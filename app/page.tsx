@@ -1,0 +1,89 @@
+"use client"
+
+import { useState } from "react"
+import { Sidebar } from "@/components/sidebar"
+import { Header } from "@/components/header"
+import { Dashboard } from "@/components/dashboard"
+import { SubnetCalculator } from "@/components/tools/subnet-calculator"
+import { VLSMPlanner } from "@/components/tools/vlsm-planner"
+import { VLANManager } from "@/components/tools/vlan-manager"
+import { ConflictChecker } from "@/components/tools/conflict-checker"
+import { NetworkTester } from "@/components/tools/network-tester"
+import { DNSTools } from "@/components/tools/dns-tools"
+import { ProjectManager } from "@/components/project-manager"
+import { About } from "@/components/about"
+import { MTUCalculator } from "@/components/tools/mtu-calculator"
+import { ACLGenerator } from "@/components/tools/acl-generator"
+import { IPv6Tools } from "@/components/tools/ipv6-tools"
+import { OUILookup } from "@/components/tools/oui-lookup"
+import { Footer } from "@/components/footer"
+import { PingTraceroute } from "@/components/tools/ping-traceroute"
+import { PortScanner } from "@/components/tools/port-scanner"
+
+export default function HomePage() {
+  const [activeView, setActiveView] = useState("dashboard")
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  const renderContent = () => {
+    switch (activeView) {
+      case "dashboard":
+        return <Dashboard onNavigate={setActiveView} />
+      case "subnet-calculator":
+        return <SubnetCalculator />
+      case "vlsm-planner":
+        return <VLSMPlanner />
+      case "vlan-manager":
+        return <VLANManager />
+      case "conflict-checker":
+        return <ConflictChecker />
+      case "network-tester":
+        return <NetworkTester />
+      case "dns-tools":
+        return <DNSTools />
+      case "mtu-calculator":
+        return <MTUCalculator />
+      case "acl-generator":
+        return <ACLGenerator />
+      case "ipv6-tools":
+        return <IPv6Tools />
+      case "oui-lookup":
+        return <OUILookup />
+      case "ping-traceroute":
+        return <PingTraceroute />
+      case "port-scanner":
+        return <PortScanner />
+      case "about":
+        return <About />
+      case "project-manager":
+        return <ProjectManager />
+      default:
+        return <Dashboard onNavigate={setActiveView} />
+    }
+  }
+
+  return (
+    <div className="flex h-screen bg-background">
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <Sidebar
+        activeView={activeView}
+        onNavigate={setActiveView}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          sidebarOpen={sidebarOpen}
+          onNavigate={setActiveView}
+        />
+        <main className="flex-1 overflow-auto">
+          <div className="p-3 sm:p-4 lg:p-6">{renderContent()}</div>
+          <Footer />
+        </main>
+      </div>
+    </div>
+  )
+}
