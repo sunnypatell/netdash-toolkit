@@ -183,6 +183,17 @@ const recentImprovements = [
 ]
 
 const changelog = [
+    {
+    version: "2.1.1",
+    type: "patch",
+    title: "Mobile Enhancement",
+    changes: [
+      "Added scrollbar to hamburger menu for mobile devices to fix overflow issues",
+    ],
+    technical: [
+      "hamburger menu that stays visible with shrink-0 class and truncates on launch",
+    ],
+  },
   {
     version: "2.1.0",
     type: "major",
