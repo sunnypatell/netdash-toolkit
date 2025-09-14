@@ -19,12 +19,12 @@ import { OUILookup } from "@/components/tools/oui-lookup"
 import { Footer } from "@/components/footer"
 import { PingTraceroute } from "@/components/tools/ping-traceroute"
 import { PortScanner } from "@/components/tools/port-scanner"
-import { RoutingTools } from "@/components/tools/routing-tools" // Added routing tools import
-import { WirelessTools } from "@/components/tools/wireless-tools" // Added wireless tools import
+import { RoutingTools } from "@/components/tools/routing-tools"
+import { WirelessTools } from "@/components/tools/wireless-tools"
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const renderContent = () => {
     switch (activeView) {
@@ -36,9 +36,9 @@ export default function HomePage() {
         return <VLSMPlanner />
       case "vlan-manager":
         return <VLANManager />
-      case "routing-tools": // Added routing tools case
+      case "routing-tools":
         return <RoutingTools />
-      case "wireless-tools": // Added wireless tools case
+      case "wireless-tools":
         return <WirelessTools />
       case "conflict-checker":
         return <ConflictChecker />
@@ -70,7 +70,11 @@ export default function HomePage() {
   return (
     <div className="flex h-screen bg-background">
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          onTouchStart={() => setSidebarOpen(false)}
+        />
       )}
 
       <Sidebar
