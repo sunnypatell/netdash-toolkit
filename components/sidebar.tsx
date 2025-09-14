@@ -36,7 +36,7 @@ const navigationItems = [
   { id: "vlsm-planner", label: "VLSM Planner", icon: Network },
   { id: "vlan-manager", label: "VLAN Manager", icon: Layers },
   { id: "routing-tools", label: "Routing Tools", icon: Route },
-  { id: "wireless-tools", label: "Wireless Tools", icon: Wifi }, // Added wireless tools to navigation
+  { id: "wireless-tools", label: "Wireless Tools", icon: Wifi },
   { id: "conflict-checker", label: "IP Conflict Checker", icon: AlertTriangle },
   { id: "network-tester", label: "Network Tester", icon: Activity },
   { id: "dns-tools", label: "DNS Tools", icon: Globe },
@@ -56,8 +56,7 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
       className={cn(
         "bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
         "fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto",
-        isOpen ? "w-64" : "w-16 -translate-x-full lg:translate-x-0",
-        isOpen && "translate-x-0",
+        isOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full lg:translate-x-0",
       )}
     >
       <div className="flex h-full flex-col">
@@ -80,33 +79,35 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 px-2 py-4">
-          <nav className="space-y-1">
-            {navigationItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <Button
-                  key={item.id}
-                  variant={activeView === item.id ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent",
-                    !isOpen && "justify-center px-2",
-                    activeView === item.id && "bg-sidebar-accent text-sidebar-accent-foreground",
-                  )}
-                  onClick={() => {
-                    onNavigate(item.id)
-                    if (window.innerWidth < 1024) {
-                      onToggle()
-                    }
-                  }}
-                >
-                  <Icon className={cn("w-4 h-4", isOpen && "mr-2")} />
-                  {isOpen && <span className="text-sm">{item.label}</span>}
-                </Button>
-              )
-            })}
-          </nav>
-        </ScrollArea>
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full px-2 py-4">
+            <nav className="space-y-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Button
+                    key={item.id}
+                    variant={activeView === item.id ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent",
+                      !isOpen && "justify-center px-2",
+                      activeView === item.id && "bg-sidebar-accent text-sidebar-accent-foreground",
+                    )}
+                    onClick={() => {
+                      onNavigate(item.id)
+                      if (window.innerWidth < 1024) {
+                        onToggle()
+                      }
+                    }}
+                  >
+                    <Icon className={cn("w-4 h-4", isOpen && "mr-2")} />
+                    {isOpen && <span className="text-sm">{item.label}</span>}
+                  </Button>
+                )
+              })}
+            </nav>
+          </ScrollArea>
+        </div>
       </div>
     </div>
   )

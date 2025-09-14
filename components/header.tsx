@@ -16,7 +16,7 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
     <header className="bg-card border-b border-border px-3 sm:px-4 lg:px-6 py-3 sm:py-4 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/95">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 sm:space-x-4">
-          <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="text-foreground lg:hidden">
+          <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="text-foreground lg:hidden shrink-0">
             <Menu className="w-4 h-4" />
           </Button>
           {!sidebarOpen && (
@@ -25,11 +25,11 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
             </Button>
           )}
           <div className="flex items-center space-x-2">
-            <h1 className="text-base sm:text-lg font-semibold text-foreground">Network Toolbox</h1>
+            <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">Network Toolbox</h1>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
           <div className="hidden sm:flex items-center space-x-2">
             <Badge variant="outline" className="text-xs">
               v2.1
