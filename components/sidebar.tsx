@@ -20,6 +20,7 @@ import {
   Info,
   Navigation,
   Scan,
+  Route,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -34,6 +35,8 @@ const navigationItems = [
   { id: "subnet-calculator", label: "Subnet Calculator", icon: Calculator },
   { id: "vlsm-planner", label: "VLSM Planner", icon: Network },
   { id: "vlan-manager", label: "VLAN Manager", icon: Layers },
+  { id: "routing-tools", label: "Routing Tools", icon: Route },
+  { id: "wireless-tools", label: "Wireless Tools", icon: Wifi }, // Added wireless tools to navigation
   { id: "conflict-checker", label: "IP Conflict Checker", icon: AlertTriangle },
   { id: "network-tester", label: "Network Tester", icon: Activity },
   { id: "dns-tools", label: "DNS Tools", icon: Globe },

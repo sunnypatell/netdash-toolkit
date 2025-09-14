@@ -19,6 +19,8 @@ import { OUILookup } from "@/components/tools/oui-lookup"
 import { Footer } from "@/components/footer"
 import { PingTraceroute } from "@/components/tools/ping-traceroute"
 import { PortScanner } from "@/components/tools/port-scanner"
+import { RoutingTools } from "@/components/tools/routing-tools" // Added routing tools import
+import { WirelessTools } from "@/components/tools/wireless-tools" // Added wireless tools import
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
@@ -34,6 +36,10 @@ export default function HomePage() {
         return <VLSMPlanner />
       case "vlan-manager":
         return <VLANManager />
+      case "routing-tools": // Added routing tools case
+        return <RoutingTools />
+      case "wireless-tools": // Added wireless tools case
+        return <WirelessTools />
       case "conflict-checker":
         return <ConflictChecker />
       case "network-tester":

@@ -3,7 +3,24 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Github, Linkedin, Globe, Network, Zap, Shield, Calculator } from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import {
+  ExternalLink,
+  Github,
+  Linkedin,
+  Globe,
+  Network,
+  Zap,
+  Shield,
+  Calculator,
+  GitCommit,
+  Clock,
+  Plus,
+  Bug,
+  Wrench,
+  Star,
+} from "lucide-react"
 
 const features = [
   {
@@ -105,6 +122,20 @@ const features = [
     icon: Shield,
     capabilities: ["AES-GCM encryption", "PBKDF2 key derivation", "Schema versioning", "Integrity validation"],
   },
+  {
+    title: "Routing Tools",
+    description:
+      "Complete suite of routing protocol configuration generators including OSPF, EIGRP, static routes, and administrative distance reference.",
+    icon: Network,
+    capabilities: ["OSPF configuration", "EIGRP configuration", "Static routes", "Administrative distance"],
+  },
+  {
+    title: "Wireless Tools",
+    description:
+      "Channel planning, interference analysis, and WiFi configuration tools for wireless network management.",
+    icon: Network,
+    capabilities: ["Channel planning", "Interference analysis", "WiFi configuration"],
+  },
 ]
 
 const technicalHighlights = [
@@ -151,6 +182,366 @@ const recentImprovements = [
   "Added comprehensive technical details and edge case handling throughout the application",
 ]
 
+const changelog = [
+  {
+    version: "2.1.0",
+    type: "major",
+    title: "Comprehensive Networking Suite Expansion",
+    changes: [
+      "Added complete Routing Tools suite with OSPF, EIGRP, static routes, and administrative distance reference",
+      "Enhanced ACL Generator with Standard ACL support alongside Extended ACLs",
+      "Introduced Wireless Tools with channel planning, interference analysis, and WiFi configuration",
+      "Added comprehensive security best practices guide for wireless networks",
+      "Implemented technical changelog system with complete revision history",
+    ],
+    technical: [
+      "Multi-tab interface for routing protocol configuration generators",
+      "Real-time channel interference simulation and recommendations",
+      "Enhanced ACL validation with security warnings and best practices",
+      "Comprehensive wireless security checklist and enterprise features",
+    ],
+  },
+  {
+    version: "2.0.3",
+    type: "patch",
+    title: "Enhanced IP Conflict Detection",
+    changes: [
+      "Improved multi-source network data correlation with enhanced format support",
+      "Added enhanced regex parsers for Windows ARP, Linux ip neigh, Cisco show arp",
+      "Implemented DHCP lease and switch MAC table parsing",
+      "Enhanced conflict detection with evidence tracking and remediation workflows",
+    ],
+    technical: [
+      "Advanced regex patterns for network data extraction",
+      "Real-time conflict correlation algorithms",
+      "Evidence-based remediation guidance system",
+    ],
+  },
+  {
+    version: "2.0.2",
+    type: "patch",
+    title: "Live OUI Database Integration",
+    changes: [
+      "Integrated macvendors.com API with comprehensive vendor records",
+      "Implemented rate-limited bulk processing for MAC address lookups",
+      "Added comprehensive MAC address format support",
+      "Enhanced error handling and fallback mechanisms",
+    ],
+    technical: [
+      "HTTP API integration with rate limiting",
+      "Bulk processing with concurrent request management",
+      "Comprehensive error handling and retry logic",
+    ],
+  },
+  {
+    version: "2.0.1",
+    type: "patch",
+    title: "Real Network Testing Implementation",
+    changes: [
+      "Replaced simulated ping/traceroute with real HTTP-based RTT measurement",
+      "Implemented animated real-time results with performance.now() timing",
+      "Added CORS-aware requests with configurable timeout handling",
+      "Enhanced port scanner with WebSocket and HTTP probes",
+    ],
+    technical: [
+      "Performance.now() for microsecond timing precision",
+      "CORS handling for cross-origin network requests",
+      "WebSocket probes for port connectivity testing",
+    ],
+  },
+  {
+    version: "2.0.0",
+    type: "major",
+    title: "Production-Grade Architecture Overhaul",
+    changes: [
+      "Complete rewrite with enterprise-grade security and performance",
+      "Implemented AES-GCM encryption with PBKDF2 key derivation for project storage",
+      "Added comprehensive WCAG 2.2 AA accessibility compliance",
+      "Introduced CSP with strict security policies preventing XSS attacks",
+    ],
+    technical: [
+      "Web Crypto API for client-side encryption",
+      "IndexedDB with encrypted storage layer",
+      "Semantic HTML with ARIA labels and keyboard navigation",
+      "Content Security Policy implementation",
+    ],
+  },
+  {
+    version: "1.9.2",
+    type: "patch",
+    title: "Enhanced VLSM Planning Algorithm",
+    changes: [
+      "Improved binary boundary allocation with fragmentation analysis",
+      "Added capacity validation with utilization heatmaps",
+      "Enhanced subnet sorting by host count descending",
+      "Implemented optimal prefix calculation validation",
+    ],
+    technical: [
+      "Binary boundary alignment algorithms",
+      "Fragmentation detection and analysis",
+      "Capacity utilization visualization",
+    ],
+  },
+  {
+    version: "1.9.1",
+    type: "patch",
+    title: "IPv6 Tools RFC Compliance",
+    changes: [
+      "Implemented RFC 5952 compliant IPv6 address compression",
+      "Added EUI-64 generation from MAC with U/L bit flip and FF:FE insertion",
+      "Enhanced solicited-node multicast calculation",
+      "Improved link-local address generation and validation",
+    ],
+    technical: [
+      "RFC 5952 longest zero sequence replacement",
+      "EUI-64 MAC address transformation",
+      "Solicited-node multicast address calculation",
+    ],
+  },
+  {
+    version: "1.9.0",
+    type: "minor",
+    title: "Multi-Platform ACL Generator",
+    changes: [
+      "Added support for Cisco IOS, Palo Alto, and Juniper SRX platforms",
+      "Implemented wildcard mask calculation using bitwise operations",
+      "Enhanced protocol and port validation with comprehensive error checking",
+      "Added rule documentation and configuration export functionality",
+    ],
+    technical: [
+      "Multi-platform configuration generation",
+      "Bitwise wildcard mask calculations",
+      "Comprehensive input validation and sanitization",
+    ],
+  },
+  {
+    version: "1.8.3",
+    type: "patch",
+    title: "DNS Tools RFC 8484 Compliance",
+    changes: [
+      "Implemented RFC 8484 compliant DNS over HTTPS client",
+      "Added multiple provider support with TTL-based caching",
+      "Enhanced DNSSEC AD flag validation",
+      "Improved support for comprehensive record types",
+    ],
+    technical: [
+      "RFC 8484 DNS over HTTPS implementation",
+      "TTL-based response caching system",
+      "DNSSEC validation and verification",
+    ],
+  },
+  {
+    version: "1.8.2",
+    type: "patch",
+    title: "Enhanced VLAN Management",
+    changes: [
+      "Added IEEE 802.1Q VLAN database with multi-vendor support",
+      "Implemented Cisco IOS and Aruba CX configuration generation",
+      "Enhanced native VLAN validation and trunk consistency checking",
+      "Added comprehensive VLAN conflict detection",
+    ],
+    technical: [
+      "IEEE 802.1Q standard compliance",
+      "Multi-vendor configuration templates",
+      "Trunk port validation algorithms",
+    ],
+  },
+  {
+    version: "1.8.1",
+    type: "patch",
+    title: "MTU Calculator Protocol Analysis",
+    changes: [
+      "Implemented protocol stack overhead analysis with configurable layers",
+      "Added support for Ethernet, 802.1Q, IPv4/IPv6, TCP/UDP calculations",
+      "Enhanced tunneling protocol overhead calculations",
+      "Added fragmentation warnings and path MTU discovery",
+    ],
+    technical: [
+      "Protocol stack overhead calculations",
+      "Encapsulation layer analysis",
+      "Path MTU discovery algorithms",
+    ],
+  },
+  {
+    version: "1.8.0",
+    type: "minor",
+    title: "Advanced Subnet Calculator",
+    changes: [
+      "Enhanced IPv4 subnet calculations with RFC 3021 support",
+      "Implemented deterministic algorithms with bit-level masking operations",
+      "Added support for host routes and point-to-point links",
+      "Enhanced private range detection and CIDR validation",
+    ],
+    technical: [
+      "Unsigned 32-bit arithmetic for precision",
+      "RFC 3021 point-to-point link support",
+      "Bit-level network and broadcast calculations",
+    ],
+  },
+  {
+    version: "1.7.2",
+    type: "patch",
+    title: "Project Management Security",
+    changes: [
+      "Implemented client-side AES-GCM encryption for project storage",
+      "Added PBKDF2 key derivation with SHA-256 integrity hashing",
+      "Enhanced JSON schema versioning with migration support",
+      "Improved secure import/export with password-based encryption",
+    ],
+    technical: [
+      "AES-GCM encryption with Web Crypto API",
+      "PBKDF2 key derivation functions",
+      "SHA-256 integrity verification",
+    ],
+  },
+  {
+    version: "1.7.1",
+    type: "patch",
+    title: "Enhanced Port Scanner",
+    changes: [
+      "Implemented browser-based port connectivity testing",
+      "Added WebSocket and HTTP probe methods",
+      "Enhanced concurrent scanning with configurable timeouts",
+      "Improved service detection and status reporting",
+    ],
+    technical: ["WebSocket connection probing", "Concurrent request management", "Service fingerprinting algorithms"],
+  },
+  {
+    version: "1.7.0",
+    type: "minor",
+    title: "Network Testing Suite",
+    changes: [
+      "Added comprehensive network connectivity testing tools",
+      "Implemented real-time ping and traceroute functionality",
+      "Enhanced DNS resolution testing with multiple record types",
+      "Added network performance metrics and analysis",
+    ],
+    technical: [
+      "Real-time network connectivity probes",
+      "DNS resolution performance metrics",
+      "Network latency and packet loss analysis",
+    ],
+  },
+  {
+    version: "1.6.3",
+    type: "patch",
+    title: "UI/UX Enhancements",
+    changes: [
+      "Improved responsive design with CSS Grid and Flexbox",
+      "Enhanced dark/light theme support with system preference detection",
+      "Added comprehensive keyboard navigation and focus management",
+      "Improved accessibility with semantic HTML and ARIA labels",
+    ],
+    technical: [
+      "CSS Grid and Flexbox layout systems",
+      "System theme preference detection",
+      "Keyboard navigation event handling",
+    ],
+  },
+  {
+    version: "1.6.2",
+    type: "patch",
+    title: "Performance Optimizations",
+    changes: [
+      "Optimized for large IP/subnet operations using efficient data structures",
+      "Implemented service worker caching for offline-first architecture",
+      "Enhanced memory management for large dataset processing",
+      "Added progressive loading for improved initial page load times",
+    ],
+    technical: [
+      "Efficient data structure implementations",
+      "Service worker caching strategies",
+      "Memory optimization for large datasets",
+    ],
+  },
+  {
+    version: "1.6.1",
+    type: "patch",
+    title: "Security Hardening",
+    changes: [
+      "Implemented Content Security Policy with script-src 'self'",
+      "Added comprehensive input validation and sanitization",
+      "Enhanced XSS protection with output encoding",
+      "Improved error handling to prevent information disclosure",
+    ],
+    technical: [
+      "Content Security Policy implementation",
+      "Input validation and sanitization",
+      "XSS prevention mechanisms",
+    ],
+  },
+  {
+    version: "1.6.0",
+    type: "minor",
+    title: "Core Networking Tools",
+    changes: [
+      "Launched comprehensive subnet calculator with VLSM support",
+      "Added VLAN management with multi-vendor configuration",
+      "Implemented IP conflict detection with multi-source correlation",
+      "Added DNS tools with comprehensive record type support",
+    ],
+    technical: [
+      "VLSM algorithm implementation",
+      "Multi-vendor configuration generation",
+      "Network data correlation engines",
+    ],
+  },
+  {
+    version: "1.5.0",
+    type: "minor",
+    title: "Foundation Architecture",
+    changes: [
+      "Established React/TypeScript foundation with modern tooling",
+      "Implemented component-based architecture with reusable UI elements",
+      "Added comprehensive state management and data flow patterns",
+      "Established development workflow with testing and deployment pipelines",
+    ],
+    technical: [
+      "React 18 with TypeScript strict mode",
+      "Component-based architecture patterns",
+      "Modern build tooling and optimization",
+    ],
+  },
+  {
+    version: "1.0.0",
+    type: "major",
+    title: "Initial Release",
+    changes: [
+      "Initial project setup and architecture planning",
+      "Basic networking tool framework implementation",
+      "Core UI components and design system establishment",
+      "Development environment and tooling configuration",
+    ],
+    technical: ["Project initialization and setup", "Basic component framework", "Development tooling configuration"],
+  },
+]
+
+const getVersionBadgeVariant = (type: string) => {
+  switch (type) {
+    case "major":
+      return "default"
+    case "minor":
+      return "secondary"
+    case "patch":
+      return "outline"
+    default:
+      return "outline"
+  }
+}
+
+const getVersionIcon = (type: string) => {
+  switch (type) {
+    case "major":
+      return Star
+    case "minor":
+      return Plus
+    case "patch":
+      return Bug
+    default:
+      return Wrench
+  }
+}
+
 export function About() {
   return (
     <div className="space-y-8">
@@ -162,12 +553,12 @@ export function About() {
           enterprise-grade security while solving real-world network engineering challenges with mathematical precision.
         </p>
         <div className="flex justify-center flex-wrap gap-2">
-          <Badge variant="secondary">12 Professional Tools</Badge>
           <Badge variant="secondary">Live API Integration</Badge>
           <Badge variant="secondary">Real Network Testing</Badge>
           <Badge variant="secondary">Production-Ready</Badge>
           <Badge variant="secondary">RFC Compliant</Badge>
           <Badge variant="secondary">Enterprise Security</Badge>
+          <Badge variant="secondary">Professional Tools</Badge>
         </div>
       </div>
 
@@ -307,6 +698,126 @@ export function About() {
             storage, and comprehensive input validation to prevent injection attacks. All tools work with actual network
             data and provide genuine functionality for network professionals.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GitCommit className="w-5 h-5" />
+            Technical Changelog
+          </CardTitle>
+          <CardDescription>
+            Complete development history across {changelog.length} revisions - from v1.0.0 to v{changelog[0].version}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <Badge variant="default" className="flex items-center gap-1">
+                <Star className="w-3 h-3" />
+                Major
+              </Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Plus className="w-3 h-3" />
+                Minor
+              </Badge>
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Bug className="w-3 h-3" />
+                Patch
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground">Latest: v{changelog[0].version}</div>
+          </div>
+
+          <ScrollArea className="h-[600px] pr-4">
+            <div className="space-y-6">
+              {changelog.map((release, index) => {
+                const VersionIcon = getVersionIcon(release.type)
+                return (
+                  <div key={release.version} className="relative">
+                    {index < changelog.length - 1 && <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />}
+
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-8 h-8 bg-background border-2 border-border rounded-full flex items-center justify-center">
+                        <VersionIcon className="w-4 h-4 text-muted-foreground" />
+                      </div>
+
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-semibold text-lg">v{release.version}</h3>
+                          <Badge variant={getVersionBadgeVariant(release.type)}>{release.type}</Badge>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {release.date}
+                          </div>
+                        </div>
+
+                        <h4 className="font-medium text-foreground">{release.title}</h4>
+
+                        <div className="space-y-3">
+                          <div>
+                            <h5 className="text-sm font-medium mb-2">Features & Changes</h5>
+                            <ul className="space-y-1">
+                              {release.changes.map((change, changeIndex) => (
+                                <li key={changeIndex} className="flex items-start gap-2 text-sm">
+                                  <div className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0 mt-2" />
+                                  <span className="text-muted-foreground leading-relaxed">{change}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {release.technical && release.technical.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium mb-2">Technical Implementation</h5>
+                              <ul className="space-y-1">
+                                {release.technical.map((tech, techIndex) => (
+                                  <li key={techIndex} className="flex items-start gap-2 text-sm">
+                                    <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full flex-shrink-0 mt-2" />
+                                    <span className="text-muted-foreground leading-relaxed font-mono text-xs">
+                                      {tech}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </ScrollArea>
+
+          <Separator className="my-4" />
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-primary">{changelog.length}</div>
+              <div className="text-sm text-muted-foreground">Total Revisions</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-primary">
+                {changelog.filter((r) => r.type === "major").length}
+              </div>
+              <div className="text-sm text-muted-foreground">Major Releases</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-primary">
+                {changelog.filter((r) => r.type === "minor").length}
+              </div>
+              <div className="text-sm text-muted-foreground">Minor Updates</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-primary">
+                {changelog.filter((r) => r.type === "patch").length}
+              </div>
+              <div className="text-sm text-muted-foreground">Patch Fixes</div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

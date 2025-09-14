@@ -256,7 +256,12 @@ export function PortScanner() {
                 <Badge variant="outline">{currentScan.results.filter((r) => r.status === "open").length} open</Badge>
                 <Badge variant="secondary">{currentScan.results.length} total</Badge>
                 {currentScan.completed && (
-                  <Button variant="outline" size="sm" onClick={() => exportResults(currentScan)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => exportResults(currentScan)}
+                    className="bg-transparent"
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>

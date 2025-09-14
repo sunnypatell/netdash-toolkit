@@ -180,7 +180,12 @@ export function PingTraceroute() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">Ping Results</h4>
-                    <Button variant="outline" size="sm" onClick={() => exportResults("ping")}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => exportResults("ping")}
+                      className="bg-transparent"
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Export
                     </Button>
@@ -266,7 +271,12 @@ export function PingTraceroute() {
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">Route to {tracerouteHost}</h4>
                     {tracerouteResults.length > 0 && (
-                      <Button variant="outline" size="sm" onClick={() => exportResults("traceroute")}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => exportResults("traceroute")}
+                        className="bg-transparent"
+                      >
                         <Download className="w-4 h-4 mr-2" />
                         Export
                       </Button>
