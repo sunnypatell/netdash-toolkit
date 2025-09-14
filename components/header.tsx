@@ -32,10 +32,7 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
         <div className="flex items-center space-x-2 sm:space-x-4">
           <div className="hidden sm:flex items-center space-x-2">
             <Badge variant="outline" className="text-xs">
-              v2.0
-            </Badge>
-            <Badge variant="secondary" className="text-xs hidden md:flex">
-              12 Tools
+              v2.1
             </Badge>
           </div>
           <ThemeToggle />

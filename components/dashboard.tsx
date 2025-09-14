@@ -18,6 +18,8 @@ import {
   Navigation,
   Scan,
   TrendingUp,
+  Route,
+  Radio,
 } from "lucide-react"
 
 interface DashboardProps {
@@ -50,6 +52,24 @@ const tools = [
     icon: Layers,
     category: "Configuration",
     features: ["Switch templates", "Trunk planning", "Cisco & Aruba"],
+  },
+  {
+    id: "routing-tools",
+    title: "Routing Tools",
+    description: "Configure OSPF, EIGRP, static routes, and administrative distances",
+    icon: Route,
+    category: "Configuration",
+    features: ["OSPF & EIGRP", "Static routes", "Admin distances"],
+    popular: true,
+  },
+  {
+    id: "wireless-tools",
+    title: "Wireless Tools",
+    description: "Channel planning, interference analysis, and WiFi configuration",
+    icon: Radio,
+    category: "Wireless",
+    features: ["Channel planning", "Interference analysis", "WiFi config"],
+    popular: true,
   },
   {
     id: "conflict-checker",
@@ -104,10 +124,10 @@ const tools = [
   {
     id: "acl-generator",
     title: "ACL Generator",
-    description: "Generate access control lists with wildcard masks and rule validation",
+    description: "Generate standard and extended access control lists with validation",
     icon: Shield,
     category: "Security",
-    features: ["Wildcard masks", "Multi-vendor", "Rule validation"],
+    features: ["Standard & Extended", "Multi-vendor", "Rule validation"],
   },
   {
     id: "ipv6-tools",
@@ -130,7 +150,7 @@ const tools = [
 const stats = [
   {
     title: "Available Tools",
-    value: tools.length.toString(),
+    value: tools.length.toString(), // Updated to reflect actual tool count
     description: "Professional networking utilities",
     icon: Network,
   },
