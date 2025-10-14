@@ -178,8 +178,8 @@ export function IPv6Tools() {
   }
 
   const generateEUI64 = (mac: string, networkPrefix: string, prefixLength: number): string => {
-    if (prefixLength !== 64) {
-      throw new Error("EUI-64 generation requires a /64 prefix length")
+    if (prefixLength > 64) {
+      throw new Error("Prefix length must be 64 or less for EUI-64 generation")
     }
 
     // Clean MAC address
