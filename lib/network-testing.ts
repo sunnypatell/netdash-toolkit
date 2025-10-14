@@ -2,7 +2,9 @@
 
 export interface RTTTestResult {
   url: string
+  requestedMethod: "HEAD" | "GET"
   method: string
+  mode: "cors" | "no-cors"
   samples: number[]
   median: number
   p95: number
@@ -12,7 +14,9 @@ export interface RTTTestResult {
   jitter: number
   packetLoss: number
   success: boolean
+  warnings?: string[]
   error?: string
+  errorDetails?: string[]
   timestamp: number
 }
 
@@ -51,84 +55,72 @@ export async function testRTT(
   samples = 5,
   timeout = 10000,
 ): Promise<RTTTestResult> {
+  let normalizedUrl: URL
+  try {
+    normalizedUrl = normalizeTestUrl(url)
+  } catch (error) {
+    return buildFailedRTTResult(url, method, ["Invalid or unsupported URL"], [])
+  }
+  const urlString = normalizedUrl.toString()
+
+  if (!isHttpProtocol(normalizedUrl)) {
+    return buildFailedRTTResult(urlString, method, ["Only HTTP and HTTPS URLs are supported"], [])
+  }
+
+  if (isMixedContentBlocked(normalizedUrl)) {
+    return buildFailedRTTResult(
+      urlString,
+      method,
+      ["Browsers block HTTP endpoints when the app is served over HTTPS. Use an HTTPS test URL."],
+      [],
+    )
+  }
+
   const results: number[] = []
   const errors: string[] = []
+  const warnings = new Set<string>()
   let successCount = 0
+  let effectiveMethod: "HEAD" | "GET" = method
+  let mode: "cors" | "no-cors" = "cors"
 
   for (let i = 0; i < samples; i++) {
     let attempt = 0
-    const maxAttempts = 3 // Increased retry attempts from 2 to 3
+    const maxAttempts = 3
 
     while (attempt < maxAttempts) {
       try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-        // Add cache busting to prevent cached responses
-        const testUrl = new URL(url)
-        testUrl.searchParams.set("_t", Date.now().toString())
-        testUrl.searchParams.set("_r", Math.random().toString(36).substring(7))
-
-        const startTime = performance.now()
-        const response = await fetch(testUrl.toString(), {
-          method,
-          cache: "no-store",
-          keepalive: false,
-          signal: controller.signal,
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-            "User-Agent": "NetworkToolbox/1.0 RTT-Tester",
-          },
-        })
-
-        clearTimeout(timeoutId)
-        const endTime = performance.now()
-
-        if (response.ok) {
-          results.push(endTime - startTime)
-          successCount++
-          break // Success, no need to retry
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const measurement = await measureSingleSample(urlString, effectiveMethod, method, timeout)
+        results.push(measurement.duration)
+        successCount++
+        effectiveMethod = measurement.methodUsed
+        if (measurement.mode === "no-cors") {
+          mode = "no-cors"
         }
+        measurement.warnings.forEach((warning) => warnings.add(warning))
+        break
       } catch (error) {
         attempt++
-        const errorMsg = error instanceof Error ? error.message : "Network error"
-
         if (attempt >= maxAttempts) {
-          errors.push(`Sample ${i + 1}: ${errorMsg}`)
+          errors.push(`Sample ${i + 1}: ${describeRTTError(error, normalizedUrl, timeout)}`)
         } else {
           await new Promise((resolve) => setTimeout(resolve, 200 * attempt))
         }
       }
     }
 
-    // Delay between samples to avoid overwhelming the server
     if (i < samples - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 300)) // Increased delay from 250ms to 300ms
+      await new Promise((resolve) => setTimeout(resolve, 300))
     }
   }
 
   const packetLoss = ((samples - successCount) / samples) * 100
 
   if (results.length === 0) {
-    return {
-      url,
-      method,
-      samples: [],
-      median: 0,
-      p95: 0,
-      average: 0,
-      min: 0,
-      max: 0,
-      jitter: 0,
-      packetLoss: 100,
-      success: false,
-      error: errors.length > 0 ? errors.join("; ") : "All requests failed - check URL and CORS policy",
-      timestamp: Date.now(),
-    }
+    return buildFailedRTTResult(urlString, method, errors, Array.from(warnings), mode)
+  }
+
+  if (packetLoss > 0) {
+    warnings.add(`Detected ${packetLoss.toFixed(1)}% packet loss across ${samples} attempts`)
   }
 
   const sorted = [...results].sort((a, b) => a - b)
@@ -137,14 +129,14 @@ export async function testRTT(
   const average = results.reduce((sum, val) => sum + val, 0) / results.length
   const min = Math.min(...results)
   const max = Math.max(...results)
-
-  // Calculate jitter (standard deviation)
   const variance = results.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / results.length
   const jitter = Math.sqrt(variance)
 
   return {
-    url,
-    method,
+    url: urlString,
+    requestedMethod: method,
+    method: effectiveMethod,
+    mode,
     samples: results,
     median,
     p95,
@@ -154,8 +146,204 @@ export async function testRTT(
     jitter,
     packetLoss,
     success: true,
+    warnings: Array.from(warnings),
     timestamp: Date.now(),
   }
+}
+
+function normalizeTestUrl(input: string): URL {
+  try {
+    return new URL(input)
+  } catch (error) {
+    try {
+      return new URL(`https://${input}`)
+    } catch (innerError) {
+      throw innerError
+    }
+  }
+}
+
+function isHttpProtocol(url: URL): boolean {
+  return url.protocol === "http:" || url.protocol === "https:"
+}
+
+function isMixedContentBlocked(url: URL): boolean {
+  if (url.protocol !== "http:") {
+    return false
+  }
+
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  return window.location.protocol === "https:"
+}
+
+function buildFailedRTTResult(
+  url: string,
+  requestedMethod: "HEAD" | "GET",
+  errors: string[],
+  warnings: string[],
+  mode: "cors" | "no-cors" = "cors",
+): RTTTestResult {
+  return {
+    url,
+    requestedMethod,
+    method: requestedMethod,
+    mode,
+    samples: [],
+    median: 0,
+    p95: 0,
+    average: 0,
+    min: 0,
+    max: 0,
+    jitter: 0,
+    packetLoss: 100,
+    success: false,
+    warnings: warnings.length > 0 ? warnings : undefined,
+    error: errors.join("; ") || "All requests failed - check URL and CORS policy",
+    errorDetails: errors,
+    timestamp: Date.now(),
+  }
+}
+
+interface RTTMeasurement {
+  duration: number
+  methodUsed: "HEAD" | "GET"
+  mode: "cors" | "no-cors"
+  warnings: string[]
+}
+
+async function measureSingleSample(
+  url: string,
+  effectiveMethod: "HEAD" | "GET",
+  requestedMethod: "HEAD" | "GET",
+  timeout: number,
+): Promise<RTTMeasurement> {
+  try {
+    const attempt = await timedFetch(url, effectiveMethod, timeout, "cors")
+
+    if (attempt.response.status === 405 && requestedMethod === "HEAD") {
+      const retry = await timedFetch(url, "GET", timeout, "cors")
+      if (!isSuccessfulResponse(retry.response)) {
+        throw new Error(`HTTP ${retry.response.status}: ${retry.response.statusText || "Request failed"}`)
+      }
+      return {
+        duration: retry.duration,
+        methodUsed: "GET",
+        mode: "cors",
+        warnings: ["Remote endpoint does not allow HEAD requests; retried with GET."],
+      }
+    }
+
+    if (!isSuccessfulResponse(attempt.response)) {
+      throw new Error(`HTTP ${attempt.response.status}: ${attempt.response.statusText || "Request failed"}`)
+    }
+
+    return {
+      duration: attempt.duration,
+      methodUsed: effectiveMethod,
+      mode: "cors",
+      warnings: [],
+    }
+  } catch (error) {
+    if (isLikelyCorsIssue(error) && new URL(url).protocol === "https:") {
+      const fallback = await timedFetch(url, "GET", timeout, "no-cors")
+      return {
+        duration: fallback.duration,
+        methodUsed: "GET",
+        mode: "no-cors",
+        warnings: [
+          "Remote server did not provide CORS headers. Used GET with no-cors mode; timing excludes HTTP status validation.",
+        ],
+      }
+    }
+
+    throw error
+  }
+}
+
+interface TimedFetchResult {
+  duration: number
+  response: Response
+}
+
+async function timedFetch(
+  baseUrl: string,
+  method: "HEAD" | "GET",
+  timeout: number,
+  mode: RequestMode,
+): Promise<TimedFetchResult> {
+  const target = new URL(baseUrl)
+  target.searchParams.set("_netdash_ts", Date.now().toString())
+  target.searchParams.set("_netdash_rand", Math.random().toString(36).slice(2))
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const startTime = performance.now()
+    const response = await fetch(target.toString(), {
+      method,
+      mode,
+      cache: "no-store",
+      signal: controller.signal,
+      credentials: "omit",
+      headers: mode === "cors"
+        ? {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+            "User-Agent": "NetworkToolbox/1.0 RTT-Tester",
+          }
+        : undefined,
+    })
+    const endTime = performance.now()
+
+    return {
+      duration: endTime - startTime,
+      response,
+    }
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+function isSuccessfulResponse(response: Response): boolean {
+  if (response.type === "opaque") {
+    return true
+  }
+  return response.ok
+}
+
+function isLikelyCorsIssue(error: unknown): boolean {
+  if (error instanceof TypeError && typeof error.message === "string") {
+    return error.message.includes("fetch") || error.message.includes("Failed to fetch")
+  }
+  if (error instanceof Error && typeof error.message === "string") {
+    return error.message.toLowerCase().includes("cors")
+  }
+  return false
+}
+
+function describeRTTError(error: unknown, url: URL, timeout: number): string {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return `Request timed out after ${timeout}ms`
+  }
+
+  if (isMixedContentBlocked(url)) {
+    return "Mixed content blocked - use HTTPS for the test endpoint"
+  }
+
+  if (isLikelyCorsIssue(error)) {
+    return "Remote server blocked the browser request (CORS). Provide a test endpoint with Access-Control-Allow-Origin headers."
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return "Unknown network error"
 }
 
 // Enhanced throughput testing with better progress tracking
@@ -291,64 +479,92 @@ export async function testUploadThroughput(
 
 // Enhanced DNS over HTTPS query with better reliability
 export async function queryDNSOverHTTPS(domain: string, recordType = "A", provider = "cloudflare"): Promise<DNSResult> {
-  const providers = {
-    cloudflare: "https://cloudflare-dns.com/dns-query",
-    google: "https://dns.google/dns-query",
-    quad9: "https://dns.quad9.net:5053/dns-query",
-    opendns: "https://doh.opendns.com/dns-query",
-    adguard: "https://dns.adguard.com/dns-query",
+  const dohProviders: Record<
+    string,
+    {
+      url: string
+      format: "json" | "dns-message"
+    }
+  > = {
+    cloudflare: { url: "https://cloudflare-dns.com/dns-query", format: "json" },
+    google: { url: "https://dns.google/resolve", format: "json" },
+    quad9: { url: "https://dns.quad9.net:5053/dns-query", format: "dns-message" },
+    opendns: { url: "https://doh.opendns.com/dns-query", format: "dns-message" },
+    adguard: { url: "https://dns.adguard-dns.com/resolve", format: "json" },
   }
 
-  const baseUrl = providers[provider as keyof typeof providers] || providers.cloudflare
+  const providerConfig = dohProviders[provider] || dohProviders.cloudflare
 
   const maxRetries = 2
   let lastError: Error | null = null
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Validate domain name
       if (!isValidDomain(domain)) {
         throw new Error("Invalid domain name format")
       }
 
-      // Validate record type
-      const validTypes = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"]
-      if (!validTypes.includes(recordType.toUpperCase())) {
+      const recordTypeCode = getRecordTypeCode(recordType)
+      if (recordTypeCode === undefined) {
         throw new Error(`Invalid record type: ${recordType}`)
       }
 
       const startTime = performance.now()
-      const url = `${baseUrl}?name=${encodeURIComponent(domain)}&type=${recordType.toUpperCase()}&do=1`
-
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // Increased timeout from 10s to 15s
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
 
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/dns-json",
-          "User-Agent": "NetworkToolbox/1.0 DNS-Client",
-          "Cache-Control": "no-cache",
-        },
-        signal: controller.signal,
-      })
+      let response: Response
+      let normalized: NormalizedDNSResponse
+
+      if (providerConfig.format === "json") {
+        const urlObject = new URL(providerConfig.url)
+        urlObject.searchParams.set("name", domain)
+        urlObject.searchParams.set("type", recordType.toUpperCase())
+        urlObject.searchParams.set("do", "1")
+
+        response = await fetch(urlObject.toString(), {
+          headers: {
+            Accept: "application/dns-json",
+            "User-Agent": "NetworkToolbox/1.0 DNS-Client",
+            "Cache-Control": "no-cache",
+          },
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        normalized = normalizeJsonDnsResponse(data, domain)
+      } else {
+        const wireQuery = buildDnsQueryMessage(domain, recordTypeCode)
+        const encodedQuery = encodeDnsQuery(wireQuery)
+        const urlObject = new URL(providerConfig.url)
+        urlObject.searchParams.set("dns", encodedQuery)
+        urlObject.searchParams.set("do", "1")
+
+        response = await fetch(urlObject.toString(), {
+          headers: {
+            Accept: "application/dns-message",
+            "User-Agent": "NetworkToolbox/1.0 DNS-Client",
+            "Cache-Control": "no-cache",
+          },
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        const buffer = new Uint8Array(await response.arrayBuffer())
+        normalized = parseDnsMessage(buffer)
+      }
 
       clearTimeout(timeoutId)
-      const endTime = performance.now()
-      const responseTime = endTime - startTime
+      const responseTime = performance.now() - startTime
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      // Validate response structure
-      if (typeof data !== "object" || data === null) {
-        throw new Error("Invalid DNS response format")
-      }
-
-      // Handle different response statuses
-      if (data.Status !== 0) {
+      if (normalized.Status !== 0) {
         const statusMessages: Record<number, string> = {
           1: "Format Error - The name server was unable to interpret the query",
           2: "Server Failure - The name server encountered an internal failure",
@@ -356,14 +572,14 @@ export async function queryDNSOverHTTPS(domain: string, recordType = "A", provid
           4: "Not Implemented - The name server does not support the requested kind of query",
           5: "Refused - The name server refuses to perform the operation",
         }
-        throw new Error(statusMessages[data.Status] || `DNS Error: Status ${data.Status}`)
+        throw new Error(statusMessages[normalized.Status] || `DNS Error: Status ${normalized.Status}`)
       }
 
-      const records = (data.Answer || []).map((record: any) => ({
-        name: record.name || domain,
-        type: getRecordTypeName(record.type) || recordType,
-        ttl: record.TTL || 0,
-        data: formatRecordData(record.data, record.type),
+      const records = normalized.Answer.map((answer) => ({
+        name: answer.name || domain,
+        type: getRecordTypeName(answer.type) || recordType.toUpperCase(),
+        ttl: answer.ttl,
+        data: formatRecordData(answer.data, answer.type),
       }))
 
       return {
@@ -371,7 +587,7 @@ export async function queryDNSOverHTTPS(domain: string, recordType = "A", provid
         recordType: recordType.toUpperCase(),
         records,
         provider,
-        dnssec: data.AD || false,
+        dnssec: normalized.AD,
         responseTime,
         success: true,
         timestamp: Date.now(),
@@ -385,7 +601,7 @@ export async function queryDNSOverHTTPS(domain: string, recordType = "A", provid
           lastError.message.includes("timeout") ||
           lastError.message.includes("Server Failure"))
       ) {
-        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1))) // Exponential backoff
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)))
         continue
       }
       break
@@ -403,6 +619,350 @@ export async function queryDNSOverHTTPS(domain: string, recordType = "A", provid
     error: lastError?.message || "DNS query failed",
     timestamp: Date.now(),
   }
+}
+
+interface NormalizedDNSAnswer {
+  name: string
+  type: number
+  ttl: number
+  data: string
+}
+
+interface NormalizedDNSResponse {
+  Status: number
+  AD: boolean
+  Answer: NormalizedDNSAnswer[]
+}
+
+function normalizeJsonDnsResponse(data: any, fallbackDomain: string): NormalizedDNSResponse {
+  const status = typeof data?.Status === "number" ? data.Status : typeof data?.status === "number" ? data.status : -1
+  const adFlag = Boolean(data?.AD ?? data?.Ad ?? data?.ad)
+
+  const answers: NormalizedDNSAnswer[] = Array.isArray(data?.Answer)
+    ? data.Answer.map((record: any) => {
+        const typeValue =
+          typeof record?.type === "number"
+            ? record.type
+            : getRecordTypeCode(String(record?.type || "")) ?? 255
+        const ttlValue = Number.parseInt(record?.TTL ?? record?.ttl ?? "0", 10) || 0
+        const nameValue = trimTrailingDot(record?.name || record?.Name || fallbackDomain)
+        const dataValue = String(record?.data ?? record?.Data ?? record?.value ?? "")
+
+        return {
+          name: nameValue,
+          type: typeValue,
+          ttl: ttlValue,
+          data: dataValue,
+        }
+      })
+    : []
+
+  return {
+    Status: status,
+    AD: adFlag,
+    Answer: answers,
+  }
+}
+
+function getRecordTypeCode(type: string): number | undefined {
+  const codes: Record<string, number> = {
+    A: 1,
+    NS: 2,
+    CNAME: 5,
+    SOA: 6,
+    PTR: 12,
+    MX: 15,
+    TXT: 16,
+    AAAA: 28,
+    SRV: 33,
+  }
+
+  return codes[type.toUpperCase()]
+}
+
+function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
+  const labels = trimTrailingDot(domain)
+    .split(".")
+    .map((label) => label.trim())
+    .filter(Boolean)
+
+  const questionLength = labels.reduce((sum, label) => sum + 1 + label.length, 0) + 1 + 4
+  const message = new Uint8Array(12 + questionLength)
+  const view = new DataView(message.buffer)
+
+  const id = Math.floor(Math.random() * 0xffff)
+  view.setUint16(0, id)
+  view.setUint16(2, 0x0100) // recursion desired
+  view.setUint16(4, 1) // QDCOUNT
+  view.setUint16(6, 0) // ANCOUNT
+  view.setUint16(8, 0) // NSCOUNT
+  view.setUint16(10, 0) // ARCOUNT
+
+  let offset = 12
+  for (const label of labels) {
+    message[offset] = label.length
+    for (let i = 0; i < label.length; i++) {
+      message[offset + 1 + i] = label.charCodeAt(i)
+    }
+    offset += label.length + 1
+  }
+
+  message[offset++] = 0
+  view.setUint16(offset, recordType)
+  view.setUint16(offset + 2, 1) // Class IN
+
+  return message
+}
+
+function encodeDnsQuery(bytes: Uint8Array): string {
+  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+    let binary = ""
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte)
+    }
+    return window
+      .btoa(binary)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "")
+  }
+
+  const nodeBuffer = typeof globalThis !== "undefined" ? (globalThis as any).Buffer : undefined
+  if (nodeBuffer) {
+    return nodeBuffer
+      .from(bytes)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "")
+  }
+
+  throw new Error("Base64 encoding not available in this environment")
+}
+
+function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
+  if (message.length < 12) {
+    throw new Error("DNS response too short")
+  }
+
+  const view = new DataView(message.buffer, message.byteOffset, message.byteLength)
+  const flags = view.getUint16(2)
+  const qdCount = view.getUint16(4)
+  const anCount = view.getUint16(6)
+
+  let offset = 12
+
+  for (let i = 0; i < qdCount; i++) {
+    const question = readDomainName(message, offset)
+    offset = question.nextOffset + 4 // skip type and class
+  }
+
+  const answers: NormalizedDNSAnswer[] = []
+
+  for (let i = 0; i < anCount; i++) {
+    const nameResult = readDomainName(message, offset)
+    offset = nameResult.nextOffset
+
+    if (offset + 10 > message.length) {
+      break
+    }
+
+    const type = view.getUint16(offset)
+    const ttl = view.getUint32(offset + 4)
+    const rdlength = view.getUint16(offset + 8)
+    const rdataOffset = offset + 10
+    const rdataEnd = rdataOffset + rdlength
+
+    if (rdataEnd > message.length) {
+      break
+    }
+
+    const rdata = message.slice(rdataOffset, rdataEnd)
+    const dataString = formatRDataFromBytes(type, rdata, message, rdataOffset)
+
+    answers.push({
+      name: trimTrailingDot(nameResult.name),
+      type,
+      ttl,
+      data: dataString,
+    })
+
+    offset = rdataEnd
+  }
+
+  return {
+    Status: flags & 0x000f,
+    AD: (flags & 0x0020) === 0x0020,
+    Answer: answers,
+  }
+}
+
+function readDomainName(message: Uint8Array, offset: number, depth = 0): { name: string; nextOffset: number } {
+  if (depth > 10) {
+    throw new Error("DNS pointer recursion limit exceeded")
+  }
+
+  const labels: string[] = []
+  let currentOffset = offset
+  let jumped = false
+  let nextOffset = offset
+
+  while (currentOffset < message.length) {
+    const length = message[currentOffset]
+    if (length === undefined) {
+      break
+    }
+
+    // Pointer
+    if ((length & 0xc0) === 0xc0) {
+      const pointer = ((length & 0x3f) << 8) | message[currentOffset + 1]
+      if (!jumped) {
+        nextOffset = currentOffset + 2
+      }
+      const pointed = readDomainName(message, pointer, depth + 1)
+      labels.push(pointed.name)
+      currentOffset += 2
+      jumped = true
+      break
+    }
+
+    if (length === 0) {
+      currentOffset += 1
+      if (!jumped) {
+        nextOffset = currentOffset
+      }
+      break
+    }
+
+    const end = currentOffset + 1 + length
+    if (end > message.length) {
+      break
+    }
+
+    const labelBytes = message.slice(currentOffset + 1, end)
+    labels.push(String.fromCharCode(...labelBytes))
+    currentOffset = end
+    if (!jumped) {
+      nextOffset = currentOffset
+    }
+  }
+
+  const name = labels.filter(Boolean).join(".")
+  return { name, nextOffset }
+}
+
+function formatRDataFromBytes(type: number, rdata: Uint8Array, message: Uint8Array, rdataOffset: number): string {
+  switch (type) {
+    case 1: // A
+      return Array.from(rdata).join(".")
+    case 28: // AAAA
+      return ipv6FromBytes(rdata)
+    case 2: // NS
+    case 5: // CNAME
+    case 12: // PTR
+      return readDomainName(message, rdataOffset).name
+    case 15: { // MX
+      if (rdata.length < 3) {
+        return ""
+      }
+      const preference = (rdata[0] << 8) | rdata[1]
+      const exchange = readDomainName(message, rdataOffset + 2).name
+      return `${preference} ${exchange}`
+    }
+    case 16: { // TXT
+      const chunks: string[] = []
+      let index = 0
+      while (index < rdata.length) {
+        const length = rdata[index]
+        index += 1
+        const end = Math.min(index + length, rdata.length)
+        const textBytes = rdata.slice(index, end)
+        chunks.push(`"${String.fromCharCode(...textBytes)}"`)
+        index = end
+      }
+      return chunks.join(" ")
+    }
+    case 33: { // SRV
+      if (rdata.length < 7) {
+        return ""
+      }
+      const priority = (rdata[0] << 8) | rdata[1]
+      const weight = (rdata[2] << 8) | rdata[3]
+      const port = (rdata[4] << 8) | rdata[5]
+      const target = readDomainName(message, rdataOffset + 6).name
+      return `${priority} ${weight} ${port} ${target}`
+    }
+    default:
+      return Array.from(rdata)
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("")
+  }
+}
+
+function ipv6FromBytes(bytes: Uint8Array): string {
+  if (bytes.length !== 16) {
+    return Array.from(bytes)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("")
+  }
+
+  const groups = []
+  for (let i = 0; i < 16; i += 2) {
+    groups.push(((bytes[i] << 8) | bytes[i + 1]).toString(16))
+  }
+
+  let bestStart = -1
+  let bestLength = 0
+  let currentStart = -1
+  let currentLength = 0
+
+  for (let i = 0; i < groups.length; i++) {
+    if (groups[i] === "0") {
+      if (currentStart === -1) {
+        currentStart = i
+      }
+      currentLength++
+      if (currentLength > bestLength) {
+        bestStart = currentStart
+        bestLength = currentLength
+      }
+    } else {
+      currentStart = -1
+      currentLength = 0
+    }
+  }
+
+  if (bestLength > 1) {
+    const compressed: string[] = []
+    let i = 0
+    while (i < groups.length) {
+      if (i === bestStart) {
+        compressed.push("")
+        i += bestLength
+        if (i >= groups.length) {
+          compressed.push("")
+        }
+      } else {
+        compressed.push(groups[i].replace(/^0+/, "") || "0")
+        i++
+      }
+    }
+    let result = compressed.join(":")
+    result = result.replace(/:{3,}/, "::")
+    if (result.startsWith(":")) {
+      result = `:${result}`
+    }
+    if (result.endsWith(":")) {
+      result = `${result}:`
+    }
+    return result
+  }
+
+  return groups.map((group) => group.replace(/^0+/, "") || "0").join(":")
+}
+
+function trimTrailingDot(value: string): string {
+  return value.endsWith(".") ? value.slice(0, -1) : value
 }
 
 // Helper function to validate domain names

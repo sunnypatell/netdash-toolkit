@@ -173,6 +173,10 @@ const algorithmDetails = [
 ]
 
 const recentImprovements = [
+  "Form controls across the suite now sit on high-contrast surfaces so inputs, selects, and checkboxes stay legible in dark and light themes.",
+  "Outline actions and dashboard launch buttons gain accent borders/backgrounds to prevent blending into card surfaces.",
+  "Desktop navigation now defaults to an expanded state on larger screens while staying collapsible on mobile.",
+  "IPv4 wildcard and subnet validators reject discontiguous masks across routing and ACL tooling with inline guidance.",
   "Enhanced IP Conflict Checker with support for DHCP leases, MAC tables, and 15+ network data formats",
   "Real-time OUI Lookup integration with macvendors.com API and 18,000+ vendor database",
   "Improved search functionality with dynamic filtering and consistent tool counts",
@@ -183,7 +187,69 @@ const recentImprovements = [
 ]
 
 const changelog = [
-    {
+  {
+    version: "2.5.0",
+    type: "minor",
+    title: "Deterministic network analysis",
+    changes: [
+      "Network Analyzer now derives bandwidth and latency insights from interface metrics instead of simulated randomness, so repeated runs stay consistent.",
+      "Zero-data and invalid interface states surface guidance instead of NaN outputs, highlighting down links and missing speeds before calculations run.",
+      "Reports and dashboards guard against divide-by-zero scenarios and call out saturated links or data-quality issues directly in the UI.",
+    ],
+    technical: [
+      "Centralised interface dataset normalisation clamps utilisation, validates speeds, and shares findings across bandwidth/latency engines.",
+      "Latency modelling uses topology- and utilisation-based heuristics with congestion penalties in place of Math.random().",
+      "All percentage calculations now check for zero capacity before dividing, preventing NaN progress bars and report exports.",
+    ],
+  },
+  {
+    version: "2.4.0",
+    type: "minor",
+    title: "High-contrast theming refresh",
+    changes: [
+      "Updated the global dark theme palette so cards and data-entry surfaces are visually distinct and meet contrast guidelines.",
+      "Refined input, select, textarea, and checkbox components with opaque surfaces and clearer focus states across light and dark modes.",
+      "Adjusted outline buttons and dashboard calls-to-action for better prominence on all backgrounds and synced the documentation with the release.",
+    ],
+    technical: [
+      "Tweaked OKLCH tokens for card, border, input, and ring colours to produce accessible contrast ratios.",
+      "Normalized shadcn UI primitives to share the new surfaces and focus treatments across inputs, selects, and checkboxes.",
+      "Documentation and in-app badges bumped to 2.4 with changelog entries covering the refresh.",
+    ],
+  },
+  {
+    version: "2.3.0",
+    type: "minor",
+    title: "Navigation polish & subnet sanity checks",
+    changes: [
+      "Sidebar automatically expands on desktop breakpoints while remaining collapsible for touch devices.",
+      "Routing and static route builders now fail fast on discontiguous IPv4 masks and provide clear remediation tips.",
+      "Documentation refreshed to highlight the stricter validation and layout behaviour.",
+    ],
+    technical: [
+      "MediaQuery-synchronised sidebar state with SSR-safe guards.",
+      "Subnet mask parser rejects non-contiguous bit patterns before generating configuration output.",
+      "README/About changelog updates matching the release cadence.",
+    ],
+  },
+  {
+    version: "2.2.0",
+    type: "minor",
+    title: "Routing Reliability & Documentation Refresh",
+    changes: [
+      "Validated OSPF, EIGRP, and static route generators with CIDR-aware normalization, wildcard validation, and contextual warnings.",
+      "Extended VLAN manager conflict detection to flag overlapping IPv4 and IPv6 allocations using range analysis.",
+      "Hardened ACL generator host parsing to keep Cisco IOS output consistent for mixed CIDR and host entries.",
+      "Added a branded favicon and comprehensive README outlining deployment workflow, tool coverage, and frontend-only constraints.",
+    ],
+    technical: [
+      "Shared CIDR normalization utilities across routing and ACL tooling.",
+      "BigInt-backed IPv6 range math for multi-VLAN overlap detection.",
+      "Static route evaluation pipeline with combined next-hop/interface support and warning emission.",
+      "Repository documentation overhaul capturing infrastructure limits and DoH/HTTP RTT architecture.",
+    ],
+  },
+  {
     version: "2.1.1",
     type: "patch",
     title: "Mobile Enhancement",

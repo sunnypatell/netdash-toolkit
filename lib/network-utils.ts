@@ -52,12 +52,19 @@ export function prefixToNetmask(prefix: number): string {
 export function netmaskToPrefix(netmask: string): number {
   const maskInt = ipv4ToInt(netmask)
   let prefix = 0
-  let mask = 0x80000000
+  let encounteredZero = false
 
-  for (let i = 0; i < 32; i++) {
-    if ((maskInt & mask) === 0) break
-    prefix++
-    mask >>>= 1
+  for (let bit = 31; bit >= 0; bit--) {
+    const isOne = ((maskInt >>> bit) & 1) === 1
+
+    if (isOne) {
+      if (encounteredZero) {
+        throw new Error("Subnet mask must have contiguous 1 bits")
+      }
+      prefix++
+    } else {
+      encounteredZero = true
+    }
   }
 
   return prefix

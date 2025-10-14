@@ -45,6 +45,13 @@ interface NetworkInterface {
   status: "up" | "down"
 }
 
+interface InterfaceEntry {
+  device: NetworkDevice
+  iface: NetworkInterface
+  speed: number
+  utilization: number
+}
+
 interface BandwidthAnalysis {
   totalCapacity: number
   currentUtilization: number
@@ -104,37 +111,110 @@ export function NetworkAnalyzer() {
 
   const [topologyData, setTopologyData] = useState("")
 
+  const getInterfaceDataset = () => {
+    const entries: InterfaceEntry[] = []
+    const dataIssues: string[] = []
+
+    devices.forEach((device) => {
+      device.interfaces.forEach((iface) => {
+        const hasValidSpeed = Number.isFinite(iface.speed) && iface.speed > 0
+        const hasValidUtilization = Number.isFinite(iface.utilization)
+        const sanitizedSpeed = hasValidSpeed ? iface.speed : 0
+        const sanitizedUtilization = hasValidUtilization
+          ? Math.min(Math.max(iface.utilization, 0), 100)
+          : 0
+
+        if (!hasValidSpeed) {
+          dataIssues.push(
+            `${device.name} ${iface.name} is missing a valid interface speed and was treated as 0 Mbps.`,
+          )
+        }
+
+        if (!hasValidUtilization) {
+          dataIssues.push(
+            `${device.name} ${iface.name} reported invalid utilization metrics and was normalised to 0%.`,
+          )
+        }
+
+        entries.push({
+          device,
+          iface,
+          speed: sanitizedSpeed,
+          utilization: sanitizedUtilization,
+        })
+      })
+    })
+
+    return { entries, dataIssues }
+  }
+
   const analyzeBandwidth = (): BandwidthAnalysis => {
-    const allInterfaces = devices.flatMap((device) => device.interfaces.filter((iface) => iface.status === "up"))
-
-    const totalCapacity = allInterfaces.reduce((sum, iface) => sum + iface.speed, 0)
-    const currentUtilization = allInterfaces.reduce((sum, iface) => sum + (iface.speed * iface.utilization) / 100, 0)
-    const utilizationPercentage = (currentUtilization / totalCapacity) * 100
-
-    const peakUtilization = Math.max(...allInterfaces.map((iface) => iface.utilization))
-    const availableBandwidth = totalCapacity - currentUtilization
+    const { entries, dataIssues } = getInterfaceDataset()
+    const activeInterfaces = entries.filter((entry) => entry.iface.status === "up" && entry.speed > 0)
+    const downInterfaces = entries.filter((entry) => entry.iface.status !== "up")
+    const zeroSpeedActive = entries.filter((entry) => entry.iface.status === "up" && entry.speed === 0)
 
     const bottlenecks: string[] = []
-    const recommendations: string[] = []
+    const recommendationSet = new Set<string>()
 
-    // Identify bottlenecks
-    allInterfaces.forEach((iface) => {
-      if (iface.utilization > 80) {
-        const device = devices.find((d) => d.interfaces.includes(iface))
-        bottlenecks.push(`${device?.name} - ${iface.name} (${iface.utilization}% utilized)`)
+    if (activeInterfaces.length === 0) {
+      if (downInterfaces.length > 0) {
+        recommendationSet.add(
+          `${downInterfaces.length} interface${downInterfaces.length === 1 ? "" : "s"} reported down and were excluded from bandwidth calculations.`,
+        )
+      }
+
+      if (zeroSpeedActive.length > 0) {
+        recommendationSet.add(
+          `${zeroSpeedActive.length} interface${zeroSpeedActive.length === 1 ? "" : "s"} lacked speed information; update interface metrics to measure capacity.`,
+        )
+      }
+
+      dataIssues.forEach((issue) => recommendationSet.add(issue))
+      recommendationSet.add("Add at least one active interface with valid speed and utilization to calculate bandwidth.")
+
+      return {
+        totalCapacity: 0,
+        currentUtilization: 0,
+        peakUtilization: 0,
+        availableBandwidth: 0,
+        bottlenecks,
+        recommendations: Array.from(recommendationSet),
+      }
+    }
+
+    const totalCapacity = activeInterfaces.reduce((sum, entry) => sum + entry.speed, 0)
+    const currentUtilization = activeInterfaces.reduce(
+      (sum, entry) => sum + (entry.speed * entry.utilization) / 100,
+      0,
+    )
+    const utilizationPercentage = totalCapacity > 0 ? (currentUtilization / totalCapacity) * 100 : 0
+    const peakUtilization = activeInterfaces.reduce((max, entry) => Math.max(max, entry.utilization), 0)
+    const availableBandwidth = Math.max(totalCapacity - currentUtilization, 0)
+
+    activeInterfaces.forEach((entry) => {
+      if (entry.utilization > 85) {
+        bottlenecks.push(
+          `${entry.device.name} - ${entry.iface.name} (${entry.utilization.toFixed(1)}% of ${entry.speed} Mbps)`,
+        )
       }
     })
 
-    // Generate recommendations
     if (utilizationPercentage > 70) {
-      recommendations.push("Overall network utilization is high - consider capacity planning")
+      recommendationSet.add("Overall network utilization is high — schedule capacity planning.")
     }
     if (bottlenecks.length > 0) {
-      recommendations.push("High utilization interfaces detected - consider load balancing or upgrades")
+      recommendationSet.add("High utilization interfaces detected — consider load balancing or upgrades.")
     }
     if (peakUtilization > 90) {
-      recommendations.push("Critical utilization levels detected - immediate attention required")
+      recommendationSet.add("Critical utilization levels detected — investigate saturated links immediately.")
     }
+    if (downInterfaces.length > 0) {
+      recommendationSet.add(
+        `${downInterfaces.length} interface${downInterfaces.length === 1 ? " is" : "s are"} down and excluded from utilization calculations.`,
+      )
+    }
+    dataIssues.forEach((issue) => recommendationSet.add(issue))
 
     return {
       totalCapacity,
@@ -142,40 +222,99 @@ export function NetworkAnalyzer() {
       peakUtilization,
       availableBandwidth,
       bottlenecks,
-      recommendations,
+      recommendations: Array.from(recommendationSet),
     }
   }
 
   const analyzeLatency = (): LatencyAnalysis => {
-    // Simulated latency analysis based on network topology
+    const { entries, dataIssues } = getInterfaceDataset()
+    const activeInterfaces = entries.filter((entry) => entry.iface.status === "up" && entry.speed > 0)
+    const downInterfaces = entries.filter((entry) => entry.iface.status !== "up")
+
+    const issues = new Set<string>(dataIssues)
+
+    if (activeInterfaces.length === 0) {
+      issues.add("No active interfaces were available for latency estimation.")
+      if (downInterfaces.length > 0) {
+        issues.add(
+          `${downInterfaces.length} interface${downInterfaces.length === 1 ? "" : "s"} reported down and were excluded from analysis.`,
+        )
+      }
+
+      return {
+        averageLatency: 0,
+        jitter: 0,
+        packetLoss: Math.min(downInterfaces.length * 2, 100),
+        qualityScore: Math.max(0, 80 - downInterfaces.length * 10),
+        issues: Array.from(issues),
+      }
+    }
+
     const routerCount = devices.filter((d) => d.type === "router").length
     const switchCount = devices.filter((d) => d.type === "switch").length
-    const totalDevices = devices.length
+    const firewallCount = devices.filter((d) => d.type === "firewall").length
+    const serverCount = devices.filter((d) => d.type === "server").length
 
-    // Base latency calculation (simplified)
-    const baseLatency = routerCount * 2 + switchCount * 0.5 + Math.random() * 5
-    const jitter = Math.random() * 2
-    const packetLoss = Math.random() * 0.5
+    const averageUtilization =
+      activeInterfaces.reduce((sum, entry) => sum + entry.utilization, 0) / activeInterfaces.length
+    const heavilyUtilized = activeInterfaces.filter((entry) => entry.utilization > 85)
+    const moderatelyUtilized = activeInterfaces.filter(
+      (entry) => entry.utilization > 65 && entry.utilization <= 85,
+    )
 
-    // Quality score calculation
+    const topologyCost = routerCount * 1.8 + switchCount * 0.45 + firewallCount * 2.5 + serverCount * 0.2
+    const congestionPenalty = heavilyUtilized.length * 2.5 + moderatelyUtilized.length * 1.2
+    const utilizationPenalty = averageUtilization * 0.18
+
+    const averageLatency = Number((topologyCost + congestionPenalty + utilizationPenalty).toFixed(2))
+
+    const utilizationVariance =
+      activeInterfaces.reduce((sum, entry) => sum + Math.pow(entry.utilization - averageUtilization, 2), 0) /
+      activeInterfaces.length
+    const jitter = Number((Math.sqrt(utilizationVariance) * 0.12).toFixed(2))
+
+    const packetLossBase = heavilyUtilized.length * 0.6 + downInterfaces.length * 2
+    const packetLoss = Math.min(
+      100,
+      Number((packetLossBase + Math.max(0, averageUtilization - 95) * 0.3).toFixed(2)),
+    )
+
     let qualityScore = 100
-    if (baseLatency > 50) qualityScore -= 20
-    if (baseLatency > 100) qualityScore -= 30
-    if (jitter > 1) qualityScore -= 15
-    if (packetLoss > 0.1) qualityScore -= 25
+    if (averageLatency > 60) qualityScore -= 25
+    else if (averageLatency > 40) qualityScore -= 15
+    else if (averageLatency > 25) qualityScore -= 10
 
-    const issues: string[] = []
-    if (baseLatency > 50) issues.push("High latency detected")
-    if (jitter > 1) issues.push("High jitter affecting real-time applications")
-    if (packetLoss > 0.1) issues.push("Packet loss detected")
-    if (totalDevices > 10) issues.push("Complex topology may contribute to latency")
+    if (jitter > 2.5) qualityScore -= 20
+    else if (jitter > 1.5) qualityScore -= 12
+    else if (jitter > 1) qualityScore -= 6
+
+    if (packetLoss > 2) qualityScore -= 30
+    else if (packetLoss > 1) qualityScore -= 20
+    else if (packetLoss > 0.5) qualityScore -= 10
+
+    qualityScore = Math.max(0, Math.min(100, qualityScore - heavilyUtilized.length * 2))
+
+    if (averageLatency > 40) {
+      issues.add("Average latency is elevated; review hop count and congestion sources.")
+    }
+    if (jitter > 1.5) {
+      issues.add("Latency jitter is high; verify QoS and real-time traffic paths.")
+    }
+    if (packetLoss > 1) {
+      issues.add("Packet loss detected; inspect oversubscribed or error-prone links.")
+    }
+    if (downInterfaces.length > 0) {
+      issues.add(
+        `${downInterfaces.length} interface${downInterfaces.length === 1 ? " is" : "s are"} down and excluded from latency calculations.`,
+      )
+    }
 
     return {
-      averageLatency: baseLatency,
+      averageLatency,
       jitter,
       packetLoss,
-      qualityScore: Math.max(0, qualityScore),
-      issues,
+      qualityScore: Math.round(qualityScore),
+      issues: Array.from(issues),
     }
   }
 
@@ -246,9 +385,10 @@ export function NetworkAnalyzer() {
 
     if (analysisResults.bandwidth) {
       const bw = analysisResults.bandwidth
+      const utilizationPercent = bw.totalCapacity > 0 ? (bw.currentUtilization / bw.totalCapacity) * 100 : 0
       report += "## Bandwidth Analysis\n"
       report += `- Total Capacity: ${bw.totalCapacity.toFixed(0)} Mbps\n`
-      report += `- Current Utilization: ${bw.currentUtilization.toFixed(0)} Mbps (${((bw.currentUtilization / bw.totalCapacity) * 100).toFixed(1)}%)\n`
+      report += `- Current Utilization: ${bw.currentUtilization.toFixed(0)} Mbps (${utilizationPercent.toFixed(1)}%)\n`
       report += `- Available Bandwidth: ${bw.availableBandwidth.toFixed(0)} Mbps\n`
       report += `- Peak Interface Utilization: ${bw.peakUtilization.toFixed(1)}%\n\n`
 
@@ -317,10 +457,11 @@ export function NetworkAnalyzer() {
   const networkHealth = useMemo(() => {
     if (!analysisResults.bandwidth || !analysisResults.latency) return 0
 
-    const bwScore = Math.max(
-      0,
-      100 - (analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity) * 100,
-    )
+    const utilizationRatio =
+      analysisResults.bandwidth.totalCapacity > 0
+        ? analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity
+        : 0
+    const bwScore = Math.max(0, 100 - utilizationRatio * 100)
     const latencyScore = analysisResults.latency.qualityScore
 
     return Math.round((bwScore + latencyScore) / 2)
@@ -539,8 +680,11 @@ export function NetworkAnalyzer() {
                         </div>
                         <Progress
                           value={
-                            (analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity) *
-                            100
+                            analysisResults.bandwidth.totalCapacity > 0
+                              ? (analysisResults.bandwidth.currentUtilization /
+                                  analysisResults.bandwidth.totalCapacity) *
+                                100
+                              : 0
                           }
                           className="mt-2"
                         />
