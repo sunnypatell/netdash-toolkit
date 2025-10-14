@@ -16,6 +16,9 @@ interface PingResult {
   success: boolean
   responseTime?: number
   error?: string
+  methodUsed?: "HEAD" | "GET"
+  scheme?: "http" | "https"
+  fallback?: boolean
 }
 
 interface TracerouteHop {
@@ -33,41 +36,172 @@ export function PingTraceroute() {
   const [isPinging, setIsPinging] = useState(false)
   const [isTracing, setIsTracing] = useState(false)
 
+  const [pingValidationError, setPingValidationError] = useState<string | null>(null)
+  const [tracerouteValidationError, setTracerouteValidationError] = useState<string | null>(null)
+  const [activeTracerouteTarget, setActiveTracerouteTarget] = useState<string | null>(null)
+
+  const parseTargetInput = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+
+    const hasScheme = /^[a-zA-Z][a-zA-Z\d+-.]*:\/\//.test(trimmed)
+    const addSchemeIfMissing = () => {
+      const looksLikeIPv6 = trimmed.includes(":") && !trimmed.includes("//")
+      const needsBrackets = looksLikeIPv6 && !trimmed.startsWith("[") && !trimmed.endsWith("]")
+      const hostPort = needsBrackets ? `[${trimmed}]` : trimmed
+      return `http://${hostPort}`
+    }
+
+    const candidate = hasScheme ? trimmed : addSchemeIfMissing()
+
+    let url: URL
+    try {
+      url = new URL(candidate)
+    } catch (error) {
+      return null
+    }
+
+    if (!["http:", "https:"].includes(url.protocol)) {
+      return null
+    }
+
+    const hostLabel = url.port ? `${url.hostname}:${url.port}` : url.hostname
+    const hostForUrl = url.host
+
+    const urls: string[] = []
+    const primaryProtocol = url.protocol === "http:" ? "http" : "https"
+    urls.push(`${primaryProtocol}://${hostForUrl}`)
+
+    const alternateProtocol = primaryProtocol === "http" ? "https" : "http"
+    const alternateUrl = `${alternateProtocol}://${hostForUrl}`
+    if (!hasScheme || !urls.includes(alternateUrl)) {
+      urls.push(alternateUrl)
+    }
+
+    const uniqueUrls = Array.from(new Set(urls))
+
+    return {
+      displayHost: hostLabel,
+      urls: uniqueUrls,
+    }
+  }
+
+  const createTimeoutSignal = (ms: number) => {
+    if (typeof AbortController === "undefined") return undefined
+
+    const abortSignalWithTimeout = (AbortSignal as typeof AbortSignal & {
+      timeout?: (ms: number) => AbortSignal
+    }).timeout
+
+    if (typeof abortSignalWithTimeout === "function") {
+      return abortSignalWithTimeout(ms)
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), ms)
+    controller.signal.addEventListener("abort", () => clearTimeout(timer), { once: true })
+    return controller.signal
+  }
+
+  const attemptPingRequest = async (url: string) => {
+    const methods: Array<"HEAD" | "GET"> = ["HEAD", "GET"]
+    let lastError: unknown = null
+
+    for (let i = 0; i < methods.length; i++) {
+      const method = methods[i]
+      const startTime = performance.now()
+      try {
+        await fetch(url, {
+          method,
+          mode: "no-cors",
+          cache: "no-cache",
+          signal: createTimeoutSignal(5000),
+        })
+
+        const endTime = performance.now()
+        return {
+          success: true as const,
+          responseTime: endTime - startTime,
+          methodUsed: method,
+          methodFallback: i > 0,
+        }
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    return {
+      success: false as const,
+      error: lastError,
+    }
+  }
+
+  const formatPingError = (error: unknown) => {
+    if (error instanceof DOMException) {
+      if (error.name === "AbortError") {
+        return "Request timed out"
+      }
+      return error.message || error.name
+    }
+    if (error instanceof Error) {
+      return error.message
+    }
+    return "Host unreachable or blocked"
+  }
+
   // Simulate ping functionality (browser limitations prevent real ICMP)
   const performPing = async () => {
     if (!pingHost.trim()) return
 
+    const target = parseTargetInput(pingHost)
+    if (!target) {
+      setPingValidationError("Enter a valid hostname or IP address.")
+      return
+    }
+
+    setPingValidationError(null)
     setIsPinging(true)
-    const startTime = performance.now()
 
     try {
-      // Use HTTP request as ping simulation
-      const response = await fetch(`https://${pingHost}`, {
-        method: "HEAD",
-        mode: "no-cors",
-        cache: "no-cache",
-      })
+      let fallbackUsed = false
+      let lastError: unknown = null
 
-      const endTime = performance.now()
-      const responseTime = endTime - startTime
+      for (let i = 0; i < target.urls.length; i++) {
+        const url = target.urls[i]
+        const attempt = await attemptPingRequest(url)
 
-      const result: PingResult = {
-        host: pingHost,
-        timestamp: Date.now(),
-        success: true,
-        responseTime: responseTime,
+        if (attempt.success) {
+          const scheme = new URL(url).protocol.replace(":", "") as "http" | "https"
+          const result: PingResult = {
+            host: target.displayHost,
+            timestamp: Date.now(),
+            success: true,
+            responseTime: attempt.responseTime,
+            methodUsed: attempt.methodUsed,
+            scheme,
+            fallback: fallbackUsed || attempt.methodFallback,
+          }
+
+          setPingResults((prev) => [result, ...prev.slice(0, 9)])
+          return
+        }
+
+        fallbackUsed = true
+        lastError = attempt.error
       }
 
-      setPingResults([result, ...pingResults.slice(0, 9)])
-    } catch (error) {
+      const lastAttemptUrl = target.urls[target.urls.length - 1]
+      const scheme = new URL(lastAttemptUrl).protocol.replace(":", "") as "http" | "https"
       const result: PingResult = {
-        host: pingHost,
+        host: target.displayHost,
         timestamp: Date.now(),
         success: false,
-        error: "Host unreachable or CORS blocked",
+        error: formatPingError(lastError),
+        scheme,
+        fallback: fallbackUsed,
       }
 
-      setPingResults([result, ...pingResults.slice(0, 9)])
+      setPingResults((prev) => [result, ...prev.slice(0, 9)])
     } finally {
       setIsPinging(false)
     }
@@ -77,8 +211,16 @@ export function PingTraceroute() {
   const performTraceroute = async () => {
     if (!tracerouteHost.trim()) return
 
+    const target = parseTargetInput(tracerouteHost)
+    if (!target) {
+      setTracerouteValidationError("Enter a valid hostname or IP address.")
+      return
+    }
+
+    setTracerouteValidationError(null)
     setIsTracing(true)
     setTracerouteResults([])
+    setActiveTracerouteTarget(target.displayHost)
 
     // Simulate traceroute hops
     const simulatedHops: TracerouteHop[] = [
@@ -86,13 +228,21 @@ export function PingTraceroute() {
       { hop: 2, host: "10.0.0.1", responseTime: 5.8, timeout: false },
       { hop: 3, host: "203.0.113.1", responseTime: 12.4, timeout: false },
       { hop: 4, host: "198.51.100.1", responseTime: 25.6, timeout: false },
-      { hop: 5, host: tracerouteHost, responseTime: 45.2, timeout: false },
+      { hop: 5, host: target.displayHost, responseTime: 45.2, timeout: false },
     ]
 
     // Simulate progressive discovery
     for (let i = 0; i < simulatedHops.length; i++) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
-      setTracerouteResults((prev) => [...prev, simulatedHops[i]])
+      const hop = simulatedHops[i]
+      const jitter = hop.timeout ? 0 : (Math.random() - 0.5) * 4
+      setTracerouteResults((prev) => [
+        ...prev,
+        {
+          ...hop,
+          responseTime: hop.timeout ? undefined : Math.max(0.5, (hop.responseTime || 0) + jitter),
+        },
+      ])
     }
 
     setIsTracing(false)
@@ -154,10 +304,18 @@ export function PingTraceroute() {
                   <Input
                     id="ping-host"
                     value={pingHost}
-                    onChange={(e) => setPingHost(e.target.value)}
+                    onChange={(e) => {
+                      setPingHost(e.target.value)
+                      if (pingValidationError) {
+                        setPingValidationError(null)
+                      }
+                    }}
                     placeholder="google.com or 8.8.8.8"
                     onKeyDown={(e) => e.key === "Enter" && !isPinging && performPing()}
                   />
+                  {pingValidationError && (
+                    <p className="text-xs text-destructive mt-1">{pingValidationError}</p>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button onClick={performPing} disabled={!pingHost.trim() || isPinging}>
@@ -208,6 +366,21 @@ export function PingTraceroute() {
                           </div>
                         </div>
                         <div className="text-right">
+                          <div className="flex items-center justify-end gap-1 mb-1">
+                            {result.scheme && (
+                              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                                {result.scheme}
+                              </Badge>
+                            )}
+                            {result.methodUsed && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {result.methodUsed}
+                              </Badge>
+                            )}
+                            {result.fallback && (
+                              <Badge variant="secondary" className="text-[10px]">Fallback</Badge>
+                            )}
+                          </div>
                           {result.success ? (
                             <div className="flex items-center space-x-2">
                               <Clock className="w-3 h-3 text-blue-600" />
@@ -244,10 +417,18 @@ export function PingTraceroute() {
                   <Input
                     id="traceroute-host"
                     value={tracerouteHost}
-                    onChange={(e) => setTracerouteHost(e.target.value)}
+                    onChange={(e) => {
+                      setTracerouteHost(e.target.value)
+                      if (tracerouteValidationError) {
+                        setTracerouteValidationError(null)
+                      }
+                    }}
                     placeholder="google.com or 8.8.8.8"
                     onKeyDown={(e) => e.key === "Enter" && !isTracing && performTraceroute()}
                   />
+                  {tracerouteValidationError && (
+                    <p className="text-xs text-destructive mt-1">{tracerouteValidationError}</p>
+                  )}
                 </div>
                 <div className="flex items-end">
                   <Button onClick={performTraceroute} disabled={!tracerouteHost.trim() || isTracing}>
@@ -269,7 +450,9 @@ export function PingTraceroute() {
               {(tracerouteResults.length > 0 || isTracing) && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Route to {tracerouteHost}</h4>
+                    <h4 className="font-semibold">
+                      Route to {activeTracerouteTarget ? activeTracerouteTarget : tracerouteHost}
+                    </h4>
                     {tracerouteResults.length > 0 && (
                       <Button
                         variant="outline"
