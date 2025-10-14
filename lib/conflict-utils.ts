@@ -88,6 +88,15 @@ function sameSubnet(ip1: string, ip2: string, prefixLength = 24): boolean {
   return (ip1Int & mask) === (ip2Int & mask)
 }
 
+function collectUniqueValues(entries: ConflictEntry[], key: keyof ConflictEntry): string[] {
+  const values = entries
+    .map((entry) => entry[key])
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.trim())
+
+  return Array.from(new Set(values))
+}
+
 // Detect IP address conflicts (same IP, different MAC)
 function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
   const conflicts: IPConflict[] = []
@@ -111,6 +120,35 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
       if (uniqueMACs.size > 1) {
         // Same IP with different MACs
         const severity = ipEntries.some((e) => e.source === "dhcp") ? "high" : "medium"
+        const remediation = new Set<string>([
+          "Verify which device should have this IP address",
+          "Check for IP address conflicts on the network",
+          "Update DHCP reservations if necessary",
+          "Investigate potential ARP spoofing or duplicate IP assignment",
+        ])
+
+        const interfaces = collectUniqueValues(ipEntries, "interface")
+        if (interfaces.length > 0) {
+          remediation.add(`Inspect connected switch/router interfaces (${interfaces.join(", ")}) for duplicate hosts.`)
+        }
+
+        const vlans = collectUniqueValues(ipEntries, "vlan")
+        if (vlans.length > 0) {
+          remediation.add(`Verify VLAN configuration for ${vlans.join(", ")} and ensure static assignments are documented.`)
+        }
+
+        const hostnames = collectUniqueValues(ipEntries, "hostname")
+        if (hostnames.length > 0) {
+          remediation.add(`Confirm the intended hostnames (${hostnames.join(", ")}) and shut down any unexpected node.`)
+        }
+
+        if (ipEntries.some((entry) => entry.source === "mac-table")) {
+          remediation.add("Clear stale CAM table entries on the relevant switches after removing the duplicate device.")
+        }
+
+        if (ipEntries.some((entry) => entry.source === "arp")) {
+          remediation.add("Flush ARP caches on affected routers or switches after resolving the conflict.")
+        }
 
         conflicts.push({
           type: "ip-duplicate",
@@ -118,12 +156,7 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
           entries: ipEntries,
           severity,
           description: `IP address ${ip} is associated with ${uniqueMACs.size} different MAC addresses`,
-          remediation: [
-            "Verify which device should have this IP address",
-            "Check for IP address conflicts on the network",
-            "Update DHCP reservations if necessary",
-            "Investigate potential ARP spoofing or duplicate IP assignment",
-          ],
+          remediation: Array.from(remediation),
         })
       }
     }
@@ -166,18 +199,34 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
         }
 
         if (hasConflict) {
+          const remediation = new Set<string>([
+            "Verify device network configuration",
+            "Check for MAC address cloning or spoofing",
+            "Investigate DHCP lease conflicts",
+            "Ensure device is not multi-homed incorrectly",
+          ])
+
+          const interfaces = collectUniqueValues(macEntries, "interface")
+          if (interfaces.length > 0) {
+            remediation.add(`Audit switch ports ${interfaces.join(", ")} for unmanaged switches, bridges, or loops.`)
+          }
+
+          const vlans = collectUniqueValues(macEntries, "vlan")
+          if (vlans.length > 1) {
+            remediation.add(`Confirm the MAC address is not trunked across VLANs (${vlans.join(", ")}) unexpectedly.`)
+          }
+
+          if (macEntries.some((entry) => entry.source === "mac-table")) {
+            remediation.add("Consider enabling port security or sticky MAC on the affected interfaces to prevent duplicates.")
+          }
+
           conflicts.push({
             type: "mac-duplicate",
             mac,
             entries: macEntries,
             severity: "medium",
             description: `MAC address ${mac} is associated with multiple IP addresses in the same subnet`,
-            remediation: [
-              "Verify device network configuration",
-              "Check for MAC address cloning or spoofing",
-              "Investigate DHCP lease conflicts",
-              "Ensure device is not multi-homed incorrectly",
-            ],
+            remediation: Array.from(remediation),
           })
         }
       }
@@ -199,6 +248,28 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
     const conflictingDHCP = dhcpEntries.find((dhcp) => dhcp.ip === staticEntry.ip && dhcp.mac !== staticEntry.mac)
 
     if (conflictingDHCP) {
+      const remediation = new Set<string>([
+        "Move static IP outside DHCP scope range",
+        "Create DHCP reservation for static device",
+        "Update DHCP scope to exclude static IP range",
+        "Verify device MAC address is correct",
+      ])
+
+      const interfaces = collectUniqueValues([staticEntry], "interface")
+      if (interfaces.length > 0) {
+        remediation.add(`Document and monitor the connected interface (${interfaces.join(", ")}) for unauthorized re-use.`)
+      }
+
+      const scopeNames = collectUniqueValues([staticEntry, conflictingDHCP], "vlan")
+      if (scopeNames.length > 0) {
+        remediation.add(`Validate DHCP scopes or VLANs (${scopeNames.join(", ")}) to ensure reservation boundaries are correct.`)
+      }
+
+      const hostnames = collectUniqueValues([conflictingDHCP], "hostname")
+      if (hostnames.length > 0) {
+        remediation.add(`Confirm DHCP reservation details for ${hostnames.join(", ")}.`)
+      }
+
       conflicts.push({
         type: "dhcp-static-overlap",
         ip: staticEntry.ip,
@@ -206,12 +277,7 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
         dhcpEntry: conflictingDHCP,
         severity: "high",
         description: `Static IP ${staticEntry.ip} conflicts with DHCP lease for different MAC address`,
-        remediation: [
-          "Move static IP outside DHCP scope range",
-          "Create DHCP reservation for static device",
-          "Update DHCP scope to exclude static IP range",
-          "Verify device MAC address is correct",
-        ],
+        remediation: Array.from(remediation),
       })
     }
   }
