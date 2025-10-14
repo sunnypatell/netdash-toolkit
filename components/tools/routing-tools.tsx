@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,9 +11,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Router, Network, Settings, Info, Download } from "lucide-react"
+import { Copy, Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ResultCard } from "@/components/ui/result-card"
+import {
+  calculateIPv4Subnet,
+  intToIpv4,
+  ipv4ToInt,
+  isValidIPv4,
+  netmaskToPrefix,
+  prefixToNetmask,
+} from "@/lib/network-utils"
 
 interface OSPFConfig {
   processId: string
@@ -60,6 +68,180 @@ interface StaticRoute {
   track: string
 }
 
+interface NetworkStatementEvaluation {
+  isValid: boolean
+  network?: string
+  wildcard?: string
+  warnings: string[]
+  error?: string
+}
+
+interface StaticRouteEvaluation {
+  isValid: boolean
+  destination?: string
+  mask?: string
+  nextHop?: string
+  exitInterface?: string
+  warnings: string[]
+  error?: string
+}
+
+const evaluateNetworkStatement = (address: string, wildcardMask?: string): NetworkStatementEvaluation => {
+  const warnings: string[] = []
+  const trimmedAddress = address.trim()
+
+  if (!trimmedAddress) {
+    return { isValid: false, warnings, error: "Network address is required" }
+  }
+
+  if (trimmedAddress.includes("/")) {
+    const [ip, prefixStr] = trimmedAddress.split("/")
+    const prefix = Number.parseInt(prefixStr ?? "", 10)
+
+    if (!isValidIPv4(ip) || isNaN(prefix) || prefix < 0 || prefix > 32) {
+      return { isValid: false, warnings, error: "Invalid CIDR notation" }
+    }
+
+    const subnet = calculateIPv4Subnet(ip, prefix)
+    if (subnet.network !== ip) {
+      warnings.push(`Normalized network to ${subnet.network}/${prefix}`)
+    }
+
+    return { isValid: true, network: subnet.network, wildcard: subnet.wildcardMask, warnings }
+  }
+
+  if (!isValidIPv4(trimmedAddress)) {
+    return { isValid: false, warnings, error: "Invalid IPv4 address" }
+  }
+
+  let wildcard = (wildcardMask ?? "").trim()
+  if (!wildcard) {
+    wildcard = "0.0.0.0"
+    warnings.push("Wildcard mask missing; assuming host-specific statement")
+  }
+
+  if (!isValidIPv4(wildcard)) {
+    return { isValid: false, warnings, error: "Invalid wildcard mask" }
+  }
+
+  const wildcardInt = ipv4ToInt(wildcard)
+  const netmaskInt = (~wildcardInt) >>> 0
+  const netmask = intToIpv4(netmaskInt)
+  let prefix: number
+  try {
+    prefix = netmaskToPrefix(netmask)
+  } catch (error) {
+    return {
+      isValid: false,
+      warnings,
+      error: error instanceof Error ? error.message : "Wildcard must translate to a valid subnet mask",
+    }
+  }
+
+  const normalizedMask = prefixToNetmask(prefix)
+
+  if (ipv4ToInt(normalizedMask) !== netmaskInt) {
+    return { isValid: false, warnings, error: "Wildcard must map to a contiguous subnet" }
+  }
+
+  const subnet = calculateIPv4Subnet(trimmedAddress, prefix)
+  if (subnet.network !== trimmedAddress) {
+    warnings.push(`Normalized network to ${subnet.network}/${prefix}`)
+  }
+
+  return { isValid: true, network: subnet.network, wildcard: subnet.wildcardMask, warnings }
+}
+
+const evaluateStaticRoute = (route: StaticRoute): StaticRouteEvaluation => {
+  const warnings: string[] = []
+  const destinationInput = route.destination.trim()
+  let maskInput = route.mask.trim()
+  const nextHopInput = route.nextHop.trim()
+  const interfaceInput = route.interface.trim()
+
+  if (!destinationInput) {
+    return { isValid: false, warnings, error: "Destination network is required" }
+  }
+
+  let destination = destinationInput
+  let prefixFromDestination: number | null = null
+
+  if (destination.includes("/")) {
+    const [ip, prefixStr] = destination.split("/")
+    const prefix = Number.parseInt(prefixStr ?? "", 10)
+
+    if (!isValidIPv4(ip) || isNaN(prefix) || prefix < 0 || prefix > 32) {
+      return { isValid: false, warnings, error: "Invalid destination CIDR" }
+    }
+
+    const subnet = calculateIPv4Subnet(ip, prefix)
+    if (subnet.network !== ip) {
+      warnings.push(`Destination normalized to ${subnet.network}/${prefix}`)
+    }
+
+    destination = subnet.network
+    maskInput = prefixToNetmask(prefix)
+    prefixFromDestination = prefix
+  } else if (!isValidIPv4(destination)) {
+    return { isValid: false, warnings, error: "Invalid destination address" }
+  }
+
+  if (!maskInput) {
+    if (prefixFromDestination !== null) {
+      maskInput = prefixToNetmask(prefixFromDestination)
+    } else {
+      return { isValid: false, warnings, error: "Subnet mask or prefix is required" }
+    }
+  }
+
+  let prefix: number
+  if (maskInput.includes(".")) {
+    if (!isValidIPv4(maskInput)) {
+      return { isValid: false, warnings, error: "Invalid subnet mask" }
+    }
+    try {
+      prefix = netmaskToPrefix(maskInput)
+    } catch (error) {
+      return {
+        isValid: false,
+        warnings,
+        error: error instanceof Error ? error.message : "Subnet mask must have contiguous 1 bits",
+      }
+    }
+  } else {
+    const sanitized = maskInput.startsWith("/") ? maskInput.slice(1) : maskInput
+    const parsed = Number.parseInt(sanitized, 10)
+    if (isNaN(parsed) || parsed < 0 || parsed > 32) {
+      return { isValid: false, warnings, error: "Invalid prefix length" }
+    }
+    prefix = parsed
+    maskInput = prefixToNetmask(prefix)
+  }
+
+  const subnet = calculateIPv4Subnet(destination, prefix)
+  if (subnet.network !== destination) {
+    warnings.push(`Destination adjusted to ${subnet.network}/${prefix}`)
+    destination = subnet.network
+  }
+
+  if (nextHopInput && !isValidIPv4(nextHopInput)) {
+    return { isValid: false, warnings, error: "Invalid next-hop address" }
+  }
+
+  if (!nextHopInput && !interfaceInput) {
+    return { isValid: false, warnings, error: "Specify a next hop or exit interface" }
+  }
+
+  return {
+    isValid: true,
+    destination,
+    mask: subnet.netmask,
+    nextHop: nextHopInput || undefined,
+    exitInterface: interfaceInput || undefined,
+    warnings,
+  }
+}
+
 export function RoutingTools() {
   const { toast } = useToast()
   const [ospfConfig, setOspfConfig] = useState<OSPFConfig>({
@@ -98,15 +280,27 @@ export function RoutingTools() {
     },
   ])
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copied to clipboard",
-      description: "Configuration copied successfully",
-    })
-  }
+  const ospfNetworkEvaluations = useMemo(
+    () =>
+      ospfConfig.networks.map((network) => ({
+        raw: network,
+        evaluation: evaluateNetworkStatement(network.address, network.wildcardMask),
+      })),
+    [ospfConfig.networks],
+  )
 
-  const generateOSPFConfig = () => {
+  const eigrpNetworkEvaluations = useMemo(
+    () =>
+      eigrpConfig.networks.map((network) => ({
+        raw: network,
+        evaluation: evaluateNetworkStatement(network.address, network.wildcardMask),
+      })),
+    [eigrpConfig.networks],
+  )
+
+  const staticRouteEvaluations = useMemo(() => staticRoutes.map((route) => evaluateStaticRoute(route)), [staticRoutes])
+
+  const ospfConfigText = useMemo(() => {
     let config = `! OSPF Configuration\n`
     config += `router ospf ${ospfConfig.processId}\n`
 
@@ -118,10 +312,19 @@ export function RoutingTools() {
       config += ` default-information originate\n`
     }
 
-    ospfConfig.networks.forEach((network) => {
-      if (network.address && network.wildcardMask) {
-        config += ` network ${network.address} ${network.wildcardMask} area ${network.area}\n`
+    ospfNetworkEvaluations.forEach(({ raw, evaluation }, index) => {
+      if (!raw.address) return
+
+      if (!evaluation.isValid || !evaluation.network || !evaluation.wildcard) {
+        config += `! Skipped network ${raw.address || `entry ${index + 1}`}: ${evaluation.error || "Invalid definition"}\n`
+        return
       }
+
+      evaluation.warnings.forEach((warning) => {
+        config += `! Warning [${raw.address || `entry ${index + 1}`}]: ${warning}\n`
+      })
+
+      config += ` network ${evaluation.network} ${evaluation.wildcard} area ${raw.area || "0"}\n`
     })
 
     if (ospfConfig.redistributeStatic) {
@@ -138,7 +341,6 @@ export function RoutingTools() {
 
     config += `!\n`
 
-    // Area configurations
     ospfConfig.areas.forEach((area) => {
       if (area.id !== "0") {
         if (area.type === "stub") {
@@ -156,9 +358,9 @@ export function RoutingTools() {
     })
 
     return config
-  }
+  }, [ospfConfig, ospfNetworkEvaluations])
 
-  const generateEIGRPConfig = () => {
+  const eigrpConfigText = useMemo(() => {
     let config = `! EIGRP Configuration\n`
     config += `router eigrp ${eigrpConfig.asNumber}\n`
 
@@ -166,10 +368,19 @@ export function RoutingTools() {
       config += ` eigrp router-id ${eigrpConfig.routerId}\n`
     }
 
-    eigrpConfig.networks.forEach((network) => {
-      if (network.address && network.wildcardMask) {
-        config += ` network ${network.address} ${network.wildcardMask}\n`
+    eigrpNetworkEvaluations.forEach(({ raw, evaluation }, index) => {
+      if (!raw.address) return
+
+      if (!evaluation.isValid || !evaluation.network || !evaluation.wildcard) {
+        config += `! Skipped network ${raw.address || `entry ${index + 1}`}: ${evaluation.error || "Invalid definition"}\n`
+        return
       }
+
+      evaluation.warnings.forEach((warning) => {
+        config += `! Warning [${raw.address || `entry ${index + 1}`}]: ${warning}\n`
+      })
+
+      config += ` network ${evaluation.network} ${evaluation.wildcard}\n`
     })
 
     if (!eigrpConfig.autoSummary) {
@@ -198,42 +409,127 @@ export function RoutingTools() {
 
     config += `!\n`
     return config
-  }
+  }, [eigrpConfig, eigrpNetworkEvaluations])
 
-  const generateStaticRoutes = () => {
+  const staticConfigText = useMemo(() => {
     let config = `! Static Routes Configuration\n`
 
-    staticRoutes.forEach((route, index) => {
-      if (route.destination && route.mask && (route.nextHop || route.interface)) {
-        let routeCmd = `ip route ${route.destination} ${route.mask}`
+    staticRouteEvaluations.forEach((evaluation, index) => {
+      const route = staticRoutes[index]
+      if (!route) return
 
-        if (route.nextHop) {
-          routeCmd += ` ${route.nextHop}`
-        } else if (route.interface) {
-          routeCmd += ` ${route.interface}`
+      if (!evaluation.isValid || !evaluation.destination || !evaluation.mask) {
+        if (route.destination || route.mask) {
+          config += `! Skipped static route ${route.destination || `entry ${index + 1}`}: ${
+            evaluation.error || "Invalid definition"
+          }\n`
         }
+        return
+      }
 
-        if (route.adminDistance !== "1") {
-          routeCmd += ` ${route.adminDistance}`
-        }
+      evaluation.warnings.forEach((warning) => {
+        config += `! Warning [${route.destination || `entry ${index + 1}`}]: ${warning}\n`
+      })
 
-        if (route.permanent) {
-          routeCmd += ` permanent`
-        }
+      let routeCmd = `ip route ${evaluation.destination} ${evaluation.mask}`
 
-        if (route.track) {
-          routeCmd += ` track ${route.track}`
-        }
+      if (evaluation.exitInterface) {
+        routeCmd += ` ${evaluation.exitInterface}`
+      }
 
-        config += `${routeCmd}\n`
+      if (evaluation.nextHop) {
+        routeCmd += ` ${evaluation.nextHop}`
+      }
 
-        if (route.description) {
-          config += `! ${route.description}\n`
-        }
+      const distance = Number.parseInt(route.adminDistance || "1", 10)
+      if (!isNaN(distance) && distance !== 1) {
+        routeCmd += ` ${distance}`
+      }
+
+      if (route.permanent) {
+        routeCmd += " permanent"
+      }
+
+      if (route.track) {
+        routeCmd += ` track ${route.track}`
+      }
+
+      config += `${routeCmd}\n`
+
+      if (route.description) {
+        config += `! ${route.description}\n`
       }
     })
 
     return config
+  }, [staticRouteEvaluations, staticRoutes])
+
+  const ospfIssues = useMemo(() => {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    ospfNetworkEvaluations.forEach(({ raw, evaluation }, index) => {
+      const label = raw.address || `Entry ${index + 1}`
+      if (evaluation.error) {
+        errors.push(`${label}: ${evaluation.error}`)
+      } else if (evaluation.isValid) {
+        evaluation.warnings.forEach((warning) => warnings.push(`${label}: ${warning}`))
+      }
+    })
+
+    return { errors, warnings }
+  }, [ospfNetworkEvaluations])
+
+  const eigrpIssues = useMemo(() => {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    eigrpNetworkEvaluations.forEach(({ raw, evaluation }, index) => {
+      const label = raw.address || `Entry ${index + 1}`
+      if (evaluation.error) {
+        errors.push(`${label}: ${evaluation.error}`)
+      } else if (evaluation.isValid) {
+        evaluation.warnings.forEach((warning) => warnings.push(`${label}: ${warning}`))
+      }
+    })
+
+    return { errors, warnings }
+  }, [eigrpNetworkEvaluations])
+
+  const staticIssues = useMemo(() => {
+    const errors: string[] = []
+    const warnings: string[] = []
+
+    staticRouteEvaluations.forEach((evaluation, index) => {
+      const label = staticRoutes[index]?.destination || `Route ${index + 1}`
+      if (evaluation.error) {
+        errors.push(`${label}: ${evaluation.error}`)
+      } else if (evaluation.isValid) {
+        evaluation.warnings.forEach((warning) => warnings.push(`${label}: ${warning}`))
+      }
+    })
+
+    return { errors, warnings }
+  }, [staticRouteEvaluations, staticRoutes])
+
+  const ospfValidNetworks = ospfNetworkEvaluations.filter((entry) => entry.evaluation.isValid).length
+  const eigrpValidNetworks = eigrpNetworkEvaluations.filter((entry) => entry.evaluation.isValid).length
+  const validStaticRoutes = staticRouteEvaluations.filter((evaluation) => evaluation.isValid)
+  const defaultRouteCount = staticRouteEvaluations.filter(
+    (evaluation) => evaluation.isValid && evaluation.destination === "0.0.0.0" && evaluation.mask === "0.0.0.0",
+  ).length
+  const floatingRouteCount = staticRouteEvaluations.filter((evaluation, index) => {
+    if (!evaluation.isValid) return false
+    const distance = Number.parseInt(staticRoutes[index].adminDistance || "1", 10)
+    return !isNaN(distance) && distance > 1
+  }).length
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast({
+      title: "Copied to clipboard",
+      description: "Configuration copied successfully",
+    })
   }
 
   const addNetwork = (type: "ospf" | "eigrp") => {
@@ -457,15 +753,30 @@ export function RoutingTools() {
             </Card>
 
             <div className="space-y-4">
+              {(ospfIssues.errors.length > 0 || ospfIssues.warnings.length > 0) && (
+                <Alert variant={ospfIssues.errors.length ? "destructive" : "default"}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="space-y-1 text-sm">
+                    <strong>
+                      {ospfIssues.errors.length > 0
+                        ? "Resolve the following OSPF validation issues:"
+                        : "Review OSPF network warnings:"}
+                    </strong>
+                    <ul className="list-disc list-inside space-y-1">
+                      {(ospfIssues.errors.length > 0 ? ospfIssues.errors : ospfIssues.warnings).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <ResultCard
                 title="Generated OSPF Configuration"
                 data={[
                   { label: "Process ID", value: ospfConfig.processId },
                   { label: "Router ID", value: ospfConfig.routerId || "Auto-selected" },
-                  {
-                    label: "Networks",
-                    value: ospfConfig.networks.filter((n) => n.address && n.wildcardMask).length.toString(),
-                  },
+                  { label: "Valid Networks", value: `${ospfValidNetworks}/${ospfConfig.networks.length}` },
                 ]}
               />
 
@@ -475,19 +786,19 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={generateOSPFConfig()} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea value={ospfConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2 bg-transparent"
-                      onClick={() => copyToClipboard(generateOSPFConfig())}
+                      onClick={() => copyToClipboard(ospfConfigText)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                   <div className="flex space-x-2 mt-4">
                     <Button
-                      onClick={() => exportConfig(generateOSPFConfig(), "ospf-config.txt")}
+                      onClick={() => exportConfig(ospfConfigText, "ospf-config.txt")}
                       variant="outline"
                       className="flex-1 bg-transparent"
                     >
@@ -641,15 +952,30 @@ export function RoutingTools() {
             </Card>
 
             <div className="space-y-4">
+              {(eigrpIssues.errors.length > 0 || eigrpIssues.warnings.length > 0) && (
+                <Alert variant={eigrpIssues.errors.length ? "destructive" : "default"}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="space-y-1 text-sm">
+                    <strong>
+                      {eigrpIssues.errors.length > 0
+                        ? "Resolve the following EIGRP validation issues:"
+                        : "Review EIGRP network warnings:"}
+                    </strong>
+                    <ul className="list-disc list-inside space-y-1">
+                      {(eigrpIssues.errors.length > 0 ? eigrpIssues.errors : eigrpIssues.warnings).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <ResultCard
                 title="Generated EIGRP Configuration"
                 data={[
                   { label: "AS Number", value: eigrpConfig.asNumber || "Not set" },
                   { label: "Router ID", value: eigrpConfig.routerId || "Auto-selected" },
-                  {
-                    label: "Networks",
-                    value: eigrpConfig.networks.filter((n) => n.address && n.wildcardMask).length.toString(),
-                  },
+                  { label: "Valid Networks", value: `${eigrpValidNetworks}/${eigrpConfig.networks.length}` },
                 ]}
               />
 
@@ -659,19 +985,19 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={generateEIGRPConfig()} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea value={eigrpConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2 bg-transparent"
-                      onClick={() => copyToClipboard(generateEIGRPConfig())}
+                      onClick={() => copyToClipboard(eigrpConfigText)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                   <div className="flex space-x-2 mt-4">
                     <Button
-                      onClick={() => exportConfig(generateEIGRPConfig(), "eigrp-config.txt")}
+                      onClick={() => exportConfig(eigrpConfigText, "eigrp-config.txt")}
                       variant="outline"
                       className="flex-1 bg-transparent"
                     >
@@ -750,7 +1076,6 @@ export function RoutingTools() {
                             onChange={(e) => {
                               const newRoutes = [...staticRoutes]
                               newRoutes[index].nextHop = e.target.value
-                              newRoutes[index].interface = ""
                               setStaticRoutes(newRoutes)
                             }}
                           />
@@ -763,7 +1088,6 @@ export function RoutingTools() {
                             onChange={(e) => {
                               const newRoutes = [...staticRoutes]
                               newRoutes[index].interface = e.target.value
-                              newRoutes[index].nextHop = ""
                               setStaticRoutes(newRoutes)
                             }}
                           />
@@ -838,25 +1162,30 @@ export function RoutingTools() {
             </Card>
 
             <div className="space-y-4">
+              {(staticIssues.errors.length > 0 || staticIssues.warnings.length > 0) && (
+                <Alert variant={staticIssues.errors.length ? "destructive" : "default"}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="space-y-1 text-sm">
+                    <strong>
+                      {staticIssues.errors.length > 0
+                        ? "Resolve the following static route issues before deployment:"
+                        : "Static route warnings detected:"}
+                    </strong>
+                    <ul className="list-disc list-inside space-y-1">
+                      {(staticIssues.errors.length > 0 ? staticIssues.errors : staticIssues.warnings).map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <ResultCard
                 title="Static Routes Summary"
                 data={[
-                  {
-                    label: "Total Routes",
-                    value: staticRoutes
-                      .filter((r) => r.destination && r.mask && (r.nextHop || r.interface))
-                      .length.toString(),
-                  },
-                  {
-                    label: "Default Routes",
-                    value: staticRoutes
-                      .filter((r) => r.destination === "0.0.0.0" && r.mask === "0.0.0.0")
-                      .length.toString(),
-                  },
-                  {
-                    label: "Floating Static",
-                    value: staticRoutes.filter((r) => Number.parseInt(r.adminDistance) > 1).length.toString(),
-                  },
+                  { label: "Valid Routes", value: `${validStaticRoutes.length}/${staticRoutes.length}` },
+                  { label: "Default Routes", value: defaultRouteCount.toString() },
+                  { label: "Floating Static", value: floatingRouteCount.toString() },
                 ]}
               />
 
@@ -866,19 +1195,19 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={generateStaticRoutes()} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea value={staticConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2 bg-transparent"
-                      onClick={() => copyToClipboard(generateStaticRoutes())}
+                      onClick={() => copyToClipboard(staticConfigText)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                   </div>
                   <div className="flex space-x-2 mt-4">
                     <Button
-                      onClick={() => exportConfig(generateStaticRoutes(), "static-routes.txt")}
+                      onClick={() => exportConfig(staticConfigText, "static-routes.txt")}
                       variant="outline"
                       className="flex-1 bg-transparent"
                     >

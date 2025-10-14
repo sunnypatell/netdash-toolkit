@@ -173,6 +173,8 @@ const algorithmDetails = [
 ]
 
 const recentImprovements = [
+  "Desktop navigation now defaults to an expanded state on larger screens while staying collapsible on mobile.",
+  "IPv4 wildcard and subnet validators reject discontiguous masks across routing and ACL tooling with inline guidance.",
   "Enhanced IP Conflict Checker with support for DHCP leases, MAC tables, and 15+ network data formats",
   "Real-time OUI Lookup integration with macvendors.com API and 18,000+ vendor database",
   "Improved search functionality with dynamic filtering and consistent tool counts",
@@ -183,7 +185,39 @@ const recentImprovements = [
 ]
 
 const changelog = [
-    {
+  {
+    version: "2.3.0",
+    type: "minor",
+    title: "Navigation polish & subnet sanity checks",
+    changes: [
+      "Sidebar automatically expands on desktop breakpoints while remaining collapsible for touch devices.",
+      "Routing and static route builders now fail fast on discontiguous IPv4 masks and provide clear remediation tips.",
+      "Documentation refreshed to highlight the stricter validation and layout behaviour.",
+    ],
+    technical: [
+      "MediaQuery-synchronised sidebar state with SSR-safe guards.",
+      "Subnet mask parser rejects non-contiguous bit patterns before generating configuration output.",
+      "README/About changelog updates matching the release cadence.",
+    ],
+  },
+  {
+    version: "2.2.0",
+    type: "minor",
+    title: "Routing Reliability & Documentation Refresh",
+    changes: [
+      "Validated OSPF, EIGRP, and static route generators with CIDR-aware normalization, wildcard validation, and contextual warnings.",
+      "Extended VLAN manager conflict detection to flag overlapping IPv4 and IPv6 allocations using range analysis.",
+      "Hardened ACL generator host parsing to keep Cisco IOS output consistent for mixed CIDR and host entries.",
+      "Added a branded favicon and comprehensive README outlining deployment workflow, tool coverage, and frontend-only constraints.",
+    ],
+    technical: [
+      "Shared CIDR normalization utilities across routing and ACL tooling.",
+      "BigInt-backed IPv6 range math for multi-VLAN overlap detection.",
+      "Static route evaluation pipeline with combined next-hop/interface support and warning emission.",
+      "Repository documentation overhaul capturing infrastructure limits and DoH/HTTP RTT architecture.",
+    ],
+  },
+  {
     version: "2.1.1",
     type: "patch",
     title: "Mobile Enhancement",

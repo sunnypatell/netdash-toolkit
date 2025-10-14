@@ -55,8 +55,9 @@ export function calculateVLSM(baseNetwork: string, basePrefix: number, requireme
       let prefix = 32
       let blockSize = 1
 
-      // Find the smallest block size that fits the required hosts
-      for (let p = 30; p >= 1; p--) {
+      // Find the smallest block size that fits the required hosts. Include /32 and /31 networks
+      // so that point-to-point and host-only allocations do not consume unnecessarily large ranges.
+      for (let p = 32; p >= 1; p--) {
         const testBlockSize = Math.pow(2, 32 - p)
         const testUsableHosts = p === 31 ? 2 : p === 32 ? 1 : testBlockSize - 2
 
