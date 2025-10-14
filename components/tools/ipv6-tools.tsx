@@ -150,49 +150,116 @@ export function IPv6Tools() {
   }
 
   // Generate EUI-64 from MAC address
-  const generateEUI64 = (mac: string, prefixAddr: string): string => {
-    try {
-      // Clean MAC address
-      const cleanMac = mac.replace(/[:-]/g, "").toLowerCase()
-      if (cleanMac.length !== 12 || !/^[0-9a-f]{12}$/.test(cleanMac)) {
-        throw new Error("Invalid MAC address format")
-      }
-
-      // Split MAC into bytes
-      const macBytes = cleanMac.match(/.{2}/g) || []
-      if (macBytes.length !== 6) {
-        throw new Error("Invalid MAC address")
-      }
-
-      // Flip the U/L bit (7th bit of first byte)
-      const firstByte = Number.parseInt(macBytes[0], 16)
-      const flippedByte = (firstByte ^ 0x02).toString(16).padStart(2, "0")
-
-      // Insert FF:FE in the middle
-      const eui64 = `${flippedByte}${macBytes[1]}:${macBytes[2]}ff:fe${macBytes[3]}:${macBytes[4]}${macBytes[5]}`
-
-      // Combine with prefix
-      const prefixPart = prefixAddr.split("::")[0] || prefixAddr.split(":").slice(0, 4).join(":")
-      return `${prefixPart}:${eui64}`
-    } catch (err) {
-      return `Error: ${err instanceof Error ? err.message : "Invalid MAC address"}`
+  const getNetworkPrefix = (
+    address: string,
+    prefixLength: number,
+  ): { network: string; error?: string } => {
+    const expanded = expandIPv6(address)
+    if (expanded.error) {
+      return { network: "", error: expanded.error }
     }
+
+    if (Number.isNaN(prefixLength) || prefixLength < 0 || prefixLength > 128) {
+      return { network: "", error: "Invalid prefix length. Enter a value between 0 and 128." }
+    }
+
+    const groups = expanded.result.split(":").map((group) => Number.parseInt(group, 16))
+    const maskedGroups = groups.map((group, index) => {
+      const bitsRemaining = prefixLength - index * 16
+      if (bitsRemaining >= 16) return group
+      if (bitsRemaining <= 0) return 0
+
+      const mask = 0xffff - ((1 << (16 - bitsRemaining)) - 1)
+      return group & mask
+    })
+
+    const network = maskedGroups.map((group) => group.toString(16).padStart(4, "0")).join(":")
+    return { network }
   }
 
-  // Generate link-local address
+  const generateEUI64 = (mac: string, networkPrefix: string, prefixLength: number): string => {
+    if (prefixLength !== 64) {
+      throw new Error("EUI-64 generation requires a /64 prefix length")
+    }
+
+    // Clean MAC address
+    const cleanMac = mac.replace(/[:-]/g, "").toLowerCase()
+    if (cleanMac.length !== 12 || !/^[0-9a-f]{12}$/.test(cleanMac)) {
+      throw new Error("Invalid MAC address format")
+    }
+
+    const macBytes = cleanMac.match(/.{2}/g)
+    if (!macBytes || macBytes.length !== 6) {
+      throw new Error("Invalid MAC address")
+    }
+
+    const firstByte = Number.parseInt(macBytes[0], 16)
+    const flippedByte = (firstByte ^ 0x02).toString(16).padStart(2, "0")
+    const eui64 = `${flippedByte}${macBytes[1]}:${macBytes[2]}ff:fe${macBytes[3]}:${macBytes[4]}${macBytes[5]}`
+
+    const expandedPrefix = expandIPv6(networkPrefix)
+    if (expandedPrefix.error) {
+      throw new Error(expandedPrefix.error)
+    }
+
+    const prefixGroups = expandedPrefix.result.split(":")
+    const groupsNeeded = 4
+    const baseGroups = prefixGroups.slice(0, groupsNeeded)
+    while (baseGroups.length < groupsNeeded) {
+      baseGroups.push("0000")
+    }
+
+    const combined = `${baseGroups.join(":")}:${eui64}`
+    const compressed = compressIPv6(combined)
+
+    if (compressed.error) {
+      throw new Error(compressed.error)
+    }
+
+    return compressed.result
+  }
+
   const generateLinkLocal = (mac: string): string => {
-    return generateEUI64(mac, "fe80::")
+    try {
+      return generateEUI64(mac, "fe80::", 64)
+    } catch (err) {
+      return `Error: ${err instanceof Error ? err.message : "Unable to generate link-local address"}`
+    }
   }
 
   const results = useMemo(() => {
     const compressResult = compressIPv6(ipv6Address)
     const expandResult = expandIPv6(ipv6Address)
 
-    // Set error if any operation failed
-    const hasError = compressResult.error || expandResult.error
-    if (hasError && !error) {
-      setError(compressResult.error || expandResult.error || "")
-    } else if (!hasError && error) {
+    let currentError = compressResult.error || expandResult.error || ""
+
+    const prefixLength = Number.parseInt(prefix, 10)
+    if (!currentError && (Number.isNaN(prefixLength) || prefixLength < 0 || prefixLength > 128)) {
+      currentError = "Invalid prefix length. Enter a value between 0 and 128."
+    }
+
+    let networkPrefix = ""
+    if (!currentError) {
+      const networkResult = getNetworkPrefix(ipv6Address, prefixLength)
+      if (networkResult.error) {
+        currentError = networkResult.error
+      } else {
+        networkPrefix = networkResult.network
+      }
+    }
+
+    let eui64Address = ""
+    if (!currentError && networkPrefix) {
+      try {
+        eui64Address = generateEUI64(macAddress, networkPrefix, prefixLength)
+      } catch (err) {
+        currentError = err instanceof Error ? err.message : "Unable to generate EUI-64 address"
+      }
+    }
+
+    if (currentError !== error) {
+      setError(currentError)
+    } else if (!currentError && error) {
       setError("")
     }
 
@@ -201,7 +268,7 @@ export function IPv6Tools() {
       compressed: compressResult.result,
       expanded: expandResult.result,
       solicitedNode: calculateSolicitedNode(ipv6Address),
-      eui64: generateEUI64(macAddress, `2001:db8::/${prefix}`),
+      eui64: eui64Address || "—",
       linkLocal: generateLinkLocal(macAddress),
       addressType: classifyIPv6Address(ipv6Address),
     }
