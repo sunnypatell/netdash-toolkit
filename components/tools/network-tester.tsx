@@ -20,6 +20,7 @@ import {
   Play,
   StopCircle,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   Clock,
   Download,
@@ -164,6 +165,12 @@ export function NetworkTester() {
                 )}
                 <span className="font-mono text-sm">{result.url}</span>
                 <Badge variant="outline">{result.method}</Badge>
+                {result.requestedMethod !== result.method && (
+                  <Badge variant="outline" className="text-xs">
+                    Requested {result.requestedMethod}
+                  </Badge>
+                )}
+                {result.mode === "no-cors" && <Badge variant="secondary">no-cors fallback</Badge>}
                 {result.packetLoss > 0 && <Badge variant="destructive">{result.packetLoss.toFixed(1)}% loss</Badge>}
               </div>
               <span className="text-xs text-muted-foreground">{new Date(result.timestamp).toLocaleTimeString()}</span>
@@ -196,8 +203,32 @@ export function NetworkTester() {
                   <div className="font-mono">{formatDuration(result.p95)}</div>
                 </div>
               </div>
-            ) : (
-              <div className="text-sm text-red-600">{result.error}</div>
+            ) : null}
+
+            {result.success && result.warnings && result.warnings.length > 0 && (
+              <Alert className="mt-3">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <ul className="list-disc space-y-1 pl-5 text-xs">
+                    {result.warnings.map((warning, warningIndex) => (
+                      <li key={warningIndex}>{warning}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!result.success && (
+              <div className="space-y-2">
+                <div className="text-sm text-red-600">{result.error}</div>
+                {result.errorDetails && result.errorDetails.length > 0 && (
+                  <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                    {result.errorDetails.map((detail, detailIndex) => (
+                      <li key={detailIndex}>{detail}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </Card>
         ))}

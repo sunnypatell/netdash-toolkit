@@ -1,6 +1,6 @@
 // VLAN management utilities and switch configuration generators
 
-import { isValidCIDR } from "./network-utils"
+import { cidrToRange, expandIPv6, isValidCIDR, isValidIPv4, isValidIPv6 } from "./network-utils"
 
 export interface VLAN {
   id: number
@@ -84,6 +84,36 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
 }
 
 // Check for overlapping subnets across VLANs
+const MAX_IPV6 = (1n << 128n) - 1n
+
+const ipv6ToBigInt = (ip: string): bigint => {
+  const expanded = expandIPv6(ip)
+  return expanded.split(":").reduce<bigint>((acc, part) => {
+    const value = BigInt(`0x${part}`)
+    return (acc << 16n) + value
+  }, 0n)
+}
+
+const ipv6CidrRange = (cidr: string): { start: bigint; end: bigint } => {
+  const [ip, prefixStr] = cidr.split("/")
+  const prefix = Number.parseInt(prefixStr ?? "", 10)
+  if (isNaN(prefix) || prefix < 0 || prefix > 128) {
+    throw new Error("Invalid IPv6 prefix length")
+  }
+
+  const base = ipv6ToBigInt(ip)
+  const hostBits = BigInt(128 - prefix)
+  const hostMask = hostBits === 0n ? 0n : (1n << hostBits) - 1n
+  const network = base & (MAX_IPV6 ^ hostMask)
+  const end = network + hostMask
+
+  return { start: network, end }
+}
+
+const rangesOverlap = <T extends number | bigint>(aStart: T, aEnd: T, bStart: T, bEnd: T): boolean => {
+  return aStart <= bEnd && bStart <= aEnd
+}
+
 export function checkSubnetOverlaps(vlans: VLAN[]): Array<{ vlan1: VLAN; vlan2: VLAN; subnet: string }> {
   const overlaps: Array<{ vlan1: VLAN; vlan2: VLAN; subnet: string }> = []
 
@@ -94,8 +124,36 @@ export function checkSubnetOverlaps(vlans: VLAN[]): Array<{ vlan1: VLAN; vlan2: 
 
       for (const subnet1 of vlan1.subnets) {
         for (const subnet2 of vlan2.subnets) {
+          if (!subnet1 || !subnet2) continue
+
           if (subnet1 === subnet2) {
             overlaps.push({ vlan1, vlan2, subnet: subnet1 })
+            continue
+          }
+
+          if (isValidCIDR(subnet1) && isValidCIDR(subnet2)) {
+            const [ip1] = subnet1.split("/")
+            const [ip2] = subnet2.split("/")
+
+            try {
+              if (isValidIPv4(ip1) && isValidIPv4(ip2)) {
+                const range1 = cidrToRange(subnet1)
+                const range2 = cidrToRange(subnet2)
+
+                if (rangesOverlap(range1.start, range1.end, range2.start, range2.end)) {
+                  overlaps.push({ vlan1, vlan2, subnet: `${subnet1} ↔ ${subnet2}` })
+                }
+              } else if (isValidIPv6(ip1) && isValidIPv6(ip2)) {
+                const range1 = ipv6CidrRange(subnet1)
+                const range2 = ipv6CidrRange(subnet2)
+
+                if (rangesOverlap(range1.start, range1.end, range2.start, range2.end)) {
+                  overlaps.push({ vlan1, vlan2, subnet: `${subnet1} ↔ ${subnet2}` })
+                }
+              }
+            } catch {
+              // Ignore invalid CIDR conversions and fall back to string comparison
+            }
           }
         }
       }
