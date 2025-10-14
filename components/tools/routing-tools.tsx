@@ -127,7 +127,17 @@ const evaluateNetworkStatement = (address: string, wildcardMask?: string): Netwo
   const wildcardInt = ipv4ToInt(wildcard)
   const netmaskInt = (~wildcardInt) >>> 0
   const netmask = intToIpv4(netmaskInt)
-  const prefix = netmaskToPrefix(netmask)
+  let prefix: number
+  try {
+    prefix = netmaskToPrefix(netmask)
+  } catch (error) {
+    return {
+      isValid: false,
+      warnings,
+      error: error instanceof Error ? error.message : "Wildcard must translate to a valid subnet mask",
+    }
+  }
+
   const normalizedMask = prefixToNetmask(prefix)
 
   if (ipv4ToInt(normalizedMask) !== netmaskInt) {
@@ -189,7 +199,15 @@ const evaluateStaticRoute = (route: StaticRoute): StaticRouteEvaluation => {
     if (!isValidIPv4(maskInput)) {
       return { isValid: false, warnings, error: "Invalid subnet mask" }
     }
-    prefix = netmaskToPrefix(maskInput)
+    try {
+      prefix = netmaskToPrefix(maskInput)
+    } catch (error) {
+      return {
+        isValid: false,
+        warnings,
+        error: error instanceof Error ? error.message : "Subnet mask must have contiguous 1 bits",
+      }
+    }
   } else {
     const sanitized = maskInput.startsWith("/") ? maskInput.slice(1) : maskInput
     const parsed = Number.parseInt(sanitized, 10)

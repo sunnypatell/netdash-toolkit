@@ -28,7 +28,7 @@ The production build is deployed on Vercel and automatically synced from this re
 - **VLAN Manager** — Multi-vendor switch templates, CSV exports, and IPv4/IPv6 overlap detection using CIDR-aware range analysis.
 
 ### Routing & Switching Automation
-- **Routing Tools** — Guided configuration builders for OSPF, EIGRP, and static routes with CIDR normalization, wildcard validation, and warning surfaces.
+- **Routing Tools** — Guided configuration builders for OSPF, EIGRP, and static routes with CIDR normalization, contiguous-mask enforcement, wildcard validation, and warning surfaces.
 - **Wireless Toolkit** — Channel planning, signal modelling, and security checklists for enterprise Wi-Fi deployments.
 - **ACL Generator** — Standard and extended Cisco IOS ACLs with host/CIDR parsing, port validation, and exportable configuration bundles.
 
@@ -78,7 +78,7 @@ The development server is available at `http://localhost:3000`. The Vercel deplo
 
 ## Tool Highlights
 ### Routing Tools
-- Parses CIDR or address/wildcard input, normalizes non-aligned networks, and warns when assumptions are made.
+- Parses CIDR or address/wildcard input, normalizes non-aligned networks, rejects discontiguous masks, and warns when assumptions are made.
 - Supports simultaneous next-hop and exit-interface definitions for static routes, adds comments for skipped entries, and exports ready-to-paste command sets.
 
 ### VLAN Manager
@@ -103,6 +103,7 @@ The development server is available at `http://localhost:3000`. The Vercel deplo
 
 ## Changelog
 The in-app About page contains the full changelog. Recent highlights include:
+- v2.3.0 — Desktop navigation auto-expands on large screens, IPv4 mask validation rejects discontiguous inputs, wildcard feedback improved across routing tools, and documentation refreshed to match the release.
 - v2.2.0 — Routing validation overhaul, VLAN overlap detection, ACL parsing fixes, branded favicon, and full README rewrite.
 - v2.1.1 — Mobile navigation fixes for the collapsible sidebar.
 - v2.1.0 — Major feature expansion covering routing, ACL, wireless, and changelog infrastructure.
