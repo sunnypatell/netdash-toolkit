@@ -107,17 +107,60 @@ export function parseLinuxARP(text: string): ParsedARPEntry[] {
   return entries
 }
 
+// Legacy Linux arp -n format parser
+export function parseLinuxLegacyARP(text: string): ParsedARPEntry[] {
+  const entries: ParsedARPEntry[] = []
+  const lines = text.split("\n")
+
+  for (const line of lines) {
+    if (!line || /address/i.test(line) || /hwtype/i.test(line)) {
+      continue
+    }
+
+    const parts = line.trim().split(/\s+/)
+    if (parts.length < 4) {
+      continue
+    }
+
+    const ip = parts[0]
+    const hwAddress = parts[2]
+    const iface = parts[parts.length - 1]
+    const macCandidate = hwAddress.toLowerCase()
+
+    if (macCandidate === "(incomplete)" || macCandidate.includes("incomplete")) {
+      continue
+    }
+
+    try {
+      entries.push({
+        ip,
+        mac: normalizeMac(hwAddress),
+        interface: iface,
+        source: "arp",
+      })
+    } catch (error) {
+      continue
+    }
+  }
+
+  return entries
+}
+
 // Cisco ARP table parser
 export function parseCiscoARP(text: string): ParsedARPEntry[] {
   const entries: ParsedARPEntry[] = []
   const lines = text.split("\n")
 
   // Regex for Cisco ARP format
-  const arpRegex = /^Internet\s+(\d+\.\d+\.\d+\.\d+)\s+\d+\s+([0-9a-f.]{14})\s+ARPA\s+(\S+)/i
+  const arpRegex = /^Internet\s+(\d+\.\d+\.\d+\.\d+)\s+\S+\s+([0-9a-f.:-]{11,})\s+ARPA\s+(\S+)/i
 
   for (const line of lines) {
     const match = line.match(arpRegex)
     if (match) {
+      const macCandidate = match[2].toLowerCase()
+      if (macCandidate.includes("incomplete")) {
+        continue
+      }
       try {
         entries.push({
           ip: match[1],
@@ -139,38 +182,36 @@ export function parseCiscoMAC(text: string): ParsedMACEntry[] {
   const entries: ParsedMACEntry[] = []
   const lines = text.split("\n")
 
-  const macRegex1 = /^([0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4})\s+(\S+)\s+(\S+)/i
-  const macRegex2 = /^([0-9a-f:]{17})\s+(\S+)\s+(\S+)/i
-  const macRegex3 = /^\s*(\d+)\s+([0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4})\s+(\S+)\s+(\S+)/i
+  const macRegex =
+    /^\s*(?:(\d+)\s+)?([0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}|[0-9a-f:]{17}|[0-9a-f-]{17})\s+(\S+)\s+(.+)$/i
 
   for (const line of lines) {
-    const match = line.match(macRegex1) || line.match(macRegex2) || line.match(macRegex3)
+    const match = line.match(macRegex)
+    if (!match) {
+      continue
+    }
 
-    if (match) {
-      try {
-        let macAddress = match[1]
-        let vlan = undefined
-        let type = match[2]
-        let interfaceName = match[3]
+    const vlan = match[1]
+    const macAddress = match[2]
+    const type = match[3]
+    const interfaceSegment = match[4].trim()
 
-        // Handle format with VLAN as first column
-        if (match.length === 5) {
-          vlan = match[1]
-          macAddress = match[2]
-          type = match[3]
-          interfaceName = match[4]
-        }
+    if (!macAddress) {
+      continue
+    }
 
-        entries.push({
-          mac: normalizeMac(macAddress),
-          vlan: vlan,
-          type: type,
-          interface: interfaceName,
-          source: "mac-table",
-        })
-      } catch (e) {
-        continue
-      }
+    const port = interfaceSegment.split(/\s|,|;/)[0]
+
+    try {
+      entries.push({
+        mac: normalizeMac(macAddress),
+        vlan: vlan,
+        type: type.toLowerCase(),
+        interface: port,
+        source: "mac-table",
+      })
+    } catch (error) {
+      continue
     }
   }
 
@@ -477,6 +518,7 @@ export function autoParseNetworkData(text: string): (ParsedARPEntry | ParsedDHCP
   const arpParsers = [
     parseWindowsARP,
     parseLinuxARP,
+    parseLinuxLegacyARP,
     parseCiscoARP,
     parseJuniperARP,
     parseHPARP,

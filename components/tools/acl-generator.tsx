@@ -23,7 +23,7 @@ import {
   Network,
   Settings,
 } from "lucide-react"
-import { ipv4ToInt, intToIpv4 } from "@/lib/network-utils"
+import { calculateIPv4Subnet, isValidIPv4 } from "@/lib/network-utils"
 import { useToast } from "@/hooks/use-toast"
 
 interface StandardACLRule {
@@ -32,6 +32,7 @@ interface StandardACLRule {
   sourceNetwork: string
   sourceWildcard?: string
   description?: string
+  log?: boolean
 }
 
 interface ExtendedACLRule {
@@ -62,6 +63,72 @@ interface ValidationResult {
   warnings: string[]
 }
 
+type ParsedACLNetwork = {
+  kind: "any" | "host" | "network"
+  network: string
+  wildcard: string
+  host?: string
+  warnings: string[]
+}
+
+const parseACLNetwork = (input: string): ParsedACLNetwork => {
+  const trimmed = input.trim()
+
+  if (!trimmed) {
+    throw new Error("Network value is required")
+  }
+
+  if (trimmed.toLowerCase() === "any") {
+    return { kind: "any", network: "any", wildcard: "", warnings: [] }
+  }
+
+  if (trimmed.toLowerCase().startsWith("host ")) {
+    const hostIp = trimmed.slice(5).trim()
+    if (!isValidIPv4(hostIp)) {
+      throw new Error("Invalid host address")
+    }
+    return { kind: "host", network: hostIp, wildcard: "0.0.0.0", host: hostIp, warnings: [] }
+  }
+
+  const [address, prefixStr] = trimmed.split("/")
+  const normalizedAddress = address.trim()
+
+  if (!isValidIPv4(normalizedAddress)) {
+    throw new Error("Invalid IPv4 address")
+  }
+
+  if (prefixStr !== undefined) {
+    const prefix = Number.parseInt(prefixStr, 10)
+    if (isNaN(prefix) || prefix < 0 || prefix > 32) {
+      throw new Error("Invalid prefix length")
+    }
+
+    const subnet = calculateIPv4Subnet(normalizedAddress, prefix)
+    const warnings: string[] = []
+
+    if (subnet.network !== normalizedAddress) {
+      warnings.push(`Normalized network to ${subnet.network}/${prefix}`)
+    }
+
+    return {
+      kind: prefix === 32 ? "host" : "network",
+      network: subnet.network,
+      wildcard: subnet.wildcardMask,
+      host: prefix === 32 ? subnet.network : undefined,
+      warnings,
+    }
+  }
+
+  // No prefix provided – treat as host with implicit wildcard
+  return {
+    kind: "host",
+    network: normalizedAddress,
+    wildcard: "0.0.0.0",
+    host: normalizedAddress,
+    warnings: ["No prefix provided; treating value as a host entry"],
+  }
+}
+
 export function ACLGenerator() {
   const { toast } = useToast()
   const [aclType, setAclType] = useState<"standard" | "extended">("extended")
@@ -89,40 +156,16 @@ export function ACLGenerator() {
   const [platform, setPlatform] = useState("cisco-ios")
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([])
 
-  const cidrToWildcard = (cidr: string): { network: string; wildcard: string } => {
-    try {
-      if (cidr === "any" || cidr === "host") return { network: cidr, wildcard: "" }
-
-      const [ip, prefixStr] = cidr.split("/")
-      if (!prefixStr) return { network: ip, wildcard: "0.0.0.0" }
-
-      const prefix = Number.parseInt(prefixStr)
-      if (prefix < 0 || prefix > 32) {
-        throw new Error("Invalid prefix length")
-      }
-
-      const mask = (0xffffffff << (32 - prefix)) >>> 0
-      const wildcard = ~mask >>> 0
-
-      const networkInt = ipv4ToInt(ip) & mask
-      const networkIp = intToIpv4(networkInt)
-      const wildcardIp = intToIpv4(wildcard)
-
-      return { network: networkIp, wildcard: wildcardIp }
-    } catch {
-      return { network: cidr, wildcard: "0.0.0.0" }
-    }
-  }
-
   const validateStandardRule = (rule: StandardACLRule): ValidationResult => {
     const errors: string[] = []
     const warnings: string[] = []
 
-    if (rule.sourceNetwork !== "any" && rule.sourceNetwork !== "host") {
+    if (rule.sourceNetwork !== "any") {
       try {
-        cidrToWildcard(rule.sourceNetwork)
-      } catch {
-        errors.push("Invalid source network format")
+        const parsed = parseACLNetwork(rule.sourceNetwork)
+        warnings.push(...parsed.warnings)
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "Invalid source network format")
       }
     }
 
@@ -142,20 +185,22 @@ export function ACLGenerator() {
     const warnings: string[] = []
 
     // Validate source network
-    if (rule.sourceNetwork !== "any" && rule.sourceNetwork !== "host") {
+    if (rule.sourceNetwork !== "any") {
       try {
-        cidrToWildcard(rule.sourceNetwork)
-      } catch {
-        errors.push("Invalid source network format")
+        const parsed = parseACLNetwork(rule.sourceNetwork)
+        warnings.push(...parsed.warnings)
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "Invalid source network format")
       }
     }
 
     // Validate destination network
-    if (rule.destNetwork !== "any" && rule.destNetwork !== "host") {
+    if (rule.destNetwork !== "any") {
       try {
-        cidrToWildcard(rule.destNetwork)
-      } catch {
-        errors.push("Invalid destination network format")
+        const parsed = parseACLNetwork(rule.destNetwork)
+        warnings.push(...parsed.warnings)
+      } catch (error) {
+        errors.push(error instanceof Error ? error.message : "Invalid destination network format")
       }
     }
 
@@ -234,41 +279,54 @@ export function ACLGenerator() {
   }
 
   const generateStandardCiscoACL = (rule: StandardACLRule, index: number): string => {
-    const { network: srcNet, wildcard: srcWild } = cidrToWildcard(rule.sourceNetwork)
+    const parsed = parseACLNetwork(rule.sourceNetwork)
+    const { kind, network, wildcard, host, warnings } = parsed
 
-    let line = `access-list ${aclName} ${rule.action}`
+    let statement = ""
+    if (warnings.length) {
+      statement += warnings.map((warning) => `! ${warning}`).join("\n") + "\n"
+    }
 
-    if (srcNet === "any") {
-      line += " any"
-    } else if (srcNet === "host") {
-      line += ` host ${rule.sourceNetwork.replace("host ", "")}`
+    statement += `access-list ${aclName} ${rule.action}`
+
+    if (kind === "any") {
+      statement += " any"
+    } else if (kind === "host") {
+      statement += ` host ${host ?? network}`
     } else {
-      line += ` ${srcNet} ${srcWild}`
+      statement += ` ${network} ${wildcard}`
     }
 
     if (rule.log) {
-      line += " log"
+      statement += " log"
     }
 
-    return line
+    return statement
   }
 
   const generateExtendedCiscoACL = (rule: ExtendedACLRule, index: number): string => {
-    const { network: srcNet, wildcard: srcWild } = cidrToWildcard(rule.sourceNetwork)
-    const { network: dstNet, wildcard: dstWild } = cidrToWildcard(rule.destNetwork)
+    const sourceParsed = parseACLNetwork(rule.sourceNetwork)
+    const destParsed = parseACLNetwork(rule.destNetwork)
 
-    let line = `access-list ${aclName} ${rule.action}`
+    const warnings = [...sourceParsed.warnings, ...destParsed.warnings]
+
+    let line = ""
+    if (warnings.length) {
+      line += warnings.map((warning) => `! ${warning}`).join("\n") + "\n"
+    }
+
+    line += `access-list ${aclName} ${rule.action}`
 
     // Protocol
     line += ` ${rule.protocol}`
 
     // Source
-    if (srcNet === "any") {
+    if (sourceParsed.kind === "any") {
       line += " any"
-    } else if (srcNet === "host") {
-      line += ` host ${rule.sourceNetwork.replace("host ", "")}`
+    } else if (sourceParsed.kind === "host") {
+      line += ` host ${sourceParsed.host ?? sourceParsed.network}`
     } else {
-      line += ` ${srcNet} ${srcWild}`
+      line += ` ${sourceParsed.network} ${sourceParsed.wildcard}`
     }
 
     // Source port
@@ -281,12 +339,12 @@ export function ACLGenerator() {
     }
 
     // Destination
-    if (dstNet === "any") {
+    if (destParsed.kind === "any") {
       line += " any"
-    } else if (dstNet === "host") {
-      line += ` host ${rule.destNetwork.replace("host ", "")}`
+    } else if (destParsed.kind === "host") {
+      line += ` host ${destParsed.host ?? destParsed.network}`
     } else {
-      line += ` ${dstNet} ${dstWild}`
+      line += ` ${destParsed.network} ${destParsed.wildcard}`
     }
 
     // Destination port

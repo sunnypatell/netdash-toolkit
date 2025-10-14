@@ -183,7 +183,24 @@ const recentImprovements = [
 ]
 
 const changelog = [
-    {
+  {
+    version: "2.2.0",
+    type: "minor",
+    title: "Routing Reliability & Documentation Refresh",
+    changes: [
+      "Validated OSPF, EIGRP, and static route generators with CIDR-aware normalization, wildcard validation, and contextual warnings.",
+      "Extended VLAN manager conflict detection to flag overlapping IPv4 and IPv6 allocations using range analysis.",
+      "Hardened ACL generator host parsing to keep Cisco IOS output consistent for mixed CIDR and host entries.",
+      "Added a branded favicon and comprehensive README outlining deployment workflow, tool coverage, and frontend-only constraints.",
+    ],
+    technical: [
+      "Shared CIDR normalization utilities across routing and ACL tooling.",
+      "BigInt-backed IPv6 range math for multi-VLAN overlap detection.",
+      "Static route evaluation pipeline with combined next-hop/interface support and warning emission.",
+      "Repository documentation overhaul capturing infrastructure limits and DoH/HTTP RTT architecture.",
+    ],
+  },
+  {
     version: "2.1.1",
     type: "patch",
     title: "Mobile Enhancement",
