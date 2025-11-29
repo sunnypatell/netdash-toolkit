@@ -213,7 +213,7 @@ export function MTUCalculator() {
           </Card>
 
           <div className="flex space-x-2">
-            <Button onClick={exportResults} variant="outline" className="flex-1 bg-transparent">
+            <Button onClick={exportResults} variant="outline" className="flex-1">
               <Download className="w-4 h-4 mr-2" />
               Export Results
             </Button>

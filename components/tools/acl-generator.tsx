@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -610,10 +611,10 @@ export function ACLGenerator() {
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <Button onClick={loadSampleRules} variant="outline" className="flex-1 bg-transparent">
+                  <Button onClick={loadSampleRules} variant="outline" className="flex-1">
                     Load Sample Rules
                   </Button>
-                  <Button onClick={validateAllRules} variant="outline" className="flex-1 bg-transparent">
+                  <Button onClick={validateAllRules} variant="outline" className="flex-1">
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Validate Rules
                   </Button>
@@ -818,24 +819,22 @@ export function ACLGenerator() {
                                 </div>
                                 <div className="space-y-2">
                                   <div className="flex items-center space-x-2">
-                                    <input
-                                      type="checkbox"
+                                    <Checkbox
                                       id={`established-${rule.id}`}
                                       checked={(rule as ExtendedACLRule).established || false}
-                                      onChange={(e) => updateExtendedRule(rule.id, "established", e.target.checked)}
-                                      className="rounded"
+                                      onCheckedChange={(checked) =>
+                                        updateExtendedRule(rule.id, "established", !!checked)
+                                      }
                                     />
                                     <Label htmlFor={`established-${rule.id}`} className="text-sm">
                                       Established
                                     </Label>
                                   </div>
                                   <div className="flex items-center space-x-2">
-                                    <input
-                                      type="checkbox"
+                                    <Checkbox
                                       id={`log-${rule.id}`}
                                       checked={(rule as ExtendedACLRule).log || false}
-                                      onChange={(e) => updateExtendedRule(rule.id, "log", e.target.checked)}
-                                      className="rounded"
+                                      onCheckedChange={(checked) => updateExtendedRule(rule.id, "log", !!checked)}
                                     />
                                     <Label htmlFor={`log-${rule.id}`} className="text-sm">
                                       Log
@@ -896,11 +895,11 @@ export function ACLGenerator() {
               <CardContent>
                 <Textarea value={generateACL()} readOnly className="font-mono text-sm min-h-[400px]" />
                 <div className="flex space-x-2 mt-4">
-                  <Button onClick={copyToClipboard} variant="outline" className="flex-1 bg-transparent">
+                  <Button onClick={copyToClipboard} variant="outline" className="flex-1">
                     <Copy className="w-4 h-4 mr-2" />
                     Copy
                   </Button>
-                  <Button onClick={exportACL} variant="outline" className="flex-1 bg-transparent">
+                  <Button onClick={exportACL} variant="outline" className="flex-1">
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>

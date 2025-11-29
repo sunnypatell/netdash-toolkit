@@ -57,7 +57,7 @@ export function PingTraceroute() {
     let url: URL
     try {
       url = new URL(candidate)
-    } catch (error) {
+    } catch {
       return null
     }
 
@@ -149,7 +149,6 @@ export function PingTraceroute() {
     return "Host unreachable or blocked"
   }
 
-  // Simulate ping functionality (browser limitations prevent real ICMP)
   const performPing = async () => {
     if (!pingHost.trim()) return
 
@@ -182,7 +181,7 @@ export function PingTraceroute() {
             fallback: fallbackUsed || attempt.methodFallback,
           }
 
-          setPingResults((prev) => [result, ...prev.slice(0, 9)])
+          setPingResults(prev => [result, ...prev.slice(0, 9)])
           return
         }
 
@@ -201,13 +200,12 @@ export function PingTraceroute() {
         fallback: fallbackUsed,
       }
 
-      setPingResults((prev) => [result, ...prev.slice(0, 9)])
+      setPingResults(prev => [result, ...prev.slice(0, 9)])
     } finally {
       setIsPinging(false)
     }
   }
 
-  // Simulate traceroute functionality
   const performTraceroute = async () => {
     if (!tracerouteHost.trim()) return
 
@@ -222,7 +220,6 @@ export function PingTraceroute() {
     setTracerouteResults([])
     setActiveTracerouteTarget(target.displayHost)
 
-    // Simulate traceroute hops
     const simulatedHops: TracerouteHop[] = [
       { hop: 1, host: "192.168.1.1", responseTime: 1.2, timeout: false },
       { hop: 2, host: "10.0.0.1", responseTime: 5.8, timeout: false },
@@ -231,12 +228,11 @@ export function PingTraceroute() {
       { hop: 5, host: target.displayHost, responseTime: 45.2, timeout: false },
     ]
 
-    // Simulate progressive discovery
     for (let i = 0; i < simulatedHops.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 1000))
       const hop = simulatedHops[i]
       const jitter = hop.timeout ? 0 : (Math.random() - 0.5) * 4
-      setTracerouteResults((prev) => [
+      setTracerouteResults(prev => [
         ...prev,
         {
           ...hop,
@@ -270,15 +266,17 @@ export function PingTraceroute() {
         <Activity className="w-6 h-6 text-primary" />
         <div>
           <h1 className="text-2xl font-bold">Ping & Traceroute</h1>
-          <p className="text-muted-foreground">Test network connectivity and trace packet paths to destinations</p>
+          <p className="text-muted-foreground">
+            Test network connectivity and trace packet paths to destinations
+          </p>
         </div>
       </div>
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Browser Limitations:</strong> Due to browser security restrictions, this tool uses HTTP requests to
-          simulate ping functionality. Real ICMP ping requires native applications.
+          <strong>Browser Limitations:</strong> Due to browser security restrictions, this tool uses
+          HTTP requests to simulate ping functionality. Real ICMP ping requires native applications.
         </AlertDescription>
       </Alert>
 
@@ -304,14 +302,14 @@ export function PingTraceroute() {
                   <Input
                     id="ping-host"
                     value={pingHost}
-                    onChange={(e) => {
+                    onChange={e => {
                       setPingHost(e.target.value)
                       if (pingValidationError) {
                         setPingValidationError(null)
                       }
                     }}
                     placeholder="google.com or 8.8.8.8"
-                    onKeyDown={(e) => e.key === "Enter" && !isPinging && performPing()}
+                    onKeyDown={e => e.key === "Enter" && !isPinging && performPing()}
                   />
                   {pingValidationError && (
                     <p className="text-xs text-destructive mt-1">{pingValidationError}</p>
@@ -351,7 +349,10 @@ export function PingTraceroute() {
 
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {pingResults.map((result, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      >
                         <div className="flex items-center space-x-3">
                           {result.success ? (
                             <CheckCircle className="w-4 h-4 text-green-600" />
@@ -368,7 +369,10 @@ export function PingTraceroute() {
                         <div className="text-right">
                           <div className="flex items-center justify-end gap-1 mb-1">
                             {result.scheme && (
-                              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] uppercase tracking-wide"
+                              >
                                 {result.scheme}
                               </Badge>
                             )}
@@ -378,13 +382,17 @@ export function PingTraceroute() {
                               </Badge>
                             )}
                             {result.fallback && (
-                              <Badge variant="secondary" className="text-[10px]">Fallback</Badge>
+                              <Badge variant="secondary" className="text-[10px]">
+                                Fallback
+                              </Badge>
                             )}
                           </div>
                           {result.success ? (
                             <div className="flex items-center space-x-2">
                               <Clock className="w-3 h-3 text-blue-600" />
-                              <span className="text-sm font-mono">{result.responseTime?.toFixed(1)}ms</span>
+                              <span className="text-sm font-mono">
+                                {result.responseTime?.toFixed(1)}ms
+                              </span>
                             </div>
                           ) : (
                             <Badge variant="destructive" className="text-xs">
@@ -408,7 +416,9 @@ export function PingTraceroute() {
                 <Navigation className="w-5 h-5" />
                 <span>Traceroute</span>
               </CardTitle>
-              <CardDescription>Trace the network path packets take to reach a destination</CardDescription>
+              <CardDescription>
+                Trace the network path packets take to reach a destination
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex space-x-4">
@@ -417,21 +427,28 @@ export function PingTraceroute() {
                   <Input
                     id="traceroute-host"
                     value={tracerouteHost}
-                    onChange={(e) => {
+                    onChange={e => {
                       setTracerouteHost(e.target.value)
                       if (tracerouteValidationError) {
                         setTracerouteValidationError(null)
                       }
                     }}
                     placeholder="google.com or 8.8.8.8"
-                    onKeyDown={(e) => e.key === "Enter" && !isTracing && performTraceroute()}
+                    onKeyDown={e =>
+                      e.key === "Enter" && !isTracing && performTraceroute()
+                    }
                   />
                   {tracerouteValidationError && (
-                    <p className="text-xs text-destructive mt-1">{tracerouteValidationError}</p>
+                    <p className="text-xs text-destructive mt-1">
+                      {tracerouteValidationError}
+                    </p>
                   )}
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={performTraceroute} disabled={!tracerouteHost.trim() || isTracing}>
+                  <Button
+                    onClick={performTraceroute}
+                    disabled={!tracerouteHost.trim() || isTracing}
+                  >
                     {isTracing ? (
                       <>
                         <Navigation className="w-4 h-4 mr-2 animate-spin" />
@@ -451,14 +468,13 @@ export function PingTraceroute() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold">
-                      Route to {activeTracerouteTarget ? activeTracerouteTarget : tracerouteHost}
+                      Route to {activeTracerouteTarget || tracerouteHost}
                     </h4>
                     {tracerouteResults.length > 0 && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => exportResults("traceroute")}
-                        className="bg-transparent"
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Export
@@ -468,9 +484,14 @@ export function PingTraceroute() {
 
                   <div className="space-y-2">
                     {tracerouteResults.map((hop, index) => (
-                      <div key={index} className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg">
+                      <div
+                        key={index}
+                        className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg"
+                      >
                         <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-medium text-primary">{hop.hop}</span>
+                          <span className="text-sm font-medium text-primary">
+                            {hop.hop}
+                          </span>
                         </div>
                         <div className="flex-1">
                           <div className="font-mono text-sm">{hop.host}</div>
@@ -483,7 +504,9 @@ export function PingTraceroute() {
                           ) : (
                             <div className="flex items-center space-x-2">
                               <Clock className="w-3 h-3 text-blue-600" />
-                              <span className="text-sm font-mono">{hop.responseTime?.toFixed(1)}ms</span>
+                              <span className="text-sm font-mono">
+                                {hop.responseTime?.toFixed(1)}ms
+                              </span>
                             </div>
                           )}
                         </div>
@@ -495,7 +518,9 @@ export function PingTraceroute() {
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <Activity className="w-4 h-4 animate-spin" />
                         </div>
-                        <div className="flex-1 text-muted-foreground">Discovering next hop...</div>
+                        <div className="flex-1 text-muted-foreground">
+                          Discovering next hop...
+                        </div>
                       </div>
                     )}
                   </div>

@@ -468,11 +468,11 @@ export function OUILookup() {
               )}
 
               <div className="flex space-x-2">
-                <Button onClick={exportResults} variant="outline" className="flex-1 bg-transparent">
+                          <Button onClick={exportResults} variant="outline" className="flex-1">
                   <Download className="w-4 h-4 mr-2" />
                   Export JSON
                 </Button>
-                <Button onClick={exportCSV} variant="outline" className="flex-1 bg-transparent">
+                          <Button onClick={exportCSV} variant="outline" className="flex-1">
                   <Download className="w-4 h-4 mr-2" />
                   Export CSV
                 </Button>

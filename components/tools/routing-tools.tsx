@@ -685,7 +685,7 @@ export function RoutingTools() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label>Network Statements</Label>
-                    <Button size="sm" variant="outline" onClick={() => addNetwork("ospf")} className="bg-transparent">
+                    <Button size="sm" variant="outline" onClick={() => addNetwork("ospf")}>
                       Add Network
                     </Button>
                   </div>
@@ -790,7 +790,7 @@ export function RoutingTools() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="absolute top-2 right-2 bg-transparent"
+                      className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(ospfConfigText)}
                     >
                       <Copy className="w-4 h-4" />
@@ -800,7 +800,7 @@ export function RoutingTools() {
                     <Button
                       onClick={() => exportConfig(ospfConfigText, "ospf-config.txt")}
                       variant="outline"
-                      className="flex-1 bg-transparent"
+                      className="flex-1"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Export Config
@@ -855,7 +855,7 @@ export function RoutingTools() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label>Network Statements</Label>
-                    <Button size="sm" variant="outline" onClick={() => addNetwork("eigrp")} className="bg-transparent">
+                    <Button size="sm" variant="outline" onClick={() => addNetwork("eigrp")}>
                       Add Network
                     </Button>
                   </div>
@@ -989,7 +989,7 @@ export function RoutingTools() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="absolute top-2 right-2 bg-transparent"
+                      className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(eigrpConfigText)}
                     >
                       <Copy className="w-4 h-4" />
@@ -999,7 +999,7 @@ export function RoutingTools() {
                     <Button
                       onClick={() => exportConfig(eigrpConfigText, "eigrp-config.txt")}
                       variant="outline"
-                      className="flex-1 bg-transparent"
+                      className="flex-1"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Export Config
@@ -1032,7 +1032,7 @@ export function RoutingTools() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Static Routes</Label>
-                  <Button size="sm" variant="outline" onClick={addStaticRoute} className="bg-transparent">
+                  <Button size="sm" variant="outline" onClick={addStaticRoute}>
                     Add Route
                   </Button>
                 </div>
@@ -1199,7 +1199,7 @@ export function RoutingTools() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="absolute top-2 right-2 bg-transparent"
+                      className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(staticConfigText)}
                     >
                       <Copy className="w-4 h-4" />
@@ -1209,7 +1209,7 @@ export function RoutingTools() {
                     <Button
                       onClick={() => exportConfig(staticConfigText, "static-routes.txt")}
                       variant="outline"
-                      className="flex-1 bg-transparent"
+                      className="flex-1"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Export Routes

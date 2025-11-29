@@ -42,12 +42,22 @@ export function ConflictChecker() {
     } catch (error) {
       console.error("[v0] Analysis error:", error)
       // Create a basic analysis result if the analysis fails
+      // Fallback summary using type-safe guards
+      const uniqueIPs = new Set(
+        data
+          .map((d) => ("ip" in d && typeof d.ip === "string" ? d.ip : undefined))
+          .filter((ip): ip is string => !!ip),
+      ).size
+      const uniqueMACs = new Set(
+        data.map((d) => ("mac" in d && typeof d.mac === "string" ? d.mac : undefined)).filter((m): m is string => !!m),
+      ).size
+      const sources = Array.from(new Set(data.map((d) => d.source)))
       setAnalysis({
         totalEntries: data.length,
-        uniqueIPs: new Set(data.filter((d) => d.ip).map((d) => d.ip)).size,
-        uniqueMACs: new Set(data.map((d) => d.mac)).size,
+        uniqueIPs,
+        uniqueMACs,
         conflicts: [],
-        sources: Array.from(new Set(data.map((d) => d.source))),
+        sources,
         summary: { high: 0, medium: 0, low: 0 },
       })
     }
@@ -253,48 +263,77 @@ export function ConflictChecker() {
                       <div>
                         <h5 className="font-medium mb-2">Affected Entries:</h5>
                         <div className="space-y-2">
-                          {conflict.entries.map((entry, entryIndex) => (
-                            <div key={entryIndex} className="p-2 bg-muted/50 rounded text-sm">
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                {entry.ip && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-muted-foreground">IP:</span>
-                                    <span className="font-mono">{entry.ip}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-4 w-4 p-0"
-                                      onClick={() => copyToClipboard(entry.ip!)}
-                                    >
-                                      <Copy className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                {entry.mac && (
-                                  <div className="flex items-center space-x-1">
-                                    <span className="text-muted-foreground">MAC:</span>
-                                    <span className="font-mono">{entry.mac}</span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-4 w-4 p-0"
-                                      onClick={() => copyToClipboard(entry.mac)}
-                                    >
-                                      <Copy className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                )}
-                                {entry.hostname && (
+                          {"entries" in conflict ? (
+                            conflict.entries.map((entry: any, entryIndex: number) => (
+                              <div key={entryIndex} className="p-2 bg-muted/50 rounded text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  {entry.ip && (
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-muted-foreground">IP:</span>
+                                      <span className="font-mono">{entry.ip}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-4 w-4 p-0"
+                                        onClick={() => copyToClipboard(entry.ip!)}
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {entry.mac && (
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-muted-foreground">MAC:</span>
+                                      <span className="font-mono">{entry.mac}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-4 w-4 p-0"
+                                        onClick={() => copyToClipboard(entry.mac)}
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  {entry.hostname && (
+                                    <div>
+                                      <span className="text-muted-foreground">Host:</span> {entry.hostname}
+                                    </div>
+                                  )}
                                   <div>
-                                    <span className="text-muted-foreground">Host:</span> {entry.hostname}
+                                    <span className="text-muted-foreground">Source:</span> {entry.source}
                                   </div>
-                                )}
-                                <div>
-                                  <span className="text-muted-foreground">Source:</span> {entry.source}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="p-2 bg-muted/50 rounded text-sm">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  {conflict.ip && (
+                                    <div className="flex items-center space-x-1">
+                                      <span className="text-muted-foreground">IP:</span>
+                                      <span className="font-mono">{conflict.ip}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-4 w-4 p-0"
+                                        onClick={() => copyToClipboard(conflict.ip)}
+                                      >
+                                        <Copy className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-muted-foreground">Static Source:</span> {conflict.staticEntry.source}
+                                  </div>
+                                  <div>
+                                    <span className="text-muted-foreground">DHCP Source:</span> {conflict.dhcpEntry.source}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
 

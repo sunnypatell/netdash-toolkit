@@ -791,12 +791,12 @@ export function WirelessTools() {
                   <Button
                     onClick={() => copyToClipboard(generateWirelessConfig())}
                     variant="outline"
-                    className="flex-1 bg-transparent"
+                    className="flex-1"
                   >
                     <Copy className="w-4 h-4 mr-2" />
                     Copy Config
                   </Button>
-                  <Button onClick={exportConfig} variant="outline" className="flex-1 bg-transparent">
+                  <Button onClick={exportConfig} variant="outline" className="flex-1">
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </Button>

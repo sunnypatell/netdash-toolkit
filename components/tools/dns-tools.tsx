@@ -214,7 +214,7 @@ export function DNSTools() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-transparent"
+              className=""
               onClick={() => {
                 setDnsQuery("google.com")
                 setDnsRecordType("A")
@@ -225,7 +225,7 @@ export function DNSTools() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-transparent"
+              className=""
               onClick={() => {
                 setDnsQuery("google.com")
                 setDnsRecordType("MX")
@@ -236,7 +236,7 @@ export function DNSTools() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-transparent"
+              className=""
               onClick={() => {
                 setDnsQuery("google.com")
                 setDnsRecordType("TXT")
@@ -247,7 +247,7 @@ export function DNSTools() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-transparent"
+              className=""
               onClick={() => {
                 setDnsQuery("google.com")
                 setDnsRecordType("AAAA")
@@ -258,7 +258,7 @@ export function DNSTools() {
             <Button
               variant="outline"
               size="sm"
-              className="bg-transparent"
+              className=""
               onClick={() => {
                 setDnsQuery("8.8.8.8")
                 setDnsRecordType("PTR")

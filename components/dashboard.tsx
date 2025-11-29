@@ -272,7 +272,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                     <Button
                       onClick={() => onNavigate(tool.id)}
-                      className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
+                      className="w-full hover:bg-primary hover:text-primary-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
                       variant="outline"
                     >
                       Launch Tool

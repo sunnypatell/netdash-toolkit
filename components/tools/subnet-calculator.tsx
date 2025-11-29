@@ -357,7 +357,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv4Address("10.0.0.1")
                     setIpv4Prefix("24")
@@ -368,7 +368,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv4Address("192.0.2.10")
                     setIpv4Prefix("31")
@@ -379,7 +379,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv4Address("203.0.113.1")
                     setIpv4Prefix("32")
@@ -395,7 +395,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv6Address("2001:db8::1")
                     setIpv6Prefix("64")
@@ -406,7 +406,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv6Address("2001:0db8:0000:0000:0000:0000:0000:0001")
                     setIpv6Prefix("48")
@@ -417,7 +417,7 @@ export function SubnetCalculator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-xs sm:text-sm bg-transparent"
+                  className="w-full justify-start text-xs sm:text-sm"
                   onClick={() => {
                     setIpv6Address("fe80::1")
                     setIpv6Prefix("64")
