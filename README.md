@@ -1,110 +1,454 @@
+<div align="center">
+
 # NetDash Toolkit
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/sunnypatells-projects/netdash)
+### *The Ultimate Network Engineering Workbench*
 
-NetDash is a front-end networking workbench built with Next.js that consolidates planning, validation, troubleshooting, and documentation utilities into a single browser experience. Every tool runs entirely client-side, making it safe to use with production data while keeping the deployment lightweight enough for Vercel’s static hosting model.
+<br />
 
-## Table of Contents
-- [Live Deployment](#live-deployment)
-- [Feature Overview](#feature-overview)
-- [Architecture & Tech Stack](#architecture--tech-stack)
-- [Frontend-Only Constraints](#frontend-only-constraints)
-- [Getting Started](#getting-started)
-- [Available Scripts](#available-scripts)
-- [Tool Highlights](#tool-highlights)
-- [Data Sources & Integrations](#data-sources--integrations)
-- [Changelog](#changelog)
+<img src="public/favicon.svg" alt="NetDash Logo" width="120" height="120" />
 
-## Live Deployment
-The production build is deployed on Vercel and automatically synced from this repository:
+<br />
+<br />
 
-**https://vercel.com/sunnypatells-projects/netdash**
+[![Live Demo](https://img.shields.io/badge/LIVE-DEMO-10b981?style=for-the-badge&logo=vercel&logoColor=white)](https://netdash-toolkit.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-## Feature Overview
-### Address Planning & Design
-- **Subnet Calculator** — Dual-stack IPv4/IPv6 calculations with RFC3021 handling for /31 links and solicited-node multicast discovery.
-- **VLSM Planner** — Host-aware allocations that include /31 and /32 prefixes, utilization heatmaps, and CSV/JSON exports.
-- **VLAN Manager** — Multi-vendor switch templates, CSV exports, and IPv4/IPv6 overlap detection using CIDR-aware range analysis.
+[![License](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
+[![Maintenance](https://img.shields.io/badge/Maintained-yes-green?style=flat-square)](https://github.com/sunnypatell/netdash-toolkit/graphs/commit-activity)
 
-### Routing & Switching Automation
-- **Routing Tools** — Guided configuration builders for OSPF, EIGRP, and static routes with CIDR normalization, contiguous-mask enforcement, wildcard validation, and warning surfaces.
-- **Wireless Toolkit** — Channel planning, signal modelling, and security checklists for enterprise Wi-Fi deployments.
-- **ACL Generator** — Standard and extended Cisco IOS ACLs with host/CIDR parsing, port validation, and exportable configuration bundles.
+<br />
 
-### Troubleshooting & Operations
-- **Network Tester** — HTTP-based RTT measurement with multi-mode fallbacks plus DNS-over-HTTPS queries against Cloudflare, Google, Quad9, and custom endpoints.
-- **IP Conflict Checker** — Parses Windows ARP, Linux `ip neigh`, Cisco ARP/MAC tables, and DHCP logs to correlate duplicate addressing with remediation guidance.
-- **MTU Calculator, OUI Lookup, Port Scanner, Ping & Traceroute simulators** — Quick checks for everyday operations; ping/traceroute present curated sample flows for visibility.
+**[Features](#-features) • [Quick Start](#-quick-start) • [Tools](#-tool-suite) • [Tech Stack](#-tech-stack) • [Roadmap](#-roadmap)**
 
-### Compliance & Documentation
-- **About Dashboard** — Rich release history, adoption metrics, and technical notes embedded in the UI.
-- **Project Manager** — Secure client-side storage using AES-GCM and PBKDF2 (see app for details) for keeping network project records.
+<br />
 
-## Architecture & Tech Stack
-- **Framework**: [Next.js 14](https://nextjs.org/) with the App Router.
-- **Language**: TypeScript with React 18.
-- **Styling**: Tailwind CSS + shadcn/ui component primitives.
-- **State Management**: Local component state and browser storage; no backend services.
-- **Build Tooling**: pnpm, Next.js compiler, and TypeScript.
-- **Hosting**: Static deployment on Vercel.
+---
 
-## Frontend-Only Constraints
-Running entirely on the client has a few implications:
-- Raw ICMP, traceroute, or TCP SYN scans are not possible without a dedicated backend. The Ping & Traceroute views provide curated sample flows while the Network Tester performs standards-compliant HTTP RTT tests instead.
-- DNS lookups are executed via DNS-over-HTTPS (Cloudflare JSON and RFC8484 wire encodings). Providers that block browser requests will surface clear warnings in the UI.
-- All parsing and validation happens in the browser; no uploaded data leaves the session.
+<br />
 
-## Getting Started
+<img src="https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/rainbow.png" alt="rainbow line" />
+
+</div>
+
+<br />
+
+## What is NetDash?
+
+**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **14+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
+
+<br />
+
+<div align="center">
+<table>
+<tr>
+<td align="center" width="33%">
+
+### Privacy First
+All calculations run **100% client-side**. Your network data never leaves your browser.
+
+</td>
+<td align="center" width="33%">
+
+### Zero Install
+Access professional-grade tools instantly from any modern browser. No downloads required.
+
+</td>
+<td align="center" width="33%">
+
+### Dark Mode
+Beautiful light and dark themes that adapt to your system preferences.
+
+</td>
+</tr>
+</table>
+</div>
+
+<br />
+
+---
+
+<br />
+
+## Features
+
+<div align="center">
+
+| Category | Tools | Description |
+|:--------:|:-----:|:------------|
+| **Address Planning** | Subnet Calculator, VLSM Planner, VLAN Manager | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
+| **Routing & Switching** | Routing Tools, Wireless Tools, ACL Generator | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation |
+| **Troubleshooting** | Conflict Checker, Network Tester, DNS Tools | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries |
+| **Utilities** | MTU Calculator, IPv6 Tools, OUI Lookup | Protocol overhead analysis, EUI-64 generation, MAC vendor identification |
+
+</div>
+
+<br />
+
+---
+
+<br />
+
+## Quick Start
+
+### Prerequisites
+
+- **Node.js** 18.0 or later
+- **pnpm** (recommended) or npm
+
+### Installation
+
 ```bash
+# Clone the repository
+git clone https://github.com/sunnypatell/netdash-toolkit.git
+
+# Navigate to the project directory
+cd netdash-toolkit
+
 # Install dependencies
 pnpm install
 
-# Run the development server
+# Start the development server
 pnpm dev
-
-# Build an optimized production bundle
-pnpm build
 ```
-The development server is available at `http://localhost:3000`. The Vercel deployment automatically rebuilds from the `main` branch.
+
+Open [http://localhost:3000](http://localhost:3000) to access NetDash.
+
+### Production Build
+
+```bash
+# Create optimized production build
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+<br />
+
+---
+
+<br />
+
+## Tool Suite
+
+<details>
+<summary><b>Subnet Calculator</b> — Dual-stack IPv4/IPv6 calculations</summary>
+
+<br />
+
+- Full IPv4 and IPv6 subnet calculations
+- Network, broadcast, and host range computation
+- CIDR notation with netmask conversion
+- Special address detection (private, loopback, multicast, link-local)
+- RFC3021 /31 point-to-point link support
+- Export results to CSV/JSON
+
+</details>
+
+<details>
+<summary><b>VLSM Planner</b> — Variable Length Subnet Masking optimization</summary>
+
+<br />
+
+- Optimal subnet allocation algorithm
+- Host requirement-based planning
+- Visual heatmap of network utilization
+- Support for /31 and /32 prefixes
+- Utilization statistics and waste analysis
+- Export to CSV, JSON, or text
+
+</details>
+
+<details>
+<summary><b>VLAN Manager</b> — Enterprise VLAN design and configuration</summary>
+
+<br />
+
+- VLAN database management with validation
+- Switch port configuration (access/trunk modes)
+- IPv4/IPv6 subnet overlap detection
+- Multi-vendor configuration generation:
+  - Cisco IOS
+  - Aruba CX
+- Native VLAN and trunk allowed VLAN validation
+- CSV export of VLAN database
+
+</details>
+
+<details>
+<summary><b>Routing Tools</b> — Configuration builders for routing protocols</summary>
+
+<br />
+
+- **OSPF**: Area configuration, network statements, process ID management
+- **EIGRP**: AS configuration, network statements, wildcard masks
+- **Static Routes**: Next-hop and exit-interface support, tracking options
+- CIDR normalization and validation
+- Discontiguous mask rejection
+- Administrative distance reference
+
+</details>
+
+<details>
+<summary><b>Wireless Tools</b> — WiFi planning and configuration</summary>
+
+<br />
+
+- 2.4 GHz and 5 GHz channel planning
+- Channel interference analysis
+- Capacity calculator with real-world throughput estimates
+- Per-client bandwidth calculations
+- Cisco wireless configuration templates
+- Security best practices checklist
+
+</details>
+
+<details>
+<summary><b>ACL Generator</b> — Access Control List builder</summary>
+
+<br />
+
+- Standard and Extended ACL support
+- Host/CIDR/wildcard mask parsing
+- TCP/UDP port specification with operators (eq, gt, lt, neq, range)
+- ICMP type and code support
+- TCP flags and "established" keyword
+- Security warnings for dangerous rules
+- Cisco IOS configuration output
+
+</details>
+
+<details>
+<summary><b>IP Conflict Checker</b> — Network conflict detection</summary>
+
+<br />
+
+- Multi-format input parsing:
+  - Windows ARP tables
+  - Linux `ip neigh` output
+  - Cisco ARP/MAC tables
+  - DHCP lease files
+- IP and MAC duplicate detection
+- Conflict severity classification
+- Remediation recommendations
+- Export to CSV or remediation report
+
+</details>
+
+<details>
+<summary><b>Network Tester</b> — Connectivity and performance testing</summary>
+
+<br />
+
+- HTTP-based RTT measurement with jitter analysis
+- Throughput testing (download/upload)
+- DNS-over-HTTPS queries (Cloudflare, Google, Quad9, OpenDNS, AdGuard)
+- DNSSEC validation
+- MTU calculator with protocol overhead
+- OUI/MAC vendor lookup
+
+</details>
+
+<details>
+<summary><b>DNS Tools</b> — DNS query and analysis</summary>
+
+<br />
+
+- Multiple DoH providers
+- Record type support: A, AAAA, CNAME, MX, NS, TXT, SOA, PTR, SRV
+- DNSSEC validation indicator
+- Response time measurement
+- Detailed record information display
+
+</details>
+
+<details>
+<summary><b>MTU Calculator</b> — Protocol overhead analysis</summary>
+
+<br />
+
+- Link MTU configuration
+- IPv4/IPv6 protocol selection
+- Transport layer overhead (TCP/UDP)
+- Encapsulation protocols:
+  - Ethernet II, 802.1Q VLAN, QinQ
+  - PPPoE, GRE, VXLAN, IPsec ESP
+- Fragmentation warnings
+- Maximum payload calculation
+
+</details>
+
+<br />
+
+---
+
+<br />
+
+## Tech Stack
+
+<div align="center">
+
+| Layer | Technology |
+|:-----:|:-----------|
+| **Framework** | [Next.js 14](https://nextjs.org/) with App Router |
+| **Language** | [TypeScript 5](https://www.typescriptlang.org/) |
+| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
+| **Components** | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
+| **Icons** | [Lucide React](https://lucide.dev/) |
+| **Charts** | [Recharts](https://recharts.org/) |
+| **Forms** | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) |
+| **Theming** | [next-themes](https://github.com/pacocoursey/next-themes) |
+| **Deployment** | [Vercel](https://vercel.com/) |
+
+</div>
+
+<br />
+
+---
+
+<br />
+
+## Project Structure
+
+```
+netdash-toolkit/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout with theme provider
+│   ├── page.tsx           # Main application page
+│   └── globals.css        # Global styles and Tailwind config
+├── components/
+│   ├── ui/                # shadcn/ui components
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── ip-input.tsx   # Custom IP address input
+│   │   └── ...
+│   ├── tools/             # Network tool components
+│   │   ├── subnet-calculator.tsx
+│   │   ├── vlsm-planner.tsx
+│   │   ├── vlan-manager.tsx
+│   │   └── ...
+│   ├── dashboard.tsx      # Main dashboard view
+│   ├── sidebar.tsx        # Navigation sidebar
+│   └── header.tsx         # Application header
+├── lib/                   # Utility libraries
+│   ├── network-utils.ts   # IPv4/IPv6 calculations
+│   ├── network-testing.ts # RTT, DNS, throughput utilities
+│   ├── conflict-utils.ts  # Conflict detection algorithms
+│   ├── vlan-utils.ts      # VLAN validation and config generation
+│   ├── vlsm-utils.ts      # VLSM planning algorithms
+│   └── parsers.ts         # Multi-format data parsers
+├── hooks/                 # React hooks
+│   └── use-toast.ts       # Toast notification hook
+└── public/                # Static assets
+    └── favicon.svg        # Application icon
+```
+
+<br />
+
+---
+
+<br />
+
+## Roadmap
+
+<div align="center">
+
+| Status | Feature | Description |
+|:------:|:--------|:------------|
+| Done | Core Tools | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
+| Done | Network Testing | RTT, Throughput, DNS-over-HTTPS |
+| Done | Dark Mode | System-aware theming |
+| In Progress | Electron App | Desktop version with native networking |
+| Planned | Real ICMP Ping | Native ping with Electron |
+| Planned | Real Traceroute | TTL-based hop discovery |
+| Planned | Port Scanner | TCP/UDP socket scanning |
+| Planned | Network Discovery | ARP scanning, device enumeration |
+| Planned | Configuration Backup | SSH-based device config backup |
+
+</div>
+
+<br />
+
+---
+
+<br />
+
+## Browser Limitations
+
+Running entirely in the browser has some constraints:
+
+| Feature | Limitation | Workaround |
+|:--------|:-----------|:-----------|
+| **ICMP Ping** | Browsers cannot send ICMP packets | HTTP-based RTT testing |
+| **Traceroute** | No TTL manipulation available | Simulated hop visualization |
+| **Port Scanning** | TCP/UDP sockets not accessible | Educational simulation mode |
+| **Direct DNS** | Only DoH providers accessible | Multiple DoH provider support |
+
+> **Coming Soon**: Electron desktop app with full native networking capabilities!
+
+<br />
+
+---
+
+<br />
 
 ## Available Scripts
-| Command       | Description                                      |
-|---------------|--------------------------------------------------|
-| `pnpm dev`    | Start Next.js in development mode with hot reload |
-| `pnpm build`  | Generate a production build (used by CI/Vercel)   |
-| `pnpm start`  | Serve the production build locally                |
-| `pnpm lint`   | Run Next.js linting (uses the default config)     |
 
-## Tool Highlights
-### Routing Tools
-- Parses CIDR or address/wildcard input, normalizes non-aligned networks, rejects discontiguous masks, and warns when assumptions are made.
-- Supports simultaneous next-hop and exit-interface definitions for static routes, adds comments for skipped entries, and exports ready-to-paste command sets.
+| Command | Description |
+|:--------|:------------|
+| `pnpm dev` | Start development server with hot reload |
+| `pnpm build` | Generate optimized production build |
+| `pnpm start` | Serve production build locally |
+| `pnpm lint` | Run ESLint for code quality |
 
-### VLAN Manager
-- Detects duplicate IDs and reserved ranges, validates trunk/native VLANs, and now inspects IPv4/IPv6 overlaps using BigInt range math.
-- Generates Cisco IOS and Aruba CX interface templates plus CSV exports of the VLAN database.
+<br />
 
-### ACL Generator
-- Accepts host statements (`host 192.0.2.10`) or CIDR notation and automatically derives the proper wildcard mask.
-- Highlights dangerous “permit any any” rules, invalid ports, and missing documentation while offering export/copy helpers.
+---
 
-### Network Testing
-- Uses fetch-based RTT probes with progressively permissive modes (HEAD → GET → image beacon) to maximize CORS compatibility.
-- DNS module auto-detects JSON or binary DoH responses and decodes wire-format messages for providers without REST wrappers.
+<br />
 
-### IP Conflict Checker
-- Correlates inputs from ARP, MAC, DHCP, and switch tables; extracts VLAN/port metadata; and produces actionable remediation steps.
+## Contributing
 
-## Data Sources & Integrations
-- **DNS over HTTPS**: Cloudflare (1.1.1.1), Google (8.8.8.8), Quad9 (9.9.9.9), and configurable custom resolvers.
-- **OUI Database**: macvendors.com API with bulk-rate limiting and fallback caching.
-- **Project Storage**: Client-side AES-GCM encryption with PBKDF2 key derivation (details in the About page).
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Changelog
-The in-app About page contains the full changelog. Recent highlights include:
-- v2.3.0 — Desktop navigation auto-expands on large screens, IPv4 mask validation rejects discontiguous inputs, wildcard feedback improved across routing tools, and documentation refreshed to match the release.
-- v2.2.0 — Routing validation overhaul, VLAN overlap detection, ACL parsing fixes, branded favicon, and full README rewrite.
-- v2.1.1 — Mobile navigation fixes for the collapsible sidebar.
-- v2.1.0 — Major feature expansion covering routing, ACL, wireless, and changelog infrastructure.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat(scope): add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-For the complete timeline, open the **About → Technical Changelog** section inside the application.
+<br />
+
+---
+
+<br />
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+<br />
+
+---
+
+<br />
+
+<div align="center">
+
+### Star this repo if you find it useful!
+
+<br />
+
+**Made with love by [Sunny Patel](https://github.com/sunnypatell)**
+
+<br />
+
+[![GitHub stars](https://img.shields.io/github/stars/sunnypatell/netdash-toolkit?style=social)](https://github.com/sunnypatell/netdash-toolkit/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/sunnypatell/netdash-toolkit?style=social)](https://github.com/sunnypatell/netdash-toolkit/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/sunnypatell/netdash-toolkit?style=social)](https://github.com/sunnypatell/netdash-toolkit/watchers)
+
+</div>
