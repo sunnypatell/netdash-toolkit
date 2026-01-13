@@ -83,7 +83,6 @@ export function VLSMPlanner() {
   }
 
   const loadSamplePlan = () => {
-    console.log("[v0] Loading VLSM sample plan...")
     try {
       setBaseNetwork("10.0.0.0")
       setBasePrefix("20")
@@ -94,9 +93,8 @@ export function VLSMPlanner() {
         { id: "4", name: "DMZ", hostsRequired: 10, description: "Web servers and public services" },
         { id: "5", name: "Management", hostsRequired: 5, description: "Network management devices" },
       ])
-      console.log("[v0] VLSM sample plan loaded successfully")
     } catch (error) {
-      console.error("[v0] Error loading VLSM sample plan:", error)
+      console.error("Error loading VLSM sample plan:", error)
     }
   }
 

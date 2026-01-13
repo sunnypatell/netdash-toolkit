@@ -64,7 +64,7 @@ export function OUILookup() {
         throw new Error(`API error: ${response.status}`)
       }
     } catch (error) {
-      console.error("[v0] OUI lookup error:", error)
+      console.error("OUI lookup error:", error)
 
       const oui = macAddress
         .replace(/[^0-9A-Fa-f]/g, "")
@@ -136,16 +136,14 @@ export function OUILookup() {
 
     setIsLoading(true)
     try {
-      console.log("[v0] Looking up MAC:", macInput)
       const result = await lookupOUIFromAPI(macInput.trim())
       const lookupResult: LookupResult = {
         ...result,
         timestamp: Date.now(),
       }
       setResults([lookupResult])
-      console.log("[v0] Lookup result:", lookupResult)
     } catch (error) {
-      console.error("[v0] Single lookup error:", error)
+      console.error("Single lookup error:", error)
     } finally {
       setIsLoading(false)
     }
@@ -157,7 +155,6 @@ export function OUILookup() {
 
     setIsLoading(true)
     try {
-      console.log("[v0] Bulk lookup for", macs.length, "MACs")
       const lookupResults: LookupResult[] = []
 
       // Process in batches to respect API rate limits (1 request per second)
@@ -178,9 +175,8 @@ export function OUILookup() {
       }
 
       setResults(lookupResults)
-      console.log("[v0] Bulk lookup completed:", lookupResults.length, "results")
     } catch (error) {
-      console.error("[v0] Bulk lookup error:", error)
+      console.error("Bulk lookup error:", error)
     } finally {
       setIsLoading(false)
     }
@@ -190,7 +186,7 @@ export function OUILookup() {
     try {
       await navigator.clipboard.writeText(text)
     } catch (err) {
-      console.error("[v0] Failed to copy to clipboard:", err)
+      console.error("Failed to copy to clipboard:", err)
     }
   }
 

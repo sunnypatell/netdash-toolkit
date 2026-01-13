@@ -30,17 +30,15 @@ export function ConflictChecker() {
   const [sourceTexts, setSourceTexts] = useState<string[]>([])
 
   const handleDataParsed = (data: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]) => {
-    console.log("[v0] Parsed data received:", data.length, "entries")
     setParsedData(data)
     const mockSourceTexts = ["Network data source"]
     setSourceTexts(mockSourceTexts)
 
     try {
       const analysisResult = analyzeConflicts(data, mockSourceTexts)
-      console.log("[v0] Analysis completed:", analysisResult.conflicts.length, "conflicts found")
       setAnalysis(analysisResult)
     } catch (error) {
-      console.error("[v0] Analysis error:", error)
+      console.error("Analysis error:", error)
       // Create a basic analysis result if the analysis fails
       // Fallback summary using type-safe guards
       const uniqueIPs = new Set(
@@ -93,7 +91,7 @@ export function ConflictChecker() {
     try {
       await navigator.clipboard.writeText(text)
     } catch (err) {
-      console.error("[v0] Failed to copy to clipboard:", err)
+      console.error("Failed to copy to clipboard:", err)
     }
   }
 

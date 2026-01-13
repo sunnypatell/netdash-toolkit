@@ -185,7 +185,6 @@ export function VLANManager() {
   }
 
   const loadSampleConfig = () => {
-    console.log("[v0] Loading VLAN sample config...")
     try {
       setVlans([
         {
@@ -252,9 +251,8 @@ export function VLANManager() {
           allowedVlans: "10,20,30,40,50",
         },
       ])
-      console.log("[v0] VLAN sample config loaded successfully")
     } catch (error) {
-      console.error("[v0] Error loading VLAN sample config:", error)
+      console.error("Error loading VLAN sample config:", error)
     }
   }
 
