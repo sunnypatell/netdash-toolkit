@@ -2,22 +2,29 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.sunnypatell.netdash-toolkit",
   "productName": "NetDash Toolkit",
-  "copyright": "Copyright © 2024 Sunny Patel",
+  "copyright": "Copyright © 2024-2025 Sunny Patel",
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
   "directories": {
     "output": "release",
-    "buildResources": "build"
+    "buildResources": "electron/resources"
   },
   "files": [
     "dist-electron/**/*",
     "out/**/*",
-    "public/**/*"
+    "public/**/*",
+    "!**/*.map",
+    "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+    "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+    "!**/node_modules/*.d.ts",
+    "!**/node_modules/.bin"
   ],
   "extraMetadata": {
     "main": "dist-electron/main.js"
   },
+  "asar": true,
+  "compression": "maximum",
   "mac": {
     "category": "public.app-category.developer-tools",
-    "icon": "public/favicon.svg",
     "target": [
       {
         "target": "dmg",
@@ -29,11 +36,35 @@
       }
     ],
     "darkModeSupport": true,
-    "hardenedRuntime": true,
-    "gatekeeperAssess": false
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "extendInfo": {
+      "NSAppTransportSecurity": {
+        "NSAllowsArbitraryLoads": true
+      },
+      "NSLocalNetworkUsageDescription": "NetDash Toolkit requires network access to perform ping, traceroute, port scanning, and other network diagnostics.",
+      "NSNetworkVolumesUsageDescription": "NetDash Toolkit may need to access network volumes for network discovery features."
+    }
+  },
+  "dmg": {
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "window": {
+      "width": 540,
+      "height": 400
+    }
   },
   "win": {
-    "icon": "public/favicon.svg",
     "target": [
       {
         "target": "nsis",
@@ -43,7 +74,8 @@
         "target": "portable",
         "arch": ["x64"]
       }
-    ]
+    ],
+    "requestedExecutionLevel": "asInvoker"
   },
   "nsis": {
     "oneClick": false,
@@ -51,10 +83,11 @@
     "allowToChangeInstallationDirectory": true,
     "deleteAppDataOnUninstall": true,
     "createDesktopShortcut": true,
-    "createStartMenuShortcut": true
+    "createStartMenuShortcut": true,
+    "shortcutName": "NetDash Toolkit",
+    "uninstallDisplayName": "NetDash Toolkit"
   },
   "linux": {
-    "icon": "public/favicon.svg",
     "category": "Network",
     "target": [
       {
@@ -66,7 +99,11 @@
         "arch": ["x64"]
       }
     ],
-    "maintainer": "Sunny Patel <sunnypatel124555@gmail.com>"
+    "maintainer": "Sunny Patel <sunnypatel124555@gmail.com>",
+    "vendor": "Sunny Patel",
+    "synopsis": "Professional network engineering toolkit",
+    "description": "NetDash Toolkit is a comprehensive network engineering workbench featuring real ICMP ping, traceroute, port scanning, subnet calculations, and VLAN management."
   },
+  "appImage": {},
   "publish": null
 }

@@ -1,15 +1,158 @@
+/**
+ * NetDash Toolkit - Network Handlers
+ * Enterprise-grade network operations with security hardening
+ *
+ * @author Sunny Patel
+ * @license MIT
+ */
+
 import { ipcMain } from "electron"
 import * as os from "os"
 import * as dns from "dns"
 import * as net from "net"
-import { exec } from "child_process"
+import { exec, spawn } from "child_process"
 import { promisify } from "util"
 
 const execAsync = promisify(exec)
 
-// Register all network-related IPC handlers
+// ============================================================================
+// SECURITY: Input Validation
+// ============================================================================
+
+/**
+ * Validates and sanitizes hostname/IP input to prevent command injection
+ * Allows: hostnames, IPv4, IPv6 addresses
+ * Blocks: shell metacharacters, command injection attempts
+ */
+function validateHost(host: string): { valid: boolean; sanitized: string; error?: string } {
+  if (!host || typeof host !== "string") {
+    return { valid: false, sanitized: "", error: "Host is required" }
+  }
+
+  const trimmed = host.trim()
+
+  if (trimmed.length === 0) {
+    return { valid: false, sanitized: "", error: "Host cannot be empty" }
+  }
+
+  if (trimmed.length > 253) {
+    return { valid: false, sanitized: "", error: "Host too long (max 253 characters)" }
+  }
+
+  // Block dangerous shell characters that could lead to command injection
+  const dangerousChars = /[;&|`$(){}[\]<>\\'"!\n\r\t]/
+  if (dangerousChars.test(trimmed)) {
+    return { valid: false, sanitized: "", error: "Invalid characters in host" }
+  }
+
+  // IPv4 validation
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+  if (ipv4Regex.test(trimmed)) {
+    return { valid: true, sanitized: trimmed }
+  }
+
+  // IPv6 validation (simplified - covers most cases)
+  const ipv6Regex = /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/
+  if (ipv6Regex.test(trimmed)) {
+    return { valid: true, sanitized: trimmed }
+  }
+
+  // Hostname validation (RFC 1123)
+  const hostnameRegex = /^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*$/
+  if (hostnameRegex.test(trimmed)) {
+    return { valid: true, sanitized: trimmed.toLowerCase() }
+  }
+
+  return { valid: false, sanitized: "", error: "Invalid hostname or IP address format" }
+}
+
+/**
+ * Validates port number
+ */
+function validatePort(port: number): boolean {
+  return Number.isInteger(port) && port >= 1 && port <= 65535
+}
+
+/**
+ * Validates port array
+ */
+function validatePorts(ports: number[]): { valid: boolean; sanitized: number[]; error?: string } {
+  if (!Array.isArray(ports)) {
+    return { valid: false, sanitized: [], error: "Ports must be an array" }
+  }
+
+  if (ports.length === 0) {
+    return { valid: false, sanitized: [], error: "At least one port is required" }
+  }
+
+  if (ports.length > 10000) {
+    return { valid: false, sanitized: [], error: "Too many ports (max 10000)" }
+  }
+
+  const sanitized = ports.filter(validatePort)
+  if (sanitized.length === 0) {
+    return { valid: false, sanitized: [], error: "No valid ports provided" }
+  }
+
+  return { valid: true, sanitized }
+}
+
+/**
+ * Validates DNS server address
+ */
+function validateDnsServer(server: string): { valid: boolean; sanitized: string; error?: string } {
+  if (!server) {
+    return { valid: true, sanitized: "" } // Use system default
+  }
+
+  // DNS server should be an IP address
+  const hostValidation = validateHost(server)
+  if (!hostValidation.valid) {
+    return { valid: false, sanitized: "", error: "Invalid DNS server address" }
+  }
+
+  // Only allow IP addresses for DNS servers (not hostnames)
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+  if (!ipv4Regex.test(hostValidation.sanitized)) {
+    return { valid: false, sanitized: "", error: "DNS server must be an IP address" }
+  }
+
+  return { valid: true, sanitized: hostValidation.sanitized }
+}
+
+// ============================================================================
+// LOGGING
+// ============================================================================
+
+type LogLevel = "info" | "warn" | "error" | "debug"
+
+function log(level: LogLevel, message: string, data?: Record<string, unknown>) {
+  const timestamp = new Date().toISOString()
+  const prefix = `[NetDash][${timestamp}][${level.toUpperCase()}]`
+
+  if (data) {
+    console[level === "error" ? "error" : level === "warn" ? "warn" : "log"](
+      `${prefix} ${message}`,
+      JSON.stringify(data)
+    )
+  } else {
+    console[level === "error" ? "error" : level === "warn" ? "warn" : "log"](`${prefix} ${message}`)
+  }
+}
+
+// ============================================================================
+// NETWORK HANDLERS
+// ============================================================================
+
+/**
+ * Register all network-related IPC handlers
+ */
 export function registerNetworkHandlers() {
-  // Ping handler - uses system ping command
+  log("info", "Registering network handlers")
+
+  // --------------------------------
+  // PING Handler
+  // --------------------------------
   ipcMain.handle(
     "network:ping",
     async (
@@ -17,44 +160,9 @@ export function registerNetworkHandlers() {
       host: string,
       options?: { timeout?: number; count?: number }
     ) => {
-      const count = options?.count || 4
-      const timeout = options?.timeout || 5000
-
-      try {
-        const platform = process.platform
-        let cmd: string
-
-        if (platform === "win32") {
-          cmd = `ping -n ${count} -w ${timeout} ${host}`
-        } else if (platform === "darwin") {
-          cmd = `ping -c ${count} -W ${Math.ceil(timeout / 1000)} ${host}`
-        } else {
-          cmd = `ping -c ${count} -W ${Math.ceil(timeout / 1000)} ${host}`
-        }
-
-        const startTime = Date.now()
-        const { stdout } = await execAsync(cmd, { timeout: timeout * count + 5000 })
-        const totalTime = Date.now() - startTime
-
-        // Parse ping output
-        const times = parsePingOutput(stdout, platform)
-        const alive = times.length > 0
-        const packetLoss = ((count - times.length) / count) * 100
-
-        return {
-          host,
-          alive,
-          time: totalTime,
-          min: times.length > 0 ? Math.min(...times) : 0,
-          max: times.length > 0 ? Math.max(...times) : 0,
-          avg:
-            times.length > 0
-              ? times.reduce((a, b) => a + b, 0) / times.length
-              : 0,
-          packetLoss,
-          times,
-        }
-      } catch (error) {
+      const validation = validateHost(host)
+      if (!validation.valid) {
+        log("warn", "Ping validation failed", { host, error: validation.error })
         return {
           host,
           alive: false,
@@ -64,13 +172,67 @@ export function registerNetworkHandlers() {
           avg: 0,
           packetLoss: 100,
           times: [],
-          error: error instanceof Error ? error.message : "Ping failed",
+          error: validation.error,
+        }
+      }
+
+      const sanitizedHost = validation.sanitized
+      const count = Math.min(Math.max(options?.count || 4, 1), 10) // Limit to 1-10
+      const timeout = Math.min(Math.max(options?.timeout || 5000, 1000), 30000) // Limit to 1-30 seconds
+
+      log("info", "Starting ping", { host: sanitizedHost, count, timeout })
+
+      try {
+        const platform = process.platform
+        const args = buildPingArgs(platform, sanitizedHost, count, timeout)
+
+        const startTime = Date.now()
+        const result = await executeCommand("ping", args, timeout * count + 5000)
+        const totalTime = Date.now() - startTime
+
+        const times = parsePingOutput(result.stdout, platform)
+        const alive = times.length > 0
+        const packetLoss = ((count - times.length) / count) * 100
+
+        log("info", "Ping completed", {
+          host: sanitizedHost,
+          alive,
+          packetLoss,
+          avgTime: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0,
+        })
+
+        return {
+          host: sanitizedHost,
+          alive,
+          time: totalTime,
+          min: times.length > 0 ? Math.min(...times) : 0,
+          max: times.length > 0 ? Math.max(...times) : 0,
+          avg: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0,
+          packetLoss,
+          times,
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Ping failed"
+        log("error", "Ping failed", { host: sanitizedHost, error: errorMessage })
+
+        return {
+          host: sanitizedHost,
+          alive: false,
+          time: 0,
+          min: 0,
+          max: 0,
+          avg: 0,
+          packetLoss: 100,
+          times: [],
+          error: errorMessage,
         }
       }
     }
   )
 
-  // Traceroute handler
+  // --------------------------------
+  // TRACEROUTE Handler
+  // --------------------------------
   ipcMain.handle(
     "network:traceroute",
     async (
@@ -78,42 +240,52 @@ export function registerNetworkHandlers() {
       host: string,
       options?: { maxHops?: number; timeout?: number }
     ) => {
-      const maxHops = options?.maxHops || 30
-      const timeout = options?.timeout || 5000
-
-      try {
-        const platform = process.platform
-        let cmd: string
-
-        if (platform === "win32") {
-          cmd = `tracert -h ${maxHops} -w ${timeout} ${host}`
-        } else if (platform === "darwin") {
-          cmd = `traceroute -m ${maxHops} -w ${Math.ceil(timeout / 1000)} ${host}`
-        } else {
-          cmd = `traceroute -m ${maxHops} -w ${Math.ceil(timeout / 1000)} ${host}`
-        }
-
-        const { stdout } = await execAsync(cmd, {
-          timeout: timeout * maxHops + 10000,
-        })
-
-        const hops = parseTracerouteOutput(stdout, platform)
-
-        return {
-          destination: host,
-          hops,
-        }
-      } catch (error) {
+      const validation = validateHost(host)
+      if (!validation.valid) {
+        log("warn", "Traceroute validation failed", { host, error: validation.error })
         return {
           destination: host,
           hops: [],
-          error: error instanceof Error ? error.message : "Traceroute failed",
+          error: validation.error,
+        }
+      }
+
+      const sanitizedHost = validation.sanitized
+      const maxHops = Math.min(Math.max(options?.maxHops || 30, 1), 64) // Limit to 1-64
+      const timeout = Math.min(Math.max(options?.timeout || 5000, 1000), 10000) // Limit to 1-10 seconds
+
+      log("info", "Starting traceroute", { host: sanitizedHost, maxHops, timeout })
+
+      try {
+        const platform = process.platform
+        const args = buildTracerouteArgs(platform, sanitizedHost, maxHops, timeout)
+        const command = platform === "win32" ? "tracert" : "traceroute"
+
+        const result = await executeCommand(command, args, timeout * maxHops + 10000)
+        const hops = parseTracerouteOutput(result.stdout, platform)
+
+        log("info", "Traceroute completed", { host: sanitizedHost, hopCount: hops.length })
+
+        return {
+          destination: sanitizedHost,
+          hops,
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Traceroute failed"
+        log("error", "Traceroute failed", { host: sanitizedHost, error: errorMessage })
+
+        return {
+          destination: sanitizedHost,
+          hops: [],
+          error: errorMessage,
         }
       }
     }
   )
 
-  // Port scan handler
+  // --------------------------------
+  // PORT SCAN Handler
+  // --------------------------------
   ipcMain.handle(
     "network:portScan",
     async (
@@ -122,8 +294,29 @@ export function registerNetworkHandlers() {
       ports: number[],
       options?: { timeout?: number; concurrent?: number }
     ) => {
-      const timeout = options?.timeout || 3000
-      const concurrent = options?.concurrent || 50
+      const hostValidation = validateHost(host)
+      if (!hostValidation.valid) {
+        log("warn", "Port scan host validation failed", { host, error: hostValidation.error })
+        return []
+      }
+
+      const portsValidation = validatePorts(ports)
+      if (!portsValidation.valid) {
+        log("warn", "Port scan ports validation failed", { error: portsValidation.error })
+        return []
+      }
+
+      const sanitizedHost = hostValidation.sanitized
+      const sanitizedPorts = portsValidation.sanitized
+      const timeout = Math.min(Math.max(options?.timeout || 3000, 500), 10000) // 500ms - 10s
+      const concurrent = Math.min(Math.max(options?.concurrent || 50, 1), 200) // 1-200 concurrent
+
+      log("info", "Starting port scan", {
+        host: sanitizedHost,
+        portCount: sanitizedPorts.length,
+        timeout,
+        concurrent,
+      })
 
       const results: Array<{
         port: number
@@ -132,19 +325,28 @@ export function registerNetworkHandlers() {
       }> = []
 
       // Process ports in batches
-      for (let i = 0; i < ports.length; i += concurrent) {
-        const batch = ports.slice(i, i + concurrent)
+      for (let i = 0; i < sanitizedPorts.length; i += concurrent) {
+        const batch = sanitizedPorts.slice(i, i + concurrent)
         const batchResults = await Promise.all(
-          batch.map((port) => scanPort(host, port, timeout))
+          batch.map((port) => scanPort(sanitizedHost, port, timeout))
         )
         results.push(...batchResults)
       }
+
+      const openPorts = results.filter((r) => r.state === "open").length
+      log("info", "Port scan completed", {
+        host: sanitizedHost,
+        scanned: results.length,
+        open: openPorts,
+      })
 
       return results
     }
   )
 
-  // DNS lookup handler
+  // --------------------------------
+  // DNS LOOKUP Handler
+  // --------------------------------
   ipcMain.handle(
     "network:dnsLookup",
     async (
@@ -152,19 +354,73 @@ export function registerNetworkHandlers() {
       hostname: string,
       options?: { server?: string; type?: string }
     ) => {
+      const hostValidation = validateHost(hostname)
+      if (!hostValidation.valid) {
+        log("warn", "DNS lookup validation failed", { hostname, error: hostValidation.error })
+        return {
+          hostname,
+          records: [],
+          server: "system",
+          responseTime: 0,
+          error: hostValidation.error,
+        }
+      }
+
+      let serverToUse = "system"
+      if (options?.server) {
+        const serverValidation = validateDnsServer(options.server)
+        if (!serverValidation.valid) {
+          return {
+            hostname,
+            records: [],
+            server: options.server,
+            responseTime: 0,
+            error: serverValidation.error,
+          }
+        }
+        serverToUse = serverValidation.sanitized || "system"
+      }
+
+      const sanitizedHostname = hostValidation.sanitized
+      const recordType = options?.type || "A"
+      const validTypes = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"]
+
+      if (!validTypes.includes(recordType)) {
+        return {
+          hostname: sanitizedHostname,
+          records: [],
+          server: serverToUse,
+          responseTime: 0,
+          error: `Invalid record type. Supported: ${validTypes.join(", ")}`,
+        }
+      }
+
+      log("info", "Starting DNS lookup", { hostname: sanitizedHostname, type: recordType, server: serverToUse })
+
       const startTime = Date.now()
 
       try {
-        // Use system DNS or custom server
-        if (options?.server) {
-          dns.setServers([options.server])
+        // Store original servers to restore later
+        const originalServers = dns.getServers()
+
+        // Set custom DNS server if provided
+        if (serverToUse !== "system") {
+          dns.setServers([serverToUse])
         }
 
         const records: Array<{ type: string; value: string; ttl?: number }> = []
-        const recordType = options?.type || "A"
 
         await new Promise<void>((resolve, reject) => {
-          dns.resolve(hostname, recordType as any, (err, addresses) => {
+          dns.resolve(sanitizedHostname, recordType as any, (err, addresses) => {
+            // Restore original servers
+            if (serverToUse !== "system") {
+              try {
+                dns.setServers(originalServers)
+              } catch {
+                // Ignore errors restoring servers
+              }
+            }
+
             if (err) {
               reject(err)
               return
@@ -175,10 +431,7 @@ export function registerNetworkHandlers() {
                 if (typeof addr === "string") {
                   records.push({ type: recordType, value: addr })
                 } else if (typeof addr === "object") {
-                  records.push({
-                    type: recordType,
-                    value: JSON.stringify(addr),
-                  })
+                  records.push({ type: recordType, value: JSON.stringify(addr) })
                 }
               })
             }
@@ -186,26 +439,39 @@ export function registerNetworkHandlers() {
           })
         })
 
+        log("info", "DNS lookup completed", {
+          hostname: sanitizedHostname,
+          recordCount: records.length,
+          responseTime: Date.now() - startTime,
+        })
+
         return {
-          hostname,
+          hostname: sanitizedHostname,
           records,
-          server: options?.server || dns.getServers()[0],
+          server: serverToUse,
           responseTime: Date.now() - startTime,
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "DNS lookup failed"
+        log("error", "DNS lookup failed", { hostname: sanitizedHostname, error: errorMessage })
+
         return {
-          hostname,
+          hostname: sanitizedHostname,
           records: [],
-          server: options?.server || "system",
+          server: serverToUse,
           responseTime: Date.now() - startTime,
-          error: error instanceof Error ? error.message : "DNS lookup failed",
+          error: errorMessage,
         }
       }
     }
   )
 
-  // Get network interfaces
+  // --------------------------------
+  // NETWORK INTERFACES Handler
+  // --------------------------------
   ipcMain.handle("network:getInterfaces", async () => {
+    log("debug", "Getting network interfaces")
+
     const interfaces = os.networkInterfaces()
     const result: Array<{
       name: string
@@ -219,7 +485,14 @@ export function registerNetworkHandlers() {
     for (const [name, addrs] of Object.entries(interfaces)) {
       if (!addrs) continue
 
-      const iface: any = {
+      const iface: {
+        name: string
+        mac: string
+        ipv4?: string
+        ipv6?: string
+        netmask?: string
+        internal: boolean
+      } = {
         name,
         mac: addrs[0]?.mac || "00:00:00:00:00:00",
         internal: addrs[0]?.internal || false,
@@ -237,32 +510,37 @@ export function registerNetworkHandlers() {
       result.push(iface)
     }
 
+    log("debug", "Network interfaces retrieved", { count: result.length })
     return result
   })
 
-  // ARP scan handler
-  ipcMain.handle("network:arpScan", async (_event, _subnet?: string) => {
+  // --------------------------------
+  // ARP SCAN Handler
+  // --------------------------------
+  ipcMain.handle("network:arpScan", async () => {
+    log("info", "Starting ARP scan")
+
     try {
       const platform = process.platform
-      let cmd: string
+      // ARP command is safe - no user input
+      const result = await executeCommand("arp", ["-a"], 10000)
+      const entries = parseArpOutput(result.stdout, platform)
 
-      if (platform === "win32") {
-        cmd = "arp -a"
-      } else if (platform === "darwin") {
-        cmd = "arp -a"
-      } else {
-        cmd = "arp -a"
-      }
-
-      const { stdout } = await execAsync(cmd)
-      return parseArpOutput(stdout, platform)
+      log("info", "ARP scan completed", { entryCount: entries.length })
+      return entries
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "ARP scan failed"
+      log("error", "ARP scan failed", { error: errorMessage })
       return []
     }
   })
 
-  // System info handler
+  // --------------------------------
+  // SYSTEM INFO Handler
+  // --------------------------------
   ipcMain.handle("system:getInfo", async () => {
+    log("debug", "Getting system info")
+
     return {
       hostname: os.hostname(),
       platform: os.platform(),
@@ -272,9 +550,98 @@ export function registerNetworkHandlers() {
       uptime: os.uptime(),
     }
   })
+
+  log("info", "Network handlers registered successfully")
 }
 
-// Helper function to scan a single port
+// ============================================================================
+// COMMAND EXECUTION (Safe)
+// ============================================================================
+
+/**
+ * Execute a command safely using spawn (avoids shell interpretation)
+ */
+async function executeCommand(
+  command: string,
+  args: string[],
+  timeout: number
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      timeout,
+      windowsHide: true,
+      // No shell = no command injection
+    })
+
+    let stdout = ""
+    let stderr = ""
+
+    child.stdout?.on("data", (data) => {
+      stdout += data.toString()
+    })
+
+    child.stderr?.on("data", (data) => {
+      stderr += data.toString()
+    })
+
+    child.on("error", (error) => {
+      reject(error)
+    })
+
+    child.on("close", (code) => {
+      // Some network commands return non-zero even on partial success
+      resolve({ stdout, stderr })
+    })
+
+    // Timeout handling
+    setTimeout(() => {
+      child.kill()
+      reject(new Error("Command timed out"))
+    }, timeout)
+  })
+}
+
+/**
+ * Build ping command arguments based on platform
+ */
+function buildPingArgs(
+  platform: string,
+  host: string,
+  count: number,
+  timeout: number
+): string[] {
+  if (platform === "win32") {
+    return ["-n", String(count), "-w", String(timeout), host]
+  } else {
+    // macOS and Linux
+    return ["-c", String(count), "-W", String(Math.ceil(timeout / 1000)), host]
+  }
+}
+
+/**
+ * Build traceroute command arguments based on platform
+ */
+function buildTracerouteArgs(
+  platform: string,
+  host: string,
+  maxHops: number,
+  timeout: number
+): string[] {
+  if (platform === "win32") {
+    return ["-h", String(maxHops), "-w", String(timeout), host]
+  } else {
+    // macOS and Linux
+    return ["-m", String(maxHops), "-w", String(Math.ceil(timeout / 1000)), host]
+  }
+}
+
+// ============================================================================
+// PORT SCANNING
+// ============================================================================
+
+/**
+ * Scan a single port using TCP socket
+ */
 async function scanPort(
   host: string,
   port: number,
@@ -283,40 +650,56 @@ async function scanPort(
   return new Promise((resolve) => {
     const socket = new net.Socket()
     let state: "open" | "closed" | "filtered" = "filtered"
+    let resolved = false
+
+    const cleanup = () => {
+      if (!resolved) {
+        resolved = true
+        socket.destroy()
+        resolve({
+          port,
+          state,
+          service: getServiceName(port),
+        })
+      }
+    }
 
     socket.setTimeout(timeout)
 
     socket.on("connect", () => {
       state = "open"
-      socket.destroy()
+      cleanup()
     })
 
     socket.on("timeout", () => {
       state = "filtered"
-      socket.destroy()
+      cleanup()
     })
 
-    socket.on("error", (err: any) => {
+    socket.on("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "ECONNREFUSED") {
         state = "closed"
+      } else if (err.code === "EHOSTUNREACH" || err.code === "ENETUNREACH") {
+        state = "filtered"
       } else {
         state = "filtered"
       }
+      cleanup()
     })
 
-    socket.on("close", () => {
-      resolve({
-        port,
-        state,
-        service: getServiceName(port),
-      })
-    })
+    socket.on("close", cleanup)
 
     socket.connect(port, host)
   })
 }
 
-// Parse ping output based on platform
+// ============================================================================
+// OUTPUT PARSERS
+// ============================================================================
+
+/**
+ * Parse ping output based on platform
+ */
 function parsePingOutput(output: string, platform: string): number[] {
   const times: number[] = []
   const lines = output.split("\n")
@@ -338,7 +721,9 @@ function parsePingOutput(output: string, platform: string): number[] {
   return times
 }
 
-// Parse traceroute output based on platform
+/**
+ * Parse traceroute output based on platform
+ */
 function parseTracerouteOutput(
   output: string,
   platform: string
@@ -385,12 +770,9 @@ function parseTracerouteOutput(
 
       if (platform === "win32") {
         ip = match[5] || "*"
-        if (match[2] && match[2] !== "*")
-          rtt.push(parseFloat(match[2].replace("<", "")))
-        if (match[3] && match[3] !== "*")
-          rtt.push(parseFloat(match[3].replace("<", "")))
-        if (match[4] && match[4] !== "*")
-          rtt.push(parseFloat(match[4].replace("<", "")))
+        if (match[2] && match[2] !== "*") rtt.push(parseFloat(match[2].replace("<", "")))
+        if (match[3] && match[3] !== "*") rtt.push(parseFloat(match[3].replace("<", "")))
+        if (match[4] && match[4] !== "*") rtt.push(parseFloat(match[4].replace("<", "")))
       } else {
         hostname = match[2]
         ip = match[3] || "*"
@@ -412,7 +794,9 @@ function parseTracerouteOutput(
   return hops
 }
 
-// Parse ARP output
+/**
+ * Parse ARP output
+ */
 function parseArpOutput(
   output: string,
   platform: string
@@ -425,14 +809,10 @@ function parseArpOutput(
 
     if (platform === "win32") {
       // Windows: "  192.168.1.1           00-11-22-33-44-55     dynamic"
-      match = line.match(
-        /\s*([\d.]+)\s+([0-9A-Fa-f-]{17})\s+(?:dynamic|static)/i
-      )
+      match = line.match(/\s*([\d.]+)\s+([0-9A-Fa-f-]{17})\s+(?:dynamic|static)/i)
     } else {
       // macOS/Linux: "? (192.168.1.1) at 00:11:22:33:44:55 on en0"
-      match = line.match(
-        /\(?([\d.]+)\)?\s+at\s+([0-9A-Fa-f:]{17})\s+(?:on\s+(\w+))?/i
-      )
+      match = line.match(/\(?([\d.]+)\)?\s+at\s+([0-9A-Fa-f:]{17})\s+(?:on\s+(\w+))?/i)
     }
 
     if (match) {
@@ -447,7 +827,13 @@ function parseArpOutput(
   return entries
 }
 
-// Common port to service name mapping
+// ============================================================================
+// SERVICE NAME LOOKUP
+// ============================================================================
+
+/**
+ * Common port to service name mapping
+ */
 function getServiceName(port: number): string | undefined {
   const services: Record<number, string> = {
     20: "FTP-DATA",
@@ -456,13 +842,24 @@ function getServiceName(port: number): string | undefined {
     23: "Telnet",
     25: "SMTP",
     53: "DNS",
+    67: "DHCP",
+    68: "DHCP",
     80: "HTTP",
     110: "POP3",
+    123: "NTP",
     143: "IMAP",
+    161: "SNMP",
+    162: "SNMP-Trap",
     443: "HTTPS",
     445: "SMB",
+    465: "SMTPS",
+    514: "Syslog",
+    587: "SMTP-Submit",
+    636: "LDAPS",
     993: "IMAPS",
     995: "POP3S",
+    1433: "MSSQL",
+    1521: "Oracle",
     3306: "MySQL",
     3389: "RDP",
     5432: "PostgreSQL",
@@ -470,6 +867,8 @@ function getServiceName(port: number): string | undefined {
     6379: "Redis",
     8080: "HTTP-Proxy",
     8443: "HTTPS-Alt",
+    9200: "Elasticsearch",
+    11211: "Memcached",
     27017: "MongoDB",
   }
 

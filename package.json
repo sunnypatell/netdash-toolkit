@@ -2,21 +2,58 @@
   "name": "netdash-toolkit",
   "version": "1.0.0",
   "private": true,
-  "description": "Professional network engineering toolkit with real networking capabilities",
-  "author": "Sunny Patel <sunnypatel124555@gmail.com>",
+  "description": "Professional network engineering toolkit with real networking capabilities - featuring subnet calculations, VLSM planning, VLAN management, real ICMP ping, traceroute, and port scanning",
+  "author": {
+    "name": "Sunny Patel",
+    "email": "sunnypatel124555@gmail.com",
+    "url": "https://github.com/sunnypatell"
+  },
   "license": "MIT",
+  "homepage": "https://netdash-toolkit.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunnypatell/netdash-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sunnypatell/netdash-toolkit/issues"
+  },
+  "keywords": [
+    "network",
+    "networking",
+    "subnet",
+    "calculator",
+    "vlsm",
+    "vlan",
+    "ping",
+    "traceroute",
+    "port-scanner",
+    "dns",
+    "electron",
+    "nextjs",
+    "typescript",
+    "network-tools",
+    "network-engineering",
+    "it-tools",
+    "devops"
+  ],
   "main": "dist-electron/main.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "electron:dev": "concurrently \"cross-env NODE_ENV=development next dev\" \"wait-on http://localhost:3000 && tsc -p electron/tsconfig.json && cross-env NODE_ENV=development electron .\"",
-    "electron:build": "next build && next export && tsc -p electron/tsconfig.json && electron-builder",
+    "electron:build": "next build && tsc -p electron/tsconfig.json && electron-builder",
     "electron:compile": "tsc -p electron/tsconfig.json",
     "dist:mac": "pnpm electron:build --mac",
     "dist:win": "pnpm electron:build --win",
-    "dist:linux": "pnpm electron:build --linux"
+    "dist:linux": "pnpm electron:build --linux",
+    "dist:all": "pnpm electron:build --mac --win --linux"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

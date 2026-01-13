@@ -22,7 +22,7 @@
 
 <br />
 
-**[Features](#-features) • [Quick Start](#-quick-start) • [Tools](#-tool-suite) • [Tech Stack](#-tech-stack) • [Roadmap](#-roadmap)**
+**[Features](#features) • [Quick Start](#quick-start) • [Tools](#tool-suite) • [Tech Stack](#tech-stack) • [Roadmap](#roadmap) • [Desktop App](#electron-desktop-app)**
 
 <br />
 
@@ -362,12 +362,14 @@ netdash-toolkit/
 | Done | Core Tools | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
 | Done | Network Testing | RTT, Throughput, DNS-over-HTTPS |
 | Done | Dark Mode | System-aware theming |
-| In Progress | Electron App | Desktop version with native networking |
-| Planned | Real ICMP Ping | Native ping with Electron |
-| Planned | Real Traceroute | TTL-based hop discovery |
-| Planned | Port Scanner | TCP/UDP socket scanning |
-| Planned | Network Discovery | ARP scanning, device enumeration |
+| Done | Electron App | Desktop version with native networking |
+| Done | Real ICMP Ping | Native ping with Electron |
+| Done | Real Traceroute | TTL-based hop discovery |
+| Done | Port Scanner | TCP/UDP socket scanning |
+| Done | Network Discovery | ARP scanning, device enumeration |
 | Planned | Configuration Backup | SSH-based device config backup |
+| Planned | SNMP Polling | Device monitoring via SNMP |
+| Planned | Network Topology | Visual network mapping |
 
 </div>
 
@@ -388,7 +390,54 @@ Running entirely in the browser has some constraints:
 | **Port Scanning** | TCP/UDP sockets not accessible | Educational simulation mode |
 | **Direct DNS** | Only DoH providers accessible | Multiple DoH provider support |
 
-> **Coming Soon**: Electron desktop app with full native networking capabilities!
+> **Available Now**: Electron desktop app with full native networking capabilities!
+
+<br />
+
+---
+
+<br />
+
+## Electron Desktop App
+
+NetDash Toolkit is available as a native desktop application with **real networking capabilities** that go beyond browser limitations.
+
+### Native Features
+
+| Feature | Browser | Desktop App |
+|:--------|:-------:|:-----------:|
+| **ICMP Ping** | HTTP fallback | Real ICMP packets |
+| **Traceroute** | Simulated | Real TTL-based hop discovery |
+| **Port Scanning** | Limited | Full TCP/UDP scanning |
+| **Network Discovery** | Not available | ARP scanning |
+| **DNS Queries** | DoH only | Direct DNS queries |
+
+### Building the Desktop App
+
+```bash
+# Install dependencies
+pnpm install
+
+# Development mode (with hot reload)
+pnpm electron:dev
+
+# Build for macOS
+pnpm dist:mac
+
+# Build for Windows
+pnpm dist:win
+
+# Build for Linux
+pnpm dist:linux
+```
+
+### System Requirements
+
+| Platform | Requirements |
+|:---------|:-------------|
+| **macOS** | macOS 10.13+ (High Sierra or later), x64 or Apple Silicon |
+| **Windows** | Windows 10+, x64 |
+| **Linux** | Ubuntu 18.04+, Debian 10+, or equivalent |
 
 <br />
 
@@ -404,6 +453,10 @@ Running entirely in the browser has some constraints:
 | `pnpm build` | Generate optimized production build |
 | `pnpm start` | Serve production build locally |
 | `pnpm lint` | Run ESLint for code quality |
+| `pnpm electron:dev` | Start Electron app in development mode |
+| `pnpm dist:mac` | Build macOS app (DMG + ZIP) |
+| `pnpm dist:win` | Build Windows installer (NSIS + Portable) |
+| `pnpm dist:linux` | Build Linux packages (AppImage + DEB) |
 
 <br />
 
