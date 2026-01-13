@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -18,16 +18,74 @@ import {
   Shield,
   Activity,
   Copy,
+  Zap,
+  Scan,
 } from "lucide-react"
 import { PasteParser } from "@/components/ui/paste-parser"
 import { analyzeConflicts, exportConflictsToCSV, generateRemediationReport } from "@/lib/conflict-utils"
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/parsers"
 import type { ConflictAnalysisResult } from "@/lib/conflict-utils"
+import { isElectron, electronNetwork } from "@/lib/electron"
 
 export function ConflictChecker() {
   const [parsedData, setParsedData] = useState<(ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]>([])
   const [analysis, setAnalysis] = useState<ConflictAnalysisResult | null>(null)
   const [sourceTexts, setSourceTexts] = useState<string[]>([])
+  const [isNative, setIsNative] = useState(false)
+  const [isScanning, setIsScanning] = useState(false)
+
+  // Check if running in Electron for native networking
+  useEffect(() => {
+    setIsNative(isElectron())
+  }, [])
+
+  // Native ARP scan function
+  const runNativeArpScan = async () => {
+    if (!isNative) return
+
+    setIsScanning(true)
+    try {
+      console.log("[NetDash] Running NATIVE ARP scan")
+      const arpEntries = await electronNetwork.arpScan()
+
+      if (arpEntries && arpEntries.length > 0) {
+        // Convert ARP entries to parsed format
+        const parsedEntries: ParsedARPEntry[] = arpEntries.map((entry) => ({
+          ip: entry.ip,
+          mac: entry.mac,
+          interface: entry.interface,
+          source: "Native ARP Scan",
+          type: "arp" as const,
+        }))
+
+        setParsedData(parsedEntries)
+        setSourceTexts(["Native ARP Scan"])
+
+        // Run conflict analysis
+        try {
+          const analysisResult = analyzeConflicts(parsedEntries, ["Native ARP Scan"])
+          setAnalysis(analysisResult)
+        } catch (error) {
+          console.error("Analysis error:", error)
+          // Fallback summary
+          const uniqueIPs = new Set(parsedEntries.map((e) => e.ip)).size
+          const uniqueMACs = new Set(parsedEntries.map((e) => e.mac)).size
+          setAnalysis({
+            totalEntries: parsedEntries.length,
+            uniqueIPs,
+            uniqueMACs,
+            conflicts: [],
+            sources: ["Native ARP Scan"],
+            summary: { high: 0, medium: 0, low: 0 },
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Native ARP scan failed:", error)
+    } finally {
+      setIsScanning(false)
+    }
+  }
 
   const handleDataParsed = (data: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]) => {
     setParsedData(data)
@@ -147,8 +205,29 @@ export function ConflictChecker() {
             <h1 className="text-2xl font-bold">IP Conflict Checker</h1>
             <p className="text-muted-foreground">Detect IP and MAC conflicts from multiple data sources</p>
           </div>
+          {isNative && (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              <Zap className="w-3 h-3 mr-1" />
+              Native Mode
+            </Badge>
+          )}
         </div>
         <div className="flex space-x-2">
+          {isNative && (
+            <Button onClick={runNativeArpScan} disabled={isScanning}>
+              {isScanning ? (
+                <>
+                  <Activity className="w-4 h-4 mr-2 animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                <>
+                  <Scan className="w-4 h-4 mr-2" />
+                  Scan Local Network
+                </>
+              )}
+            </Button>
+          )}
           {analysis && analysis.conflicts.length > 0 && (
             <>
               <Button variant="outline" onClick={() => exportConflicts("csv")}>
@@ -163,6 +242,16 @@ export function ConflictChecker() {
           )}
         </div>
       </div>
+
+      {isNative && (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <Zap className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <strong>Native Mode:</strong> Click "Scan Local Network" to perform a real ARP scan of your local network
+            using system tools. You can also paste data from other sources for combined analysis.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="input" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">

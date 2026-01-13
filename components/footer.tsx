@@ -35,7 +35,7 @@ export function Footer() {
 
             <Button variant="ghost" size="sm" asChild>
               <a
-                href="https://github.com/sunnypatell"
+                href="https://github.com/sunnypatell/netdash-toolkit"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"

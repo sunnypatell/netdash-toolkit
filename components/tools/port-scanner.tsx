@@ -81,25 +81,29 @@ export function PortScanner() {
     setCurrentScan(session)
 
     try {
-      // Use native port scanning in Electron
+      // Use native TCP socket port scanning in Electron
       if (isNative) {
+        console.log("[NetDash] Using NATIVE TCP socket port scanning")
         const nativeResults = await electronNetwork.portScan(target.trim(), ports, {
           timeout: 3000,
-          concurrent: 50,
+          concurrent: 100, // More concurrent connections for faster scanning
         })
 
-        if (nativeResults) {
+        if (nativeResults && nativeResults.length > 0) {
           for (let i = 0; i < nativeResults.length; i++) {
             const nativeResult = nativeResults[i]
             const result: PortScanResult = {
               port: nativeResult.port,
               service: nativeResult.service || getServiceName(nativeResult.port),
               status: nativeResult.state,
+              responseTime: (nativeResult as any).responseTime, // Include response time from native scan
             }
             session.results.push(result)
             setScanProgress(((i + 1) / nativeResults.length) * 100)
             setCurrentScan({ ...session })
           }
+        } else {
+          console.error("[NetDash] Native port scan returned no results")
         }
       } else {
         // Fallback to simulated scanning for browser

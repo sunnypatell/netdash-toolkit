@@ -10,10 +10,7 @@ import { ipcMain } from "electron"
 import * as os from "os"
 import * as dns from "dns"
 import * as net from "net"
-import { exec, spawn } from "child_process"
-import { promisify } from "util"
-
-const execAsync = promisify(exec)
+import { spawn } from "child_process"
 
 // ============================================================================
 // SECURITY: Input Validation
@@ -559,6 +556,66 @@ export function registerNetworkHandlers() {
 // ============================================================================
 
 /**
+ * Get the full path for a command based on platform
+ * Tries multiple known locations as fallbacks
+ */
+function getCommandPath(command: string): string {
+  const platform = process.platform
+
+  // Primary paths - most common locations
+  const primaryPaths: Record<string, Record<string, string>> = {
+    ping: {
+      darwin: "/sbin/ping",
+      linux: "/bin/ping",
+      win32: "ping",
+    },
+    traceroute: {
+      darwin: "/usr/sbin/traceroute",
+      linux: "/usr/bin/traceroute",
+      win32: "tracert",
+    },
+    arp: {
+      darwin: "/usr/sbin/arp",
+      linux: "/usr/sbin/arp",
+      win32: "arp",
+    },
+  }
+
+  // Fallback paths - alternative locations on some systems
+  const fallbackPaths: Record<string, Record<string, string[]>> = {
+    ping: {
+      darwin: ["/usr/bin/ping", "/usr/sbin/ping"],
+      linux: ["/usr/bin/ping", "/sbin/ping"],
+      win32: [],
+    },
+    traceroute: {
+      darwin: ["/usr/bin/traceroute"],
+      linux: ["/sbin/traceroute", "/usr/sbin/traceroute"],
+      win32: [],
+    },
+    arp: {
+      darwin: ["/usr/bin/arp"],
+      linux: ["/sbin/arp", "/usr/bin/arp"],
+      win32: [],
+    },
+  }
+
+  const primary = primaryPaths[command]?.[platform]
+  if (primary) {
+    return primary
+  }
+
+  // Try fallbacks (this is mainly for edge cases)
+  const fallbacks = fallbackPaths[command]?.[platform] || []
+  if (fallbacks.length > 0) {
+    return fallbacks[0]
+  }
+
+  // Last resort - let the system find it
+  return command
+}
+
+/**
  * Execute a command safely using spawn (avoids shell interpretation)
  */
 async function executeCommand(
@@ -567,7 +624,12 @@ async function executeCommand(
   timeout: number
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    // Use full path for system commands to avoid PATH issues in packaged app
+    const fullCommand = getCommandPath(command)
+
+    log("debug", `Executing command: ${fullCommand} ${args.join(" ")}`)
+
+    const child = spawn(fullCommand, args, {
       timeout,
       windowsHide: true,
       // No shell = no command injection
@@ -575,6 +637,7 @@ async function executeCommand(
 
     let stdout = ""
     let stderr = ""
+    let killed = false
 
     child.stdout?.on("data", (data) => {
       stdout += data.toString()
@@ -584,20 +647,52 @@ async function executeCommand(
       stderr += data.toString()
     })
 
-    child.on("error", (error) => {
-      reject(error)
+    child.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") {
+        reject(new Error(`Command not found: ${fullCommand}. The required network tool may not be installed.`))
+      } else if (error.code === "EACCES") {
+        reject(new Error(`Permission denied: ${fullCommand}. Try running with elevated privileges.`))
+      } else {
+        reject(error)
+      }
     })
 
     child.on("close", (code) => {
+      if (killed) {
+        return // Already handled by timeout
+      }
       // Some network commands return non-zero even on partial success
-      resolve({ stdout, stderr })
+      // e.g., ping returns 1 if host unreachable but still provides output
+      if (stdout || stderr) {
+        resolve({ stdout, stderr })
+      } else if (code !== 0) {
+        reject(new Error(`Command failed with exit code ${code}`))
+      } else {
+        resolve({ stdout, stderr })
+      }
     })
 
     // Timeout handling
-    setTimeout(() => {
-      child.kill()
-      reject(new Error("Command timed out"))
+    const timeoutId = setTimeout(() => {
+      killed = true
+      child.kill("SIGTERM")
+      // Give it a moment to terminate gracefully
+      setTimeout(() => {
+        if (!child.killed) {
+          child.kill("SIGKILL")
+        }
+      }, 1000)
+      // Return partial results if available
+      if (stdout) {
+        resolve({ stdout, stderr })
+      } else {
+        reject(new Error(`Command timed out after ${timeout}ms`))
+      }
     }, timeout)
+
+    child.on("close", () => {
+      clearTimeout(timeoutId)
+    })
   })
 }
 
@@ -611,9 +706,14 @@ function buildPingArgs(
   timeout: number
 ): string[] {
   if (platform === "win32") {
+    // Windows: -n count, -w timeout (milliseconds)
     return ["-n", String(count), "-w", String(timeout), host]
+  } else if (platform === "darwin") {
+    // macOS: -c count, -W waittime (milliseconds), -t timeout (seconds)
+    // -W is per-packet wait time in ms, -t is overall timeout in seconds
+    return ["-c", String(count), "-W", String(timeout), "-t", String(Math.ceil((timeout * count) / 1000) + 2), host]
   } else {
-    // macOS and Linux
+    // Linux: -c count, -W timeout (seconds)
     return ["-c", String(count), "-W", String(Math.ceil(timeout / 1000)), host]
   }
 }
@@ -627,11 +727,18 @@ function buildTracerouteArgs(
   maxHops: number,
   timeout: number
 ): string[] {
+  const waitSeconds = Math.max(1, Math.ceil(timeout / 1000))
+
   if (platform === "win32") {
-    return ["-h", String(maxHops), "-w", String(timeout), host]
+    // Windows tracert: -h maxHops, -w timeout (milliseconds)
+    return ["-h", String(maxHops), "-w", String(timeout), "-d", host]
+  } else if (platform === "darwin") {
+    // macOS traceroute: -m maxHops, -w wait (seconds), -q queries per hop
+    // Use -n to skip DNS resolution for faster results, -q 1 for single query
+    return ["-m", String(maxHops), "-w", String(waitSeconds), "-q", "1", "-n", host]
   } else {
-    // macOS and Linux
-    return ["-m", String(maxHops), "-w", String(Math.ceil(timeout / 1000)), host]
+    // Linux traceroute: -m maxHops, -w wait (seconds)
+    return ["-m", String(maxHops), "-w", String(waitSeconds), "-q", "1", "-n", host]
   }
 }
 
@@ -640,26 +747,34 @@ function buildTracerouteArgs(
 // ============================================================================
 
 /**
- * Scan a single port using TCP socket
+ * Scan a single port using TCP socket - REAL socket-level scanning
+ * This creates actual TCP connections to determine port state
  */
 async function scanPort(
   host: string,
   port: number,
   timeout: number
-): Promise<{ port: number; state: "open" | "closed" | "filtered"; service?: string }> {
+): Promise<{ port: number; state: "open" | "closed" | "filtered"; service?: string; responseTime?: number }> {
   return new Promise((resolve) => {
     const socket = new net.Socket()
     let state: "open" | "closed" | "filtered" = "filtered"
     let resolved = false
+    const startTime = Date.now()
 
-    const cleanup = () => {
+    const cleanup = (finalState: "open" | "closed" | "filtered") => {
       if (!resolved) {
         resolved = true
+        state = finalState
+        const responseTime = Date.now() - startTime
         socket.destroy()
+
+        log("debug", `Port scan result: ${host}:${port} = ${state}`, { responseTime })
+
         resolve({
           port,
           state,
           service: getServiceName(port),
+          responseTime: state === "open" ? responseTime : undefined,
         })
       }
     }
@@ -667,29 +782,44 @@ async function scanPort(
     socket.setTimeout(timeout)
 
     socket.on("connect", () => {
-      state = "open"
-      cleanup()
+      cleanup("open")
     })
 
     socket.on("timeout", () => {
-      state = "filtered"
-      cleanup()
+      cleanup("filtered")
     })
 
     socket.on("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "ECONNREFUSED") {
-        state = "closed"
+        // Connection refused = port is closed (something is listening but refusing)
+        cleanup("closed")
       } else if (err.code === "EHOSTUNREACH" || err.code === "ENETUNREACH") {
-        state = "filtered"
+        // Host/network unreachable
+        cleanup("filtered")
+      } else if (err.code === "ETIMEDOUT") {
+        // Connection timed out
+        cleanup("filtered")
+      } else if (err.code === "ECONNRESET") {
+        // Connection reset - typically means filtered by firewall
+        cleanup("filtered")
       } else {
-        state = "filtered"
+        // Other errors - assume filtered
+        log("debug", `Port scan error: ${host}:${port}`, { error: err.code || err.message })
+        cleanup("filtered")
       }
-      cleanup()
     })
 
-    socket.on("close", cleanup)
+    socket.on("close", () => {
+      if (!resolved) {
+        cleanup("filtered")
+      }
+    })
 
-    socket.connect(port, host)
+    try {
+      socket.connect(port, host)
+    } catch (err) {
+      cleanup("filtered")
+    }
   })
 }
 
@@ -739,55 +869,95 @@ function parseTracerouteOutput(
   const lines = output.split("\n")
 
   for (const line of lines) {
-    // Skip header lines
+    // Skip header lines and empty lines
+    const trimmed = line.trim()
     if (
-      line.trim().startsWith("traceroute") ||
-      line.trim().startsWith("Tracing") ||
-      line.trim() === ""
+      trimmed.startsWith("traceroute") ||
+      trimmed.startsWith("Tracing") ||
+      trimmed.startsWith("over a maximum") ||
+      trimmed === "" ||
+      trimmed.startsWith("Trace complete")
     ) {
       continue
     }
 
-    let match: RegExpMatchArray | null = null
-
     if (platform === "win32") {
-      // Windows: "  1    <1 ms    <1 ms    <1 ms  192.168.1.1"
-      match = line.match(
-        /^\s*(\d+)\s+(?:(<?\d+)\s*ms)?\s+(?:(<?\d+)\s*ms)?\s+(?:(<?\d+)\s*ms)?\s+([\d.]+|\*)/
+      // Windows tracert: "  1    <1 ms    <1 ms    <1 ms  192.168.1.1"
+      // or "  1     *        *        *     Request timed out."
+      const winMatch = line.match(
+        /^\s*(\d+)\s+(?:(<?\d+)\s*ms|\*)\s+(?:(<?\d+)\s*ms|\*)\s+(?:(<?\d+)\s*ms|\*)\s+([\d.]+|Request timed out\.|\*)/i
       )
+
+      if (winMatch) {
+        const hop = parseInt(winMatch[1])
+        const rtt: number[] = []
+        let ip = "*"
+
+        // Check if it's a timeout
+        if (winMatch[5] && !winMatch[5].includes("timed out") && winMatch[5] !== "*") {
+          ip = winMatch[5]
+        }
+
+        if (winMatch[2] && winMatch[2] !== "*") rtt.push(parseFloat(winMatch[2].replace("<", "0.")))
+        if (winMatch[3] && winMatch[3] !== "*") rtt.push(parseFloat(winMatch[3].replace("<", "0.")))
+        if (winMatch[4] && winMatch[4] !== "*") rtt.push(parseFloat(winMatch[4].replace("<", "0.")))
+
+        hops.push({
+          hop,
+          ip,
+          hostname: undefined,
+          rtt,
+          timeout: ip === "*" || rtt.length === 0,
+        })
+      }
     } else {
-      // macOS/Linux: " 1  192.168.1.1 (192.168.1.1)  1.234 ms  1.456 ms  1.789 ms"
-      match = line.match(
-        /^\s*(\d+)\s+(?:([^\s(]+)\s+)?\(?([\d.]+|\*)\)?\s+(?:([\d.]+)\s*ms)?\s*(?:([\d.]+)\s*ms)?\s*(?:([\d.]+)\s*ms)?/
-      )
-    }
+      // macOS/Linux with -n flag: " 1  192.168.1.1  1.234 ms"
+      // or " 1  *"
+      // Format: hop_number  ip_or_*  [rtt ms] [rtt ms] [rtt ms]
 
-    if (match) {
-      const hop = parseInt(match[1])
-      const rtt: number[] = []
-      let ip = "*"
-      let hostname: string | undefined
+      // Try simple format first (with -n -q 1): "  1  192.168.1.1  1.234 ms"
+      const simpleMatch = line.match(/^\s*(\d+)\s+([\d.]+|\*)\s+(?:([\d.]+)\s*ms)?/)
 
-      if (platform === "win32") {
-        ip = match[5] || "*"
-        if (match[2] && match[2] !== "*") rtt.push(parseFloat(match[2].replace("<", "")))
-        if (match[3] && match[3] !== "*") rtt.push(parseFloat(match[3].replace("<", "")))
-        if (match[4] && match[4] !== "*") rtt.push(parseFloat(match[4].replace("<", "")))
-      } else {
-        hostname = match[2]
-        ip = match[3] || "*"
-        if (match[4]) rtt.push(parseFloat(match[4]))
-        if (match[5]) rtt.push(parseFloat(match[5]))
-        if (match[6]) rtt.push(parseFloat(match[6]))
+      if (simpleMatch) {
+        const hop = parseInt(simpleMatch[1])
+        const ip = simpleMatch[2] || "*"
+        const rtt: number[] = []
+
+        if (simpleMatch[3]) {
+          rtt.push(parseFloat(simpleMatch[3]))
+        }
+
+        hops.push({
+          hop,
+          ip,
+          hostname: undefined,
+          rtt,
+          timeout: ip === "*" || rtt.length === 0,
+        })
+        continue
       }
 
-      hops.push({
-        hop,
-        ip,
-        hostname,
-        rtt,
-        timeout: ip === "*" || rtt.length === 0,
-      })
+      // Try full format with hostname: " 1  router.local (192.168.1.1)  1.234 ms"
+      const fullMatch = line.match(
+        /^\s*(\d+)\s+(?:([^\s(]+)\s+)?\(?([\d.]+|\*)\)?\s+(?:([\d.]+)\s*ms)?/
+      )
+
+      if (fullMatch) {
+        const hop = parseInt(fullMatch[1])
+        const hostname = fullMatch[2]
+        const ip = fullMatch[3] || "*"
+        const rtt: number[] = []
+
+        if (fullMatch[4]) rtt.push(parseFloat(fullMatch[4]))
+
+        hops.push({
+          hop,
+          ip,
+          hostname,
+          rtt,
+          timeout: ip === "*" || rtt.length === 0,
+        })
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,7 @@ import {
   protocolOverheads,
 } from "@/lib/network-testing"
 import type { RTTTestResult, ThroughputTestResult, DNSResult, MTUCalculation, OUIResult } from "@/lib/network-testing"
+import { isElectron, electronNetwork } from "@/lib/electron"
 
 export function NetworkTester() {
   const [activeTest, setActiveTest] = useState<string | null>(null)
@@ -46,10 +47,16 @@ export function NetworkTester() {
   const [dnsResults, setDnsResults] = useState<DNSResult[]>([])
   const [mtuCalculation, setMtuCalculation] = useState<MTUCalculation | null>(null)
   const [ouiResult, setOuiResult] = useState<OUIResult | null>(null)
+  const [isNative, setIsNative] = useState(false)
+
+  // Check if running in Electron
+  useEffect(() => {
+    setIsNative(isElectron())
+  }, [])
 
   // RTT Test State
-  const [rttUrl, setRttUrl] = useState("https://www.google.com")
-  const [rttMethod, setRttMethod] = useState<"HEAD" | "GET">("HEAD")
+  const [rttUrl, setRttUrl] = useState("google.com")
+  const [rttMethod, setRttMethod] = useState<"HEAD" | "GET" | "ICMP">("HEAD")
   const [rttSamples, setRttSamples] = useState("10")
 
   // Throughput Test State
@@ -78,8 +85,44 @@ export function NetworkTester() {
 
     setActiveTest("rtt")
     try {
-      const result = await testRTT(rttUrl, rttMethod, Number.parseInt(rttSamples) || 10)
-      setRttResults([result, ...rttResults.slice(0, 9)]) // Keep last 10 results
+      // Use native ICMP ping when method is ICMP and we're in Electron
+      if (rttMethod === "ICMP" && isNative) {
+        console.log("[NetDash] Using NATIVE ICMP ping for RTT test")
+        const host = rttUrl.trim().replace(/^https?:\/\//, "").split("/")[0]
+        const samples = Number.parseInt(rttSamples) || 10
+
+        const nativeResult = await electronNetwork.ping(host, {
+          count: samples,
+          timeout: 5000,
+        })
+
+        if (nativeResult) {
+          const result: RTTTestResult = {
+            url: host,
+            method: "ICMP" as any,
+            samples: nativeResult.times.length,
+            timestamps: nativeResult.times.map((_, i) => Date.now() - (samples - i) * 100),
+            latencies: nativeResult.times,
+            average: nativeResult.avg,
+            min: nativeResult.min,
+            max: nativeResult.max,
+            jitter: nativeResult.times.length > 1
+              ? Math.sqrt(
+                  nativeResult.times.reduce((sum, t) => sum + Math.pow(t - nativeResult.avg, 2), 0) /
+                    nativeResult.times.length
+                )
+              : 0,
+            packetLoss: nativeResult.packetLoss,
+          }
+          setRttResults([result, ...rttResults.slice(0, 9)])
+        }
+      } else {
+        // Use HTTP-based RTT test for browser or when HTTP method selected
+        const url = rttUrl.startsWith("http") ? rttUrl : `https://${rttUrl}`
+        const method = rttMethod === "ICMP" ? "HEAD" : rttMethod
+        const result = await testRTT(url, method, Number.parseInt(rttSamples) || 10)
+        setRttResults([result, ...rttResults.slice(0, 9)])
+      }
     } catch (error) {
       console.error("RTT test failed:", error)
     } finally {
@@ -305,13 +348,23 @@ export function NetworkTester() {
         </div>
       </div>
 
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Browser Limitations:</strong> These tests use HTTP requests and are subject to CORS policies. For
-          accurate network testing, use dedicated tools or configure test endpoints with proper CORS headers.
-        </AlertDescription>
-      </Alert>
+      {isNative ? (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <Zap className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <strong>Native Mode:</strong> Running in desktop app with real ICMP ping support. Select "ICMP Ping (Native)"
+            in RTT test for accurate latency measurements using system-level networking.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Browser Limitations:</strong> These tests use HTTP requests and are subject to CORS policies. For
+            accurate network testing with ICMP ping, use the desktop app.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="rtt" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
@@ -345,13 +398,16 @@ export function NetworkTester() {
                 </div>
                 <div>
                   <Label>Method</Label>
-                  <Select value={rttMethod} onValueChange={(value: "HEAD" | "GET") => setRttMethod(value)}>
+                  <Select value={rttMethod} onValueChange={(value: "HEAD" | "GET" | "ICMP") => setRttMethod(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="HEAD">HEAD (faster)</SelectItem>
-                      <SelectItem value="GET">GET (full request)</SelectItem>
+                      {isNative && (
+                        <SelectItem value="ICMP">ICMP Ping (Native)</SelectItem>
+                      )}
+                      <SelectItem value="HEAD">HTTP HEAD (faster)</SelectItem>
+                      <SelectItem value="GET">HTTP GET (full request)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

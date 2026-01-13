@@ -8,6 +8,7 @@
     "output": "release",
     "buildResources": "electron/resources"
   },
+  "icon": "electron/resources/icon",
   "files": [
     "dist-electron/**/*",
     "out/**/*",
@@ -24,6 +25,7 @@
   "asar": true,
   "compression": "maximum",
   "mac": {
+    "icon": "electron/resources/icon.icns",
     "category": "public.app-category.developer-tools",
     "target": [
       {
@@ -65,6 +67,7 @@
     }
   },
   "win": {
+    "icon": "electron/resources/icon.ico",
     "target": [
       {
         "target": "nsis",
@@ -75,7 +78,8 @@
         "arch": ["x64"]
       }
     ],
-    "requestedExecutionLevel": "asInvoker"
+    "requestedExecutionLevel": "asInvoker",
+    "legalTrademarks": "NetDash Toolkit is a trademark of Sunny Patel"
   },
   "nsis": {
     "oneClick": false,
@@ -88,6 +92,7 @@
     "uninstallDisplayName": "NetDash Toolkit"
   },
   "linux": {
+    "icon": "electron/resources/icon.png",
     "category": "Network",
     "target": [
       {
@@ -102,7 +107,8 @@
     "maintainer": "Sunny Patel <sunnypatel124555@gmail.com>",
     "vendor": "Sunny Patel",
     "synopsis": "Professional network engineering toolkit",
-    "description": "NetDash Toolkit is a comprehensive network engineering workbench featuring real ICMP ping, traceroute, port scanning, subnet calculations, and VLAN management."
+    "description": "NetDash Toolkit is a comprehensive network engineering workbench featuring real ICMP ping, traceroute, port scanning, subnet calculations, and VLAN management.",
+    "executableName": "netdash-toolkit"
   },
   "appImage": {},
   "publish": null

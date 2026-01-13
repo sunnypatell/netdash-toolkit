@@ -8,8 +8,17 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Activity, Navigation, AlertCircle, CheckCircle, Clock, Download, Zap } from "lucide-react"
+import { Activity, Navigation, AlertCircle, CheckCircle, Clock, Download, Zap, Wifi, Server } from "lucide-react"
 import { isElectron, electronNetwork } from "@/lib/electron"
+
+interface NetworkInterface {
+  name: string
+  mac: string
+  ipv4?: string
+  ipv6?: string
+  netmask?: string
+  internal: boolean
+}
 
 interface PingResult {
   host: string
@@ -41,10 +50,27 @@ export function PingTraceroute() {
   const [pingValidationError, setPingValidationError] = useState<string | null>(null)
   const [tracerouteValidationError, setTracerouteValidationError] = useState<string | null>(null)
   const [activeTracerouteTarget, setActiveTracerouteTarget] = useState<string | null>(null)
+  const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterface[]>([])
 
   // Check if running in Electron for native networking
   useEffect(() => {
-    setIsNative(isElectron())
+    const checkNative = async () => {
+      const native = isElectron()
+      setIsNative(native)
+
+      // Load network interfaces when in native mode
+      if (native) {
+        try {
+          const interfaces = await electronNetwork.getNetworkInterfaces()
+          if (interfaces) {
+            setNetworkInterfaces(interfaces)
+          }
+        } catch (error) {
+          console.error("Failed to load network interfaces:", error)
+        }
+      }
+    }
+    checkNative()
   }, [])
 
   const parseTargetInput = (value: string) => {
@@ -356,9 +382,10 @@ export function PingTraceroute() {
       )}
 
       <Tabs defaultValue="ping" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className={`grid w-full ${isNative ? "grid-cols-3" : "grid-cols-2"}`}>
           <TabsTrigger value="ping">Ping Test</TabsTrigger>
           <TabsTrigger value="traceroute">Traceroute</TabsTrigger>
+          {isNative && <TabsTrigger value="interfaces">Network Info</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="ping" className="space-y-6">
@@ -604,6 +631,80 @@ export function PingTraceroute() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isNative && (
+          <TabsContent value="interfaces" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Server className="w-5 h-5" />
+                  <span>Network Interfaces</span>
+                </CardTitle>
+                <CardDescription>
+                  Real network interface information from your system
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {networkInterfaces.length > 0 ? (
+                  <div className="space-y-4">
+                    {networkInterfaces
+                      .filter(iface => !iface.internal) // Show external interfaces first
+                      .concat(networkInterfaces.filter(iface => iface.internal))
+                      .map((iface, index) => (
+                        <div
+                          key={index}
+                          className={`p-4 rounded-lg border ${
+                            iface.internal ? "bg-muted/30" : "bg-muted/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <Wifi className="w-5 h-5 text-primary" />
+                              <span className="font-semibold">{iface.name}</span>
+                              {iface.internal && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Internal
+                                </Badge>
+                              )}
+                            </div>
+                            <span className="font-mono text-xs text-muted-foreground">
+                              {iface.mac}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            {iface.ipv4 && (
+                              <div>
+                                <span className="text-muted-foreground">IPv4:</span>{" "}
+                                <span className="font-mono">{iface.ipv4}</span>
+                                {iface.netmask && (
+                                  <span className="text-muted-foreground text-xs ml-2">
+                                    / {iface.netmask}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {iface.ipv6 && (
+                              <div>
+                                <span className="text-muted-foreground">IPv6:</span>{" "}
+                                <span className="font-mono text-xs break-all">
+                                  {iface.ipv6}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Server className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Loading network interfaces...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <Card>

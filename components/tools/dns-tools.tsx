@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,26 +9,62 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Globe, Search, Activity, CheckCircle, AlertCircle, Clock, Shield } from "lucide-react"
+import { Globe, Search, Activity, CheckCircle, AlertCircle, Clock, Shield, Zap } from "lucide-react"
 import { queryDNSOverHTTPS } from "@/lib/network-testing"
 import type { DNSResult } from "@/lib/network-testing"
+import { isElectron, electronNetwork } from "@/lib/electron"
 
 export function DNSTools() {
   const [activeQuery, setActiveQuery] = useState(false)
   const [dnsResults, setDnsResults] = useState<DNSResult[]>([])
+  const [isNative, setIsNative] = useState(false)
 
   // DNS Query State
   const [dnsQuery, setDnsQuery] = useState("example.com")
   const [dnsRecordType, setDnsRecordType] = useState("A")
   const [dnsProvider, setDnsProvider] = useState("cloudflare")
 
+  // Check if running in Electron for native networking
+  useEffect(() => {
+    setIsNative(isElectron())
+  }, [])
+
   const runDNSQuery = async () => {
     if (!dnsQuery.trim()) return
 
     setActiveQuery(true)
     try {
-      const result = await queryDNSOverHTTPS(dnsQuery.trim(), dnsRecordType, dnsProvider)
-      setDnsResults([result, ...dnsResults.slice(0, 9)]) // Keep last 10 results
+      // Use native DNS resolution when provider is "native" and we're in Electron
+      if (dnsProvider === "native" && isNative) {
+        console.log("[NetDash] Using NATIVE DNS resolution")
+        const nativeResult = await electronNetwork.dnsLookup(dnsQuery.trim(), {
+          type: dnsRecordType,
+        })
+
+        if (nativeResult) {
+          const result: DNSResult = {
+            domain: dnsQuery.trim(),
+            recordType: dnsRecordType,
+            provider: "Native (System)",
+            timestamp: Date.now(),
+            responseTime: nativeResult.responseTime,
+            success: !nativeResult.error,
+            error: nativeResult.error,
+            dnssec: false,
+            records: nativeResult.records.map((r) => ({
+              name: dnsQuery.trim(),
+              type: r.type,
+              ttl: r.ttl || 0,
+              data: r.value,
+            })),
+          }
+          setDnsResults([result, ...dnsResults.slice(0, 9)])
+        }
+      } else {
+        // Use DNS over HTTPS for browser or when DoH provider is selected
+        const result = await queryDNSOverHTTPS(dnsQuery.trim(), dnsRecordType, dnsProvider)
+        setDnsResults([result, ...dnsResults.slice(0, 9)])
+      }
     } catch (error) {
       console.error("DNS query failed:", error)
     } finally {
@@ -129,13 +165,23 @@ export function DNSTools() {
         </div>
       </div>
 
-      <Alert>
-        <Shield className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Secure DNS:</strong> All queries use DNS over HTTPS (DoH) for privacy and security. DNSSEC validation
-          is supported where available.
-        </AlertDescription>
-      </Alert>
+      {isNative ? (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <Zap className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <strong>Native Mode:</strong> Running in desktop app with native DNS resolution. Select "Native (System)"
+            provider for direct DNS queries using your system resolver, or use DoH providers for encrypted lookups.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <Shield className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Secure DNS:</strong> All queries use DNS over HTTPS (DoH) for privacy and security. DNSSEC validation
+            is supported where available.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -183,6 +229,9 @@ export function DNSTools() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  {isNative && (
+                    <SelectItem value="native">Native (System DNS)</SelectItem>
+                  )}
                   <SelectItem value="cloudflare">Cloudflare (1.1.1.1)</SelectItem>
                   <SelectItem value="google">Google (8.8.8.8)</SelectItem>
                   <SelectItem value="quad9">Quad9 (9.9.9.9)</SelectItem>
