@@ -1,13 +1,23 @@
 /**
  * NetDash Toolkit - Electron Main Process
- * Enterprise-grade desktop application for network engineering
+ * Desktop application for network engineering
  *
  * @author Sunny Patel
  * @license MIT
  */
 
-import { app, BrowserWindow, ipcMain, shell, Menu, dialog, nativeTheme } from "electron"
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  Menu,
+  dialog,
+  nativeTheme,
+} from "electron"
 import * as path from "path"
+import * as http from "http"
+import handler from "serve-handler"
 import { registerNetworkHandlers } from "./network/handlers"
 
 // ============================================================================
@@ -16,6 +26,44 @@ import { registerNetworkHandlers } from "./network/handlers"
 
 const APP_NAME = "NetDash Toolkit"
 const isDev = process.env.NODE_ENV === "development"
+const STATIC_PORT = 17890 // Port for static file server
+
+// ============================================================================
+// STATIC FILE SERVER
+// ============================================================================
+
+let staticServer: http.Server | null = null
+
+function startStaticServer(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const outDir = path.join(__dirname, "../out")
+
+    staticServer = http.createServer((req, res) => {
+      return handler(req, res, {
+        public: outDir,
+        cleanUrls: true,
+        directoryListing: false,
+      })
+    })
+
+    staticServer.listen(STATIC_PORT, "127.0.0.1", () => {
+      console.log(`[NetDash] Static server running at http://127.0.0.1:${STATIC_PORT}`)
+      resolve(STATIC_PORT)
+    })
+
+    staticServer.on("error", (err) => {
+      console.error("[NetDash] Static server error:", err)
+      reject(err)
+    })
+  })
+}
+
+function stopStaticServer(): void {
+  if (staticServer) {
+    staticServer.close()
+    staticServer = null
+  }
+}
 
 // ============================================================================
 // WINDOW MANAGEMENT
@@ -30,24 +78,17 @@ function createWindow(): void {
     minWidth: 1024,
     minHeight: 768,
     title: APP_NAME,
-    icon: path.join(__dirname, "../public/favicon.svg"),
+    backgroundColor: "#09090b",
+    show: false,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false, // Required for network operations
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload.js"),
+      sandbox: false,
       webSecurity: true,
-      allowRunningInsecureContent: false,
     },
-    // macOS specific styling
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
-    trafficLightPosition: { x: 15, y: 15 },
-    // Theme-aware background
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0f172a" : "#ffffff",
-    show: false, // Don't show until ready
   })
 
-  // Show window when ready to prevent visual flash
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show()
     mainWindow?.focus()
@@ -56,28 +97,21 @@ function createWindow(): void {
   // Load the app
   if (isDev) {
     mainWindow.loadURL("http://localhost:3000")
-    // Open DevTools in development
     mainWindow.webContents.openDevTools({ mode: "detach" })
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../out/index.html"))
+    // Load from local static server
+    mainWindow.loadURL(`http://127.0.0.1:${STATIC_PORT}`)
   }
 
   // Handle external links
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Only allow opening external URLs
     if (url.startsWith("http://") || url.startsWith("https://")) {
-      shell.openExternal(url)
+      // Don't open our local server externally
+      if (!url.includes("127.0.0.1") && !url.includes("localhost")) {
+        shell.openExternal(url)
+      }
     }
     return { action: "deny" }
-  })
-
-  // Handle navigation attempts
-  mainWindow.webContents.on("will-navigate", (event, url) => {
-    // Prevent navigation away from the app in production
-    if (!isDev && !url.startsWith("file://")) {
-      event.preventDefault()
-      shell.openExternal(url)
-    }
   })
 
   mainWindow.on("closed", () => {
@@ -86,59 +120,29 @@ function createWindow(): void {
 }
 
 // ============================================================================
-// APPLICATION MENU
+// MENU
 // ============================================================================
 
 function createMenu(): void {
   const isMac = process.platform === "darwin"
 
   const template: Electron.MenuItemConstructorOptions[] = [
-    // App menu (macOS only)
     ...(isMac
-      ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: "about" as const, label: `About ${APP_NAME}` },
-              { type: "separator" as const },
-              {
-                label: "Preferences...",
-                accelerator: "CmdOrCtrl+,",
-                click: () => {
-                  // Could open preferences window
-                  mainWindow?.webContents.send("open-preferences")
-                },
-              },
-              { type: "separator" as const },
-              { role: "services" as const },
-              { type: "separator" as const },
-              { role: "hide" as const },
-              { role: "hideOthers" as const },
-              { role: "unhide" as const },
-              { type: "separator" as const },
-              { role: "quit" as const },
-            ],
-          },
-        ]
+      ? [{
+          label: app.name,
+          submenu: [
+            { role: "about" as const },
+            { type: "separator" as const },
+            { role: "services" as const },
+            { type: "separator" as const },
+            { role: "hide" as const },
+            { role: "hideOthers" as const },
+            { role: "unhide" as const },
+            { type: "separator" as const },
+            { role: "quit" as const },
+          ],
+        }]
       : []),
-
-    // File menu
-    {
-      label: "File",
-      submenu: [
-        {
-          label: "Export Results...",
-          accelerator: "CmdOrCtrl+E",
-          click: () => {
-            mainWindow?.webContents.send("export-results")
-          },
-        },
-        { type: "separator" },
-        isMac ? { role: "close" } : { role: "quit" },
-      ],
-    },
-
-    // Edit menu
     {
       label: "Edit",
       submenu: [
@@ -151,107 +155,31 @@ function createMenu(): void {
         { role: "selectAll" },
       ],
     },
-
-    // View menu
     {
       label: "View",
       submenu: [
         { role: "reload" },
         { role: "forceReload" },
+        { role: "toggleDevTools" },
         { type: "separator" },
         { role: "resetZoom" },
         { role: "zoomIn" },
         { role: "zoomOut" },
         { type: "separator" },
         { role: "togglefullscreen" },
-        ...(isDev ? [{ type: "separator" as const }, { role: "toggleDevTools" as const }] : []),
       ],
     },
-
-    // Tools menu
-    {
-      label: "Tools",
-      submenu: [
-        {
-          label: "Ping",
-          accelerator: "CmdOrCtrl+1",
-          click: () => mainWindow?.webContents.send("navigate-tool", "ping"),
-        },
-        {
-          label: "Port Scanner",
-          accelerator: "CmdOrCtrl+2",
-          click: () => mainWindow?.webContents.send("navigate-tool", "port-scanner"),
-        },
-        {
-          label: "Subnet Calculator",
-          accelerator: "CmdOrCtrl+3",
-          click: () => mainWindow?.webContents.send("navigate-tool", "subnet-calculator"),
-        },
-        { type: "separator" },
-        {
-          label: "Network Interfaces",
-          click: async () => {
-            const { response } = await dialog.showMessageBox(mainWindow!, {
-              type: "info",
-              title: "Network Interfaces",
-              message: "Network interface information is available in the dashboard.",
-              buttons: ["OK", "Open Dashboard"],
-            })
-            if (response === 1) {
-              mainWindow?.webContents.send("navigate-tool", "dashboard")
-            }
-          },
-        },
-      ],
-    },
-
-    // Window menu
     {
       label: "Window",
       submenu: [
         { role: "minimize" },
         { role: "zoom" },
-        ...(isMac
-          ? [{ type: "separator" as const }, { role: "front" as const }]
-          : [{ role: "close" as const }]),
-      ],
-    },
-
-    // Help menu
-    {
-      label: "Help",
-      submenu: [
-        {
-          label: "Documentation",
-          click: () => {
-            shell.openExternal("https://github.com/sunnypatell/netdash-toolkit#readme")
-          },
-        },
-        {
-          label: "Report Issue",
-          click: () => {
-            shell.openExternal("https://github.com/sunnypatell/netdash-toolkit/issues")
-          },
-        },
-        { type: "separator" },
-        {
-          label: `About ${APP_NAME}`,
-          click: () => {
-            dialog.showMessageBox(mainWindow!, {
-              type: "info",
-              title: `About ${APP_NAME}`,
-              message: APP_NAME,
-              detail: `Version: ${app.getVersion()}\n\nA professional network engineering toolkit with real networking capabilities.\n\nBuilt with Electron, Next.js, and TypeScript.\n\n© 2024-2025 Sunny Patel`,
-              buttons: ["OK"],
-            })
-          },
-        },
+        ...(isMac ? [{ type: "separator" as const }, { role: "front" as const }] : [{ role: "close" as const }]),
       ],
     },
   ]
 
-  const menu = Menu.buildFromTemplate(template)
-  Menu.setApplicationMenu(menu)
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
 // ============================================================================
@@ -259,47 +187,13 @@ function createMenu(): void {
 // ============================================================================
 
 function registerAppHandlers(): void {
-  // App info
   ipcMain.handle("app:getVersion", () => app.getVersion())
   ipcMain.handle("app:getPlatform", () => process.platform)
   ipcMain.handle("app:isElectron", () => true)
-  ipcMain.handle("app:getName", () => app.getName())
-
-  // Theme handling
-  ipcMain.handle("app:getTheme", () => {
-    return nativeTheme.shouldUseDarkColors ? "dark" : "light"
-  })
-
-  ipcMain.handle("app:setTheme", (_event, theme: "dark" | "light" | "system") => {
-    nativeTheme.themeSource = theme
-    return true
-  })
-
-  // Window controls
-  ipcMain.handle("window:minimize", () => {
-    mainWindow?.minimize()
-  })
-
-  ipcMain.handle("window:maximize", () => {
-    if (mainWindow?.isMaximized()) {
-      mainWindow.unmaximize()
-    } else {
-      mainWindow?.maximize()
-    }
-  })
-
-  ipcMain.handle("window:close", () => {
-    mainWindow?.close()
-  })
-
-  // Dialog handlers
-  ipcMain.handle("dialog:showSaveDialog", async (_event, options) => {
-    if (!mainWindow) return { canceled: true }
-    return dialog.showSaveDialog(mainWindow, options)
-  })
+  ipcMain.handle("app:getTheme", () => nativeTheme.shouldUseDarkColors ? "dark" : "light")
 
   ipcMain.handle("dialog:showOpenDialog", async (_event, options) => {
-    if (!mainWindow) return { canceled: true }
+    if (!mainWindow) return { canceled: true, filePaths: [] }
     return dialog.showOpenDialog(mainWindow, options)
   })
 
@@ -313,96 +207,54 @@ function registerAppHandlers(): void {
 // APP LIFECYCLE
 // ============================================================================
 
-// Handle app ready
-app.whenReady().then(() => {
-  console.log(`[NetDash] Starting ${APP_NAME} v${app.getVersion()}`)
-  console.log(`[NetDash] Platform: ${process.platform}, Arch: ${process.arch}`)
-  console.log(`[NetDash] Development mode: ${isDev}`)
-
-  createWindow()
-  createMenu()
-  registerAppHandlers()
-  registerNetworkHandlers()
-
-  // macOS: Re-create window when dock icon is clicked
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
-    } else {
-      mainWindow?.show()
-      mainWindow?.focus()
-    }
-  })
-})
-
-// Handle all windows closed
-app.on("window-all-closed", () => {
-  // On macOS, apps typically stay open until explicitly quit
-  if (process.platform !== "darwin") {
-    app.quit()
-  }
-})
-
-// Handle before quit
-app.on("before-quit", () => {
-  console.log("[NetDash] Application shutting down")
-})
-
-// Handle second instance (single instance lock)
 const gotTheLock = app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
   app.quit()
 } else {
   app.on("second-instance", () => {
-    // Focus main window if user tries to open another instance
     if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore()
-      }
+      if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
     }
   })
+
+  app.whenReady().then(async () => {
+    // Start static server for production
+    if (!isDev) {
+      try {
+        await startStaticServer()
+      } catch (err) {
+        console.error("[NetDash] Failed to start static server:", err)
+        dialog.showErrorBox("Error", "Failed to start application server")
+        app.quit()
+        return
+      }
+    }
+
+    createWindow()
+    createMenu()
+    registerAppHandlers()
+    registerNetworkHandlers()
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow()
+      }
+    })
+  })
 }
 
-// Handle certificate errors (for development)
-app.on("certificate-error", (event, _webContents, _url, _error, _certificate, callback) => {
-  if (isDev) {
-    // In development, ignore certificate errors
-    event.preventDefault()
-    callback(true)
-  } else {
-    callback(false)
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit()
   }
 })
 
-// Security: Disable navigation to unknown protocols
-app.on("web-contents-created", (_event, contents) => {
-  contents.on("will-navigate", (event, navigationUrl) => {
-    const parsedUrl = new URL(navigationUrl)
-
-    // Allow localhost in dev, file:// in production
-    if (isDev) {
-      if (parsedUrl.origin !== "http://localhost:3000") {
-        event.preventDefault()
-      }
-    } else {
-      if (parsedUrl.protocol !== "file:") {
-        event.preventDefault()
-      }
-    }
-  })
+app.on("before-quit", () => {
+  stopStaticServer()
 })
-
-// ============================================================================
-// ERROR HANDLING
-// ============================================================================
 
 process.on("uncaughtException", (error) => {
-  console.error("[NetDash] Uncaught Exception:", error)
-  dialog.showErrorBox("Error", `An unexpected error occurred: ${error.message}`)
-})
-
-process.on("unhandledRejection", (reason) => {
-  console.error("[NetDash] Unhandled Rejection:", reason)
+  console.error("[NetDash] Error:", error)
 })

@@ -41,6 +41,13 @@
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "@tailwindcss/oxide",
+      "electron-winstaller"
+    ]
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -102,6 +109,7 @@
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.4",
+    "serve-handler": "^6.1.6",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -113,9 +121,10 @@
     "@types/node": "^22",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/serve-handler": "^6.1.4",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
-    "electron": "^39.2.7",
+    "electron": "39.2.7",
     "electron-builder": "^26.4.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
