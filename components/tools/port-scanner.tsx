@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Shield, Search, AlertCircle, CheckCircle, X, Download } from "lucide-react"
+import { Shield, Search, AlertCircle, CheckCircle, X, Download, Zap } from "lucide-react"
+import { isElectron, electronNetwork } from "@/lib/electron"
 
 interface PortScanResult {
   port: number
@@ -51,13 +52,19 @@ export function PortScanner() {
   const [scanProgress, setScanProgress] = useState(0)
   const [currentScan, setCurrentScan] = useState<ScanSession | null>(null)
   const [scanHistory, setScanHistory] = useState<ScanSession[]>([])
+  const [isNative, setIsNative] = useState(false)
+
+  // Check if running in Electron for native networking
+  useEffect(() => {
+    setIsNative(isElectron())
+  }, [])
 
   const getServiceName = (port: number): string => {
     const service = commonPorts.find((p) => p.port === port)
     return service?.service || "Unknown"
   }
 
-  // Simulate port scanning (browser limitations prevent real port scanning)
+  // Perform real port scanning in Electron, simulated in browser
   const performPortScan = async (ports: number[]) => {
     if (!target.trim()) return
 
@@ -73,52 +80,75 @@ export function PortScanner() {
 
     setCurrentScan(session)
 
-    // Simulate scanning each port
-    for (let i = 0; i < ports.length; i++) {
-      const port = ports[i]
-      const startTime = performance.now()
-
-      try {
-        // Attempt to connect (will mostly fail due to CORS/browser security)
-        const response = await fetch(`http://${target}:${port}`, {
-          method: "HEAD",
-          mode: "no-cors",
-          signal: AbortSignal.timeout(2000),
+    try {
+      // Use native port scanning in Electron
+      if (isNative) {
+        const nativeResults = await electronNetwork.portScan(target.trim(), ports, {
+          timeout: 3000,
+          concurrent: 50,
         })
 
-        const endTime = performance.now()
-        const responseTime = endTime - startTime
-
-        const result: PortScanResult = {
-          port,
-          service: getServiceName(port),
-          status: "open",
-          responseTime,
+        if (nativeResults) {
+          for (let i = 0; i < nativeResults.length; i++) {
+            const nativeResult = nativeResults[i]
+            const result: PortScanResult = {
+              port: nativeResult.port,
+              service: nativeResult.service || getServiceName(nativeResult.port),
+              status: nativeResult.state,
+            }
+            session.results.push(result)
+            setScanProgress(((i + 1) / nativeResults.length) * 100)
+            setCurrentScan({ ...session })
+          }
         }
+      } else {
+        // Fallback to simulated scanning for browser
+        for (let i = 0; i < ports.length; i++) {
+          const port = ports[i]
+          const startTime = performance.now()
 
-        session.results.push(result)
-      } catch (error) {
-        // Most ports will appear closed due to browser limitations
-        const result: PortScanResult = {
-          port,
-          service: getServiceName(port),
-          status: Math.random() > 0.8 ? "open" : "closed", // Simulate some open ports
+          try {
+            await fetch(`http://${target}:${port}`, {
+              method: "HEAD",
+              mode: "no-cors",
+              signal: AbortSignal.timeout(2000),
+            })
+
+            const endTime = performance.now()
+            const responseTime = endTime - startTime
+
+            const result: PortScanResult = {
+              port,
+              service: getServiceName(port),
+              status: "open",
+              responseTime,
+            }
+
+            session.results.push(result)
+          } catch (error) {
+            // Most ports will appear closed due to browser limitations
+            const result: PortScanResult = {
+              port,
+              service: getServiceName(port),
+              status: Math.random() > 0.8 ? "open" : "closed", // Simulate some open ports
+            }
+
+            session.results.push(result)
+          }
+
+          setScanProgress(((i + 1) / ports.length) * 100)
+          setCurrentScan({ ...session })
+
+          // Small delay to show progress
+          await new Promise((resolve) => setTimeout(resolve, 100))
         }
-
-        session.results.push(result)
       }
-
-      setScanProgress(((i + 1) / ports.length) * 100)
-      setCurrentScan({ ...session })
-
-      // Small delay to show progress
-      await new Promise((resolve) => setTimeout(resolve, 100))
+    } finally {
+      session.completed = true
+      setCurrentScan(session)
+      setScanHistory([session, ...scanHistory.slice(0, 4)])
+      setIsScanning(false)
     }
-
-    session.completed = true
-    setCurrentScan(session)
-    setScanHistory([session, ...scanHistory.slice(0, 4)])
-    setIsScanning(false)
   }
 
   const scanCommonPorts = () => {
@@ -164,13 +194,22 @@ export function PortScanner() {
         </div>
       </div>
 
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Browser Limitations:</strong> Due to CORS and browser security policies, this tool provides simulated
-          results. Use native tools like Nmap for real port scanning.
-        </AlertDescription>
-      </Alert>
+      {isNative ? (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <Zap className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <strong>Native Mode:</strong> Running in desktop app with real TCP port scanning capabilities.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Browser Limitations:</strong> Due to CORS and browser security policies, this tool provides simulated
+            results. Use the desktop app for real port scanning.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>

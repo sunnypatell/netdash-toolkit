@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Activity, Navigation, AlertCircle, CheckCircle, Clock, Download } from "lucide-react"
+import { Activity, Navigation, AlertCircle, CheckCircle, Clock, Download, Zap } from "lucide-react"
+import { isElectron, electronNetwork } from "@/lib/electron"
 
 interface PingResult {
   host: string
@@ -35,10 +36,16 @@ export function PingTraceroute() {
   const [tracerouteResults, setTracerouteResults] = useState<TracerouteHop[]>([])
   const [isPinging, setIsPinging] = useState(false)
   const [isTracing, setIsTracing] = useState(false)
+  const [isNative, setIsNative] = useState(false)
 
   const [pingValidationError, setPingValidationError] = useState<string | null>(null)
   const [tracerouteValidationError, setTracerouteValidationError] = useState<string | null>(null)
   const [activeTracerouteTarget, setActiveTracerouteTarget] = useState<string | null>(null)
+
+  // Check if running in Electron for native networking
+  useEffect(() => {
+    setIsNative(isElectron())
+  }, [])
 
   const parseTargetInput = (value: string) => {
     const trimmed = value.trim()
@@ -152,8 +159,10 @@ export function PingTraceroute() {
   const performPing = async () => {
     if (!pingHost.trim()) return
 
-    const target = parseTargetInput(pingHost)
-    if (!target) {
+    // For native Electron, just use the hostname directly
+    const host = pingHost.trim().replace(/^https?:\/\//, "").split("/")[0]
+
+    if (!host) {
       setPingValidationError("Enter a valid hostname or IP address.")
       return
     }
@@ -162,6 +171,33 @@ export function PingTraceroute() {
     setIsPinging(true)
 
     try {
+      // Use native ICMP ping in Electron
+      if (isNative) {
+        const nativeResult = await electronNetwork.ping(host, { count: 4, timeout: 5000 })
+
+        if (nativeResult) {
+          const result: PingResult = {
+            host: host,
+            timestamp: Date.now(),
+            success: nativeResult.alive,
+            responseTime: nativeResult.avg,
+            error: nativeResult.error,
+            methodUsed: "HEAD", // Indicate native
+            scheme: "http", // Not applicable for ICMP
+            fallback: false,
+          }
+          setPingResults(prev => [result, ...prev.slice(0, 9)])
+        }
+        return
+      }
+
+      // Fallback to HTTP-based ping for browser
+      const target = parseTargetInput(pingHost)
+      if (!target) {
+        setPingValidationError("Enter a valid hostname or IP address.")
+        return
+      }
+
       let fallbackUsed = false
       let lastError: unknown = null
 
@@ -209,8 +245,10 @@ export function PingTraceroute() {
   const performTraceroute = async () => {
     if (!tracerouteHost.trim()) return
 
-    const target = parseTargetInput(tracerouteHost)
-    if (!target) {
+    // For native Electron, just use the hostname directly
+    const host = tracerouteHost.trim().replace(/^https?:\/\//, "").split("/")[0]
+
+    if (!host) {
       setTracerouteValidationError("Enter a valid hostname or IP address.")
       return
     }
@@ -218,30 +256,58 @@ export function PingTraceroute() {
     setTracerouteValidationError(null)
     setIsTracing(true)
     setTracerouteResults([])
-    setActiveTracerouteTarget(target.displayHost)
+    setActiveTracerouteTarget(host)
 
-    const simulatedHops: TracerouteHop[] = [
-      { hop: 1, host: "192.168.1.1", responseTime: 1.2, timeout: false },
-      { hop: 2, host: "10.0.0.1", responseTime: 5.8, timeout: false },
-      { hop: 3, host: "203.0.113.1", responseTime: 12.4, timeout: false },
-      { hop: 4, host: "198.51.100.1", responseTime: 25.6, timeout: false },
-      { hop: 5, host: target.displayHost, responseTime: 45.2, timeout: false },
-    ]
+    try {
+      // Use native traceroute in Electron
+      if (isNative) {
+        const nativeResult = await electronNetwork.traceroute(host, { maxHops: 30, timeout: 5000 })
 
-    for (let i = 0; i < simulatedHops.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      const hop = simulatedHops[i]
-      const jitter = hop.timeout ? 0 : (Math.random() - 0.5) * 4
-      setTracerouteResults(prev => [
-        ...prev,
-        {
-          ...hop,
-          responseTime: hop.timeout ? undefined : Math.max(0.5, (hop.responseTime || 0) + jitter),
-        },
-      ])
+        if (nativeResult && nativeResult.hops) {
+          // Display hops progressively
+          for (const hop of nativeResult.hops) {
+            setTracerouteResults(prev => [
+              ...prev,
+              {
+                hop: hop.hop,
+                host: hop.hostname || hop.ip,
+                responseTime: hop.rtt.length > 0 ? hop.rtt.reduce((a, b) => a + b, 0) / hop.rtt.length : undefined,
+                timeout: hop.timeout,
+              },
+            ])
+            await new Promise(resolve => setTimeout(resolve, 100)) // Small delay for visual effect
+          }
+        }
+        return
+      }
+
+      // Fallback to simulated traceroute for browser
+      const target = parseTargetInput(tracerouteHost)
+      const displayHost = target?.displayHost || host
+
+      const simulatedHops: TracerouteHop[] = [
+        { hop: 1, host: "192.168.1.1", responseTime: 1.2, timeout: false },
+        { hop: 2, host: "10.0.0.1", responseTime: 5.8, timeout: false },
+        { hop: 3, host: "203.0.113.1", responseTime: 12.4, timeout: false },
+        { hop: 4, host: "198.51.100.1", responseTime: 25.6, timeout: false },
+        { hop: 5, host: displayHost, responseTime: 45.2, timeout: false },
+      ]
+
+      for (let i = 0; i < simulatedHops.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        const hop = simulatedHops[i]
+        const jitter = hop.timeout ? 0 : (Math.random() - 0.5) * 4
+        setTracerouteResults(prev => [
+          ...prev,
+          {
+            ...hop,
+            responseTime: hop.timeout ? undefined : Math.max(0.5, (hop.responseTime || 0) + jitter),
+          },
+        ])
+      }
+    } finally {
+      setIsTracing(false)
     }
-
-    setIsTracing(false)
   }
 
   const exportResults = (type: "ping" | "traceroute") => {
@@ -272,13 +338,22 @@ export function PingTraceroute() {
         </div>
       </div>
 
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Browser Limitations:</strong> Due to browser security restrictions, this tool uses
-          HTTP requests to simulate ping functionality. Real ICMP ping requires native applications.
-        </AlertDescription>
-      </Alert>
+      {isNative ? (
+        <Alert className="border-green-500/50 bg-green-500/10">
+          <Zap className="h-4 w-4 text-green-600" />
+          <AlertDescription>
+            <strong>Native Mode:</strong> Running in desktop app with real ICMP ping and traceroute capabilities.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Browser Limitations:</strong> Due to browser security restrictions, this tool uses
+            HTTP requests to simulate ping functionality. Real ICMP ping requires the desktop app.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="ping" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
