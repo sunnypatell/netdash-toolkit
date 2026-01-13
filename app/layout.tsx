@@ -18,7 +18,6 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Network Engineering Dashboard",
   description: "Professional networking tools and utilities for network engineers",
-  generator: "v0.app",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

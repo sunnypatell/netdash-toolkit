@@ -1,7 +1,6 @@
 # NetDash Toolkit
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/sunnypatells-projects/netdash)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/P5xX40KLolT)
 
 NetDash is a front-end networking workbench built with Next.js that consolidates planning, validation, troubleshooting, and documentation utilities into a single browser experience. Every tool runs entirely client-side, making it safe to use with production data while keeping the deployment lightweight enough for Vercel’s static hosting model.
 
