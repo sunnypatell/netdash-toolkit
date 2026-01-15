@@ -100,6 +100,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isConfigured || !auth || typeof window === "undefined") return
 
+    // Wait for auth state to be determined before showing One Tap
+    if (loading) return
+
+    // Don't show One Tap if user is already signed in
+    if (user) {
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.cancel()
+      }
+      return
+    }
+
     // Skip One Tap on localhost - it requires HTTPS and verified domains
     const isLocalhost =
       window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
@@ -108,8 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Google One Tap requires a separate OAuth client ID from Google Cloud Console
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (!googleClientId) return // Skip One Tap if not configured
-
-    const currentAuth = auth // Capture for closure
 
     // Load Google Identity Services script
     const script = document.createElement("script")
@@ -125,10 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cancel_on_tap_outside: false,
           use_fedcm_for_prompt: true, // Use FedCM for better UX in Chrome
         })
-        // Only show One Tap if user is not already signed in
-        if (!currentAuth.currentUser) {
-          window.google.accounts.id.prompt()
-        }
+        window.google.accounts.id.prompt()
       }
     }
     document.head.appendChild(script)
@@ -139,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       script.remove()
     }
-  }, [isConfigured])
+  }, [isConfigured, loading, user])
 
   const handleGoogleOneTap = async (response: { credential: string }) => {
     if (!auth) return
