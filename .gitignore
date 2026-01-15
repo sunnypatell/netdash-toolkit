@@ -48,3 +48,4 @@ next-env.d.ts
 # vscode - keep extensions.json for contributors
 .vscode/*
 !.vscode/extensions.json
+.env*.local
