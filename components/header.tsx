@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { UserMenu } from "@/components/ui/user-menu"
 import { Badge } from "@/components/ui/badge"
 import { Menu } from "lucide-react"
 
@@ -47,9 +48,10 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
         <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">
           <div className="hidden items-center space-x-2 sm:flex">
             <Badge variant="outline" className="text-xs">
-              v2.3
+              v2.4
             </Badge>
           </div>
+          <UserMenu />
           <ThemeToggle />
         </div>
       </div>
