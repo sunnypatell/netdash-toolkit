@@ -29,6 +29,7 @@ import {
   Network,
   Router,
 } from "lucide-react"
+import { SaveToProject } from "@/components/ui/save-to-project"
 import {
   validateVLAN,
   checkSubnetOverlaps,
@@ -308,6 +309,18 @@ export function VLANManager() {
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
+          {vlans.length > 0 && (
+            <SaveToProject
+              itemType="vlan"
+              itemName={`VLAN Config (${vlans.length} VLANs)`}
+              itemData={{
+                vlans,
+                ports,
+                vendor: selectedVendor,
+              }}
+              toolSource="VLAN Manager"
+            />
+          )}
         </div>
       </div>
 

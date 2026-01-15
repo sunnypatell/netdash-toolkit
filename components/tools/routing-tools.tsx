@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Copy, Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { SaveToProject } from "@/components/ui/save-to-project"
 import { ResultCard } from "@/components/ui/result-card"
 import {
   calculateIPv4Subnet,
@@ -844,6 +845,17 @@ export function RoutingTools() {
                       <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
+                    <SaveToProject
+                      itemType="routing"
+                      itemName={`OSPF Process ${ospfConfig.processId}`}
+                      itemData={{
+                        protocol: "ospf",
+                        config: ospfConfig,
+                        generatedConfig: ospfConfigText,
+                      }}
+                      toolSource="Routing Tools - OSPF"
+                      className="flex-1"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1065,6 +1077,17 @@ export function RoutingTools() {
                       <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
+                    <SaveToProject
+                      itemType="routing"
+                      itemName={`EIGRP AS ${eigrpConfig.asNumber}`}
+                      itemData={{
+                        protocol: "eigrp",
+                        config: eigrpConfig,
+                        generatedConfig: eigrpConfigText,
+                      }}
+                      toolSource="Routing Tools - EIGRP"
+                      className="flex-1"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1287,6 +1310,17 @@ export function RoutingTools() {
                       <Download className="mr-2 h-4 w-4" />
                       Export Routes
                     </Button>
+                    <SaveToProject
+                      itemType="routing"
+                      itemName={`Static Routes (${staticRoutes.length} routes)`}
+                      itemData={{
+                        protocol: "static",
+                        routes: staticRoutes,
+                        generatedConfig: staticConfigText,
+                      }}
+                      toolSource="Routing Tools - Static"
+                      className="flex-1"
+                    />
                   </div>
                 </CardContent>
               </Card>

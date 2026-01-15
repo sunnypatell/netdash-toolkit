@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calculator, Download, Info } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
+import { SaveToProject } from "@/components/ui/save-to-project"
 import { ResultCard } from "@/components/ui/result-card"
 import {
   calculateIPv4Subnet,
@@ -139,6 +140,25 @@ export function SubnetCalculator() {
             <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Export </span>JSON
           </Button>
+          {(ipv4Results || ipv6Results) && (
+            <SaveToProject
+              itemType="subnet"
+              itemName={
+                ipv4Results
+                  ? `${ipv4Results.cidr}`
+                  : `${ipv6Results?.compressed}/${ipv6Results?.prefix}`
+              }
+              itemData={{
+                version: ipv4Results ? "ipv4" : "ipv6",
+                input: ipv4Results
+                  ? { address: ipv4Address, prefix: ipv4Prefix }
+                  : { address: ipv6Address, prefix: ipv6Prefix },
+                results: ipv4Results || ipv6Results,
+              }}
+              toolSource="Subnet Calculator"
+              size="sm"
+            />
+          )}
         </div>
       </div>
 

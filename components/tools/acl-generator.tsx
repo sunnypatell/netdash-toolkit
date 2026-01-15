@@ -30,6 +30,7 @@ import {
   Network,
   Settings,
 } from "lucide-react"
+import { SaveToProject } from "@/components/ui/save-to-project"
 import { calculateIPv4Subnet, isValidIPv4 } from "@/lib/network-utils"
 import { useToast } from "@/hooks/use-toast"
 
@@ -1245,6 +1246,19 @@ export function ACLGenerator() {
                     <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
+                  <SaveToProject
+                    itemType="acl"
+                    itemName={`ACL ${aclName} (${aclType})`}
+                    itemData={{
+                      aclName,
+                      aclType,
+                      platform,
+                      rules: aclType === "standard" ? standardRules : extendedRules,
+                      generatedConfig: generateACL(),
+                    }}
+                    toolSource="ACL Generator"
+                    className="flex-1"
+                  />
                 </div>
               </CardContent>
             </Card>

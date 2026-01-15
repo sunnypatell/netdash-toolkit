@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network, Plus, Trash2, Download, BarChart3, AlertCircle, CheckCircle } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
+import { SaveToProject } from "@/components/ui/save-to-project"
 import { calculateVLSM, generateVLSMHeatmap, exportVLSMPlan } from "@/lib/vlsm-utils"
 import type { VLSMRequirement, VLSMPlan } from "@/lib/vlsm-utils"
 
@@ -136,6 +137,19 @@ export function VLSMPlanner() {
                 <Download className="mr-2 h-4 w-4" />
                 Text
               </Button>
+              {plan.success && (
+                <SaveToProject
+                  itemType="vlsm"
+                  itemName={`VLSM ${baseNetwork}/${basePrefix}`}
+                  itemData={{
+                    baseNetwork,
+                    basePrefix: Number.parseInt(basePrefix),
+                    requirements,
+                    plan,
+                  }}
+                  toolSource="VLSM Planner"
+                />
+              )}
             </>
           )}
         </div>
