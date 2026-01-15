@@ -1,0 +1,149 @@
+name: Performance Issue
+description: Report performance problems, slowdowns, or resource usage issues
+title: "[Performance]: "
+labels: ["performance", "triage"]
+assignees:
+  - sunnypatell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us identify and fix performance issues! Please provide as much detail as possible about the slowdown or resource usage problem you're experiencing.
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if a performance issue already exists.
+      options:
+        - label: I have searched existing issues and found no duplicates
+          required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform are you experiencing the issue on?
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux (AppImage)
+        - Linux (Debian/Ubuntu)
+        - Web Browser
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Performance Issue Type
+      description: What type of performance issue are you experiencing?
+      options:
+        - Slow UI / Lag
+        - High CPU Usage
+        - High Memory Usage
+        - Slow Network Operations
+        - Application Freeze / Hang
+        - Slow Startup Time
+        - Battery Drain (Laptop)
+        - Other
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: affected-tool
+    attributes:
+      label: Affected Tool
+      description: Which tool or area is affected?
+      options:
+        - General / Application-wide
+        - Ping Tool
+        - Traceroute
+        - Port Scanner
+        - DNS Lookup
+        - Subnet Calculator
+        - VLSM Planner
+        - VLAN Manager
+        - IP Conflict Checker
+        - Network Topology Mapper
+        - Bandwidth Monitor
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Issue Description
+      description: Describe the performance issue you're experiencing.
+      placeholder: |
+        The application becomes slow when...
+
+        I notice lag when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Performance Metrics
+      description: If available, provide any metrics (CPU %, memory usage, response times, etc.)
+      placeholder: |
+        - CPU: 80% when running port scan
+        - Memory: 500MB usage
+        - Response time: 5+ seconds for ping results
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this performance issue?
+      placeholder: |
+        1. Open the application
+        2. Navigate to Port Scanner
+        3. Scan a range of 1000 ports
+        4. Observe CPU spike
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: System Specifications
+      description: Your system specifications (helps us understand if it's hardware-related)
+      placeholder: |
+        - Device: MacBook Pro 14"
+        - Processor: M2 Pro
+        - RAM: 16GB
+        - OS Version: macOS 14.2
+        - App Version: v1.0.0
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does this performance issue occur?
+      options:
+        - Always
+        - Frequently (>50% of the time)
+        - Sometimes (10-50% of the time)
+        - Rarely (<10% of the time)
+        - Only once
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Have you found any workarounds?
+      placeholder: Restarting the application temporarily fixes it...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might help us diagnose the issue.
