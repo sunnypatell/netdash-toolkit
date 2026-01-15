@@ -418,11 +418,12 @@ NetDash Toolkit is available as a native desktop application with **real network
 
 ### Install Desktop App
 
-**macOS (Homebrew):**
+**macOS (Homebrew):** _(supports Apple Silicon & Intel)_
 
 ```bash
 brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
 brew install --cask netdash
+sudo xattr -cr "/Applications/NetDash Toolkit.app"  # remove quarantine (app is unsigned)
 ```
 
 **Manual Download:**
