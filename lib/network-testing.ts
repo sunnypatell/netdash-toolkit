@@ -1,5 +1,109 @@
 // Network testing utilities for RTT, throughput, and connectivity
 
+// DNS Cache implementation with TTL support
+interface DNSCacheEntry {
+  result: DNSResult
+  expiresAt: number
+  minTTL: number
+}
+
+class DNSCache {
+  private cache: Map<string, DNSCacheEntry> = new Map()
+  private maxSize: number = 100
+  private hits: number = 0
+  private misses: number = 0
+
+  private getCacheKey(domain: string, recordType: string, provider: string): string {
+    return `${domain.toLowerCase()}:${recordType.toUpperCase()}:${provider}`
+  }
+
+  get(domain: string, recordType: string, provider: string): DNSResult | null {
+    const key = this.getCacheKey(domain, recordType, provider)
+    const entry = this.cache.get(key)
+
+    if (!entry) {
+      this.misses++
+      return null
+    }
+
+    // Check if entry has expired based on TTL
+    if (Date.now() >= entry.expiresAt) {
+      this.cache.delete(key)
+      this.misses++
+      return null
+    }
+
+    this.hits++
+
+    // Return cached result with updated metadata
+    return {
+      ...entry.result,
+      timestamp: Date.now(),
+      responseTime: 0, // Indicates cache hit
+    }
+  }
+
+  set(domain: string, recordType: string, provider: string, result: DNSResult): void {
+    if (!result.success || result.records.length === 0) {
+      return // Don't cache failed or empty results
+    }
+
+    // Calculate minimum TTL from all records (at least 30 seconds, max 1 hour)
+    const minTTL = Math.min(
+      Math.max(30, Math.min(...result.records.map((r) => r.ttl || 300))),
+      3600
+    )
+
+    // Enforce max cache size with LRU-like eviction
+    if (this.cache.size >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value
+      if (oldestKey) {
+        this.cache.delete(oldestKey)
+      }
+    }
+
+    const key = this.getCacheKey(domain, recordType, provider)
+    this.cache.set(key, {
+      result,
+      expiresAt: Date.now() + minTTL * 1000,
+      minTTL,
+    })
+  }
+
+  clear(): void {
+    this.cache.clear()
+    this.hits = 0
+    this.misses = 0
+  }
+
+  getStats(): { size: number; hits: number; misses: number; hitRate: string } {
+    const total = this.hits + this.misses
+    const hitRate = total > 0 ? ((this.hits / total) * 100).toFixed(1) + "%" : "0%"
+    return {
+      size: this.cache.size,
+      hits: this.hits,
+      misses: this.misses,
+      hitRate,
+    }
+  }
+
+  // Get remaining TTL for a cached entry
+  getRemainingTTL(domain: string, recordType: string, provider: string): number | null {
+    const key = this.getCacheKey(domain, recordType, provider)
+    const entry = this.cache.get(key)
+
+    if (!entry) {
+      return null
+    }
+
+    const remaining = Math.max(0, Math.floor((entry.expiresAt - Date.now()) / 1000))
+    return remaining > 0 ? remaining : null
+  }
+}
+
+// Global DNS cache instance
+export const dnsCache = new DNSCache()
+
 export interface RTTTestResult {
   url: string
   requestedMethod: "HEAD" | "GET"
@@ -486,12 +590,25 @@ export async function testUploadThroughput(
   }
 }
 
-// Enhanced DNS over HTTPS query with better reliability
+// Enhanced DNS over HTTPS query with TTL-based caching
 export async function queryDNSOverHTTPS(
   domain: string,
   recordType = "A",
-  provider = "cloudflare"
+  provider = "cloudflare",
+  options: { skipCache?: boolean } = {}
 ): Promise<DNSResult> {
+  // Check cache first (unless explicitly skipped)
+  if (!options.skipCache) {
+    const cachedResult = dnsCache.get(domain, recordType, provider)
+    if (cachedResult) {
+      // Add cache indicator to the result
+      return {
+        ...cachedResult,
+        provider: `${provider} (cached)`,
+      }
+    }
+  }
+
   const dohProviders: Record<
     string,
     {
@@ -597,7 +714,7 @@ export async function queryDNSOverHTTPS(
         data: formatRecordData(answer.data, answer.type),
       }))
 
-      return {
+      const result: DNSResult = {
         domain,
         recordType: recordType.toUpperCase(),
         records,
@@ -607,6 +724,11 @@ export async function queryDNSOverHTTPS(
         success: true,
         timestamp: Date.now(),
       }
+
+      // Cache the successful result using TTL from records
+      dnsCache.set(domain, recordType, provider, result)
+
+      return result
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Unknown error")
 

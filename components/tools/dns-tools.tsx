@@ -15,8 +15,19 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Globe, Search, Activity, CheckCircle, AlertCircle, Clock, Shield, Zap } from "lucide-react"
-import { queryDNSOverHTTPS } from "@/lib/network-testing"
+import {
+  Globe,
+  Search,
+  Activity,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Shield,
+  Zap,
+  Database,
+  Trash2,
+} from "lucide-react"
+import { queryDNSOverHTTPS, dnsCache } from "@/lib/network-testing"
 import type { DNSResult } from "@/lib/network-testing"
 import { isElectron, electronNetwork } from "@/lib/electron"
 
@@ -24,6 +35,7 @@ export function DNSTools() {
   const [activeQuery, setActiveQuery] = useState(false)
   const [dnsResults, setDnsResults] = useState<DNSResult[]>([])
   const [isNative, setIsNative] = useState(false)
+  const [cacheStats, setCacheStats] = useState({ size: 0, hits: 0, misses: 0, hitRate: "0%" })
 
   // DNS Query State
   const [dnsQuery, setDnsQuery] = useState("example.com")
@@ -34,6 +46,16 @@ export function DNSTools() {
   useEffect(() => {
     setIsNative(isElectron())
   }, [])
+
+  // Update cache stats after each query
+  const updateCacheStats = () => {
+    setCacheStats(dnsCache.getStats())
+  }
+
+  const clearCache = () => {
+    dnsCache.clear()
+    updateCacheStats()
+  }
 
   const runDNSQuery = async () => {
     if (!dnsQuery.trim()) return
@@ -71,6 +93,7 @@ export function DNSTools() {
         const result = await queryDNSOverHTTPS(dnsQuery.trim(), dnsRecordType, dnsProvider)
         setDnsResults([result, ...dnsResults.slice(0, 9)])
       }
+      updateCacheStats()
     } catch (error) {
       console.error("DNS query failed:", error)
     } finally {
@@ -108,10 +131,16 @@ export function DNSTools() {
                     DNSSEC
                   </Badge>
                 )}
-                {result.success && (
+                {result.success && result.responseTime > 0 && (
                   <Badge variant="outline" className="text-blue-600">
-                    <Clock className="mr-1 h-3 w-3" />
+                    <Clock className="mr-1 h-3 w-3" aria-hidden="true" />
                     {formatDuration(result.responseTime)}
+                  </Badge>
+                )}
+                {result.success && result.responseTime === 0 && (
+                  <Badge variant="outline" className="text-emerald-600">
+                    <Database className="mr-1 h-3 w-3" aria-hidden="true" />
+                    Cached
                   </Badge>
                 )}
               </div>
@@ -270,6 +299,42 @@ export function DNSTools() {
                 )}
               </Button>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* DNS Cache Stats */}
+          <div className="bg-muted/50 flex items-center justify-between rounded-lg p-3">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Database className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+                <span className="text-sm font-medium">DNS Cache</span>
+              </div>
+              <div className="text-muted-foreground flex items-center space-x-3 text-sm">
+                <span>
+                  <strong>{cacheStats.size}</strong> entries
+                </span>
+                <span>
+                  <strong>{cacheStats.hits}</strong> hits
+                </span>
+                <span>
+                  <strong>{cacheStats.misses}</strong> misses
+                </span>
+                <span>
+                  <strong>{cacheStats.hitRate}</strong> hit rate
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearCache}
+              disabled={cacheStats.size === 0}
+              aria-label="Clear DNS cache"
+            >
+              <Trash2 className="mr-1 h-4 w-4" aria-hidden="true" />
+              Clear Cache
+            </Button>
           </div>
 
           <Separator />
