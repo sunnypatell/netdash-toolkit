@@ -1,6 +1,26 @@
 {
   "releases": [
     {
+      "version": "2.5.0",
+      "type": "minor",
+      "title": "Cloud Sync & Authentication",
+      "changes": [
+        "Added Firebase Authentication with Google OAuth and Email/Password sign-in options",
+        "Implemented cloud sync for projects with real-time Firestore database integration",
+        "Added Google One Tap sign-in for seamless browser authentication experience",
+        "Introduced password reset functionality with Firebase email verification",
+        "Added account linking to merge Google and email accounts with same email address",
+        "Implemented Save to Project and Load from Project functionality across all tools"
+      ],
+      "technical": [
+        "Firebase Authentication with multiple providers (Google, Email/Password)",
+        "Firestore database with user-scoped security rules (/users/{userId}/projects)",
+        "Google Identity Services integration for One Tap sign-in with FedCM support",
+        "React Context API for auth and project state management with cloud fallback to localStorage",
+        "Account linking using Firebase linkWithCredential for seamless provider merging"
+      ]
+    },
+    {
       "version": "2.4.0",
       "type": "minor",
       "title": "Project Manager & Platform Expansion",

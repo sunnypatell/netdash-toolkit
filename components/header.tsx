@@ -48,7 +48,7 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
         <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">
           <div className="hidden items-center space-x-2 sm:flex">
             <Badge variant="outline" className="text-xs">
-              v2.4
+              v2.5
             </Badge>
           </div>
           <UserMenu />

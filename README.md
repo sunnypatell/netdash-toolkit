@@ -46,21 +46,28 @@
 <div align="center">
 <table>
 <tr>
-<td align="center" width="33%">
+<td align="center" width="25%">
 
 ### Privacy First
 
 All calculations run **100% client-side**. Your network data never leaves your browser.
 
 </td>
-<td align="center" width="33%">
+<td align="center" width="25%">
+
+### Cloud Sync
+
+Sign in with Google or Email to sync your projects across devices with Firebase.
+
+</td>
+<td align="center" width="25%">
 
 ### Zero Install
 
 Access professional-grade tools instantly from any modern browser. No downloads required.
 
 </td>
-<td align="center" width="33%">
+<td align="center" width="25%">
 
 ### Dark Mode
 
@@ -87,6 +94,7 @@ Beautiful light and dark themes that adapt to your system preferences.
 | **Routing & Switching** | Routing Tools, Wireless Tools, ACL Generator  | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation               |
 |   **Troubleshooting**   |  Conflict Checker, Network Tester, DNS Tools  | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
 |      **Utilities**      |    MTU Calculator, IPv6 Tools, OUI Lookup     | Protocol overhead analysis, EUI-64 generation, MAC vendor identification                        |
+|    **Cloud & Sync**     |        Project Manager, Authentication        | Firebase cloud sync, Google/Email sign-in, cross-device project persistence                     |
 
 </div>
 
@@ -302,6 +310,7 @@ pnpm start
 |  **Language**  | [TypeScript 5](https://www.typescriptlang.org/)                             |
 |  **Styling**   | [Tailwind CSS 4](https://tailwindcss.com/)                                  |
 | **Components** | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
+|  **Backend**   | [Firebase](https://firebase.google.com/) (Auth + Firestore)                 |
 |   **Icons**    | [Lucide React](https://lucide.dev/)                                         |
 |   **Charts**   | [Recharts](https://recharts.org/)                                           |
 |   **Forms**    | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)   |
@@ -366,6 +375,7 @@ netdash-toolkit/
 |  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
 |  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS            |
 |  Done   | Dark Mode            | System-aware theming                       |
+|  Done   | Cloud Sync           | Firebase auth, project sync across devices |
 |  Done   | Electron App         | Desktop version with native networking     |
 |  Done   | Real ICMP Ping       | Native ping with Electron                  |
 |  Done   | Real Traceroute      | TTL-based hop discovery                    |

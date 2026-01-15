@@ -453,7 +453,7 @@ export function UserMenu() {
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           {syncEnabled && (
-            <span className="absolute -top-1 -right-1">
+            <span className="pointer-events-none absolute -top-1 -right-1">
               {syncing ? (
                 <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
               ) : (
@@ -463,7 +463,7 @@ export function UserMenu() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="z-[100] w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm leading-none font-medium">{user.displayName || "User"}</p>
