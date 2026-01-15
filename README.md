@@ -421,7 +421,7 @@ NetDash Toolkit is available as a native desktop application with **real network
 **macOS (Homebrew):**
 
 ```bash
-brew tap sunnypatell/netdash-toolkit
+brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
 brew install --cask netdash
 ```
 
