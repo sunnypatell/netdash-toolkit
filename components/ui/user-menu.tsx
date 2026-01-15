@@ -447,8 +447,11 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
+        <button
+          type="button"
+          className="hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Avatar className="pointer-events-none h-8 w-8">
             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User"} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
@@ -461,7 +464,7 @@ export function UserMenu() {
               )}
             </span>
           )}
-        </Button>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="z-[100] w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">

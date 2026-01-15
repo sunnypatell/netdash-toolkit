@@ -100,6 +100,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isConfigured || !auth || typeof window === "undefined") return
 
+    // Skip One Tap on localhost - it requires HTTPS and verified domains
+    const isLocalhost =
+      window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    if (isLocalhost) return
+
     // Google One Tap requires a separate OAuth client ID from Google Cloud Console
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (!googleClientId) return // Skip One Tap if not configured
@@ -254,7 +259,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       setError(null)
-      await sendPasswordResetEmail(auth, email)
+      // Use custom action URL for styled password reset page
+      const actionCodeSettings = {
+        url:
+          typeof window !== "undefined"
+            ? `${window.location.origin}/auth/action`
+            : "https://netdash-toolkit.vercel.app/auth/action",
+        handleCodeInApp: false,
+      }
+      await sendPasswordResetEmail(auth, email, actionCodeSettings)
     } catch (error) {
       const authError = error as AuthError
       console.error("Password reset error:", error)

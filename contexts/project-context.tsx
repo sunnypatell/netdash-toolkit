@@ -108,6 +108,33 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [projects, loading])
 
+  // Update user profile document for easier identification in Firebase Console
+  useEffect(() => {
+    if (!syncEnabled || !db || !user) return
+
+    const firestore = db // Capture non-null reference
+    const updateUserProfile = async () => {
+      try {
+        const userRef = doc(firestore, "users", user.uid)
+        await setDoc(
+          userRef,
+          {
+            email: user.email,
+            displayName: user.displayName || null,
+            photoURL: user.photoURL || null,
+            lastSeen: Date.now(),
+            provider: user.providerData[0]?.providerId || "unknown",
+          },
+          { merge: true }
+        )
+      } catch (error) {
+        console.error("Failed to update user profile:", error)
+      }
+    }
+
+    updateUserProfile()
+  }, [user, syncEnabled])
+
   // Sync with Firestore when user is logged in
   useEffect(() => {
     if (!syncEnabled || !db || !user) {

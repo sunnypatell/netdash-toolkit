@@ -1,0 +1,27 @@
+name: Deploy Firebase Rules
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "storage.rules"
+      - ".github/workflows/firebase-deploy.yml"
+
+jobs:
+  deploy:
+    name: Deploy Firestore Rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only firestore:rules
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: netdash-toolkit
