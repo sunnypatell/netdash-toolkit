@@ -664,14 +664,14 @@ export function WirelessTools() {
                     key={channel.channel}
                     className={`rounded-lg border p-3 ${
                       channel.recommended
-                        ? "border-green-200 bg-green-50"
+                        ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
                         : channel.interference === "high"
-                          ? "border-red-200 bg-red-50"
-                          : "border-yellow-200 bg-yellow-50"
+                          ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
+                          : "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <span className="font-medium">Channel {channel.channel}</span>
+                      <span className="text-foreground font-medium">Channel {channel.channel}</span>
                       <div className="flex gap-1">
                         <Badge
                           variant={

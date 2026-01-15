@@ -33,6 +33,8 @@ import {
   Mail,
   AlertCircle,
   CheckCircle,
+  Settings,
+  ExternalLink,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/contexts/project-context"
@@ -495,6 +497,21 @@ export function UserMenu() {
           <Badge variant="outline" className="text-xs">
             {projects.length}
           </Badge>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <a
+            href="https://console.firebase.google.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between"
+          >
+            <span className="flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Manage Account
+            </span>
+            <ExternalLink className="h-3 w-3 opacity-50" />
+          </a>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-red-600 focus:text-red-600">
