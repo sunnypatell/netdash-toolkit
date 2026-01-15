@@ -1,0 +1,129 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for NetDash Toolkit
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees:
+  - sunnypatell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Your ideas help make NetDash Toolkit better for everyone.
+
+  - type: checkboxes
+    id: existing-feature
+    attributes:
+      label: Is this feature already requested?
+      description: Please search existing issues to avoid duplicates.
+      options:
+        - label: I have searched existing issues and this feature has not been requested
+          required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New Tool
+        - Enhancement to Existing Tool
+        - UI/UX Improvement
+        - Performance Improvement
+        - Integration / API
+        - Documentation
+        - Accessibility
+        - Other
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: related-tool
+    attributes:
+      label: Related Tool (if applicable)
+      description: Which existing tool is this feature related to?
+      options:
+        - N/A - New Tool
+        - Ping Tool
+        - Traceroute
+        - Port Scanner
+        - DNS Lookup
+        - Subnet Calculator
+        - VLSM Planner
+        - VLAN Manager
+        - IP Conflict Checker
+        - Network Topology Mapper
+        - Bandwidth Monitor
+        - Multiple Tools / General
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe it.
+      placeholder: I'm always frustrated when I have to manually calculate...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: I would like a button that automatically...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or features?
+      placeholder: I've also considered using X, but it doesn't work because...
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact Level
+      description: How much would this feature improve your workflow?
+      options:
+        - Critical - Can't use the app without it
+        - High - Would significantly improve usage
+        - Medium - Nice to have
+        - Low - Minor improvement
+      default: 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your use case for this feature.
+      placeholder: As a network administrator, I need to quickly...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups / Examples
+      description: If applicable, add mockups, screenshots, or examples from other tools.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute to this feature?
+      options:
+        - label: I would be willing to submit a PR for this feature
+        - label: I can help test this feature
+        - label: I can help document this feature
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the feature request here.
