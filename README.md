@@ -438,18 +438,6 @@ sudo xattr -cr "/Applications/NetDash Toolkit.app"
 
 > **Note:** The `xattr` command removes the quarantine flag since the app is unsigned.
 
-**Manual Download:**
-
-Download the latest release for your platform from [GitHub Releases](https://github.com/sunnypatell/netdash-toolkit/releases/latest):
-
-| Platform                  | Download                                                                                                                                                           |
-| :------------------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **macOS (Apple Silicon)** | [NetDash.Toolkit-1.0.0-mac-arm64.dmg](https://github.com/sunnypatell/netdash-toolkit/releases/download/v1.0.0/NetDash.Toolkit-1.0.0-mac-arm64.dmg)                 |
-| **macOS (Intel)**         | [NetDash.Toolkit-1.0.0-mac-x64.dmg](https://github.com/sunnypatell/netdash-toolkit/releases/download/v1.0.0/NetDash.Toolkit-1.0.0-mac-x64.dmg)                     |
-| **Windows**               | [NetDash.Toolkit-1.0.0-win-x64.exe](https://github.com/sunnypatell/netdash-toolkit/releases/download/v1.0.0/NetDash.Toolkit-1.0.0-win-x64.exe)                     |
-| **Linux (AppImage)**      | [NetDash.Toolkit-1.0.0-linux-x86_64.AppImage](https://github.com/sunnypatell/netdash-toolkit/releases/download/v1.0.0/NetDash.Toolkit-1.0.0-linux-x86_64.AppImage) |
-| **Linux (Debian)**        | [NetDash.Toolkit-1.0.0-linux-amd64.deb](https://github.com/sunnypatell/netdash-toolkit/releases/download/v1.0.0/NetDash.Toolkit-1.0.0-linux-amd64.deb)             |
-
 ### Building from Source
 
 ```bash
