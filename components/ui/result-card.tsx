@@ -72,7 +72,7 @@ export function ResultCard({
   }
 
   return (
-    <Card className={cn("", className)}>
+    <Card className={cn("", className)} role="region" aria-label={title}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -80,7 +80,7 @@ export function ResultCard({
             {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
           </div>
           {badges && (
-            <div className="flex gap-1">
+            <div className="flex gap-1" aria-label="Result tags">
               {badges.map((badge, index) => (
                 <Badge key={index} variant={badge.variant || "secondary"}>
                   {badge.label}
@@ -90,7 +90,7 @@ export function ResultCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3" aria-live="polite">
         {displayData.length > 0 ? (
           displayData.map((item, index) => (
             <div
@@ -120,12 +120,18 @@ export function ResultCard({
                   size="sm"
                   onClick={() => copyToClipboard(formatValue(item.value), item.label)}
                   className="ml-2"
+                  aria-label={
+                    copiedField === item.label
+                      ? `${item.label} copied to clipboard`
+                      : `Copy ${item.label} to clipboard`
+                  }
                 >
                   {copiedField === item.label ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-green-600" aria-hidden="true" />
                   ) : (
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-4 w-4" aria-hidden="true" />
                   )}
+                  <span className="sr-only">{copiedField === item.label ? "Copied" : "Copy"}</span>
                 </Button>
               )}
             </div>

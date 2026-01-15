@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useId } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,7 @@ interface IPInputProps {
   allowCIDR?: boolean
   ipVersion?: "ipv4" | "ipv6" | "both"
   className?: string
+  id?: string
 }
 
 export function IPInput({
@@ -25,9 +26,13 @@ export function IPInput({
   allowCIDR = false,
   ipVersion = "both",
   className,
+  id,
 }: IPInputProps) {
   const [isValid, setIsValid] = useState(true)
   const [addressType, setAddressType] = useState<string>("")
+  const generatedId = useId()
+  const inputId = id || generatedId
+  const errorId = `${inputId}-error`
 
   const isPrefixInput = label?.toLowerCase().includes("prefix")
 
@@ -83,9 +88,10 @@ export function IPInput({
 
   return (
     <div className={cn("space-y-2", className)}>
-      {label && <Label>{label}</Label>}
+      {label && <Label htmlFor={inputId}>{label}</Label>}
       <div className="relative">
         <Input
+          id={inputId}
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -96,18 +102,21 @@ export function IPInput({
           type={isPrefixInput ? "number" : "text"}
           min={isPrefixInput ? "0" : undefined}
           max={isPrefixInput ? (ipVersion === "ipv6" ? "128" : "32") : undefined}
+          aria-invalid={!isValid && !!value}
+          aria-describedby={!isValid && value ? errorId : undefined}
         />
         {addressType && (
           <Badge
             variant={isValid ? "secondary" : "destructive"}
             className="absolute top-1/2 right-2 -translate-y-1/2 transform text-xs"
+            aria-label={`Address type: ${addressType}`}
           >
             {addressType}
           </Badge>
         )}
       </div>
       {!isValid && value && (
-        <p className="text-destructive text-sm">
+        <p id={errorId} className="text-destructive text-sm" role="alert">
           {isPrefixInput
             ? `Invalid prefix length (must be 0-${ipVersion === "ipv6" ? "128" : ipVersion === "ipv4" ? "32" : "128"})`
             : `Invalid ${ipVersion === "both" ? "IP address" : ipVersion.toUpperCase()} format${allowCIDR ? " or CIDR notation" : ""}`}

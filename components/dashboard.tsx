@@ -180,7 +180,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     <div className="space-y-6 sm:space-y-8">
       <div className="space-y-3 sm:space-y-4">
         <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-          <div className="bg-primary flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12">
+          <div
+            className="bg-primary flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12"
+            aria-hidden="true"
+          >
             <Network className="text-primary-foreground h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div>
@@ -210,7 +213,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       {stat.description}
                     </p>
                   </div>
-                  <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10">
+                  <div
+                    className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+                    aria-hidden="true"
+                  >
                     <Icon className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                 </div>
@@ -247,6 +253,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-110 sm:h-12 sm:w-12 ${
                           tool.popular ? "bg-primary/20" : "bg-primary/10"
                         } group-hover:bg-primary/30`}
+                        aria-hidden="true"
                       >
                         <Icon className="text-primary h-5 w-5 sm:h-6 sm:w-6" />
                       </div>
@@ -287,9 +294,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       onClick={() => onNavigate(tool.id)}
                       className="hover:bg-primary hover:text-primary-foreground group-hover:bg-primary group-hover:text-primary-foreground w-full transition-colors"
                       variant="outline"
+                      aria-label={`Launch ${tool.title}`}
                     >
                       Launch Tool
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      <ArrowRight
+                        className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                        aria-hidden="true"
+                      />
                     </Button>
                   </div>
                 </CardContent>
@@ -302,7 +313,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       <Card className="from-primary/10 via-secondary/5 to-accent/10 border-primary/30 bg-gradient-to-r">
         <CardHeader>
           <CardTitle className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-            <div className="bg-primary/20 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg">
+            <div
+              className="bg-primary/20 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
+              aria-hidden="true"
+            >
               <Shield className="text-primary h-5 w-5" />
             </div>
             <div>

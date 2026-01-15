@@ -88,11 +88,22 @@ export default function HomePage() {
 
   return (
     <div className="bg-background flex h-screen">
+      {/* Skip to main content link for keyboard navigation (WCAG 2.4.1) */}
+      <a
+        href="#main-content"
+        className="bg-primary text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
-          onTouchStart={() => setSidebarOpen(false)}
+          onKeyDown={(e) => e.key === "Escape" && setSidebarOpen(false)}
+          role="button"
+          tabIndex={0}
+          aria-label="Close sidebar overlay"
         />
       )}
 
@@ -108,7 +119,7 @@ export default function HomePage() {
           sidebarOpen={sidebarOpen}
           onNavigate={setActiveView}
         />
-        <main className="flex-1 overflow-auto">
+        <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
           <div className="p-3 sm:p-4 lg:p-6">{renderContent()}</div>
           <Footer />
         </main>

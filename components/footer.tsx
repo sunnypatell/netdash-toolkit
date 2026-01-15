@@ -15,7 +15,8 @@ export function Footer() {
               <span className="text-muted-foreground text-sm">Network Engineering Dashboard</span>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              Built with <Heart className="inline h-3 w-3 text-red-500" /> by Sunny Patel
+              Built with <Heart className="inline h-3 w-3 text-red-500" aria-hidden="true" />{" "}
+              <span className="sr-only">love</span> by Sunny Patel
             </p>
           </div>
 
@@ -26,10 +27,11 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
+                aria-label="Visit Sunny Patel's Portfolio (opens in new tab)"
               >
-                <Globe className="h-4 w-4" />
+                <Globe className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Portfolio</span>
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             </Button>
 
@@ -39,10 +41,11 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
+                aria-label="View NetDash on GitHub (opens in new tab)"
               >
-                <Github className="h-4 w-4" />
+                <Github className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">GitHub</span>
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             </Button>
 
@@ -52,10 +55,11 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
+                aria-label="Connect with Sunny Patel on LinkedIn (opens in new tab)"
               >
-                <Linkedin className="h-4 w-4" />
+                <Linkedin className="h-4 w-4" aria-hidden="true" />
                 <span className="hidden sm:inline">LinkedIn</span>
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
               </a>
             </Button>
           </div>

@@ -21,8 +21,10 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
             size="sm"
             onClick={onToggleSidebar}
             className="text-foreground shrink-0 lg:hidden"
+            aria-label="Toggle navigation menu"
+            aria-expanded={sidebarOpen}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-4 w-4" aria-hidden="true" />
           </Button>
           {!sidebarOpen && (
             <Button
@@ -30,8 +32,9 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
               size="sm"
               onClick={onToggleSidebar}
               className="text-foreground hidden lg:flex"
+              aria-label="Open navigation menu"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
           <div className="flex items-center space-x-2">

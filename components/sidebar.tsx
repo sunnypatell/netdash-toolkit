@@ -74,6 +74,8 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
             size="sm"
             onClick={onToggle}
             className="text-sidebar-foreground hover:bg-sidebar-accent"
+            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+            aria-expanded={isOpen}
           >
             <ChevronLeft className={cn("h-4 w-4 transition-transform", !isOpen && "rotate-180")} />
           </Button>
@@ -81,7 +83,7 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
 
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full px-2 py-4">
-            <nav className="space-y-1">
+            <nav className="space-y-1" aria-label="Main navigation">
               {navigationItems.map((item) => {
                 const Icon = item.icon
                 return (
@@ -99,8 +101,10 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                         onToggle()
                       }
                     }}
+                    aria-label={!isOpen ? item.label : undefined}
+                    aria-current={activeView === item.id ? "page" : undefined}
                   >
-                    <Icon className={cn("h-4 w-4", isOpen && "mr-2")} />
+                    <Icon className={cn("h-4 w-4", isOpen && "mr-2")} aria-hidden="true" />
                     {isOpen && <span className="text-sm">{item.label}</span>}
                   </Button>
                 )

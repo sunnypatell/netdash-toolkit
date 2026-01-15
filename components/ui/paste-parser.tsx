@@ -97,7 +97,7 @@ Vlan    Mac Address       Type        Ports
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <FileText className="h-5 w-5" />
+            <FileText className="h-5 w-5" aria-hidden="true" />
             <span>Network Data Parser</span>
           </CardTitle>
           <CardDescription>
@@ -122,23 +122,23 @@ Vlan    Mac Address       Type        Ports
 
             <TabsContent value="upload" className="space-y-4">
               <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
-                <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-                <p className="text-muted-foreground mb-2 text-sm">
+                <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" aria-hidden="true" />
+                <p className="text-muted-foreground mb-2 text-sm" id="file-upload-description">
                   Upload a CSV or text file containing network data
                 </p>
                 <input
                   type="file"
                   accept=".csv,.txt"
                   onChange={handleFileUpload}
-                  className="hidden"
+                  className="sr-only"
                   id="file-upload"
+                  aria-describedby="file-upload-description"
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById("file-upload")?.click()}
-                >
-                  Choose File
-                </Button>
+                <label htmlFor="file-upload">
+                  <Button variant="outline" asChild>
+                    <span>Choose File</span>
+                  </Button>
+                </label>
               </div>
             </TabsContent>
           </Tabs>
@@ -180,7 +180,7 @@ Vlan    Mac Address       Type        Ports
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5" />
+            <AlertCircle className="h-5 w-5" aria-hidden="true" />
             <span>Supported Formats</span>
           </CardTitle>
           <CardDescription>Examples of supported network data formats</CardDescription>
