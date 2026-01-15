@@ -1,0 +1,55 @@
+# auto detect text files and perform lf normalization
+* text=auto
+
+# source code
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# shell scripts
+*.sh text eol=lf
+
+# windows-specific
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+
+# electron build artifacts
+*.exe binary
+*.dmg binary
+*.deb binary
+*.rpm binary
+*.AppImage binary
+
+# archives
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+
+# lock files (exact)
+pnpm-lock.yaml -diff linguist-generated=true
+package-lock.json -diff linguist-generated=true
+yarn.lock -diff linguist-generated=true
