@@ -423,8 +423,10 @@ NetDash Toolkit is available as a native desktop application with **real network
 ```bash
 brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
 brew install --cask netdash
-sudo xattr -cr "/Applications/NetDash Toolkit.app"  # remove quarantine (app is unsigned)
+sudo xattr -cr "/Applications/NetDash Toolkit.app"
 ```
+
+> **Note:** The `xattr` command removes the quarantine flag since the app is unsigned.
 
 **Manual Download:**
 
