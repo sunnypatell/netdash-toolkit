@@ -488,7 +488,8 @@ export function parseNetworkDiscovery(text: string): ParsedDevice[] {
   const lines = text.split("\n")
 
   // CDP neighbor parsing
-  const cdpRegex = /Device ID:\s*(\S+).*?IP address:\s*(\d+\.\d+\.\d+\.\d+).*?Platform:\s*([^,]+)/gis
+  const cdpRegex =
+    /Device ID:\s*(\S+).*?IP address:\s*(\d+\.\d+\.\d+\.\d+).*?Platform:\s*([^,]+)/gis
   let match
   while ((match = cdpRegex.exec(text)) !== null) {
     devices.push({
@@ -511,7 +512,9 @@ export function parseNetworkDiscovery(text: string): ParsedDevice[] {
 }
 
 // Auto-detect format and parse
-export function autoParseNetworkData(text: string): (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] {
+export function autoParseNetworkData(
+  text: string
+): (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] {
   const results: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] = []
 
   // Try all ARP parsers
@@ -560,7 +563,9 @@ export function autoParseNetworkData(text: string): (ParsedARPEntry | ParsedDHCP
 }
 
 // Flexible parser for unknown formats
-export function parseFlexibleFormat(text: string): (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] {
+export function parseFlexibleFormat(
+  text: string
+): (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] {
   const results: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[] = []
   const lines = text.split("\n")
 

@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -37,7 +43,13 @@ import {
   generateEUI64FromMAC,
   protocolOverheads,
 } from "@/lib/network-testing"
-import type { RTTTestResult, ThroughputTestResult, DNSResult, MTUCalculation, OUIResult } from "@/lib/network-testing"
+import type {
+  RTTTestResult,
+  ThroughputTestResult,
+  DNSResult,
+  MTUCalculation,
+  OUIResult,
+} from "@/lib/network-testing"
 import { isElectron, electronNetwork } from "@/lib/electron"
 
 export function NetworkTester() {
@@ -70,7 +82,11 @@ export function NetworkTester() {
 
   // MTU Calculator State
   const [linkMTU, setLinkMTU] = useState("1500")
-  const [selectedProtocols, setSelectedProtocols] = useState<string[]>(["Ethernet II", "IPv4", "TCP"])
+  const [selectedProtocols, setSelectedProtocols] = useState<string[]>([
+    "Ethernet II",
+    "IPv4",
+    "TCP",
+  ])
 
   // OUI Lookup State
   const [macAddress, setMacAddress] = useState("")
@@ -88,7 +104,10 @@ export function NetworkTester() {
       // Use native ICMP ping when method is ICMP and we're in Electron
       if (rttMethod === "ICMP" && isNative) {
         console.log("[NetDash] Using NATIVE ICMP ping for RTT test")
-        const host = rttUrl.trim().replace(/^https?:\/\//, "").split("/")[0]
+        const host = rttUrl
+          .trim()
+          .replace(/^https?:\/\//, "")
+          .split("/")[0]
         const samples = Number.parseInt(rttSamples) || 10
 
         const nativeResult = await electronNetwork.ping(host, {
@@ -106,12 +125,15 @@ export function NetworkTester() {
             average: nativeResult.avg,
             min: nativeResult.min,
             max: nativeResult.max,
-            jitter: nativeResult.times.length > 1
-              ? Math.sqrt(
-                  nativeResult.times.reduce((sum, t) => sum + Math.pow(t - nativeResult.avg, 2), 0) /
-                    nativeResult.times.length
-                )
-              : 0,
+            jitter:
+              nativeResult.times.length > 1
+                ? Math.sqrt(
+                    nativeResult.times.reduce(
+                      (sum, t) => sum + Math.pow(t - nativeResult.avg, 2),
+                      0
+                    ) / nativeResult.times.length
+                  )
+                : 0,
             packetLoss: nativeResult.packetLoss,
           }
           setRttResults([result, ...rttResults.slice(0, 9)])
@@ -199,12 +221,12 @@ export function NetworkTester() {
         <h4 className="font-semibold">Recent Results</h4>
         {rttResults.map((result, index) => (
           <Card key={index} className="p-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {result.success ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
                 <span className="font-mono text-sm">{result.url}</span>
                 <Badge variant="outline">{result.method}</Badge>
@@ -214,13 +236,17 @@ export function NetworkTester() {
                   </Badge>
                 )}
                 {result.mode === "no-cors" && <Badge variant="secondary">no-cors fallback</Badge>}
-                {result.packetLoss > 0 && <Badge variant="destructive">{result.packetLoss.toFixed(1)}% loss</Badge>}
+                {result.packetLoss > 0 && (
+                  <Badge variant="destructive">{result.packetLoss.toFixed(1)}% loss</Badge>
+                )}
               </div>
-              <span className="text-xs text-muted-foreground">{new Date(result.timestamp).toLocaleTimeString()}</span>
+              <span className="text-muted-foreground text-xs">
+                {new Date(result.timestamp).toLocaleTimeString()}
+              </span>
             </div>
 
             {result.success ? (
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-6">
                 <div>
                   <span className="text-muted-foreground">Median:</span>
                   <div className="font-mono font-semibold">{formatDuration(result.median)}</div>
@@ -265,7 +291,7 @@ export function NetworkTester() {
               <div className="space-y-2">
                 <div className="text-sm text-red-600">{result.error}</div>
                 {result.errorDetails && result.errorDetails.length > 0 && (
-                  <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                  <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
                     {result.errorDetails.map((detail, detailIndex) => (
                       <li key={detailIndex}>{detail}</li>
                     ))}
@@ -287,28 +313,32 @@ export function NetworkTester() {
         <h4 className="font-semibold">Recent Queries</h4>
         {dnsResults.map((result, index) => (
           <Card key={index} className="p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {result.success ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
                 <span className="font-mono">{result.domain}</span>
                 <Badge variant="outline">{result.recordType}</Badge>
                 <Badge variant="secondary">{result.provider}</Badge>
                 {result.dnssec && <Badge variant="outline">DNSSEC</Badge>}
-                {result.success && <Badge variant="outline">{formatDuration(result.responseTime)}</Badge>}
+                {result.success && (
+                  <Badge variant="outline">{formatDuration(result.responseTime)}</Badge>
+                )}
               </div>
-              <span className="text-xs text-muted-foreground">{new Date(result.timestamp).toLocaleTimeString()}</span>
+              <span className="text-muted-foreground text-xs">
+                {new Date(result.timestamp).toLocaleTimeString()}
+              </span>
             </div>
 
             {result.success ? (
               result.records.length > 0 ? (
                 <div className="space-y-2">
                   {result.records.map((record, recordIndex) => (
-                    <div key={recordIndex} className="p-2 bg-muted/50 rounded text-sm font-mono">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div key={recordIndex} className="bg-muted/50 rounded p-2 font-mono text-sm">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
                         <div>
                           <span className="text-muted-foreground">Name:</span> {record.name}
                         </div>
@@ -327,7 +357,7 @@ export function NetworkTester() {
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground">No records found</div>
+                <div className="text-muted-foreground text-sm">No records found</div>
               )
             ) : (
               <div className="text-sm text-red-600">{result.error}</div>
@@ -341,10 +371,12 @@ export function NetworkTester() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Activity className="w-6 h-6 text-primary" />
+        <Activity className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Network Testing Tools</h1>
-          <p className="text-muted-foreground">Test RTT, throughput, DNS resolution, and network utilities</p>
+          <p className="text-muted-foreground">
+            Test RTT, throughput, DNS resolution, and network utilities
+          </p>
         </div>
       </div>
 
@@ -352,16 +384,17 @@ export function NetworkTester() {
         <Alert className="border-green-500/50 bg-green-500/10">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription>
-            <strong>Native Mode:</strong> Running in desktop app with real ICMP ping support. Select "ICMP Ping (Native)"
-            in RTT test for accurate latency measurements using system-level networking.
+            <strong>Native Mode:</strong> Running in desktop app with real ICMP ping support. Select
+            "ICMP Ping (Native)" in RTT test for accurate latency measurements using system-level
+            networking.
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Browser Limitations:</strong> These tests use HTTP requests and are subject to CORS policies. For
-            accurate network testing with ICMP ping, use the desktop app.
+            <strong>Browser Limitations:</strong> These tests use HTTP requests and are subject to
+            CORS policies. For accurate network testing with ICMP ping, use the desktop app.
           </AlertDescription>
         </Alert>
       )}
@@ -380,13 +413,15 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Clock className="w-5 h-5" />
+                <Clock className="h-5 w-5" />
                 <span>Round Trip Time (RTT) Testing</span>
               </CardTitle>
-              <CardDescription>Measure HTTP response times with jitter and packet loss analysis</CardDescription>
+              <CardDescription>
+                Measure HTTP response times with jitter and packet loss analysis
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div className="md:col-span-2">
                   <Label htmlFor="rtt-url">Test URL</Label>
                   <Input
@@ -398,14 +433,15 @@ export function NetworkTester() {
                 </div>
                 <div>
                   <Label>Method</Label>
-                  <Select value={rttMethod} onValueChange={(value: "HEAD" | "GET" | "ICMP") => setRttMethod(value)}>
+                  <Select
+                    value={rttMethod}
+                    onValueChange={(value: "HEAD" | "GET" | "ICMP") => setRttMethod(value)}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {isNative && (
-                        <SelectItem value="ICMP">ICMP Ping (Native)</SelectItem>
-                      )}
+                      {isNative && <SelectItem value="ICMP">ICMP Ping (Native)</SelectItem>}
                       <SelectItem value="HEAD">HTTP HEAD (faster)</SelectItem>
                       <SelectItem value="GET">HTTP GET (full request)</SelectItem>
                     </SelectContent>
@@ -424,15 +460,19 @@ export function NetworkTester() {
                 </div>
               </div>
 
-              <Button onClick={runRTTTest} disabled={!rttUrl || activeTest === "rtt"} className="w-full">
+              <Button
+                onClick={runRTTTest}
+                disabled={!rttUrl || activeTest === "rtt"}
+                className="w-full"
+              >
                 {activeTest === "rtt" ? (
                   <>
-                    <StopCircle className="w-4 h-4 mr-2" />
+                    <StopCircle className="mr-2 h-4 w-4" />
                     Testing...
                   </>
                 ) : (
                   <>
-                    <Play className="w-4 h-4 mr-2" />
+                    <Play className="mr-2 h-4 w-4" />
                     Start RTT Test
                   </>
                 )}
@@ -447,13 +487,15 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Activity className="w-5 h-5" />
+                <Activity className="h-5 w-5" />
                 <span>Throughput Testing</span>
               </CardTitle>
-              <CardDescription>Measure download and upload speeds to test endpoints</CardDescription>
+              <CardDescription>
+                Measure download and upload speeds to test endpoints
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="throughput-url">Test URL</Label>
                   <Input
@@ -480,7 +522,7 @@ export function NetworkTester() {
                   disabled={!throughputUrl || activeTest?.startsWith("throughput")}
                   className="flex-1"
                 >
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Download Test
                 </Button>
                 <Button
@@ -488,7 +530,7 @@ export function NetworkTester() {
                   disabled={!throughputUrl || activeTest?.startsWith("throughput")}
                   className="flex-1"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
+                  <Upload className="mr-2 h-4 w-4" />
                   Upload Test
                 </Button>
               </div>
@@ -496,7 +538,7 @@ export function NetworkTester() {
               {activeTest?.startsWith("throughput") && (
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Activity className="w-4 h-4 animate-spin" />
+                    <Activity className="h-4 w-4 animate-spin" />
                     <span>Running {activeTest.split("-")[1]} test...</span>
                   </div>
                   <Progress value={50} className="w-full" />
@@ -508,29 +550,35 @@ export function NetworkTester() {
                   <h4 className="font-semibold">Recent Results</h4>
                   {throughputResults.map((result, index) => (
                     <Card key={index} className="p-4">
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           {result.success ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-green-600" />
                           ) : (
-                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <AlertCircle className="h-4 w-4 text-red-600" />
                           )}
                           <span className="font-mono text-sm">{result.url}</span>
-                          <Badge variant={result.direction === "download" ? "secondary" : "outline"}>
+                          <Badge
+                            variant={result.direction === "download" ? "secondary" : "outline"}
+                          >
                             {result.direction}
                           </Badge>
                         </div>
                       </div>
 
                       {result.success ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                           <div>
                             <span className="text-muted-foreground">Throughput:</span>
-                            <div className="font-mono font-semibold">{formatThroughput(result.throughputMbps)}</div>
+                            <div className="font-mono font-semibold">
+                              {formatThroughput(result.throughputMbps)}
+                            </div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Data Transferred:</span>
-                            <div className="font-mono">{(result.bytesTransferred / 1024 / 1024).toFixed(2)} MB</div>
+                            <div className="font-mono">
+                              {(result.bytesTransferred / 1024 / 1024).toFixed(2)} MB
+                            </div>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Duration:</span>
@@ -552,13 +600,15 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Globe className="w-5 h-5" />
+                <Globe className="h-5 w-5" />
                 <span>DNS over HTTPS</span>
               </CardTitle>
-              <CardDescription>Query DNS records using secure DNS over HTTPS providers</CardDescription>
+              <CardDescription>
+                Query DNS records using secure DNS over HTTPS providers
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div>
                   <Label htmlFor="dns-query">Domain</Label>
                   <Input
@@ -603,15 +653,19 @@ export function NetworkTester() {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={runDNSQuery} disabled={!dnsQuery || activeTest === "dns"} className="w-full">
+                  <Button
+                    onClick={runDNSQuery}
+                    disabled={!dnsQuery || activeTest === "dns"}
+                    className="w-full"
+                  >
                     {activeTest === "dns" ? (
                       <>
-                        <Activity className="w-4 h-4 mr-2 animate-spin" />
+                        <Activity className="mr-2 h-4 w-4 animate-spin" />
                         Querying...
                       </>
                     ) : (
                       <>
-                        <Search className="w-4 h-4 mr-2" />
+                        <Search className="mr-2 h-4 w-4" />
                         Query DNS
                       </>
                     )}
@@ -628,13 +682,15 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Wifi className="w-5 h-5" />
+                <Wifi className="h-5 w-5" />
                 <span>MTU Calculator</span>
               </CardTitle>
-              <CardDescription>Calculate MTU and header overhead for network stacks</CardDescription>
+              <CardDescription>
+                Calculate MTU and header overhead for network stacks
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <Label htmlFor="link-mtu">Link MTU</Label>
                   <Input
@@ -647,7 +703,7 @@ export function NetworkTester() {
                 </div>
                 <div>
                   <Label>Protocol Stack</Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {Object.keys(protocolOverheads).map((protocol) => (
                       <Badge
                         key={protocol}
@@ -661,7 +717,8 @@ export function NetworkTester() {
                           }
                         }}
                       >
-                        {protocol} ({protocolOverheads[protocol as keyof typeof protocolOverheads]}B)
+                        {protocol} ({protocolOverheads[protocol as keyof typeof protocolOverheads]}
+                        B)
                       </Badge>
                     ))}
                   </div>
@@ -675,18 +732,24 @@ export function NetworkTester() {
               {mtuCalculation && (
                 <Card className="p-4">
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{mtuCalculation.linkMTU}</div>
-                        <div className="text-sm text-muted-foreground">Link MTU</div>
+                        <div className="text-primary text-2xl font-bold">
+                          {mtuCalculation.linkMTU}
+                        </div>
+                        <div className="text-muted-foreground text-sm">Link MTU</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-orange-600">{mtuCalculation.totalOverhead}</div>
-                        <div className="text-sm text-muted-foreground">Total Overhead</div>
+                        <div className="text-2xl font-bold text-orange-600">
+                          {mtuCalculation.totalOverhead}
+                        </div>
+                        <div className="text-muted-foreground text-sm">Total Overhead</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{mtuCalculation.payloadMTU}</div>
-                        <div className="text-sm text-muted-foreground">Payload MTU</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {mtuCalculation.payloadMTU}
+                        </div>
+                        <div className="text-muted-foreground text-sm">Payload MTU</div>
                       </div>
                     </div>
 
@@ -694,7 +757,8 @@ export function NetworkTester() {
                       <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                          Warning: Payload MTU is below IPv6 minimum (1280 bytes). Fragmentation may occur.
+                          Warning: Payload MTU is below IPv6 minimum (1280 bytes). Fragmentation may
+                          occur.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -702,7 +766,7 @@ export function NetworkTester() {
                     <Separator />
 
                     <div>
-                      <h5 className="font-medium mb-2">Protocol Breakdown</h5>
+                      <h5 className="mb-2 font-medium">Protocol Breakdown</h5>
                       <div className="space-y-1">
                         {mtuCalculation.headers.map((header, index) => (
                           <div key={index} className="flex justify-between text-sm">
@@ -723,7 +787,7 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Search className="w-5 h-5" />
+                <Search className="h-5 w-5" />
                 <span>OUI Lookup</span>
               </CardTitle>
               <CardDescription>Look up MAC address vendor information</CardDescription>
@@ -746,13 +810,13 @@ export function NetworkTester() {
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       {ouiResult.found ? (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       ) : (
-                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
                       )}
                       <span className="font-mono">{ouiResult.mac}</span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                       <div>
                         <span className="text-muted-foreground">OUI:</span>
                         <div className="font-mono">{ouiResult.oui || "Unknown"}</div>
@@ -773,14 +837,14 @@ export function NetworkTester() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Zap className="w-5 h-5" />
+                <Zap className="h-5 w-5" />
                 <span>IPv6 Tools</span>
               </CardTitle>
               <CardDescription>IPv6 address manipulation and generation tools</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <h4 className="font-semibold mb-3">Solicited-Node Multicast</h4>
+                <h4 className="mb-3 font-semibold">Solicited-Node Multicast</h4>
                 <div className="flex space-x-2">
                   <Input
                     placeholder="2001:db8::1"
@@ -806,8 +870,8 @@ export function NetworkTester() {
               <Separator />
 
               <div>
-                <h4 className="font-semibold mb-3">EUI-64 from MAC</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h4 className="mb-3 font-semibold">EUI-64 from MAC</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <Label>MAC Address</Label>
                     <Input
@@ -834,7 +898,7 @@ export function NetworkTester() {
                       alert("Invalid MAC address or prefix")
                     }
                   }}
-                  className="w-full mt-4"
+                  className="mt-4 w-full"
                 >
                   Generate EUI-64
                 </Button>

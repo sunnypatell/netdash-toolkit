@@ -65,7 +65,10 @@ export interface ConflictAnalysisResult {
 }
 
 // Convert parsed entries to conflict entries
-function toConflictEntry(entry: ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry, sourceData: string): ConflictEntry {
+function toConflictEntry(
+  entry: ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry,
+  sourceData: string
+): ConflictEntry {
   return {
     ip: "ip" in entry ? entry.ip : undefined,
     mac: entry.mac,
@@ -129,25 +132,35 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
 
         const interfaces = collectUniqueValues(ipEntries, "interface")
         if (interfaces.length > 0) {
-          remediation.add(`Inspect connected switch/router interfaces (${interfaces.join(", ")}) for duplicate hosts.`)
+          remediation.add(
+            `Inspect connected switch/router interfaces (${interfaces.join(", ")}) for duplicate hosts.`
+          )
         }
 
         const vlans = collectUniqueValues(ipEntries, "vlan")
         if (vlans.length > 0) {
-          remediation.add(`Verify VLAN configuration for ${vlans.join(", ")} and ensure static assignments are documented.`)
+          remediation.add(
+            `Verify VLAN configuration for ${vlans.join(", ")} and ensure static assignments are documented.`
+          )
         }
 
         const hostnames = collectUniqueValues(ipEntries, "hostname")
         if (hostnames.length > 0) {
-          remediation.add(`Confirm the intended hostnames (${hostnames.join(", ")}) and shut down any unexpected node.`)
+          remediation.add(
+            `Confirm the intended hostnames (${hostnames.join(", ")}) and shut down any unexpected node.`
+          )
         }
 
         if (ipEntries.some((entry) => entry.source === "mac-table")) {
-          remediation.add("Clear stale CAM table entries on the relevant switches after removing the duplicate device.")
+          remediation.add(
+            "Clear stale CAM table entries on the relevant switches after removing the duplicate device."
+          )
         }
 
         if (ipEntries.some((entry) => entry.source === "arp")) {
-          remediation.add("Flush ARP caches on affected routers or switches after resolving the conflict.")
+          remediation.add(
+            "Flush ARP caches on affected routers or switches after resolving the conflict."
+          )
         }
 
         conflicts.push({
@@ -208,16 +221,22 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
 
           const interfaces = collectUniqueValues(macEntries, "interface")
           if (interfaces.length > 0) {
-            remediation.add(`Audit switch ports ${interfaces.join(", ")} for unmanaged switches, bridges, or loops.`)
+            remediation.add(
+              `Audit switch ports ${interfaces.join(", ")} for unmanaged switches, bridges, or loops.`
+            )
           }
 
           const vlans = collectUniqueValues(macEntries, "vlan")
           if (vlans.length > 1) {
-            remediation.add(`Confirm the MAC address is not trunked across VLANs (${vlans.join(", ")}) unexpectedly.`)
+            remediation.add(
+              `Confirm the MAC address is not trunked across VLANs (${vlans.join(", ")}) unexpectedly.`
+            )
           }
 
           if (macEntries.some((entry) => entry.source === "mac-table")) {
-            remediation.add("Consider enabling port security or sticky MAC on the affected interfaces to prevent duplicates.")
+            remediation.add(
+              "Consider enabling port security or sticky MAC on the affected interfaces to prevent duplicates."
+            )
           }
 
           conflicts.push({
@@ -245,7 +264,9 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
   for (const staticEntry of staticEntries) {
     if (!staticEntry.ip) continue
 
-    const conflictingDHCP = dhcpEntries.find((dhcp) => dhcp.ip === staticEntry.ip && dhcp.mac !== staticEntry.mac)
+    const conflictingDHCP = dhcpEntries.find(
+      (dhcp) => dhcp.ip === staticEntry.ip && dhcp.mac !== staticEntry.mac
+    )
 
     if (conflictingDHCP) {
       const remediation = new Set<string>([
@@ -257,12 +278,16 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
 
       const interfaces = collectUniqueValues([staticEntry], "interface")
       if (interfaces.length > 0) {
-        remediation.add(`Document and monitor the connected interface (${interfaces.join(", ")}) for unauthorized re-use.`)
+        remediation.add(
+          `Document and monitor the connected interface (${interfaces.join(", ")}) for unauthorized re-use.`
+        )
       }
 
       const scopeNames = collectUniqueValues([staticEntry, conflictingDHCP], "vlan")
       if (scopeNames.length > 0) {
-        remediation.add(`Validate DHCP scopes or VLANs (${scopeNames.join(", ")}) to ensure reservation boundaries are correct.`)
+        remediation.add(
+          `Validate DHCP scopes or VLANs (${scopeNames.join(", ")}) to ensure reservation boundaries are correct.`
+        )
       }
 
       const hostnames = collectUniqueValues([conflictingDHCP], "hostname")
@@ -288,7 +313,7 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
 // Main conflict analysis function
 export function analyzeConflicts(
   parsedData: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[],
-  sourceTexts: string[],
+  sourceTexts: string[]
 ): ConflictAnalysisResult {
   // Convert to conflict entries
   const entries: ConflictEntry[] = parsedData.map((entry, index) => {
@@ -313,7 +338,7 @@ export function analyzeConflicts(
       acc[conflict.severity]++
       return acc
     },
-    { high: 0, medium: 0, low: 0 },
+    { high: 0, medium: 0, low: 0 }
   )
 
   return {
@@ -339,7 +364,9 @@ export function exportConflictsToCSV(conflicts: Conflict[]): string {
     return [conflict.type, conflict.severity, conflict.description, ip, mac, sources, remediation]
   })
 
-  return [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
+  return [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join(
+    "\n"
+  )
 }
 
 // Generate remediation report

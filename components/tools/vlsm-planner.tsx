@@ -87,11 +87,21 @@ export function VLSMPlanner() {
       setBaseNetwork("10.0.0.0")
       setBasePrefix("20")
       setRequirements([
-        { id: "1", name: "Main Office", hostsRequired: 500, description: "Primary office with 500 users" },
+        {
+          id: "1",
+          name: "Main Office",
+          hostsRequired: 500,
+          description: "Primary office with 500 users",
+        },
         { id: "2", name: "Branch A", hostsRequired: 120, description: "Branch office A" },
         { id: "3", name: "Branch B", hostsRequired: 50, description: "Branch office B" },
         { id: "4", name: "DMZ", hostsRequired: 10, description: "Web servers and public services" },
-        { id: "5", name: "Management", hostsRequired: 5, description: "Network management devices" },
+        {
+          id: "5",
+          name: "Management",
+          hostsRequired: 5,
+          description: "Network management devices",
+        },
       ])
     } catch (error) {
       console.error("Error loading VLSM sample plan:", error)
@@ -104,10 +114,12 @@ export function VLSMPlanner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <Network className="w-6 h-6 text-primary" />
+          <Network className="text-primary h-6 w-6" />
           <div>
             <h1 className="text-2xl font-bold">VLSM Planner</h1>
-            <p className="text-muted-foreground">Plan Variable Length Subnet Masking with optimal allocation</p>
+            <p className="text-muted-foreground">
+              Plan Variable Length Subnet Masking with optimal allocation
+            </p>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -117,11 +129,11 @@ export function VLSMPlanner() {
           {plan && (
             <>
               <Button variant="outline" onClick={() => exportPlan("csv")}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 CSV
               </Button>
               <Button variant="outline" onClick={() => exportPlan("text")}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 Text
               </Button>
             </>
@@ -140,10 +152,12 @@ export function VLSMPlanner() {
           <Card>
             <CardHeader>
               <CardTitle>Base Network Configuration</CardTitle>
-              <CardDescription>Define the base network that will be subdivided using VLSM</CardDescription>
+              <CardDescription>
+                Define the base network that will be subdivided using VLSM
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <IPInput
                   label="Base Network"
                   placeholder="10.0.0.0"
@@ -162,7 +176,7 @@ export function VLSMPlanner() {
                 </div>
                 <div className="flex items-end">
                   <Button onClick={calculatePlan} className="w-full">
-                    <BarChart3 className="w-4 h-4 mr-2" />
+                    <BarChart3 className="mr-2 h-4 w-4" />
                     Calculate VLSM
                   </Button>
                 </div>
@@ -173,11 +187,17 @@ export function VLSMPlanner() {
           <Card>
             <CardHeader>
               <CardTitle>Subnet Requirements</CardTitle>
-              <CardDescription>Define the subnets you need and their host requirements</CardDescription>
+              <CardDescription>
+                Define the subnets you need and their host requirements
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Input placeholder="Subnet name" value={newReqName} onChange={(e) => setNewReqName(e.target.value)} />
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <Input
+                  placeholder="Subnet name"
+                  value={newReqName}
+                  onChange={(e) => setNewReqName(e.target.value)}
+                />
                 <Input
                   type="number"
                   placeholder="Hosts needed"
@@ -190,15 +210,18 @@ export function VLSMPlanner() {
                   onChange={(e) => setNewReqDesc(e.target.value)}
                 />
                 <Button onClick={addRequirement} disabled={!newReqName || !newReqHosts}>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Add
                 </Button>
               </div>
 
               <div className="space-y-2">
                 {requirements.map((req) => (
-                  <div key={req.id} className="flex items-center space-x-4 p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                  <div
+                    key={req.id}
+                    className="bg-muted/50 flex items-center space-x-4 rounded-lg p-3"
+                  >
+                    <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
                       <Input
                         value={req.name}
                         onChange={(e) => updateRequirement(req.id, "name", e.target.value)}
@@ -207,7 +230,13 @@ export function VLSMPlanner() {
                       <Input
                         type="number"
                         value={req.hostsRequired}
-                        onChange={(e) => updateRequirement(req.id, "hostsRequired", Number.parseInt(e.target.value))}
+                        onChange={(e) =>
+                          updateRequirement(
+                            req.id,
+                            "hostsRequired",
+                            Number.parseInt(e.target.value)
+                          )
+                        }
                         placeholder="Hosts needed"
                       />
                       <Input
@@ -217,7 +246,7 @@ export function VLSMPlanner() {
                       />
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => removeRequirement(req.id)}>
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -226,7 +255,9 @@ export function VLSMPlanner() {
               {requirements.length === 0 && (
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>Add subnet requirements to begin VLSM planning.</AlertDescription>
+                  <AlertDescription>
+                    Add subnet requirements to begin VLSM planning.
+                  </AlertDescription>
                 </Alert>
               )}
             </CardContent>
@@ -240,31 +271,35 @@ export function VLSMPlanner() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     {plan.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <AlertCircle className="h-5 w-5 text-red-600" />
                     )}
                     <span>VLSM Plan Summary</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {plan.success ? (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">{plan.totalHosts}</div>
-                        <div className="text-sm text-muted-foreground">Total Hosts</div>
+                        <div className="text-primary text-2xl font-bold">{plan.totalHosts}</div>
+                        <div className="text-muted-foreground text-sm">Total Hosts</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">{plan.allocatedHosts}</div>
-                        <div className="text-sm text-muted-foreground">Allocated</div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {plan.allocatedHosts}
+                        </div>
+                        <div className="text-muted-foreground text-sm">Allocated</div>
                       </div>
                       <div className="text-center">
                         <div className="text-2xl font-bold text-orange-600">{plan.wastedHosts}</div>
-                        <div className="text-sm text-muted-foreground">Wasted</div>
+                        <div className="text-muted-foreground text-sm">Wasted</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{plan.utilizationPercent.toFixed(1)}%</div>
-                        <div className="text-sm text-muted-foreground">Utilization</div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {plan.utilizationPercent.toFixed(1)}%
+                        </div>
+                        <div className="text-muted-foreground text-sm">Utilization</div>
                       </div>
                     </div>
                   ) : (
@@ -285,11 +320,11 @@ export function VLSMPlanner() {
                   <CardContent>
                     <div className="space-y-4">
                       {plan.allocations.map((allocation, index) => (
-                        <div key={allocation.id} className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
+                        <div key={allocation.id} className="rounded-lg border p-4">
+                          <div className="mb-3 flex items-center justify-between">
                             <div>
                               <h4 className="font-semibold">{allocation.name}</h4>
-                              <p className="text-sm text-muted-foreground">{allocation.cidr}</p>
+                              <p className="text-muted-foreground text-sm">{allocation.cidr}</p>
                             </div>
                             <div className="flex space-x-2">
                               <Badge variant="secondary">/{allocation.prefix}</Badge>
@@ -299,7 +334,7 @@ export function VLSMPlanner() {
                               )}
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                             <div>
                               <span className="text-muted-foreground">Network:</span>
                               <div className="font-mono">{allocation.network}</div>
@@ -339,15 +374,17 @@ export function VLSMPlanner() {
             <Card>
               <CardHeader>
                 <CardTitle>Network Allocation Heatmap</CardTitle>
-                <CardDescription>Visual representation of how the base network is subdivided</CardDescription>
+                <CardDescription>
+                  Visual representation of how the base network is subdivided
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="relative h-16 bg-muted rounded-lg overflow-hidden">
+                  <div className="bg-muted relative h-16 overflow-hidden rounded-lg">
                     {heatmapData.map((segment, index) => (
                       <div
                         key={index}
-                        className="absolute top-0 h-full flex items-center justify-center text-white text-xs font-medium"
+                        className="absolute top-0 flex h-full items-center justify-center text-xs font-medium text-white"
                         style={{
                           left: `${segment.start}%`,
                           width: `${segment.end - segment.start}%`,
@@ -358,12 +395,15 @@ export function VLSMPlanner() {
                       </div>
                     ))}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
                     {heatmapData.map((segment, index) => (
                       <div key={index} className="flex items-center space-x-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: segment.color }}></div>
+                        <div
+                          className="h-4 w-4 rounded"
+                          style={{ backgroundColor: segment.color }}
+                        ></div>
                         <span className="text-sm">{segment.name}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           ({(segment.end - segment.start).toFixed(1)}%)
                         </span>
                       </div>
@@ -375,7 +415,9 @@ export function VLSMPlanner() {
           ) : (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Generate a successful VLSM plan to view the network visualization.</AlertDescription>
+              <AlertDescription>
+                Generate a successful VLSM plan to view the network visualization.
+              </AlertDescription>
             </Alert>
           )}
         </TabsContent>
@@ -384,13 +426,15 @@ export function VLSMPlanner() {
       <Card>
         <CardHeader>
           <CardTitle>VLSM Algorithm</CardTitle>
-          <CardDescription>How the Variable Length Subnet Masking calculation works</CardDescription>
+          <CardDescription>
+            How the Variable Length Subnet Masking calculation works
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <h4 className="font-semibold mb-2">Algorithm Steps</h4>
-              <ol className="list-decimal list-inside space-y-1 text-sm">
+              <h4 className="mb-2 font-semibold">Algorithm Steps</h4>
+              <ol className="list-inside list-decimal space-y-1 text-sm">
                 <li>Sort requirements by host count (descending)</li>
                 <li>For each requirement, find smallest prefix that fits</li>
                 <li>Align subnet to appropriate binary boundary</li>
@@ -399,8 +443,8 @@ export function VLSMPlanner() {
               </ol>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Best Practices</h4>
-              <ul className="list-disc list-inside space-y-1 text-sm">
+              <h4 className="mb-2 font-semibold">Best Practices</h4>
+              <ul className="list-inside list-disc space-y-1 text-sm">
                 <li>Always plan for future growth (add 20-30% buffer)</li>
                 <li>Use hierarchical addressing for routing efficiency</li>
                 <li>Reserve space for point-to-point links (/30 or /31)</li>

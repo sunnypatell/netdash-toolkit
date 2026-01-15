@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Download } from "lucide-react"
 import { ResultCard } from "@/components/ui/result-card"
@@ -98,13 +104,13 @@ export function MTUCalculator() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">MTU Calculator</h1>
+        <h1 className="text-foreground mb-2 text-3xl font-bold">MTU Calculator</h1>
         <p className="text-muted-foreground">
           Calculate Maximum Transmission Unit and payload sizes with protocol overhead analysis.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Configuration</CardTitle>
@@ -113,7 +119,12 @@ export function MTUCalculator() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="link-mtu">Link MTU (bytes)</Label>
-              <Input id="link-mtu" value={linkMTU} onChange={(e) => setLinkMTU(e.target.value)} placeholder="1500" />
+              <Input
+                id="link-mtu"
+                value={linkMTU}
+                onChange={(e) => setLinkMTU(e.target.value)}
+                placeholder="1500"
+              />
             </div>
 
             <div>
@@ -145,11 +156,14 @@ export function MTUCalculator() {
 
             <div>
               <Label>Protocol Stack</Label>
-              <div className="space-y-2 mt-2">
+              <div className="mt-2 space-y-2">
                 {protocols.map((protocol, index) => (
                   <div key={protocol.name} className="flex items-center space-x-2">
-                    <Checkbox checked={protocol.enabled} onCheckedChange={() => toggleProtocol(index)} />
-                    <span className="text-sm flex-1">{protocol.name}</span>
+                    <Checkbox
+                      checked={protocol.enabled}
+                      onCheckedChange={() => toggleProtocol(index)}
+                    />
+                    <span className="flex-1 text-sm">{protocol.name}</span>
                     <Badge variant="secondary">{protocol.overhead} bytes</Badge>
                   </div>
                 ))}
@@ -171,12 +185,13 @@ export function MTUCalculator() {
           {result.fragmentationWarning && (
             <Card className="border-destructive">
               <CardContent className="pt-6">
-                <div className="flex items-center space-x-2 text-destructive">
-                  <AlertTriangle className="w-4 h-4" />
+                <div className="text-destructive flex items-center space-x-2">
+                  <AlertTriangle className="h-4 w-4" />
                   <span className="font-medium">Fragmentation Warning</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Payload MTU is below IPv4 minimum (576 bytes). This may cause fragmentation issues.
+                <p className="text-muted-foreground mt-2 text-sm">
+                  Payload MTU is below IPv4 minimum (576 bytes). This may cause fragmentation
+                  issues.
                 </p>
               </CardContent>
             </Card>
@@ -204,7 +219,7 @@ export function MTUCalculator() {
                     <span>{result.breakdown.transport.overhead} bytes</span>
                   </div>
                 )}
-                <div className="border-t pt-2 flex justify-between font-medium">
+                <div className="flex justify-between border-t pt-2 font-medium">
                   <span>Total Overhead</span>
                   <span>{result.totalOverhead} bytes</span>
                 </div>
@@ -214,7 +229,7 @@ export function MTUCalculator() {
 
           <div className="flex space-x-2">
             <Button onClick={exportResults} variant="outline" className="flex-1">
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="mr-2 h-4 w-4" />
               Export Results
             </Button>
           </div>

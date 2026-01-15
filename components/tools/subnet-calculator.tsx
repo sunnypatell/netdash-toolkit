@@ -8,7 +8,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calculator, Download, Info } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
 import { ResultCard } from "@/components/ui/result-card"
-import { calculateIPv4Subnet, calculateIPv6Subnet, isValidIPv4, isValidIPv6 } from "@/lib/network-utils"
+import {
+  calculateIPv4Subnet,
+  calculateIPv6Subnet,
+  isValidIPv4,
+  isValidIPv6,
+} from "@/lib/network-utils"
 import type { IPv4Result, IPv6Result } from "@/lib/network-utils"
 
 export function SubnetCalculator() {
@@ -105,24 +110,24 @@ export function SubnetCalculator() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div className="flex items-start space-x-3">
-          <Calculator className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
+          <Calculator className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Subnet Calculator</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <h1 className="text-xl font-bold sm:text-2xl">Subnet Calculator</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Calculate network parameters for IPv4 and IPv6 subnets
             </p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => exportResults("csv")}
             disabled={!ipv4Results && !ipv6Results}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Export </span>CSV
           </Button>
           <Button
@@ -131,7 +136,7 @@ export function SubnetCalculator() {
             onClick={() => exportResults("json")}
             disabled={!ipv4Results && !ipv6Results}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Export </span>JSON
           </Button>
         </div>
@@ -158,12 +163,12 @@ export function SubnetCalculator() {
             <CardHeader>
               <CardTitle className="text-lg sm:text-xl">IPv4 Subnet Calculation</CardTitle>
               <CardDescription className="text-sm">
-                Enter an IPv4 address and prefix length to calculate all subnet parameters including network, broadcast,
-                and host ranges
+                Enter an IPv4 address and prefix length to calculate all subnet parameters including
+                network, broadcast, and host ranges
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <IPInput
                   label="IP Address"
                   placeholder="192.168.1.1"
@@ -180,7 +185,7 @@ export function SubnetCalculator() {
                 />
                 <div className="flex items-end">
                   <Button onClick={calculateIPv4} className="w-full">
-                    <Calculator className="w-4 h-4 mr-2" />
+                    <Calculator className="mr-2 h-4 w-4" />
                     Calculate
                   </Button>
                 </div>
@@ -189,15 +194,15 @@ export function SubnetCalculator() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>Special Cases:</strong> /31 networks have 2 usable addresses (RFC 3021), /32 networks have 1
-                  host, and /30 networks have 2 usable hosts.
+                  <strong>Special Cases:</strong> /31 networks have 2 usable addresses (RFC 3021),
+                  /32 networks have 1 host, and /30 networks have 2 usable hosts.
                 </AlertDescription>
               </Alert>
             </CardContent>
           </Card>
 
           {ipv4Results && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
               <ResultCard
                 title="Network Information"
                 results={{
@@ -227,18 +232,18 @@ export function SubnetCalculator() {
               <CardTitle className="text-lg">IPv4 Reference</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div>
-                  <h4 className="font-semibold mb-2 text-sm">Private Address Ranges</h4>
-                  <div className="space-y-1 text-xs sm:text-sm font-mono">
+                  <h4 className="mb-2 text-sm font-semibold">Private Address Ranges</h4>
+                  <div className="space-y-1 font-mono text-xs sm:text-sm">
                     <div>10.0.0.0/8 (Class A)</div>
                     <div>172.16.0.0/12 (Class B)</div>
                     <div>192.168.0.0/16 (Class C)</div>
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2 text-sm">Special Addresses</h4>
-                  <div className="space-y-1 text-xs sm:text-sm font-mono">
+                  <h4 className="mb-2 text-sm font-semibold">Special Addresses</h4>
+                  <div className="space-y-1 font-mono text-xs sm:text-sm">
                     <div>127.0.0.0/8 (Loopback)</div>
                     <div>169.254.0.0/16 (Link-Local)</div>
                     <div>224.0.0.0/4 (Multicast)</div>
@@ -254,12 +259,12 @@ export function SubnetCalculator() {
             <CardHeader>
               <CardTitle className="text-lg sm:text-xl">IPv6 Subnet Calculation</CardTitle>
               <CardDescription className="text-sm">
-                Enter an IPv6 address and prefix length to calculate network parameters, compression, and special
-                addresses
+                Enter an IPv6 address and prefix length to calculate network parameters,
+                compression, and special addresses
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <IPInput
                   label="IPv6 Address"
                   placeholder="2001:db8::1"
@@ -276,7 +281,7 @@ export function SubnetCalculator() {
                 />
                 <div className="flex items-end">
                   <Button onClick={calculateIPv6} className="w-full">
-                    <Calculator className="w-4 h-4 mr-2" />
+                    <Calculator className="mr-2 h-4 w-4" />
                     Calculate
                   </Button>
                 </div>
@@ -285,15 +290,15 @@ export function SubnetCalculator() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription className="text-sm">
-                  <strong>IPv6 Features:</strong> Automatic address compression per RFC 5952, solicited-node multicast
-                  calculation, and EUI-64 interface identifier support.
+                  <strong>IPv6 Features:</strong> Automatic address compression per RFC 5952,
+                  solicited-node multicast calculation, and EUI-64 interface identifier support.
                 </AlertDescription>
               </Alert>
             </CardContent>
           </Card>
 
           {ipv6Results && (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
               <ResultCard
                 title="Address Information"
                 results={{
@@ -320,10 +325,10 @@ export function SubnetCalculator() {
               <CardTitle className="text-lg">IPv6 Reference</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div>
-                  <h4 className="font-semibold mb-2 text-sm">Special Addresses</h4>
-                  <div className="space-y-1 text-xs sm:text-sm font-mono">
+                  <h4 className="mb-2 text-sm font-semibold">Special Addresses</h4>
+                  <div className="space-y-1 font-mono text-xs sm:text-sm">
                     <div>::1/128 (Loopback)</div>
                     <div>fe80::/10 (Link-Local)</div>
                     <div>fc00::/7 (Unique Local)</div>
@@ -331,8 +336,8 @@ export function SubnetCalculator() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-2 text-sm">Common Prefixes</h4>
-                  <div className="space-y-1 text-xs sm:text-sm font-mono">
+                  <h4 className="mb-2 text-sm font-semibold">Common Prefixes</h4>
+                  <div className="space-y-1 font-mono text-xs sm:text-sm">
                     <div>/48 (Site prefix)</div>
                     <div>/64 (Subnet prefix)</div>
                     <div>/128 (Host address)</div>
@@ -347,12 +352,14 @@ export function SubnetCalculator() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Calculation Examples</CardTitle>
-          <CardDescription className="text-sm">Test cases to verify subnet calculations</CardDescription>
+          <CardDescription className="text-sm">
+            Test cases to verify subnet calculations
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
-              <h4 className="font-semibold mb-2 text-sm">IPv4 Test Cases</h4>
+              <h4 className="mb-2 text-sm font-semibold">IPv4 Test Cases</h4>
               <div className="space-y-2">
                 <Button
                   variant="outline"
@@ -390,7 +397,7 @@ export function SubnetCalculator() {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2 text-sm">IPv6 Test Cases</h4>
+              <h4 className="mb-2 text-sm font-semibold">IPv6 Test Cases</h4>
               <div className="space-y-2">
                 <Button
                   variant="outline"

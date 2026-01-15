@@ -41,23 +41,23 @@ Please provide as much information as possible:
 
 ### What to Expect
 
-| Timeline | Action |
-| -------- | ------ |
-| 24 hours | Initial acknowledgment of your report |
-| 72 hours | Preliminary assessment and severity rating |
-| 7 days   | Detailed response with remediation plan |
+| Timeline | Action                                             |
+| -------- | -------------------------------------------------- |
+| 24 hours | Initial acknowledgment of your report              |
+| 72 hours | Preliminary assessment and severity rating         |
+| 7 days   | Detailed response with remediation plan            |
 | 30 days  | Target for fix deployment (critical issues faster) |
 
 ### Severity Ratings
 
 We use the following severity classifications:
 
-| Severity | Description | Response Time |
-| -------- | ----------- | ------------- |
-| **Critical** | Remote code execution, data breach, authentication bypass | < 24 hours |
-| **High** | Privilege escalation, significant data exposure | < 72 hours |
-| **Medium** | Limited data exposure, denial of service | < 7 days |
-| **Low** | Minor issues, theoretical vulnerabilities | < 30 days |
+| Severity     | Description                                               | Response Time |
+| ------------ | --------------------------------------------------------- | ------------- |
+| **Critical** | Remote code execution, data breach, authentication bypass | < 24 hours    |
+| **High**     | Privilege escalation, significant data exposure           | < 72 hours    |
+| **Medium**   | Limited data exposure, denial of service                  | < 7 days      |
+| **Low**      | Minor issues, theoretical vulnerabilities                 | < 30 days     |
 
 ### Safe Harbor
 
@@ -118,7 +118,7 @@ We appreciate the security researchers who help keep NetDash Toolkit secure:
 
 <!-- Security researchers will be acknowledged here -->
 
-*No vulnerabilities reported yet. Be the first!*
+_No vulnerabilities reported yet. Be the first!_
 
 ---
 

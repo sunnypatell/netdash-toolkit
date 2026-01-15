@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -70,9 +76,30 @@ export function NetworkAnalyzer() {
       type: "switch",
       ip: "192.168.1.1",
       interfaces: [
-        { name: "GigE1/0/1", speed: 1000, utilization: 45, mtu: 1500, duplex: "full", status: "up" },
-        { name: "GigE1/0/2", speed: 1000, utilization: 78, mtu: 1500, duplex: "full", status: "up" },
-        { name: "GigE1/0/24", speed: 1000, utilization: 23, mtu: 1500, duplex: "full", status: "up" },
+        {
+          name: "GigE1/0/1",
+          speed: 1000,
+          utilization: 45,
+          mtu: 1500,
+          duplex: "full",
+          status: "up",
+        },
+        {
+          name: "GigE1/0/2",
+          speed: 1000,
+          utilization: 78,
+          mtu: 1500,
+          duplex: "full",
+          status: "up",
+        },
+        {
+          name: "GigE1/0/24",
+          speed: 1000,
+          utilization: 23,
+          mtu: 1500,
+          duplex: "full",
+          status: "up",
+        },
       ],
     },
     {
@@ -105,10 +132,15 @@ export function NetworkAnalyzer() {
   const [topologyData, setTopologyData] = useState("")
 
   const analyzeBandwidth = (): BandwidthAnalysis => {
-    const allInterfaces = devices.flatMap((device) => device.interfaces.filter((iface) => iface.status === "up"))
+    const allInterfaces = devices.flatMap((device) =>
+      device.interfaces.filter((iface) => iface.status === "up")
+    )
 
     const totalCapacity = allInterfaces.reduce((sum, iface) => sum + iface.speed, 0)
-    const currentUtilization = allInterfaces.reduce((sum, iface) => sum + (iface.speed * iface.utilization) / 100, 0)
+    const currentUtilization = allInterfaces.reduce(
+      (sum, iface) => sum + (iface.speed * iface.utilization) / 100,
+      0
+    )
     const utilizationPercentage = (currentUtilization / totalCapacity) * 100
 
     const peakUtilization = Math.max(...allInterfaces.map((iface) => iface.utilization))
@@ -130,7 +162,9 @@ export function NetworkAnalyzer() {
       recommendations.push("Overall network utilization is high - consider capacity planning")
     }
     if (bottlenecks.length > 0) {
-      recommendations.push("High utilization interfaces detected - consider load balancing or upgrades")
+      recommendations.push(
+        "High utilization interfaces detected - consider load balancing or upgrades"
+      )
     }
     if (peakUtilization > 90) {
       recommendations.push("Critical utilization levels detected - immediate attention required")
@@ -224,7 +258,7 @@ export function NetworkAnalyzer() {
             return { ...device, interfaces: [...device.interfaces, newInterface] }
           }
           return device
-        }),
+        })
       )
     }
   }
@@ -319,7 +353,9 @@ export function NetworkAnalyzer() {
 
     const bwScore = Math.max(
       0,
-      100 - (analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity) * 100,
+      100 -
+        (analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity) *
+          100
     )
     const latencyScore = analysisResults.latency.qualityScore
 
@@ -329,7 +365,7 @@ export function NetworkAnalyzer() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <BarChart3 className="w-6 h-6 text-primary" />
+        <BarChart3 className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Network Analyzer</h1>
           <p className="text-muted-foreground">
@@ -338,13 +374,13 @@ export function NetworkAnalyzer() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Network className="w-5 h-5 text-blue-600" />
+              <Network className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Total Devices</p>
+                <p className="text-muted-foreground text-sm">Total Devices</p>
                 <p className="text-2xl font-bold">{devices.length}</p>
               </div>
             </div>
@@ -354,9 +390,9 @@ export function NetworkAnalyzer() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-green-600" />
+              <Activity className="h-5 w-5 text-green-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Network Health</p>
+                <p className="text-muted-foreground text-sm">Network Health</p>
                 <p className="text-2xl font-bold">{networkHealth}%</p>
               </div>
             </div>
@@ -366,11 +402,15 @@ export function NetworkAnalyzer() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
+              <TrendingUp className="h-5 w-5 text-orange-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Active Interfaces</p>
+                <p className="text-muted-foreground text-sm">Active Interfaces</p>
                 <p className="text-2xl font-bold">
-                  {devices.reduce((sum, device) => sum + device.interfaces.filter((i) => i.status === "up").length, 0)}
+                  {devices.reduce(
+                    (sum, device) =>
+                      sum + device.interfaces.filter((i) => i.status === "up").length,
+                    0
+                  )}
                 </p>
               </div>
             </div>
@@ -380,13 +420,14 @@ export function NetworkAnalyzer() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Zap className="w-5 h-5 text-purple-600" />
+              <Zap className="h-5 w-5 text-purple-600" />
               <div>
-                <p className="text-sm text-muted-foreground">Total Capacity</p>
+                <p className="text-muted-foreground text-sm">Total Capacity</p>
                 <p className="text-2xl font-bold">
                   {devices.reduce(
-                    (sum, device) => sum + device.interfaces.reduce((iSum, iface) => iSum + iface.speed, 0),
-                    0,
+                    (sum, device) =>
+                      sum + device.interfaces.reduce((iSum, iface) => iSum + iface.speed, 0),
+                    0
                   )}{" "}
                   Mbps
                 </p>
@@ -411,7 +452,7 @@ export function NetworkAnalyzer() {
               <CardDescription>Manage your network topology and device inventory</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <Input
                   placeholder="Device name"
                   value={newDevice.name}
@@ -447,21 +488,35 @@ export function NetworkAnalyzer() {
                   <Card key={device.id} className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          {device.type === "router" && <Router className="w-5 h-5 text-blue-600" />}
-                          {device.type === "switch" && <Network className="w-5 h-5 text-green-600" />}
-                          {device.type === "server" && <Server className="w-5 h-5 text-purple-600" />}
-                          {device.type === "workstation" && <Wifi className="w-5 h-5 text-orange-600" />}
-                          {device.type === "firewall" && <AlertTriangle className="w-5 h-5 text-red-600" />}
+                        <div className="mb-2 flex items-center space-x-3">
+                          {device.type === "router" && <Router className="h-5 w-5 text-blue-600" />}
+                          {device.type === "switch" && (
+                            <Network className="h-5 w-5 text-green-600" />
+                          )}
+                          {device.type === "server" && (
+                            <Server className="h-5 w-5 text-purple-600" />
+                          )}
+                          {device.type === "workstation" && (
+                            <Wifi className="h-5 w-5 text-orange-600" />
+                          )}
+                          {device.type === "firewall" && (
+                            <AlertTriangle className="h-5 w-5 text-red-600" />
+                          )}
                           <h4 className="font-semibold">{device.name}</h4>
                           <Badge variant="outline">{device.type}</Badge>
-                          <span className="text-sm text-muted-foreground">{device.ip}</span>
+                          <span className="text-muted-foreground text-sm">{device.ip}</span>
                         </div>
 
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <Label className="text-sm">Interfaces ({device.interfaces.length})</Label>
-                            <Button size="sm" variant="outline" onClick={() => addInterface(device.id)}>
+                            <Label className="text-sm">
+                              Interfaces ({device.interfaces.length})
+                            </Label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => addInterface(device.id)}
+                            >
                               Add Interface
                             </Button>
                           </div>
@@ -471,15 +526,17 @@ export function NetworkAnalyzer() {
                               {device.interfaces.map((iface, index) => (
                                 <div
                                   key={index}
-                                  className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
+                                  className="bg-muted/50 flex items-center justify-between rounded p-2 text-sm"
                                 >
                                   <div className="flex items-center space-x-2">
                                     <span className="font-mono">{iface.name}</span>
-                                    <Badge variant={iface.status === "up" ? "secondary" : "destructive"}>
+                                    <Badge
+                                      variant={iface.status === "up" ? "secondary" : "destructive"}
+                                    >
                                       {iface.status}
                                     </Badge>
                                   </div>
-                                  <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                  <div className="text-muted-foreground flex items-center space-x-4 text-xs">
                                     <span>{iface.speed} Mbps</span>
                                     <span>{iface.utilization}% util</span>
                                     <div className="w-16">
@@ -511,19 +568,21 @@ export function NetworkAnalyzer() {
             </CardHeader>
             <CardContent className="space-y-4">
               <Button onClick={runAnalysis} className="w-full">
-                <BarChart3 className="w-4 h-4 mr-2" />
+                <BarChart3 className="mr-2 h-4 w-4" />
                 Run Network Analysis
               </Button>
 
               {analysisResults.bandwidth && (
                 <div className="space-y-4">
                   <h4 className="font-semibold">Bandwidth Analysis</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Card className="p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span>Total Capacity:</span>
-                          <span className="font-mono">{analysisResults.bandwidth.totalCapacity.toFixed(0)} Mbps</span>
+                          <span className="font-mono">
+                            {analysisResults.bandwidth.totalCapacity.toFixed(0)} Mbps
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Current Usage:</span>
@@ -539,7 +598,8 @@ export function NetworkAnalyzer() {
                         </div>
                         <Progress
                           value={
-                            (analysisResults.bandwidth.currentUtilization / analysisResults.bandwidth.totalCapacity) *
+                            (analysisResults.bandwidth.currentUtilization /
+                              analysisResults.bandwidth.totalCapacity) *
                             100
                           }
                           className="mt-2"
@@ -551,13 +611,20 @@ export function NetworkAnalyzer() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span>Peak Utilization:</span>
-                          <span className="font-mono">{analysisResults.bandwidth.peakUtilization.toFixed(1)}%</span>
+                          <span className="font-mono">
+                            {analysisResults.bandwidth.peakUtilization.toFixed(1)}%
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Bottlenecks:</span>
-                          <span className="font-mono">{analysisResults.bandwidth.bottlenecks.length}</span>
+                          <span className="font-mono">
+                            {analysisResults.bandwidth.bottlenecks.length}
+                          </span>
                         </div>
-                        <Progress value={analysisResults.bandwidth.peakUtilization} className="mt-2" />
+                        <Progress
+                          value={analysisResults.bandwidth.peakUtilization}
+                          className="mt-2"
+                        />
                       </div>
                     </Card>
                   </div>
@@ -567,7 +634,7 @@ export function NetworkAnalyzer() {
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
                         <strong>Bottlenecks detected:</strong>
-                        <ul className="list-disc list-inside mt-1">
+                        <ul className="mt-1 list-inside list-disc">
                           {analysisResults.bandwidth.bottlenecks.map((bottleneck, index) => (
                             <li key={index}>{bottleneck}</li>
                           ))}
@@ -581,7 +648,7 @@ export function NetworkAnalyzer() {
                       <CheckCircle className="h-4 w-4" />
                       <AlertDescription>
                         <strong>Recommendations:</strong>
-                        <ul className="list-disc list-inside mt-1">
+                        <ul className="mt-1 list-inside list-disc">
                           {analysisResults.bandwidth.recommendations.map((rec, index) => (
                             <li key={index}>{rec}</li>
                           ))}
@@ -596,20 +663,26 @@ export function NetworkAnalyzer() {
                 <div className="space-y-4">
                   <Separator />
                   <h4 className="font-semibold">Latency Analysis</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Card className="p-4">
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span>Average Latency:</span>
-                          <span className="font-mono">{analysisResults.latency.averageLatency.toFixed(2)} ms</span>
+                          <span className="font-mono">
+                            {analysisResults.latency.averageLatency.toFixed(2)} ms
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Jitter:</span>
-                          <span className="font-mono">{analysisResults.latency.jitter.toFixed(2)} ms</span>
+                          <span className="font-mono">
+                            {analysisResults.latency.jitter.toFixed(2)} ms
+                          </span>
                         </div>
                         <div className="flex justify-between">
                           <span>Packet Loss:</span>
-                          <span className="font-mono">{analysisResults.latency.packetLoss.toFixed(3)}%</span>
+                          <span className="font-mono">
+                            {analysisResults.latency.packetLoss.toFixed(3)}%
+                          </span>
                         </div>
                       </div>
                     </Card>
@@ -618,10 +691,12 @@ export function NetworkAnalyzer() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span>Quality Score:</span>
-                          <span className="font-mono">{analysisResults.latency.qualityScore.toFixed(0)}/100</span>
+                          <span className="font-mono">
+                            {analysisResults.latency.qualityScore.toFixed(0)}/100
+                          </span>
                         </div>
                         <Progress value={analysisResults.latency.qualityScore} className="mt-2" />
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                           {analysisResults.latency.qualityScore >= 80 && "Excellent"}
                           {analysisResults.latency.qualityScore >= 60 &&
                             analysisResults.latency.qualityScore < 80 &&
@@ -640,7 +715,7 @@ export function NetworkAnalyzer() {
                       <Clock className="h-4 w-4" />
                       <AlertDescription>
                         <strong>Latency issues detected:</strong>
-                        <ul className="list-disc list-inside mt-1">
+                        <ul className="mt-1 list-inside list-disc">
                           {analysisResults.latency.issues.map((issue, index) => (
                             <li key={index}>{issue}</li>
                           ))}
@@ -658,23 +733,27 @@ export function NetworkAnalyzer() {
           <Card>
             <CardHeader>
               <CardTitle>Real-time Monitoring</CardTitle>
-              <CardDescription>Monitor interface utilization and network performance</CardDescription>
+              <CardDescription>
+                Monitor interface utilization and network performance
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {devices.map((device) => (
                   <Card key={device.id} className="p-4">
-                    <h4 className="font-semibold mb-3">{device.name}</h4>
+                    <h4 className="mb-3 font-semibold">{device.name}</h4>
                     <div className="space-y-2">
                       {device.interfaces.map((iface, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="font-mono text-sm">{iface.name}</span>
-                            <Badge variant={iface.status === "up" ? "secondary" : "destructive"}>{iface.status}</Badge>
+                            <Badge variant={iface.status === "up" ? "secondary" : "destructive"}>
+                              {iface.status}
+                            </Badge>
                           </div>
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
-                              <Upload className="w-3 h-3" />
+                              <Upload className="h-3 w-3" />
                               <span className="text-xs">
                                 {((iface.speed * iface.utilization) / 100).toFixed(0)} Mbps
                               </span>
@@ -682,7 +761,7 @@ export function NetworkAnalyzer() {
                             <div className="w-32">
                               <Progress value={iface.utilization} className="h-2" />
                             </div>
-                            <span className="text-xs font-mono w-12">{iface.utilization}%</span>
+                            <span className="w-12 font-mono text-xs">{iface.utilization}%</span>
                           </div>
                         </div>
                       ))}
@@ -706,7 +785,7 @@ export function NetworkAnalyzer() {
                   Generate Report
                 </Button>
                 <Button onClick={exportReport} variant="outline" disabled={!topologyData}>
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   Export
                 </Button>
               </div>
@@ -714,7 +793,11 @@ export function NetworkAnalyzer() {
               {topologyData && (
                 <div>
                   <Label>Generated Report:</Label>
-                  <Textarea value={topologyData} readOnly className="font-mono text-sm min-h-[400px] mt-2" />
+                  <Textarea
+                    value={topologyData}
+                    readOnly
+                    className="mt-2 min-h-[400px] font-mono text-sm"
+                  />
                 </div>
               )}
             </CardContent>

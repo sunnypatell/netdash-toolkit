@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
@@ -274,7 +280,9 @@ export function ACLGenerator() {
 
   const validateAllRules = () => {
     const results =
-      aclType === "standard" ? standardRules.map(validateStandardRule) : extendedRules.map(validateExtendedRule)
+      aclType === "standard"
+        ? standardRules.map(validateStandardRule)
+        : extendedRules.map(validateExtendedRule)
     setValidationResults(results)
     return results
   }
@@ -434,7 +442,9 @@ export function ACLGenerator() {
   }
 
   const updateStandardRule = (id: string, field: keyof StandardACLRule, value: string) => {
-    setStandardRules(standardRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule)))
+    setStandardRules(
+      standardRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule))
+    )
   }
 
   const deleteStandardRule = (id: string) => {
@@ -455,8 +465,14 @@ export function ACLGenerator() {
     setExtendedRules([...extendedRules, newRule])
   }
 
-  const updateExtendedRule = (id: string, field: keyof ExtendedACLRule, value: string | boolean | string[]) => {
-    setExtendedRules(extendedRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule)))
+  const updateExtendedRule = (
+    id: string,
+    field: keyof ExtendedACLRule,
+    value: string | boolean | string[]
+  ) => {
+    setExtendedRules(
+      extendedRules.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule))
+    )
   }
 
   const deleteExtendedRule = (id: string) => {
@@ -551,11 +567,12 @@ export function ACLGenerator() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Shield className="w-6 h-6 text-primary" />
+        <Shield className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Enhanced ACL Generator</h1>
           <p className="text-muted-foreground">
-            Generate Standard and Extended Access Control Lists with advanced features and validation
+            Generate Standard and Extended Access Control Lists with advanced features and
+            validation
           </p>
         </div>
       </div>
@@ -567,16 +584,16 @@ export function ACLGenerator() {
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="standard" className="flex items-center gap-2">
-            <Network className="w-4 h-4" />
+            <Network className="h-4 w-4" />
             Standard ACL
           </TabsTrigger>
           <TabsTrigger value="extended" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
+            <Settings className="h-4 w-4" />
             Extended ACL
           </TabsTrigger>
         </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -615,7 +632,7 @@ export function ACLGenerator() {
                     Load Sample Rules
                   </Button>
                   <Button onClick={validateAllRules} variant="outline" className="flex-1">
-                    <CheckCircle className="w-4 h-4 mr-2" />
+                    <CheckCircle className="mr-2 h-4 w-4" />
                     Validate Rules
                   </Button>
                 </div>
@@ -628,41 +645,46 @@ export function ACLGenerator() {
                   Rules
                   <div className="flex space-x-2">
                     <Badge variant="secondary">{currentRules.length} rules</Badge>
-                    <Button onClick={aclType === "standard" ? addStandardRule : addExtendedRule} size="sm">
-                      <Plus className="w-4 h-4 mr-2" />
+                    <Button
+                      onClick={aclType === "standard" ? addStandardRule : addExtendedRule}
+                      size="sm"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Rule
                     </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="max-h-96 space-y-4 overflow-y-auto">
                   {currentRules.map((rule, index) => {
                     const validation = validationResults[index]
                     return (
-                      <div key={rule.id} className="border rounded-lg p-4 space-y-3">
+                      <div key={rule.id} className="space-y-3 rounded-lg border p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Badge variant="outline">Rule {index + 1}</Badge>
                             {validation && (
                               <>
                                 {validation.isValid ? (
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
                                 ) : (
-                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                  <AlertCircle className="h-4 w-4 text-red-600" />
                                 )}
                               </>
                             )}
                           </div>
                           <Button
                             onClick={() =>
-                              aclType === "standard" ? deleteStandardRule(rule.id) : deleteExtendedRule(rule.id)
+                              aclType === "standard"
+                                ? deleteStandardRule(rule.id)
+                                : deleteExtendedRule(rule.id)
                             }
                             size="sm"
                             variant="ghost"
                             className="text-destructive h-8 w-8 p-0"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
 
@@ -682,13 +704,15 @@ export function ACLGenerator() {
 
                         {aclType === "standard" ? (
                           // Standard ACL Rule Form
-                          <TabsContent value="standard" className="space-y-3 mt-0">
+                          <TabsContent value="standard" className="mt-0 space-y-3">
                             <div className="grid grid-cols-2 gap-2">
                               <div>
                                 <Label>Action</Label>
                                 <Select
                                   value={rule.action}
-                                  onValueChange={(value) => updateStandardRule(rule.id, "action", value)}
+                                  onValueChange={(value) =>
+                                    updateStandardRule(rule.id, "action", value)
+                                  }
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -703,7 +727,9 @@ export function ACLGenerator() {
                                 <Label>Source Network</Label>
                                 <Input
                                   value={(rule as StandardACLRule).sourceNetwork}
-                                  onChange={(e) => updateStandardRule(rule.id, "sourceNetwork", e.target.value)}
+                                  onChange={(e) =>
+                                    updateStandardRule(rule.id, "sourceNetwork", e.target.value)
+                                  }
                                   placeholder="192.168.1.0/24, host 1.1.1.1, or any"
                                 />
                               </div>
@@ -712,7 +738,9 @@ export function ACLGenerator() {
                               <Label>Description</Label>
                               <Input
                                 value={rule.description || ""}
-                                onChange={(e) => updateStandardRule(rule.id, "description", e.target.value)}
+                                onChange={(e) =>
+                                  updateStandardRule(rule.id, "description", e.target.value)
+                                }
                                 placeholder="Rule description"
                               />
                             </div>
@@ -725,7 +753,9 @@ export function ACLGenerator() {
                                 <Label>Action</Label>
                                 <Select
                                   value={rule.action}
-                                  onValueChange={(value) => updateExtendedRule(rule.id, "action", value)}
+                                  onValueChange={(value) =>
+                                    updateExtendedRule(rule.id, "action", value)
+                                  }
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -740,7 +770,9 @@ export function ACLGenerator() {
                                 <Label>Protocol</Label>
                                 <Select
                                   value={(rule as ExtendedACLRule).protocol}
-                                  onValueChange={(value) => updateExtendedRule(rule.id, "protocol", value)}
+                                  onValueChange={(value) =>
+                                    updateExtendedRule(rule.id, "protocol", value)
+                                  }
                                 >
                                   <SelectTrigger>
                                     <SelectValue />
@@ -760,7 +792,9 @@ export function ACLGenerator() {
                                 <Label>Source Network</Label>
                                 <Input
                                   value={(rule as ExtendedACLRule).sourceNetwork}
-                                  onChange={(e) => updateExtendedRule(rule.id, "sourceNetwork", e.target.value)}
+                                  onChange={(e) =>
+                                    updateExtendedRule(rule.id, "sourceNetwork", e.target.value)
+                                  }
                                   placeholder="10.0.0.0/24, host 1.1.1.1, or any"
                                 />
                               </div>
@@ -768,7 +802,9 @@ export function ACLGenerator() {
                                 <Label>Destination Network</Label>
                                 <Input
                                   value={(rule as ExtendedACLRule).destNetwork}
-                                  onChange={(e) => updateExtendedRule(rule.id, "destNetwork", e.target.value)}
+                                  onChange={(e) =>
+                                    updateExtendedRule(rule.id, "destNetwork", e.target.value)
+                                  }
                                   placeholder="192.168.1.0/24, host 1.1.1.1, or any"
                                 />
                               </div>
@@ -782,7 +818,9 @@ export function ACLGenerator() {
                                   <div className="flex gap-1">
                                     <Select
                                       value={(rule as ExtendedACLRule).destPortOperator || "eq"}
-                                      onValueChange={(value) => updateExtendedRule(rule.id, "destPortOperator", value)}
+                                      onValueChange={(value) =>
+                                        updateExtendedRule(rule.id, "destPortOperator", value)
+                                      }
                                     >
                                       <SelectTrigger className="w-20">
                                         <SelectValue />
@@ -807,11 +845,13 @@ export function ACLGenerator() {
                                           (rule as ExtendedACLRule).destPortOperator === "range"
                                             ? "destPortRange"
                                             : "destPort",
-                                          e.target.value,
+                                          e.target.value
                                         )
                                       }
                                       placeholder={
-                                        (rule as ExtendedACLRule).destPortOperator === "range" ? "80-90" : "443"
+                                        (rule as ExtendedACLRule).destPortOperator === "range"
+                                          ? "80-90"
+                                          : "443"
                                       }
                                       className="flex-1"
                                     />
@@ -834,7 +874,9 @@ export function ACLGenerator() {
                                     <Checkbox
                                       id={`log-${rule.id}`}
                                       checked={(rule as ExtendedACLRule).log || false}
-                                      onCheckedChange={(checked) => updateExtendedRule(rule.id, "log", !!checked)}
+                                      onCheckedChange={(checked) =>
+                                        updateExtendedRule(rule.id, "log", !!checked)
+                                      }
                                     />
                                     <Label htmlFor={`log-${rule.id}`} className="text-sm">
                                       Log
@@ -850,7 +892,9 @@ export function ACLGenerator() {
                                   <Label>ICMP Type</Label>
                                   <Input
                                     value={(rule as ExtendedACLRule).icmpType || ""}
-                                    onChange={(e) => updateExtendedRule(rule.id, "icmpType", e.target.value)}
+                                    onChange={(e) =>
+                                      updateExtendedRule(rule.id, "icmpType", e.target.value)
+                                    }
                                     placeholder="8 (echo)"
                                   />
                                 </div>
@@ -858,7 +902,9 @@ export function ACLGenerator() {
                                   <Label>ICMP Code</Label>
                                   <Input
                                     value={(rule as ExtendedACLRule).icmpCode || ""}
-                                    onChange={(e) => updateExtendedRule(rule.id, "icmpCode", e.target.value)}
+                                    onChange={(e) =>
+                                      updateExtendedRule(rule.id, "icmpCode", e.target.value)
+                                    }
                                     placeholder="0"
                                   />
                                 </div>
@@ -869,7 +915,9 @@ export function ACLGenerator() {
                               <Label>Description</Label>
                               <Input
                                 value={rule.description || ""}
-                                onChange={(e) => updateExtendedRule(rule.id, "description", e.target.value)}
+                                onChange={(e) =>
+                                  updateExtendedRule(rule.id, "description", e.target.value)
+                                }
                                 placeholder="Rule description"
                               />
                             </div>
@@ -887,20 +935,26 @@ export function ACLGenerator() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5" />
+                  <FileText className="h-5 w-5" />
                   <span>Generated Configuration</span>
                 </CardTitle>
-                <CardDescription>Copy this {aclType} ACL configuration to your Cisco IOS device</CardDescription>
+                <CardDescription>
+                  Copy this {aclType} ACL configuration to your Cisco IOS device
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Textarea value={generateACL()} readOnly className="font-mono text-sm min-h-[400px]" />
-                <div className="flex space-x-2 mt-4">
+                <Textarea
+                  value={generateACL()}
+                  readOnly
+                  className="min-h-[400px] font-mono text-sm"
+                />
+                <div className="mt-4 flex space-x-2">
                   <Button onClick={copyToClipboard} variant="outline" className="flex-1">
-                    <Copy className="w-4 h-4 mr-2" />
+                    <Copy className="mr-2 h-4 w-4" />
                     Copy
                   </Button>
                   <Button onClick={exportACL} variant="outline" className="flex-1">
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 </div>
@@ -909,14 +963,16 @@ export function ACLGenerator() {
 
             <Card>
               <CardHeader>
-                <CardTitle>{aclType === "standard" ? "Standard ACL" : "Extended ACL"} Reference</CardTitle>
+                <CardTitle>
+                  {aclType === "standard" ? "Standard ACL" : "Extended ACL"} Reference
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {aclType === "standard" ? (
                   <div className="space-y-4">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <h4 className="font-semibold mb-2">Standard ACL Numbers</h4>
-                      <div className="text-sm space-y-1 text-muted-foreground">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="mb-2 font-semibold">Standard ACL Numbers</h4>
+                      <div className="text-muted-foreground space-y-1 text-sm">
                         <p>
                           • <strong>1-99:</strong> Standard IP ACLs
                         </p>
@@ -953,9 +1009,9 @@ export function ACLGenerator() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="bg-muted/50 p-4 rounded-lg">
-                      <h4 className="font-semibold mb-2">Extended ACL Numbers</h4>
-                      <div className="text-sm space-y-1 text-muted-foreground">
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <h4 className="mb-2 font-semibold">Extended ACL Numbers</h4>
+                      <div className="text-muted-foreground space-y-1 text-sm">
                         <p>
                           • <strong>100-199:</strong> Extended IP ACLs
                         </p>

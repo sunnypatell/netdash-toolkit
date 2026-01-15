@@ -38,6 +38,7 @@ Fixes #
 <!-- Describe how you tested these changes -->
 
 ### Test Environment
+
 - [ ] macOS (Apple Silicon)
 - [ ] macOS (Intel)
 - [ ] Windows
@@ -45,6 +46,7 @@ Fixes #
 - [ ] Web Browser
 
 ### Tests Performed
+
 - [ ] Manual testing
 - [ ] Unit tests pass (`npm test`)
 - [ ] Build succeeds (`npm run build`)
@@ -52,6 +54,7 @@ Fixes #
 - [ ] Type check passes (`npm run typecheck`)
 
 ### Test Steps
+
 <!-- Describe the steps to test this PR -->
 
 1.
@@ -63,21 +66,25 @@ Fixes #
 <!-- Mark completed items with an "x" -->
 
 ### Code Quality
+
 - [ ] My code follows the project's coding style
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] My changes generate no new warnings or errors
 
 ### Documentation
+
 - [ ] I have updated the documentation accordingly
 - [ ] I have updated the CHANGELOG.md (if applicable)
 
 ### Security
+
 - [ ] I have not introduced any security vulnerabilities
 - [ ] I have not exposed any sensitive information (API keys, credentials, etc.)
 - [ ] Input validation is properly implemented (if applicable)
 
 ### Performance
+
 - [ ] I have considered the performance impact of my changes
 - [ ] No unnecessary re-renders or expensive operations introduced
 

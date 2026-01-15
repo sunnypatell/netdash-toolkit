@@ -197,7 +197,9 @@ export function compressIPv6(ip: string): string {
   // Apply compression if we found a sequence of 2 or more zeros
   if (longestZeroLength >= 2) {
     const before = groups.slice(0, longestZeroStart).map((g) => g.replace(/^0+/, "") || "0")
-    const after = groups.slice(longestZeroStart + longestZeroLength).map((g) => g.replace(/^0+/, "") || "0")
+    const after = groups
+      .slice(longestZeroStart + longestZeroLength)
+      .map((g) => g.replace(/^0+/, "") || "0")
 
     if (before.length === 0 && after.length === 0) {
       return "::"
@@ -360,7 +362,10 @@ export function isValidIPv4(ip: string): boolean {
   return parts.every((part) => {
     if (part === "" || part.length > 3) return false
     const num = Number.parseInt(part, 10)
-    return (!isNaN(num) && num >= 0 && num <= 255 && part === num.toString() && !part.startsWith("0")) || part === "0"
+    return (
+      (!isNaN(num) && num >= 0 && num <= 255 && part === num.toString() && !part.startsWith("0")) ||
+      part === "0"
+    )
   })
 }
 

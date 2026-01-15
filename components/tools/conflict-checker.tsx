@@ -22,13 +22,19 @@ import {
   Scan,
 } from "lucide-react"
 import { PasteParser } from "@/components/ui/paste-parser"
-import { analyzeConflicts, exportConflictsToCSV, generateRemediationReport } from "@/lib/conflict-utils"
+import {
+  analyzeConflicts,
+  exportConflictsToCSV,
+  generateRemediationReport,
+} from "@/lib/conflict-utils"
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/parsers"
 import type { ConflictAnalysisResult } from "@/lib/conflict-utils"
 import { isElectron, electronNetwork } from "@/lib/electron"
 
 export function ConflictChecker() {
-  const [parsedData, setParsedData] = useState<(ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]>([])
+  const [parsedData, setParsedData] = useState<
+    (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]
+  >([])
   const [analysis, setAnalysis] = useState<ConflictAnalysisResult | null>(null)
   const [sourceTexts, setSourceTexts] = useState<string[]>([])
   const [isNative, setIsNative] = useState(false)
@@ -102,10 +108,12 @@ export function ConflictChecker() {
       const uniqueIPs = new Set(
         data
           .map((d) => ("ip" in d && typeof d.ip === "string" ? d.ip : undefined))
-          .filter((ip): ip is string => !!ip),
+          .filter((ip): ip is string => !!ip)
       ).size
       const uniqueMACs = new Set(
-        data.map((d) => ("mac" in d && typeof d.mac === "string" ? d.mac : undefined)).filter((m): m is string => !!m),
+        data
+          .map((d) => ("mac" in d && typeof d.mac === "string" ? d.mac : undefined))
+          .filter((m): m is string => !!m)
       ).size
       const sources = Array.from(new Set(data.map((d) => d.source)))
       setAnalysis({
@@ -156,13 +164,13 @@ export function ConflictChecker() {
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case "high":
-        return <XCircle className="w-4 h-4 text-red-600" />
+        return <XCircle className="h-4 w-4 text-red-600" />
       case "medium":
-        return <AlertCircle className="w-4 h-4 text-orange-600" />
+        return <AlertCircle className="h-4 w-4 text-orange-600" />
       case "low":
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />
+        return <AlertTriangle className="h-4 w-4 text-yellow-600" />
       default:
-        return <CheckCircle className="w-4 h-4 text-green-600" />
+        return <CheckCircle className="h-4 w-4 text-green-600" />
     }
   }
 
@@ -182,17 +190,17 @@ export function ConflictChecker() {
   const getConflictTypeIcon = (type: string) => {
     switch (type) {
       case "ip-duplicate":
-        return <Network className="w-4 h-4" />
+        return <Network className="h-4 w-4" />
       case "mac-duplicate":
-        return <Shield className="w-4 h-4" />
+        return <Shield className="h-4 w-4" />
       case "dhcp-static-overlap":
-        return <Activity className="w-4 h-4" />
+        return <Activity className="h-4 w-4" />
       case "rogue-dhcp":
-        return <AlertCircle className="w-4 h-4" />
+        return <AlertCircle className="h-4 w-4" />
       case "vlan-hopping":
-        return <AlertTriangle className="w-4 h-4" />
+        return <AlertTriangle className="h-4 w-4" />
       default:
-        return <AlertTriangle className="w-4 h-4" />
+        return <AlertTriangle className="h-4 w-4" />
     }
   }
 
@@ -200,14 +208,16 @@ export function ConflictChecker() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <AlertTriangle className="w-6 h-6 text-primary" />
+          <AlertTriangle className="text-primary h-6 w-6" />
           <div>
             <h1 className="text-2xl font-bold">IP Conflict Checker</h1>
-            <p className="text-muted-foreground">Detect IP and MAC conflicts from multiple data sources</p>
+            <p className="text-muted-foreground">
+              Detect IP and MAC conflicts from multiple data sources
+            </p>
           </div>
           {isNative && (
-            <Badge variant="outline" className="text-green-600 border-green-600">
-              <Zap className="w-3 h-3 mr-1" />
+            <Badge variant="outline" className="border-green-600 text-green-600">
+              <Zap className="mr-1 h-3 w-3" />
               Native Mode
             </Badge>
           )}
@@ -217,12 +227,12 @@ export function ConflictChecker() {
             <Button onClick={runNativeArpScan} disabled={isScanning}>
               {isScanning ? (
                 <>
-                  <Activity className="w-4 h-4 mr-2 animate-spin" />
+                  <Activity className="mr-2 h-4 w-4 animate-spin" />
                   Scanning...
                 </>
               ) : (
                 <>
-                  <Scan className="w-4 h-4 mr-2" />
+                  <Scan className="mr-2 h-4 w-4" />
                   Scan Local Network
                 </>
               )}
@@ -231,11 +241,11 @@ export function ConflictChecker() {
           {analysis && analysis.conflicts.length > 0 && (
             <>
               <Button variant="outline" onClick={() => exportConflicts("csv")}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 Export CSV
               </Button>
               <Button variant="outline" onClick={() => exportConflicts("report")}>
-                <FileText className="w-4 h-4 mr-2" />
+                <FileText className="mr-2 h-4 w-4" />
                 Remediation Report
               </Button>
             </>
@@ -247,8 +257,9 @@ export function ConflictChecker() {
         <Alert className="border-green-500/50 bg-green-500/10">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription>
-            <strong>Native Mode:</strong> Click "Scan Local Network" to perform a real ARP scan of your local network
-            using system tools. You can also paste data from other sources for combined analysis.
+            <strong>Native Mode:</strong> Click "Scan Local Network" to perform a real ARP scan of
+            your local network using system tools. You can also paste data from other sources for
+            combined analysis.
           </AlertDescription>
         </Alert>
       )}
@@ -267,25 +278,29 @@ export function ConflictChecker() {
             <Card>
               <CardHeader>
                 <CardTitle>Analysis Summary</CardTitle>
-                <CardDescription>Overview of parsed network data and detected conflicts</CardDescription>
+                <CardDescription>
+                  Overview of parsed network data and detected conflicts
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{analysis.totalEntries}</div>
-                    <div className="text-sm text-muted-foreground">Total Entries</div>
+                    <div className="text-primary text-2xl font-bold">{analysis.totalEntries}</div>
+                    <div className="text-muted-foreground text-sm">Total Entries</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">{analysis.uniqueIPs}</div>
-                    <div className="text-sm text-muted-foreground">Unique IPs</div>
+                    <div className="text-muted-foreground text-sm">Unique IPs</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-600">{analysis.uniqueMACs}</div>
-                    <div className="text-sm text-muted-foreground">Unique MACs</div>
+                    <div className="text-muted-foreground text-sm">Unique MACs</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-600">{analysis.conflicts.length}</div>
-                    <div className="text-sm text-muted-foreground">Conflicts</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {analysis.conflicts.length}
+                    </div>
+                    <div className="text-muted-foreground text-sm">Conflicts</div>
                   </div>
                 </div>
 
@@ -304,15 +319,15 @@ export function ConflictChecker() {
                   <div className="mt-4">
                     <div className="flex items-center space-x-4 text-sm">
                       <div className="flex items-center space-x-1">
-                        <XCircle className="w-4 h-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-red-600" />
                         <span>High: {analysis.summary.high}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
                         <span>Medium: {analysis.summary.medium}</span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
                         <span>Low: {analysis.summary.low}</span>
                       </div>
                     </div>
@@ -328,14 +343,14 @@ export function ConflictChecker() {
             analysis.conflicts.length > 0 ? (
               <div className="space-y-4">
                 {analysis.conflicts.map((conflict, index) => (
-                  <Card key={index} className="border-l-4 border-l-destructive">
+                  <Card key={index} className="border-l-destructive border-l-4">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center space-x-3">
                           {getConflictTypeIcon(conflict.type)}
                           <div>
                             <CardTitle className="text-lg">{conflict.description}</CardTitle>
-                            <div className="flex items-center space-x-2 mt-1">
+                            <div className="mt-1 flex items-center space-x-2">
                               <Badge variant={getSeverityColor(conflict.severity) as any}>
                                 {conflict.severity.toUpperCase()}
                               </Badge>
@@ -348,12 +363,12 @@ export function ConflictChecker() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <h5 className="font-medium mb-2">Affected Entries:</h5>
+                        <h5 className="mb-2 font-medium">Affected Entries:</h5>
                         <div className="space-y-2">
                           {"entries" in conflict ? (
                             conflict.entries.map((entry: any, entryIndex: number) => (
-                              <div key={entryIndex} className="p-2 bg-muted/50 rounded text-sm">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div key={entryIndex} className="bg-muted/50 rounded p-2 text-sm">
+                                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                                   {entry.ip && (
                                     <div className="flex items-center space-x-1">
                                       <span className="text-muted-foreground">IP:</span>
@@ -364,7 +379,7 @@ export function ConflictChecker() {
                                         className="h-4 w-4 p-0"
                                         onClick={() => copyToClipboard(entry.ip!)}
                                       >
-                                        <Copy className="w-3 h-3" />
+                                        <Copy className="h-3 w-3" />
                                       </Button>
                                     </div>
                                   )}
@@ -378,25 +393,27 @@ export function ConflictChecker() {
                                         className="h-4 w-4 p-0"
                                         onClick={() => copyToClipboard(entry.mac)}
                                       >
-                                        <Copy className="w-3 h-3" />
+                                        <Copy className="h-3 w-3" />
                                       </Button>
                                     </div>
                                   )}
                                   {entry.hostname && (
                                     <div>
-                                      <span className="text-muted-foreground">Host:</span> {entry.hostname}
+                                      <span className="text-muted-foreground">Host:</span>{" "}
+                                      {entry.hostname}
                                     </div>
                                   )}
                                   <div>
-                                    <span className="text-muted-foreground">Source:</span> {entry.source}
+                                    <span className="text-muted-foreground">Source:</span>{" "}
+                                    {entry.source}
                                   </div>
                                 </div>
                               </div>
                             ))
                           ) : (
                             <div className="space-y-2">
-                              <div className="p-2 bg-muted/50 rounded text-sm">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div className="bg-muted/50 rounded p-2 text-sm">
+                                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                                   {conflict.ip && (
                                     <div className="flex items-center space-x-1">
                                       <span className="text-muted-foreground">IP:</span>
@@ -407,15 +424,17 @@ export function ConflictChecker() {
                                         className="h-4 w-4 p-0"
                                         onClick={() => copyToClipboard(conflict.ip)}
                                       >
-                                        <Copy className="w-3 h-3" />
+                                        <Copy className="h-3 w-3" />
                                       </Button>
                                     </div>
                                   )}
                                   <div>
-                                    <span className="text-muted-foreground">Static Source:</span> {conflict.staticEntry.source}
+                                    <span className="text-muted-foreground">Static Source:</span>{" "}
+                                    {conflict.staticEntry.source}
                                   </div>
                                   <div>
-                                    <span className="text-muted-foreground">DHCP Source:</span> {conflict.dhcpEntry.source}
+                                    <span className="text-muted-foreground">DHCP Source:</span>{" "}
+                                    {conflict.dhcpEntry.source}
                                   </div>
                                 </div>
                               </div>
@@ -425,8 +444,8 @@ export function ConflictChecker() {
                       </div>
 
                       <div>
-                        <h5 className="font-medium mb-2">Recommended Actions:</h5>
-                        <ul className="list-disc list-inside space-y-1 text-sm">
+                        <h5 className="mb-2 font-medium">Recommended Actions:</h5>
+                        <ul className="list-inside list-disc space-y-1 text-sm">
                           {conflict.remediation.map((action, actionIndex) => (
                             <li key={actionIndex}>{action}</li>
                           ))}
@@ -440,15 +459,17 @@ export function ConflictChecker() {
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>No conflicts detected!</strong> Your network data appears to be clean with no IP or MAC
-                  address conflicts.
+                  <strong>No conflicts detected!</strong> Your network data appears to be clean with
+                  no IP or MAC address conflicts.
                 </AlertDescription>
               </Alert>
             )
           ) : (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>Parse network data from the Input tab to begin conflict analysis.</AlertDescription>
+              <AlertDescription>
+                Parse network data from the Input tab to begin conflict analysis.
+              </AlertDescription>
             </Alert>
           )}
         </TabsContent>
@@ -459,27 +480,32 @@ export function ConflictChecker() {
               <Card>
                 <CardHeader>
                   <CardTitle>Remediation Priority</CardTitle>
-                  <CardDescription>Conflicts organized by priority level for systematic resolution</CardDescription>
+                  <CardDescription>
+                    Conflicts organized by priority level for systematic resolution
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     {analysis.summary.high > 0 && (
                       <div>
-                        <h4 className="font-semibold text-red-600 mb-3 flex items-center space-x-2">
-                          <XCircle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center space-x-2 font-semibold text-red-600">
+                          <XCircle className="h-4 w-4" />
                           <span>High Priority ({analysis.summary.high})</span>
                         </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          These conflicts require immediate attention as they can cause network outages or security
-                          issues.
+                        <p className="text-muted-foreground mb-3 text-sm">
+                          These conflicts require immediate attention as they can cause network
+                          outages or security issues.
                         </p>
                         <div className="space-y-2">
                           {analysis.conflicts
                             .filter((c) => c.severity === "high")
                             .map((conflict, index) => (
-                              <div key={index} className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                                <div className="font-medium text-sm">{conflict.description}</div>
-                                <div className="text-xs text-muted-foreground mt-1">
+                              <div
+                                key={index}
+                                className="rounded-lg bg-red-50 p-3 dark:bg-red-950/20"
+                              >
+                                <div className="text-sm font-medium">{conflict.description}</div>
+                                <div className="text-muted-foreground mt-1 text-xs">
                                   Primary action: {conflict.remediation[0]}
                                 </div>
                               </div>
@@ -490,20 +516,23 @@ export function ConflictChecker() {
 
                     {analysis.summary.medium > 0 && (
                       <div>
-                        <h4 className="font-semibold text-orange-600 mb-3 flex items-center space-x-2">
-                          <AlertCircle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center space-x-2 font-semibold text-orange-600">
+                          <AlertCircle className="h-4 w-4" />
                           <span>Medium Priority ({analysis.summary.medium})</span>
                         </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
+                        <p className="text-muted-foreground mb-3 text-sm">
                           These conflicts should be planned for resolution to prevent future issues.
                         </p>
                         <div className="space-y-2">
                           {analysis.conflicts
                             .filter((c) => c.severity === "medium")
                             .map((conflict, index) => (
-                              <div key={index} className="p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                                <div className="font-medium text-sm">{conflict.description}</div>
-                                <div className="text-xs text-muted-foreground mt-1">
+                              <div
+                                key={index}
+                                className="rounded-lg bg-orange-50 p-3 dark:bg-orange-950/20"
+                              >
+                                <div className="text-sm font-medium">{conflict.description}</div>
+                                <div className="text-muted-foreground mt-1 text-xs">
                                   Primary action: {conflict.remediation[0]}
                                 </div>
                               </div>
@@ -514,20 +543,23 @@ export function ConflictChecker() {
 
                     {analysis.summary.low > 0 && (
                       <div>
-                        <h4 className="font-semibold text-yellow-600 mb-3 flex items-center space-x-2">
-                          <AlertTriangle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center space-x-2 font-semibold text-yellow-600">
+                          <AlertTriangle className="h-4 w-4" />
                           <span>Low Priority ({analysis.summary.low})</span>
                         </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
+                        <p className="text-muted-foreground mb-3 text-sm">
                           These conflicts should be monitored but don't require immediate action.
                         </p>
                         <div className="space-y-2">
                           {analysis.conflicts
                             .filter((c) => c.severity === "low")
                             .map((conflict, index) => (
-                              <div key={index} className="p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-                                <div className="font-medium text-sm">{conflict.description}</div>
-                                <div className="text-xs text-muted-foreground mt-1">
+                              <div
+                                key={index}
+                                className="rounded-lg bg-yellow-50 p-3 dark:bg-yellow-950/20"
+                              >
+                                <div className="text-sm font-medium">{conflict.description}</div>
+                                <div className="text-muted-foreground mt-1 text-xs">
                                   Primary action: {conflict.remediation[0]}
                                 </div>
                               </div>
@@ -545,10 +577,10 @@ export function ConflictChecker() {
                   <CardDescription>Preventive measures to avoid future conflicts</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
-                      <h5 className="font-medium mb-2">IP Address Management</h5>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <h5 className="mb-2 font-medium">IP Address Management</h5>
+                      <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
                         <li>Maintain accurate IP address documentation</li>
                         <li>Use DHCP reservations for servers and printers</li>
                         <li>Separate static and DHCP ranges clearly</li>
@@ -556,8 +588,8 @@ export function ConflictChecker() {
                       </ul>
                     </div>
                     <div>
-                      <h5 className="font-medium mb-2">Network Monitoring</h5>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <h5 className="mb-2 font-medium">Network Monitoring</h5>
+                      <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
                         <li>Monitor ARP tables regularly</li>
                         <li>Set up DHCP conflict detection</li>
                         <li>Use network discovery tools</li>
@@ -572,8 +604,8 @@ export function ConflictChecker() {
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
-                No conflicts detected. Continue monitoring your network and maintain good IP address management
-                practices.
+                No conflicts detected. Continue monitoring your network and maintain good IP address
+                management practices.
               </AlertDescription>
             </Alert>
           )}

@@ -18,7 +18,9 @@ interface PasteParserProps {
 
 export function PasteParser({ onDataParsed }: PasteParserProps) {
   const [inputText, setInputText] = useState("")
-  const [parsedData, setParsedData] = useState<(ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]>([])
+  const [parsedData, setParsedData] = useState<
+    (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]
+  >([])
   const [isLoading, setIsLoading] = useState(false)
 
   const handleParse = async () => {
@@ -95,7 +97,7 @@ Vlan    Mac Address       Type        Ports
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <FileText className="w-5 h-5" />
+            <FileText className="h-5 w-5" />
             <span>Network Data Parser</span>
           </CardTitle>
           <CardDescription>
@@ -119,18 +121,33 @@ Vlan    Mac Address       Type        Ports
             </TabsContent>
 
             <TabsContent value="upload" className="space-y-4">
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">Upload a CSV or text file containing network data</p>
-                <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" id="file-upload" />
-                <Button variant="outline" onClick={() => document.getElementById("file-upload")?.click()}>
+              <div className="border-border rounded-lg border-2 border-dashed p-6 text-center">
+                <Upload className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
+                <p className="text-muted-foreground mb-2 text-sm">
+                  Upload a CSV or text file containing network data
+                </p>
+                <input
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                >
                   Choose File
                 </Button>
               </div>
             </TabsContent>
           </Tabs>
 
-          <Button onClick={handleParse} disabled={!inputText.trim() || isLoading} className="w-full">
+          <Button
+            onClick={handleParse}
+            disabled={!inputText.trim() || isLoading}
+            className="w-full"
+          >
             {isLoading ? "Parsing..." : "Parse Data"}
           </Button>
 
@@ -147,8 +164,8 @@ Vlan    Mac Address       Type        Ports
                       acc[item.source] = (acc[item.source] || 0) + 1
                       return acc
                     },
-                    {} as Record<string, number>,
-                  ),
+                    {} as Record<string, number>
+                  )
                 ).map(([source, count]) => (
                   <Badge key={source} variant="outline">
                     {source}: {count}
@@ -163,7 +180,7 @@ Vlan    Mac Address       Type        Ports
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5" />
+            <AlertCircle className="h-5 w-5" />
             <span>Supported Formats</span>
           </CardTitle>
           <CardDescription>Examples of supported network data formats</CardDescription>
@@ -178,16 +195,24 @@ Vlan    Mac Address       Type        Ports
             </TabsList>
 
             <TabsContent value="windows-arp">
-              <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">{sampleFormats.windowsARP}</pre>
+              <pre className="bg-muted overflow-x-auto rounded-lg p-3 text-xs">
+                {sampleFormats.windowsARP}
+              </pre>
             </TabsContent>
             <TabsContent value="linux-arp">
-              <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">{sampleFormats.linuxARP}</pre>
+              <pre className="bg-muted overflow-x-auto rounded-lg p-3 text-xs">
+                {sampleFormats.linuxARP}
+              </pre>
             </TabsContent>
             <TabsContent value="cisco-arp">
-              <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">{sampleFormats.ciscoARP}</pre>
+              <pre className="bg-muted overflow-x-auto rounded-lg p-3 text-xs">
+                {sampleFormats.ciscoARP}
+              </pre>
             </TabsContent>
             <TabsContent value="cisco-mac">
-              <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto">{sampleFormats.ciscoMAC}</pre>
+              <pre className="bg-muted overflow-x-auto rounded-lg p-3 text-xs">
+                {sampleFormats.ciscoMAC}
+              </pre>
             </TabsContent>
           </Tabs>
         </CardContent>

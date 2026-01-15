@@ -89,7 +89,10 @@ export function IPInput({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={cn("font-mono", !isValid && value && "border-destructive focus-visible:ring-destructive")}
+          className={cn(
+            "font-mono",
+            !isValid && value && "border-destructive focus-visible:ring-destructive"
+          )}
           type={isPrefixInput ? "number" : "text"}
           min={isPrefixInput ? "0" : undefined}
           max={isPrefixInput ? (ipVersion === "ipv6" ? "128" : "32") : undefined}
@@ -97,14 +100,14 @@ export function IPInput({
         {addressType && (
           <Badge
             variant={isValid ? "secondary" : "destructive"}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs"
+            className="absolute top-1/2 right-2 -translate-y-1/2 transform text-xs"
           >
             {addressType}
           </Badge>
         )}
       </div>
       {!isValid && value && (
-        <p className="text-sm text-destructive">
+        <p className="text-destructive text-sm">
           {isPrefixInput
             ? `Invalid prefix length (must be 0-${ipVersion === "ipv6" ? "128" : ipVersion === "ipv4" ? "32" : "128"})`
             : `Invalid ${ipVersion === "both" ? "IP address" : ipVersion.toUpperCase()} format${allowCIDR ? " or CIDR notation" : ""}`}

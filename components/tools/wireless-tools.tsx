@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -67,44 +73,256 @@ export function WirelessTools() {
   })
 
   const channels24: ChannelInfo[] = [
-    { channel: 1, frequency: 2412, bandwidth: 20, interference: "medium", recommended: true, dfs: false },
-    { channel: 2, frequency: 2417, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 3, frequency: 2422, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 4, frequency: 2427, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 5, frequency: 2432, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 6, frequency: 2437, bandwidth: 20, interference: "medium", recommended: true, dfs: false },
-    { channel: 7, frequency: 2442, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 8, frequency: 2447, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 9, frequency: 2452, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 10, frequency: 2457, bandwidth: 20, interference: "high", recommended: false, dfs: false },
-    { channel: 11, frequency: 2462, bandwidth: 20, interference: "medium", recommended: true, dfs: false },
-    { channel: 12, frequency: 2467, bandwidth: 20, interference: "low", recommended: false, dfs: false },
-    { channel: 13, frequency: 2472, bandwidth: 20, interference: "low", recommended: false, dfs: false },
+    {
+      channel: 1,
+      frequency: 2412,
+      bandwidth: 20,
+      interference: "medium",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 2,
+      frequency: 2417,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 3,
+      frequency: 2422,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 4,
+      frequency: 2427,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 5,
+      frequency: 2432,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 6,
+      frequency: 2437,
+      bandwidth: 20,
+      interference: "medium",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 7,
+      frequency: 2442,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 8,
+      frequency: 2447,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 9,
+      frequency: 2452,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 10,
+      frequency: 2457,
+      bandwidth: 20,
+      interference: "high",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 11,
+      frequency: 2462,
+      bandwidth: 20,
+      interference: "medium",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 12,
+      frequency: 2467,
+      bandwidth: 20,
+      interference: "low",
+      recommended: false,
+      dfs: false,
+    },
+    {
+      channel: 13,
+      frequency: 2472,
+      bandwidth: 20,
+      interference: "low",
+      recommended: false,
+      dfs: false,
+    },
   ]
 
   const channels5: ChannelInfo[] = [
-    { channel: 36, frequency: 5180, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 40, frequency: 5200, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 44, frequency: 5220, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 48, frequency: 5240, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 52, frequency: 5260, bandwidth: 80, interference: "medium", recommended: false, dfs: true },
-    { channel: 56, frequency: 5280, bandwidth: 80, interference: "medium", recommended: false, dfs: true },
-    { channel: 60, frequency: 5300, bandwidth: 80, interference: "medium", recommended: false, dfs: true },
-    { channel: 64, frequency: 5320, bandwidth: 80, interference: "medium", recommended: false, dfs: true },
-    { channel: 100, frequency: 5500, bandwidth: 80, interference: "low", recommended: true, dfs: true },
-    { channel: 104, frequency: 5520, bandwidth: 80, interference: "low", recommended: true, dfs: true },
-    { channel: 108, frequency: 5540, bandwidth: 80, interference: "low", recommended: true, dfs: true },
-    { channel: 112, frequency: 5560, bandwidth: 80, interference: "low", recommended: true, dfs: true },
-    { channel: 149, frequency: 5745, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 153, frequency: 5765, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 157, frequency: 5785, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 161, frequency: 5805, bandwidth: 80, interference: "low", recommended: true, dfs: false },
-    { channel: 165, frequency: 5825, bandwidth: 80, interference: "low", recommended: true, dfs: false },
+    {
+      channel: 36,
+      frequency: 5180,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 40,
+      frequency: 5200,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 44,
+      frequency: 5220,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 48,
+      frequency: 5240,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 52,
+      frequency: 5260,
+      bandwidth: 80,
+      interference: "medium",
+      recommended: false,
+      dfs: true,
+    },
+    {
+      channel: 56,
+      frequency: 5280,
+      bandwidth: 80,
+      interference: "medium",
+      recommended: false,
+      dfs: true,
+    },
+    {
+      channel: 60,
+      frequency: 5300,
+      bandwidth: 80,
+      interference: "medium",
+      recommended: false,
+      dfs: true,
+    },
+    {
+      channel: 64,
+      frequency: 5320,
+      bandwidth: 80,
+      interference: "medium",
+      recommended: false,
+      dfs: true,
+    },
+    {
+      channel: 100,
+      frequency: 5500,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: true,
+    },
+    {
+      channel: 104,
+      frequency: 5520,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: true,
+    },
+    {
+      channel: 108,
+      frequency: 5540,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: true,
+    },
+    {
+      channel: 112,
+      frequency: 5560,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: true,
+    },
+    {
+      channel: 149,
+      frequency: 5745,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 153,
+      frequency: 5765,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 157,
+      frequency: 5785,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 161,
+      frequency: 5805,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 165,
+      frequency: 5825,
+      bandwidth: 80,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
   ]
 
   const calculateWiFiCapacity = () => {
     const currentChannels = wirelessConfig.band === "2.4" ? channels24 : channels5
-    const selectedChannel = currentChannels.find((ch) => ch.channel.toString() === wirelessConfig.channel)
+    const selectedChannel = currentChannels.find(
+      (ch) => ch.channel.toString() === wirelessConfig.channel
+    )
 
     let theoreticalSpeed = 0
     let realWorldSpeed = 0
@@ -291,7 +509,7 @@ export function WirelessTools() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Wifi className="w-6 h-6 text-primary" />
+        <Wifi className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Wireless Tools</h1>
           <p className="text-muted-foreground">
@@ -309,11 +527,11 @@ export function WirelessTools() {
         </TabsList>
 
         <TabsContent value="channel-planning" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Radio className="w-5 h-5" />
+                  <Radio className="h-5 w-5" />
                   Channel Selection
                 </CardTitle>
                 <CardDescription>Choose optimal channels to minimize interference</CardDescription>
@@ -323,7 +541,9 @@ export function WirelessTools() {
                   <Label>Frequency Band</Label>
                   <Select
                     value={wirelessConfig.band}
-                    onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))}
+                    onValueChange={(value) =>
+                      setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -339,7 +559,9 @@ export function WirelessTools() {
                   <Label>Channel Width</Label>
                   <Select
                     value={wirelessConfig.bandwidth}
-                    onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))}
+                    onValueChange={(value) =>
+                      setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -370,13 +592,17 @@ export function WirelessTools() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  <div className="mb-2 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="font-medium">Recommended Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {recommended.map((channel) => (
-                      <Badge key={channel.channel} variant="default" className="bg-green-100 text-green-800">
+                      <Badge
+                        key={channel.channel}
+                        variant="default"
+                        className="bg-green-100 text-green-800"
+                      >
                         {channel.channel} ({channel.frequency} MHz)
                         {channel.dfs && " DFS"}
                       </Badge>
@@ -385,13 +611,17 @@ export function WirelessTools() {
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <div className="mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
                     <span className="font-medium">Acceptable Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {acceptable.map((channel) => (
-                      <Badge key={channel.channel} variant="secondary" className="bg-yellow-100 text-yellow-800">
+                      <Badge
+                        key={channel.channel}
+                        variant="secondary"
+                        className="bg-yellow-100 text-yellow-800"
+                      >
                         {channel.channel} ({channel.frequency} MHz)
                         {channel.dfs && " DFS"}
                       </Badge>
@@ -400,13 +630,17 @@ export function WirelessTools() {
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                  <div className="mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
                     <span className="font-medium">Avoid These Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {avoid.map((channel) => (
-                      <Badge key={channel.channel} variant="destructive" className="bg-red-100 text-red-800">
+                      <Badge
+                        key={channel.channel}
+                        variant="destructive"
+                        className="bg-red-100 text-red-800"
+                      >
                         {channel.channel} ({channel.frequency} MHz)
                       </Badge>
                     ))}
@@ -419,14 +653,16 @@ export function WirelessTools() {
           <Card>
             <CardHeader>
               <CardTitle>Channel Overview - {wirelessConfig.band} GHz Band</CardTitle>
-              <CardDescription>Visual representation of channel usage and interference</CardDescription>
+              <CardDescription>
+                Visual representation of channel usage and interference
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {currentChannels.map((channel) => (
                   <div
                     key={channel.channel}
-                    className={`p-3 border rounded-lg ${
+                    className={`rounded-lg border p-3 ${
                       channel.recommended
                         ? "border-green-200 bg-green-50"
                         : channel.interference === "high"
@@ -434,7 +670,7 @@ export function WirelessTools() {
                           : "border-yellow-200 bg-yellow-50"
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2 flex items-center justify-between">
                       <span className="font-medium">Channel {channel.channel}</span>
                       <div className="flex gap-1">
                         <Badge
@@ -455,7 +691,7 @@ export function WirelessTools() {
                         )}
                       </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-muted-foreground text-sm">
                       <p>{channel.frequency} MHz</p>
                       <p>Bandwidth: {channel.bandwidth} MHz</p>
                     </div>
@@ -467,14 +703,16 @@ export function WirelessTools() {
         </TabsContent>
 
         <TabsContent value="capacity-calculator" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calculator className="w-5 h-5" />
+                  <Calculator className="h-5 w-5" />
                   WiFi Capacity Calculator
                 </CardTitle>
-                <CardDescription>Calculate theoretical and real-world WiFi performance</CardDescription>
+                <CardDescription>
+                  Calculate theoretical and real-world WiFi performance
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -482,7 +720,9 @@ export function WirelessTools() {
                     <Label>WiFi Standard</Label>
                     <Select
                       value={wirelessConfig.mode}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, mode: value as any }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, mode: value as any }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -498,7 +738,9 @@ export function WirelessTools() {
                     <Label>Frequency Band</Label>
                     <Select
                       value={wirelessConfig.band}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -516,7 +758,9 @@ export function WirelessTools() {
                     <Label>Channel Width</Label>
                     <Select
                       value={wirelessConfig.bandwidth}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -525,7 +769,9 @@ export function WirelessTools() {
                         <SelectItem value="20">20 MHz</SelectItem>
                         <SelectItem value="40">40 MHz</SelectItem>
                         {wirelessConfig.band === "5" && <SelectItem value="80">80 MHz</SelectItem>}
-                        {wirelessConfig.band === "5" && <SelectItem value="160">160 MHz</SelectItem>}
+                        {wirelessConfig.band === "5" && (
+                          <SelectItem value="160">160 MHz</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -533,7 +779,9 @@ export function WirelessTools() {
                     <Label>Max Concurrent Clients</Label>
                     <Input
                       value={wirelessConfig.maxClients}
-                      onChange={(e) => setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))}
+                      onChange={(e) =>
+                        setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))
+                      }
                       placeholder="50"
                     />
                   </div>
@@ -542,8 +790,8 @@ export function WirelessTools() {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Real-world performance is typically 50-70% of theoretical maximum due to overhead, interference, and
-                    protocol limitations.
+                    Real-world performance is typically 50-70% of theoretical maximum due to
+                    overhead, interference, and protocol limitations.
                   </AlertDescription>
                 </Alert>
               </CardContent>
@@ -553,7 +801,11 @@ export function WirelessTools() {
               <ResultCard
                 title="WiFi Performance Analysis"
                 data={[
-                  { label: "Theoretical Speed", value: `${capacityData.theoretical} Mbps`, highlight: true },
+                  {
+                    label: "Theoretical Speed",
+                    value: `${capacityData.theoretical} Mbps`,
+                    highlight: true,
+                  },
                   { label: "Real-World Speed", value: `${capacityData.realWorld} Mbps` },
                   { label: "Per-Client Speed", value: `${capacityData.perClient} Mbps` },
                   { label: "Max Clients", value: capacityData.maxClients.toString() },
@@ -567,7 +819,7 @@ export function WirelessTools() {
                 <CardContent className="space-y-3">
                   <div>
                     <h5 className="font-medium">Signal Quality Impact</h5>
-                    <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="text-muted-foreground space-y-1 text-sm">
                       <p>• Excellent (-30 to -50 dBm): 100% speed</p>
                       <p>• Good (-50 to -60 dBm): 75-90% speed</p>
                       <p>• Fair (-60 to -70 dBm): 50-75% speed</p>
@@ -576,7 +828,7 @@ export function WirelessTools() {
                   </div>
                   <div>
                     <h5 className="font-medium">Interference Sources</h5>
-                    <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="text-muted-foreground space-y-1 text-sm">
                       <p>• Other WiFi networks</p>
                       <p>• Microwave ovens (2.4 GHz)</p>
                       <p>• Bluetooth devices</p>
@@ -593,9 +845,9 @@ export function WirelessTools() {
               <CardTitle>Capacity Planning Guidelines</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <h4 className="font-semibold mb-3">Client Density Recommendations</h4>
+                  <h4 className="mb-3 font-semibold">Client Density Recommendations</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center space-x-2">
                       <Checkbox />
@@ -607,7 +859,9 @@ export function WirelessTools() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox />
-                      <span className="text-sm">Heavy Usage (Streaming, Gaming): 15-25 clients/AP</span>
+                      <span className="text-sm">
+                        Heavy Usage (Streaming, Gaming): 15-25 clients/AP
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox />
@@ -616,7 +870,7 @@ export function WirelessTools() {
                   </div>
                 </div>
                 <div>
-                  <h4 className="font-semibold mb-3">Bandwidth Requirements</h4>
+                  <h4 className="mb-3 font-semibold">Bandwidth Requirements</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Email/Web Browsing:</span>
@@ -642,11 +896,11 @@ export function WirelessTools() {
         </TabsContent>
 
         <TabsContent value="wifi-config" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
+                  <Settings className="h-5 w-5" />
                   WiFi Configuration
                 </CardTitle>
                 <CardDescription>Generate wireless access point configuration</CardDescription>
@@ -658,7 +912,9 @@ export function WirelessTools() {
                     <Input
                       id="ssid"
                       value={wirelessConfig.ssid}
-                      onChange={(e) => setWirelessConfig((prev) => ({ ...prev, ssid: e.target.value }))}
+                      onChange={(e) =>
+                        setWirelessConfig((prev) => ({ ...prev, ssid: e.target.value }))
+                      }
                       placeholder="MyNetwork"
                     />
                   </div>
@@ -666,7 +922,9 @@ export function WirelessTools() {
                     <Label>Security Type</Label>
                     <Select
                       value={wirelessConfig.security}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, security: value as any }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, security: value as any }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -688,7 +946,9 @@ export function WirelessTools() {
                     <Label>Channel</Label>
                     <Select
                       value={wirelessConfig.channel}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, channel: value }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, channel: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -709,7 +969,9 @@ export function WirelessTools() {
                     <Label>Transmit Power (%)</Label>
                     <Select
                       value={wirelessConfig.power}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, power: value }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, power: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -729,7 +991,9 @@ export function WirelessTools() {
                     <Label>WiFi Standard</Label>
                     <Select
                       value={wirelessConfig.mode}
-                      onValueChange={(value) => setWirelessConfig((prev) => ({ ...prev, mode: value as any }))}
+                      onValueChange={(value) =>
+                        setWirelessConfig((prev) => ({ ...prev, mode: value as any }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -745,7 +1009,9 @@ export function WirelessTools() {
                     <Label>Max Clients</Label>
                     <Input
                       value={wirelessConfig.maxClients}
-                      onChange={(e) => setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))}
+                      onChange={(e) =>
+                        setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))
+                      }
                       placeholder="50"
                     />
                   </div>
@@ -756,7 +1022,9 @@ export function WirelessTools() {
                     <Label>Beacon Interval (ms)</Label>
                     <Input
                       value={wirelessConfig.beaconInterval}
-                      onChange={(e) => setWirelessConfig((prev) => ({ ...prev, beaconInterval: e.target.value }))}
+                      onChange={(e) =>
+                        setWirelessConfig((prev) => ({ ...prev, beaconInterval: e.target.value }))
+                      }
                       placeholder="100"
                     />
                   </div>
@@ -764,7 +1032,9 @@ export function WirelessTools() {
                     <Label>DTIM Period</Label>
                     <Input
                       value={wirelessConfig.dtimPeriod}
-                      onChange={(e) => setWirelessConfig((prev) => ({ ...prev, dtimPeriod: e.target.value }))}
+                      onChange={(e) =>
+                        setWirelessConfig((prev) => ({ ...prev, dtimPeriod: e.target.value }))
+                      }
                       placeholder="2"
                     />
                   </div>
@@ -773,7 +1043,9 @@ export function WirelessTools() {
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     checked={wirelessConfig.hidden}
-                    onCheckedChange={(checked) => setWirelessConfig((prev) => ({ ...prev, hidden: !!checked }))}
+                    onCheckedChange={(checked) =>
+                      setWirelessConfig((prev) => ({ ...prev, hidden: !!checked }))
+                    }
                   />
                   <Label>Hide SSID (Not recommended for security)</Label>
                 </div>
@@ -786,18 +1058,22 @@ export function WirelessTools() {
                 <CardDescription>Cisco IOS wireless access point configuration</CardDescription>
               </CardHeader>
               <CardContent>
-                <Textarea value={generateWirelessConfig()} readOnly className="font-mono text-sm min-h-[400px]" />
-                <div className="flex space-x-2 mt-4">
+                <Textarea
+                  value={generateWirelessConfig()}
+                  readOnly
+                  className="min-h-[400px] font-mono text-sm"
+                />
+                <div className="mt-4 flex space-x-2">
                   <Button
                     onClick={() => copyToClipboard(generateWirelessConfig())}
                     variant="outline"
                     className="flex-1"
                   >
-                    <Copy className="w-4 h-4 mr-2" />
+                    <Copy className="mr-2 h-4 w-4" />
                     Copy Config
                   </Button>
                   <Button onClick={exportConfig} variant="outline" className="flex-1">
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 </div>
@@ -810,50 +1086,55 @@ export function WirelessTools() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
+                <Shield className="h-5 w-5" />
                 Wireless Security Best Practices
               </CardTitle>
-              <CardDescription>Comprehensive guide to securing your wireless network</CardDescription>
+              <CardDescription>
+                Comprehensive guide to securing your wireless network
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-2">Authentication Methods</h4>
+                    <h4 className="mb-2 font-semibold">Authentication Methods</h4>
                     <div className="space-y-3">
-                      <div className="p-3 border rounded-lg bg-green-50 border-green-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
                           <span className="font-medium">WPA3 (Recommended)</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Latest security standard with improved encryption and protection against offline attacks.
+                        <p className="text-muted-foreground text-sm">
+                          Latest security standard with improved encryption and protection against
+                          offline attacks.
                         </p>
                       </div>
-                      <div className="p-3 border rounded-lg bg-yellow-50 border-yellow-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                      <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
                           <span className="font-medium">WPA2 (Acceptable)</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Widely supported and secure when properly configured with strong passwords.
+                        <p className="text-muted-foreground text-sm">
+                          Widely supported and secure when properly configured with strong
+                          passwords.
                         </p>
                       </div>
-                      <div className="p-3 border rounded-lg bg-red-50 border-red-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                        <div className="mb-1 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-600" />
                           <span className="font-medium">WEP (Avoid)</span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          Deprecated and easily cracked. Should never be used in production environments.
+                        <p className="text-muted-foreground text-sm">
+                          Deprecated and easily cracked. Should never be used in production
+                          environments.
                         </p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-2">Password Requirements</h4>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
+                    <h4 className="mb-2 font-semibold">Password Requirements</h4>
+                    <ul className="text-muted-foreground space-y-1 text-sm">
                       <li>• Minimum 12 characters (preferably 15+)</li>
                       <li>• Mix of uppercase, lowercase, numbers, symbols</li>
                       <li>• Avoid dictionary words and personal information</li>
@@ -866,8 +1147,8 @@ export function WirelessTools() {
 
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-semibold mb-2">Network Segmentation</h4>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
+                    <h4 className="mb-2 font-semibold">Network Segmentation</h4>
+                    <ul className="text-muted-foreground space-y-1 text-sm">
                       <li>• Separate guest and corporate networks</li>
                       <li>• Use VLANs for network isolation</li>
                       <li>• Implement firewall rules between segments</li>
@@ -877,8 +1158,8 @@ export function WirelessTools() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-2">Additional Security Measures</h4>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
+                    <h4 className="mb-2 font-semibold">Additional Security Measures</h4>
+                    <ul className="text-muted-foreground space-y-1 text-sm">
                       <li>• Enable MAC address filtering (if feasible)</li>
                       <li>• Disable WPS (WiFi Protected Setup)</li>
                       <li>• Use certificate-based authentication (Enterprise)</li>
@@ -889,8 +1170,8 @@ export function WirelessTools() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-2">Enterprise Features</h4>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
+                    <h4 className="mb-2 font-semibold">Enterprise Features</h4>
+                    <ul className="text-muted-foreground space-y-1 text-sm">
                       <li>• 802.1X authentication with RADIUS</li>
                       <li>• Certificate-based device authentication</li>
                       <li>• Dynamic VLAN assignment</li>
@@ -904,9 +1185,9 @@ export function WirelessTools() {
 
               <Separator />
 
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-2">Security Checklist</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="mb-2 font-semibold">Security Checklist</h4>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <Checkbox />

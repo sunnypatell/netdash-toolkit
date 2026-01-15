@@ -43,19 +43,22 @@ function validateHost(host: string): { valid: boolean; sanitized: string; error?
   }
 
   // IPv4 validation
-  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
   if (ipv4Regex.test(trimmed)) {
     return { valid: true, sanitized: trimmed }
   }
 
   // IPv6 validation (simplified - covers most cases)
-  const ipv6Regex = /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/
+  const ipv6Regex =
+    /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/
   if (ipv6Regex.test(trimmed)) {
     return { valid: true, sanitized: trimmed }
   }
 
   // Hostname validation (RFC 1123)
-  const hostnameRegex = /^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*$/
+  const hostnameRegex =
+    /^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*$/
   if (hostnameRegex.test(trimmed)) {
     return { valid: true, sanitized: trimmed.toLowerCase() }
   }
@@ -109,7 +112,8 @@ function validateDnsServer(server: string): { valid: boolean; sanitized: string;
   }
 
   // Only allow IP addresses for DNS servers (not hostnames)
-  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+  const ipv4Regex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
   if (!ipv4Regex.test(hostValidation.sanitized)) {
     return { valid: false, sanitized: "", error: "DNS server must be an IP address" }
   }
@@ -152,11 +156,7 @@ export function registerNetworkHandlers() {
   // --------------------------------
   ipcMain.handle(
     "network:ping",
-    async (
-      _event,
-      host: string,
-      options?: { timeout?: number; count?: number }
-    ) => {
+    async (_event, host: string, options?: { timeout?: number; count?: number }) => {
       const validation = validateHost(host)
       if (!validation.valid) {
         log("warn", "Ping validation failed", { host, error: validation.error })
@@ -232,11 +232,7 @@ export function registerNetworkHandlers() {
   // --------------------------------
   ipcMain.handle(
     "network:traceroute",
-    async (
-      _event,
-      host: string,
-      options?: { maxHops?: number; timeout?: number }
-    ) => {
+    async (_event, host: string, options?: { maxHops?: number; timeout?: number }) => {
       const validation = validateHost(host)
       if (!validation.valid) {
         log("warn", "Traceroute validation failed", { host, error: validation.error })
@@ -346,11 +342,7 @@ export function registerNetworkHandlers() {
   // --------------------------------
   ipcMain.handle(
     "network:dnsLookup",
-    async (
-      _event,
-      hostname: string,
-      options?: { server?: string; type?: string }
-    ) => {
+    async (_event, hostname: string, options?: { server?: string; type?: string }) => {
       const hostValidation = validateHost(hostname)
       if (!hostValidation.valid) {
         log("warn", "DNS lookup validation failed", { hostname, error: hostValidation.error })
@@ -392,7 +384,11 @@ export function registerNetworkHandlers() {
         }
       }
 
-      log("info", "Starting DNS lookup", { hostname: sanitizedHostname, type: recordType, server: serverToUse })
+      log("info", "Starting DNS lookup", {
+        hostname: sanitizedHostname,
+        type: recordType,
+        server: serverToUse,
+      })
 
       const startTime = Date.now()
 
@@ -649,9 +645,15 @@ async function executeCommand(
 
     child.on("error", (error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") {
-        reject(new Error(`Command not found: ${fullCommand}. The required network tool may not be installed.`))
+        reject(
+          new Error(
+            `Command not found: ${fullCommand}. The required network tool may not be installed.`
+          )
+        )
       } else if (error.code === "EACCES") {
-        reject(new Error(`Permission denied: ${fullCommand}. Try running with elevated privileges.`))
+        reject(
+          new Error(`Permission denied: ${fullCommand}. Try running with elevated privileges.`)
+        )
       } else {
         reject(error)
       }
@@ -699,19 +701,22 @@ async function executeCommand(
 /**
  * Build ping command arguments based on platform
  */
-function buildPingArgs(
-  platform: string,
-  host: string,
-  count: number,
-  timeout: number
-): string[] {
+function buildPingArgs(platform: string, host: string, count: number, timeout: number): string[] {
   if (platform === "win32") {
     // Windows: -n count, -w timeout (milliseconds)
     return ["-n", String(count), "-w", String(timeout), host]
   } else if (platform === "darwin") {
     // macOS: -c count, -W waittime (milliseconds), -t timeout (seconds)
     // -W is per-packet wait time in ms, -t is overall timeout in seconds
-    return ["-c", String(count), "-W", String(timeout), "-t", String(Math.ceil((timeout * count) / 1000) + 2), host]
+    return [
+      "-c",
+      String(count),
+      "-W",
+      String(timeout),
+      "-t",
+      String(Math.ceil((timeout * count) / 1000) + 2),
+      host,
+    ]
   } else {
     // Linux: -c count, -W timeout (seconds)
     return ["-c", String(count), "-W", String(Math.ceil(timeout / 1000)), host]
@@ -754,7 +759,12 @@ async function scanPort(
   host: string,
   port: number,
   timeout: number
-): Promise<{ port: number; state: "open" | "closed" | "filtered"; service?: string; responseTime?: number }> {
+): Promise<{
+  port: number
+  state: "open" | "closed" | "filtered"
+  service?: string
+  responseTime?: number
+}> {
   return new Promise((resolve) => {
     const socket = new net.Socket()
     let state: "open" | "closed" | "filtered" = "filtered"

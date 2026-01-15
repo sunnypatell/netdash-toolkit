@@ -8,7 +8,16 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
-import { Search, Download, Info, Wifi, CheckCircle, AlertCircle, Copy, ExternalLink } from "lucide-react"
+import {
+  Search,
+  Download,
+  Info,
+  Wifi,
+  CheckCircle,
+  AlertCircle,
+  Copy,
+  ExternalLink,
+} from "lucide-react"
 
 interface OUIResult {
   mac: string
@@ -212,7 +221,7 @@ export function OUILookup() {
       "MAC Address,OUI,Vendor,Found,Timestamp,Error",
       ...results.map(
         (r) =>
-          `"${r.mac}","${r.oui}","${r.vendor}",${r.found},"${new Date(r.timestamp).toISOString()}","${r.error || ""}"`,
+          `"${r.mac}","${r.oui}","${r.vendor}",${r.found},"${new Date(r.timestamp).toISOString()}","${r.error || ""}"`
       ),
     ].join("\n")
 
@@ -250,7 +259,7 @@ export function OUILookup() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Wifi className="w-6 h-6 text-primary" />
+        <Wifi className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">OUI Lookup</h1>
           <p className="text-muted-foreground">
@@ -262,25 +271,27 @@ export function OUILookup() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Live API Integration:</strong> This tool uses the macvendors.com API with over 18,000 vendor records.
-          Rate limited to 1 request per second for bulk lookups.{" "}
+          <strong>Live API Integration:</strong> This tool uses the macvendors.com API with over
+          18,000 vendor records. Rate limited to 1 request per second for bulk lookups.{" "}
           <a
             href="https://macvendors.com/api"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center text-primary hover:underline"
+            className="text-primary inline-flex items-center hover:underline"
           >
-            Learn more <ExternalLink className="w-3 h-3 ml-1" />
+            Learn more <ExternalLink className="ml-1 h-3 w-3" />
           </a>
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Single MAC Lookup</CardTitle>
-              <CardDescription>Enter a MAC address to identify the vendor using live API</CardDescription>
+              <CardDescription>
+                Enter a MAC address to identify the vendor using live API
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -292,22 +303,28 @@ export function OUILookup() {
                   placeholder="00:11:22:33:44:55 or 001122334455"
                   onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSingleLookup()}
                 />
-                <div className="flex items-center justify-between mt-2 text-xs">
+                <div className="mt-2 flex items-center justify-between text-xs">
                   <div className="flex items-center space-x-2">
                     {macValidation.isValid ? (
-                      <CheckCircle className="w-3 h-3 text-green-600" />
+                      <CheckCircle className="h-3 w-3 text-green-600" />
                     ) : (
-                      <AlertCircle className="w-3 h-3 text-red-600" />
+                      <AlertCircle className="h-3 w-3 text-red-600" />
                     )}
                     <span className={macValidation.isValid ? "text-green-600" : "text-red-600"}>
                       {macValidation.format}
                     </span>
                   </div>
-                  <span className="text-muted-foreground">Supports: xx:xx:xx, xx-xx-xx, xxxxxx</span>
+                  <span className="text-muted-foreground">
+                    Supports: xx:xx:xx, xx-xx-xx, xxxxxx
+                  </span>
                 </div>
               </div>
-              <Button onClick={handleSingleLookup} disabled={!macValidation.isValid || isLoading} className="w-full">
-                <Search className="w-4 h-4 mr-2" />
+              <Button
+                onClick={handleSingleLookup}
+                disabled={!macValidation.isValid || isLoading}
+                className="w-full"
+              >
+                <Search className="mr-2 h-4 w-4" />
                 {isLoading ? "Looking up..." : "Lookup Vendor"}
               </Button>
             </CardContent>
@@ -316,7 +333,9 @@ export function OUILookup() {
           <Card>
             <CardHeader>
               <CardTitle>Bulk MAC Lookup</CardTitle>
-              <CardDescription>Enter multiple MAC addresses (one per line) - Rate limited to 1/second</CardDescription>
+              <CardDescription>
+                Enter multiple MAC addresses (one per line) - Rate limited to 1/second
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -326,16 +345,20 @@ export function OUILookup() {
                   value={bulkInput}
                   onChange={(e) => setBulkInput(e.target.value)}
                   placeholder="00:11:22:33:44:55&#10;00:50:56:aa:bb:cc&#10;08:00:27:dd:ee:ff&#10;001122334455"
-                  className="w-full h-32 p-3 border rounded-md resize-none font-mono text-sm"
+                  className="h-32 w-full resize-none rounded-md border p-3 font-mono text-sm"
                 />
-                <div className="text-xs text-muted-foreground mt-1">
+                <div className="text-muted-foreground mt-1 text-xs">
                   {bulkInput.split("\n").filter((line) => line.trim()).length} addresses entered
                   {bulkInput.split("\n").filter((line) => line.trim()).length > 1 &&
                     ` (≈${bulkInput.split("\n").filter((line) => line.trim()).length} seconds)`}
                 </div>
               </div>
-              <Button onClick={handleBulkLookup} disabled={isLoading || !bulkInput.trim()} className="w-full">
-                <Search className="w-4 h-4 mr-2" />
+              <Button
+                onClick={handleBulkLookup}
+                disabled={isLoading || !bulkInput.trim()}
+                className="w-full"
+              >
+                <Search className="mr-2 h-4 w-4" />
                 {isLoading ? "Processing..." : "Bulk Lookup"}
               </Button>
             </CardContent>
@@ -388,18 +411,25 @@ export function OUILookup() {
                     Lookup Results
                     <div className="flex items-center space-x-2">
                       <Badge variant="outline">{results.length} total</Badge>
-                      <Badge variant="secondary">{results.filter((r) => r.found).length} found</Badge>
+                      <Badge variant="secondary">
+                        {results.filter((r) => r.found).length} found
+                      </Badge>
                       {results.some((r) => r.error) && (
-                        <Badge variant="destructive">{results.filter((r) => r.error).length} errors</Badge>
+                        <Badge variant="destructive">
+                          {results.filter((r) => r.error).length} errors
+                        </Badge>
                       )}
                     </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                  <div className="max-h-96 space-y-3 overflow-y-auto">
                     {results.map((result, index) => (
-                      <div key={index} className="border rounded-lg p-3 hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between mb-2">
+                      <div
+                        key={index}
+                        className="hover:bg-muted/50 rounded-lg border p-3 transition-colors"
+                      >
+                        <div className="mb-2 flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="font-mono text-sm">{result.mac}</span>
                             <Button
@@ -408,28 +438,34 @@ export function OUILookup() {
                               onClick={() => copyToClipboard(result.mac)}
                               className="h-6 w-6 p-0"
                             >
-                              <Copy className="w-3 h-3" />
+                              <Copy className="h-3 w-3" />
                             </Button>
                           </div>
-                          <Badge variant={result.found ? "default" : result.error ? "destructive" : "secondary"}>
+                          <Badge
+                            variant={
+                              result.found ? "default" : result.error ? "destructive" : "secondary"
+                            }
+                          >
                             {result.found ? "Found" : result.error ? "Error" : "Unknown"}
                           </Badge>
                         </div>
-                        <div className="text-sm space-y-1">
+                        <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">OUI:</span>
                             <span className="font-mono">{result.oui || "N/A"}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Vendor:</span>
-                            <span className={result.found ? "font-medium" : "text-muted-foreground"}>
+                            <span
+                              className={result.found ? "font-medium" : "text-muted-foreground"}
+                            >
                               {result.vendor || "Not found in database"}
                             </span>
                           </div>
                           {result.error && (
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Error:</span>
-                              <span className="text-red-600 text-xs">{result.error}</span>
+                              <span className="text-xs text-red-600">{result.error}</span>
                             </div>
                           )}
                           <div className="flex justify-between text-xs">
@@ -453,8 +489,8 @@ export function OUILookup() {
                   <CardContent>
                     <div className="space-y-2">
                       {vendorStats.map(([vendor, count]) => (
-                        <div key={vendor} className="flex justify-between items-center">
-                          <span className="text-sm truncate flex-1 mr-2">{vendor}</span>
+                        <div key={vendor} className="flex items-center justify-between">
+                          <span className="mr-2 flex-1 truncate text-sm">{vendor}</span>
                           <Badge variant="outline">{count}</Badge>
                         </div>
                       ))}
@@ -464,12 +500,12 @@ export function OUILookup() {
               )}
 
               <div className="flex space-x-2">
-                          <Button onClick={exportResults} variant="outline" className="flex-1">
-                  <Download className="w-4 h-4 mr-2" />
+                <Button onClick={exportResults} variant="outline" className="flex-1">
+                  <Download className="mr-2 h-4 w-4" />
                   Export JSON
                 </Button>
-                          <Button onClick={exportCSV} variant="outline" className="flex-1">
-                  <Download className="w-4 h-4 mr-2" />
+                <Button onClick={exportCSV} variant="outline" className="flex-1">
+                  <Download className="mr-2 h-4 w-4" />
                   Export CSV
                 </Button>
               </div>
@@ -494,14 +530,14 @@ export function OUILookup() {
                     { oui: "F0:18:98", vendor: "Apple", mac: "F0:18:98:dd:ee:ff" },
                     { oui: "00:1C:73", vendor: "Arista", mac: "00:1C:73:11:22:33" },
                   ].map(({ oui, vendor, mac }) => (
-                    <div key={oui} className="flex justify-between items-center">
+                    <div key={oui} className="flex items-center justify-between">
                       <button
                         onClick={() => setMacInput(mac)}
-                        className="font-mono text-left hover:text-primary cursor-pointer transition-colors"
+                        className="hover:text-primary cursor-pointer text-left font-mono transition-colors"
                       >
                         {oui}:xx:xx:xx
                       </button>
-                      <span className="text-muted-foreground truncate ml-2">{vendor}</span>
+                      <span className="text-muted-foreground ml-2 truncate">{vendor}</span>
                     </div>
                   ))}
                 </div>

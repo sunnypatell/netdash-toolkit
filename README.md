@@ -2,7 +2,7 @@
 
 # NetDash Toolkit
 
-### *The Ultimate Network Engineering Workbench*
+### _The Ultimate Network Engineering Workbench_
 
 <br />
 
@@ -48,18 +48,21 @@
 <td align="center" width="33%">
 
 ### Privacy First
+
 All calculations run **100% client-side**. Your network data never leaves your browser.
 
 </td>
 <td align="center" width="33%">
 
 ### Zero Install
+
 Access professional-grade tools instantly from any modern browser. No downloads required.
 
 </td>
 <td align="center" width="33%">
 
 ### Dark Mode
+
 Beautiful light and dark themes that adapt to your system preferences.
 
 </td>
@@ -77,12 +80,12 @@ Beautiful light and dark themes that adapt to your system preferences.
 
 <div align="center">
 
-| Category | Tools | Description |
-|:--------:|:-----:|:------------|
-| **Address Planning** | Subnet Calculator, VLSM Planner, VLAN Manager | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
-| **Routing & Switching** | Routing Tools, Wireless Tools, ACL Generator | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation |
-| **Troubleshooting** | Conflict Checker, Network Tester, DNS Tools | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries |
-| **Utilities** | MTU Calculator, IPv6 Tools, OUI Lookup | Protocol overhead analysis, EUI-64 generation, MAC vendor identification |
+|        Category         |                     Tools                     | Description                                                                                     |
+| :---------------------: | :-------------------------------------------: | :---------------------------------------------------------------------------------------------- |
+|  **Address Planning**   | Subnet Calculator, VLSM Planner, VLAN Manager | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
+| **Routing & Switching** | Routing Tools, Wireless Tools, ACL Generator  | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation               |
+|   **Troubleshooting**   |  Conflict Checker, Network Tester, DNS Tools  | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
+|      **Utilities**      |    MTU Calculator, IPv6 Tools, OUI Lookup     | Protocol overhead analysis, EUI-64 generation, MAC vendor identification                        |
 
 </div>
 
@@ -292,17 +295,17 @@ pnpm start
 
 <div align="center">
 
-| Layer | Technology |
-|:-----:|:-----------|
-| **Framework** | [Next.js 14](https://nextjs.org/) with App Router |
-| **Language** | [TypeScript 5](https://www.typescriptlang.org/) |
-| **Styling** | [Tailwind CSS 4](https://tailwindcss.com/) |
+|     Layer      | Technology                                                                  |
+| :------------: | :-------------------------------------------------------------------------- |
+| **Framework**  | [Next.js 14](https://nextjs.org/) with App Router                           |
+|  **Language**  | [TypeScript 5](https://www.typescriptlang.org/)                             |
+|  **Styling**   | [Tailwind CSS 4](https://tailwindcss.com/)                                  |
 | **Components** | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
-| **Icons** | [Lucide React](https://lucide.dev/) |
-| **Charts** | [Recharts](https://recharts.org/) |
-| **Forms** | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) |
-| **Theming** | [next-themes](https://github.com/pacocoursey/next-themes) |
-| **Deployment** | [Vercel](https://vercel.com/) |
+|   **Icons**    | [Lucide React](https://lucide.dev/)                                         |
+|   **Charts**   | [Recharts](https://recharts.org/)                                           |
+|   **Forms**    | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)   |
+|  **Theming**   | [next-themes](https://github.com/pacocoursey/next-themes)                   |
+| **Deployment** | [Vercel](https://vercel.com/)                                               |
 
 </div>
 
@@ -357,19 +360,19 @@ netdash-toolkit/
 
 <div align="center">
 
-| Status | Feature | Description |
-|:------:|:--------|:------------|
-| Done | Core Tools | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
-| Done | Network Testing | RTT, Throughput, DNS-over-HTTPS |
-| Done | Dark Mode | System-aware theming |
-| Done | Electron App | Desktop version with native networking |
-| Done | Real ICMP Ping | Native ping with Electron |
-| Done | Real Traceroute | TTL-based hop discovery |
-| Done | Port Scanner | TCP/UDP socket scanning |
-| Done | Network Discovery | ARP scanning, device enumeration |
-| Planned | Configuration Backup | SSH-based device config backup |
-| Planned | SNMP Polling | Device monitoring via SNMP |
-| Planned | Network Topology | Visual network mapping |
+| Status  | Feature              | Description                                |
+| :-----: | :------------------- | :----------------------------------------- |
+|  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
+|  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS            |
+|  Done   | Dark Mode            | System-aware theming                       |
+|  Done   | Electron App         | Desktop version with native networking     |
+|  Done   | Real ICMP Ping       | Native ping with Electron                  |
+|  Done   | Real Traceroute      | TTL-based hop discovery                    |
+|  Done   | Port Scanner         | TCP/UDP socket scanning                    |
+|  Done   | Network Discovery    | ARP scanning, device enumeration           |
+| Planned | Configuration Backup | SSH-based device config backup             |
+| Planned | SNMP Polling         | Device monitoring via SNMP                 |
+| Planned | Network Topology     | Visual network mapping                     |
 
 </div>
 
@@ -383,12 +386,12 @@ netdash-toolkit/
 
 Running entirely in the browser has some constraints:
 
-| Feature | Limitation | Workaround |
-|:--------|:-----------|:-----------|
-| **ICMP Ping** | Browsers cannot send ICMP packets | HTTP-based RTT testing |
-| **Traceroute** | No TTL manipulation available | Simulated hop visualization |
-| **Port Scanning** | TCP/UDP sockets not accessible | Educational simulation mode |
-| **Direct DNS** | Only DoH providers accessible | Multiple DoH provider support |
+| Feature           | Limitation                        | Workaround                    |
+| :---------------- | :-------------------------------- | :---------------------------- |
+| **ICMP Ping**     | Browsers cannot send ICMP packets | HTTP-based RTT testing        |
+| **Traceroute**    | No TTL manipulation available     | Simulated hop visualization   |
+| **Port Scanning** | TCP/UDP sockets not accessible    | Educational simulation mode   |
+| **Direct DNS**    | Only DoH providers accessible     | Multiple DoH provider support |
 
 > **Available Now**: Electron desktop app with full native networking capabilities!
 
@@ -404,13 +407,13 @@ NetDash Toolkit is available as a native desktop application with **real network
 
 ### Native Features
 
-| Feature | Browser | Desktop App |
-|:--------|:-------:|:-----------:|
-| **ICMP Ping** | HTTP fallback | Real ICMP packets |
-| **Traceroute** | Simulated | Real TTL-based hop discovery |
-| **Port Scanning** | Limited | Full TCP/UDP scanning |
-| **Network Discovery** | Not available | ARP scanning |
-| **DNS Queries** | DoH only | Direct DNS queries |
+| Feature               |    Browser    |         Desktop App          |
+| :-------------------- | :-----------: | :--------------------------: |
+| **ICMP Ping**         | HTTP fallback |      Real ICMP packets       |
+| **Traceroute**        |   Simulated   | Real TTL-based hop discovery |
+| **Port Scanning**     |    Limited    |    Full TCP/UDP scanning     |
+| **Network Discovery** | Not available |         ARP scanning         |
+| **DNS Queries**       |   DoH only    |      Direct DNS queries      |
 
 ### Building the Desktop App
 
@@ -433,11 +436,11 @@ pnpm dist:linux
 
 ### System Requirements
 
-| Platform | Requirements |
-|:---------|:-------------|
-| **macOS** | macOS 10.13+ (High Sierra or later), x64 or Apple Silicon |
-| **Windows** | Windows 10+, x64 |
-| **Linux** | Ubuntu 18.04+, Debian 10+, or equivalent |
+| Platform    | Requirements                                              |
+| :---------- | :-------------------------------------------------------- |
+| **macOS**   | macOS 10.13+ (High Sierra or later), x64 or Apple Silicon |
+| **Windows** | Windows 10+, x64                                          |
+| **Linux**   | Ubuntu 18.04+, Debian 10+, or equivalent                  |
 
 <br />
 
@@ -447,16 +450,16 @@ pnpm dist:linux
 
 ## Available Scripts
 
-| Command | Description |
-|:--------|:------------|
-| `pnpm dev` | Start development server with hot reload |
-| `pnpm build` | Generate optimized production build |
-| `pnpm start` | Serve production build locally |
-| `pnpm lint` | Run ESLint for code quality |
-| `pnpm electron:dev` | Start Electron app in development mode |
-| `pnpm dist:mac` | Build macOS app (DMG + ZIP) |
-| `pnpm dist:win` | Build Windows installer (NSIS + Portable) |
-| `pnpm dist:linux` | Build Linux packages (AppImage + DEB) |
+| Command             | Description                               |
+| :------------------ | :---------------------------------------- |
+| `pnpm dev`          | Start development server with hot reload  |
+| `pnpm build`        | Generate optimized production build       |
+| `pnpm start`        | Serve production build locally            |
+| `pnpm lint`         | Run ESLint for code quality               |
+| `pnpm electron:dev` | Start Electron app in development mode    |
+| `pnpm dist:mac`     | Build macOS app (DMG + ZIP)               |
+| `pnpm dist:win`     | Build Windows installer (NSIS + Portable) |
+| `pnpm dist:linux`   | Build Linux packages (AppImage + DEB)     |
 
 <br />
 

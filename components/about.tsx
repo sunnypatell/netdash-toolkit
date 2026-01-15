@@ -28,7 +28,12 @@ const features = [
     description:
       "Pure IPv4/IPv6 subnet calculations with deterministic algorithms. Handles /31 RFC 3021 point-to-point links and /32 host routes. Implements bit-level masking operations with unsigned 32-bit arithmetic to avoid floating-point precision issues.",
     icon: Calculator,
-    capabilities: ["RFC 3021 /31 support", "Wildcard mask calculation", "Private range detection", "CIDR validation"],
+    capabilities: [
+      "RFC 3021 /31 support",
+      "Wildcard mask calculation",
+      "Private range detection",
+      "CIDR validation",
+    ],
   },
   {
     title: "VLSM Planner",
@@ -47,7 +52,12 @@ const features = [
     description:
       "IEEE 802.1Q VLAN database with multi-vendor switch configuration generation. Supports Cisco IOS (switchport commands) and Aruba CX (vlan access/trunk) with native VLAN validation and trunk consistency checking.",
     icon: Shield,
-    capabilities: ["IEEE 802.1Q compliance", "Multi-vendor configs", "Trunk validation", "Native VLAN checks"],
+    capabilities: [
+      "IEEE 802.1Q compliance",
+      "Multi-vendor configs",
+      "Trunk validation",
+      "Native VLAN checks",
+    ],
   },
   {
     title: "IP Conflict Checker",
@@ -66,14 +76,24 @@ const features = [
     description:
       "Browser-based network connectivity testing with animated real-time results. Implements HTTP-based RTT measurement using performance.now() timing with CORS-aware requests and configurable timeout handling for reliable network diagnostics.",
     icon: Network,
-    capabilities: ["Real-time animations", "HTTP RTT measurement", "CORS handling", "Performance metrics"],
+    capabilities: [
+      "Real-time animations",
+      "HTTP RTT measurement",
+      "CORS handling",
+      "Performance metrics",
+    ],
   },
   {
     title: "DNS Tools",
     description:
       "RFC 8484 compliant DNS over HTTPS client with multiple provider support. Implements TTL-based caching, DNSSEC AD flag validation, and supports A/AAAA/CNAME/MX/NS/TXT record types with comprehensive JSON response parsing.",
     icon: Globe,
-    capabilities: ["RFC 8484 compliance", "TTL caching", "DNSSEC validation", "Multi-provider support"],
+    capabilities: [
+      "RFC 8484 compliance",
+      "TTL caching",
+      "DNSSEC validation",
+      "Multi-provider support",
+    ],
   },
   {
     title: "MTU Calculator",
@@ -92,14 +112,24 @@ const features = [
     description:
       "Multi-platform Access Control List generation with wildcard mask calculation (~netmask). Supports Cisco IOS extended ACLs, Palo Alto security rules, and Juniper SRX policies with comprehensive protocol/port validation and rule documentation.",
     icon: Shield,
-    capabilities: ["Multi-platform output", "Wildcard mask math", "Protocol validation", "Rule documentation"],
+    capabilities: [
+      "Multi-platform output",
+      "Wildcard mask math",
+      "Protocol validation",
+      "Rule documentation",
+    ],
   },
   {
     title: "IPv6 Tools",
     description:
       "RFC 5952 compliant IPv6 address compression with longest zero sequence replacement. Implements EUI-64 generation from MAC (U/L bit flip, FF:FE insertion) and solicited-node multicast calculation (ff02::1:ffXX:XXXX).",
     icon: Network,
-    capabilities: ["RFC 5952 compression", "EUI-64 generation", "Solicited-node multicast", "Link-local addresses"],
+    capabilities: [
+      "RFC 5952 compression",
+      "EUI-64 generation",
+      "Solicited-node multicast",
+      "Link-local addresses",
+    ],
   },
   {
     title: "OUI Lookup",
@@ -113,21 +143,36 @@ const features = [
     description:
       "Browser-based port connectivity testing using WebSocket and HTTP probes. Implements concurrent scanning with configurable timeouts, service detection, and comprehensive port status reporting for network security assessment.",
     icon: Shield,
-    capabilities: ["Concurrent scanning", "Service detection", "Timeout handling", "Security assessment"],
+    capabilities: [
+      "Concurrent scanning",
+      "Service detection",
+      "Timeout handling",
+      "Security assessment",
+    ],
   },
   {
     title: "Project Management",
     description:
       "Client-side encrypted storage using AES-GCM with PBKDF2 key derivation. Implements JSON schema versioning with SHA-256 integrity hashing, IndexedDB persistence, and secure import/export with password-based encryption.",
     icon: Shield,
-    capabilities: ["AES-GCM encryption", "PBKDF2 key derivation", "Schema versioning", "Integrity validation"],
+    capabilities: [
+      "AES-GCM encryption",
+      "PBKDF2 key derivation",
+      "Schema versioning",
+      "Integrity validation",
+    ],
   },
   {
     title: "Routing Tools",
     description:
       "Complete suite of routing protocol configuration generators including OSPF, EIGRP, static routes, and administrative distance reference.",
     icon: Network,
-    capabilities: ["OSPF configuration", "EIGRP configuration", "Static routes", "Administrative distance"],
+    capabilities: [
+      "OSPF configuration",
+      "EIGRP configuration",
+      "Static routes",
+      "Administrative distance",
+    ],
   },
   {
     title: "Wireless Tools",
@@ -164,11 +209,13 @@ const algorithmDetails = [
   },
   {
     title: "Conflict Detection",
-    description: "Multi-source correlation with regex parsing, duplicate detection, and evidence-based remediation",
+    description:
+      "Multi-source correlation with regex parsing, duplicate detection, and evidence-based remediation",
   },
   {
     title: "IPv6 Compression",
-    description: "RFC 5952: remove leading zeros, replace longest consecutive zero sequence with :: (once only)",
+    description:
+      "RFC 5952: remove leading zeros, replace longest consecutive zero sequence with :: (once only)",
   },
 ]
 
@@ -221,12 +268,8 @@ const changelog = [
     version: "2.1.1",
     type: "patch",
     title: "Mobile Enhancement",
-    changes: [
-      "Added scrollbar to hamburger menu for mobile devices to fix overflow issues",
-    ],
-    technical: [
-      "hamburger menu that stays visible with shrink-0 class and truncates on launch",
-    ],
+    changes: ["Added scrollbar to hamburger menu for mobile devices to fix overflow issues"],
+    technical: ["hamburger menu that stays visible with shrink-0 class and truncates on launch"],
   },
   {
     version: "2.1.0",
@@ -449,7 +492,11 @@ const changelog = [
       "Enhanced concurrent scanning with configurable timeouts",
       "Improved service detection and status reporting",
     ],
-    technical: ["WebSocket connection probing", "Concurrent request management", "Service fingerprinting algorithms"],
+    technical: [
+      "WebSocket connection probing",
+      "Concurrent request management",
+      "Service fingerprinting algorithms",
+    ],
   },
   {
     version: "1.7.0",
@@ -557,7 +604,11 @@ const changelog = [
       "Core UI components and design system establishment",
       "Development environment and tooling configuration",
     ],
-    technical: ["Project initialization and setup", "Basic component framework", "Development tooling configuration"],
+    technical: [
+      "Project initialization and setup",
+      "Basic component framework",
+      "Development tooling configuration",
+    ],
   },
 ]
 
@@ -590,14 +641,15 @@ const getVersionIcon = (type: string) => {
 export function About() {
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-foreground">Professional Networking Toolbox</h1>
-        <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
-          A comprehensive, production-quality networking toolbox implementing industry-standard algorithms and
-          protocols. Built as a frontend-only SPA with real network integrations, live API connections, and
-          enterprise-grade security while solving real-world network engineering challenges with mathematical precision.
+      <div className="space-y-4 text-center">
+        <h1 className="text-foreground text-4xl font-bold">Professional Networking Toolbox</h1>
+        <p className="text-muted-foreground mx-auto max-w-4xl text-xl">
+          A comprehensive, production-quality networking toolbox implementing industry-standard
+          algorithms and protocols. Built as a frontend-only SPA with real network integrations,
+          live API connections, and enterprise-grade security while solving real-world network
+          engineering challenges with mathematical precision.
         </p>
-        <div className="flex justify-center flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-2">
           <Badge variant="secondary">Live API Integration</Badge>
           <Badge variant="secondary">Real Network Testing</Badge>
           <Badge variant="secondary">Production-Ready</Badge>
@@ -618,7 +670,7 @@ export function About() {
           <div className="space-y-3">
             {recentImprovements.map((improvement, index) => (
               <div key={index} className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
+                <div className="bg-primary mt-2 h-2 w-2 flex-shrink-0 rounded-full" />
                 <span className="text-sm leading-relaxed">{improvement}</span>
               </div>
             ))}
@@ -635,16 +687,18 @@ export function About() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            This application implements a complete professional networking toolbox with live API integrations, real
-            network testing capabilities, and comprehensive data parsing engines. Every algorithm follows industry
-            standards and RFCs, from IPv4 subnet calculations using bit-level masking to IPv6 compression per RFC 5952
-            rules, with enhanced conflict detection supporting 15+ network data formats.
+            This application implements a complete professional networking toolbox with live API
+            integrations, real network testing capabilities, and comprehensive data parsing engines.
+            Every algorithm follows industry standards and RFCs, from IPv4 subnet calculations using
+            bit-level masking to IPv6 compression per RFC 5952 rules, with enhanced conflict
+            detection supporting 15+ network data formats.
           </p>
           <p className="text-muted-foreground">
-            The architecture demonstrates enterprise-grade practices with live API integrations (macvendors.com for OUI
-            lookups), real-time network testing with animated results, enhanced parsing engines for network data
-            correlation, AES-GCM encryption for data security, and comprehensive error handling. Built to handle real
-            network operations with the sophistication needed for production network management and troubleshooting.
+            The architecture demonstrates enterprise-grade practices with live API integrations
+            (macvendors.com for OUI lookups), real-time network testing with animated results,
+            enhanced parsing engines for network data correlation, AES-GCM encryption for data
+            security, and comprehensive error handling. Built to handle real network operations with
+            the sophistication needed for production network management and troubleshooting.
           </p>
         </CardContent>
       </Card>
@@ -652,31 +706,35 @@ export function About() {
       <Card>
         <CardHeader>
           <CardTitle>Core Algorithms & Standards</CardTitle>
-          <CardDescription>Mathematical precision and RFC compliance in every calculation</CardDescription>
+          <CardDescription>
+            Mathematical precision and RFC compliance in every calculation
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {algorithmDetails.map((algorithm, index) => (
-              <div key={index} className="p-4 border rounded-lg">
-                <h4 className="font-semibold mb-2">{algorithm.title}</h4>
-                <p className="text-sm text-muted-foreground font-mono">{algorithm.description}</p>
+              <div key={index} className="rounded-lg border p-4">
+                <h4 className="mb-2 font-semibold">{algorithm.title}</h4>
+                <p className="text-muted-foreground font-mono text-sm">{algorithm.description}</p>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {features.map((feature, index) => {
           const Icon = feature.icon
           return (
             <Card key={index} className="h-full">
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <Icon className="w-5 h-5 text-primary" />
+                  <Icon className="text-primary h-5 w-5" />
                   <CardTitle className="text-lg">{feature.title}</CardTitle>
                 </div>
-                <CardDescription className="text-sm leading-relaxed">{feature.description}</CardDescription>
+                <CardDescription className="text-sm leading-relaxed">
+                  {feature.description}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -703,10 +761,10 @@ export function About() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {technicalHighlights.map((highlight, index) => (
               <div key={index} className="flex items-start space-x-2">
-                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
+                <div className="bg-primary mt-2 h-2 w-2 flex-shrink-0 rounded-full" />
                 <span className="text-sm leading-relaxed">{highlight}</span>
               </div>
             ))}
@@ -719,29 +777,30 @@ export function About() {
           <CardTitle>Performance & Security Metrics</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">18k+</div>
-              <div className="text-sm text-muted-foreground">OUI vendor database</div>
+              <div className="text-primary text-2xl font-bold">18k+</div>
+              <div className="text-muted-foreground text-sm">OUI vendor database</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">15+</div>
-              <div className="text-sm text-muted-foreground">Network data formats</div>
+              <div className="text-primary text-2xl font-bold">15+</div>
+              <div className="text-muted-foreground text-sm">Network data formats</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">AES-GCM</div>
-              <div className="text-sm text-muted-foreground">Encryption standard</div>
+              <div className="text-primary text-2xl font-bold">AES-GCM</div>
+              <div className="text-muted-foreground text-sm">Encryption standard</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-primary">WCAG 2.2</div>
-              <div className="text-sm text-muted-foreground">Accessibility level</div>
+              <div className="text-primary text-2xl font-bold">WCAG 2.2</div>
+              <div className="text-muted-foreground text-sm">Accessibility level</div>
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Engineered for real-world network operations with live API integrations, comprehensive data parsing engines,
-            real-time network testing capabilities, and security-first design with CSP policies, encrypted local
-            storage, and comprehensive input validation to prevent injection attacks. All tools work with actual network
-            data and provide genuine functionality for network professionals.
+          <p className="text-muted-foreground text-sm">
+            Engineered for real-world network operations with live API integrations, comprehensive
+            data parsing engines, real-time network testing capabilities, and security-first design
+            with CSP policies, encrypted local storage, and comprehensive input validation to
+            prevent injection attacks. All tools work with actual network data and provide genuine
+            functionality for network professionals.
           </p>
         </CardContent>
       </Card>
@@ -749,30 +808,31 @@ export function About() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <GitCommit className="w-5 h-5" />
+            <GitCommit className="h-5 w-5" />
             Technical Changelog
           </CardTitle>
           <CardDescription>
-            Complete development history across {changelog.length} revisions - from v1.0.0 to v{changelog[0].version}
+            Complete development history across {changelog.length} revisions - from v1.0.0 to v
+            {changelog[0].version}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Badge variant="default" className="flex items-center gap-1">
-                <Star className="w-3 h-3" />
+                <Star className="h-3 w-3" />
                 Major
               </Badge>
               <Badge variant="secondary" className="flex items-center gap-1">
-                <Plus className="w-3 h-3" />
+                <Plus className="h-3 w-3" />
                 Minor
               </Badge>
               <Badge variant="outline" className="flex items-center gap-1">
-                <Bug className="w-3 h-3" />
+                <Bug className="h-3 w-3" />
                 Patch
               </Badge>
             </div>
-            <div className="text-sm text-muted-foreground">Latest: v{changelog[0].version}</div>
+            <div className="text-muted-foreground text-sm">Latest: v{changelog[0].version}</div>
           </div>
 
           <ScrollArea className="h-[600px] pr-4">
@@ -781,33 +841,39 @@ export function About() {
                 const VersionIcon = getVersionIcon(release.type)
                 return (
                   <div key={release.version} className="relative">
-                    {index < changelog.length - 1 && <div className="absolute left-4 top-8 bottom-0 w-px bg-border" />}
+                    {index < changelog.length - 1 && (
+                      <div className="bg-border absolute top-8 bottom-0 left-4 w-px" />
+                    )}
 
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-8 h-8 bg-background border-2 border-border rounded-full flex items-center justify-center">
-                        <VersionIcon className="w-4 h-4 text-muted-foreground" />
+                      <div className="bg-background border-border flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border-2">
+                        <VersionIcon className="text-muted-foreground h-4 w-4" />
                       </div>
 
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-3">
-                          <h3 className="font-semibold text-lg">v{release.version}</h3>
-                          <Badge variant={getVersionBadgeVariant(release.type)}>{release.type}</Badge>
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Clock className="w-3 h-3" />
+                          <h3 className="text-lg font-semibold">v{release.version}</h3>
+                          <Badge variant={getVersionBadgeVariant(release.type)}>
+                            {release.type}
+                          </Badge>
+                          <div className="text-muted-foreground flex items-center gap-1 text-sm">
+                            <Clock className="h-3 w-3" />
                             {release.date}
                           </div>
                         </div>
 
-                        <h4 className="font-medium text-foreground">{release.title}</h4>
+                        <h4 className="text-foreground font-medium">{release.title}</h4>
 
                         <div className="space-y-3">
                           <div>
-                            <h5 className="text-sm font-medium mb-2">Features & Changes</h5>
+                            <h5 className="mb-2 text-sm font-medium">Features & Changes</h5>
                             <ul className="space-y-1">
                               {release.changes.map((change, changeIndex) => (
                                 <li key={changeIndex} className="flex items-start gap-2 text-sm">
-                                  <div className="w-1.5 h-1.5 bg-primary rounded-full flex-shrink-0 mt-2" />
-                                  <span className="text-muted-foreground leading-relaxed">{change}</span>
+                                  <div className="bg-primary mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
+                                  <span className="text-muted-foreground leading-relaxed">
+                                    {change}
+                                  </span>
                                 </li>
                               ))}
                             </ul>
@@ -815,12 +881,12 @@ export function About() {
 
                           {release.technical && release.technical.length > 0 && (
                             <div>
-                              <h5 className="text-sm font-medium mb-2">Technical Implementation</h5>
+                              <h5 className="mb-2 text-sm font-medium">Technical Implementation</h5>
                               <ul className="space-y-1">
                                 {release.technical.map((tech, techIndex) => (
                                   <li key={techIndex} className="flex items-start gap-2 text-sm">
-                                    <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full flex-shrink-0 mt-2" />
-                                    <span className="text-muted-foreground leading-relaxed font-mono text-xs">
+                                    <div className="bg-muted-foreground mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full" />
+                                    <span className="text-muted-foreground font-mono text-xs leading-relaxed">
                                       {tech}
                                     </span>
                                   </li>
@@ -839,28 +905,28 @@ export function About() {
 
           <Separator className="my-4" />
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-1 gap-4 text-center md:grid-cols-4">
             <div>
-              <div className="text-2xl font-bold text-primary">{changelog.length}</div>
-              <div className="text-sm text-muted-foreground">Total Revisions</div>
+              <div className="text-primary text-2xl font-bold">{changelog.length}</div>
+              <div className="text-muted-foreground text-sm">Total Revisions</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-primary text-2xl font-bold">
                 {changelog.filter((r) => r.type === "major").length}
               </div>
-              <div className="text-sm text-muted-foreground">Major Releases</div>
+              <div className="text-muted-foreground text-sm">Major Releases</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-primary text-2xl font-bold">
                 {changelog.filter((r) => r.type === "minor").length}
               </div>
-              <div className="text-sm text-muted-foreground">Minor Updates</div>
+              <div className="text-muted-foreground text-sm">Minor Updates</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-primary text-2xl font-bold">
                 {changelog.filter((r) => r.type === "patch").length}
               </div>
-              <div className="text-sm text-muted-foreground">Patch Fixes</div>
+              <div className="text-muted-foreground text-sm">Patch Fixes</div>
             </div>
           </div>
         </CardContent>
@@ -872,31 +938,36 @@ export function About() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Developed by Sunny Patel, a software engineer passionate about creating sophisticated, user-centric
-            applications that solve real-world problems. This project demonstrates expertise in modern web development,
-            network engineering protocols, mathematical algorithm implementation, live API integrations, and
-            enterprise-grade application architecture with a focus on practical functionality for network professionals.
+            Developed by Sunny Patel, a software engineer passionate about creating sophisticated,
+            user-centric applications that solve real-world problems. This project demonstrates
+            expertise in modern web development, network engineering protocols, mathematical
+            algorithm implementation, live API integrations, and enterprise-grade application
+            architecture with a focus on practical functionality for network professionals.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
               <a href="https://www.sunnypatel.net/" target="_blank" rel="noopener noreferrer">
-                <Globe className="w-4 h-4 mr-2" />
+                <Globe className="mr-2 h-4 w-4" />
                 Portfolio Website
-                <ExternalLink className="w-3 h-3 ml-1" />
+                <ExternalLink className="ml-1 h-3 w-3" />
               </a>
             </Button>
             <Button variant="outline" asChild>
               <a href="https://github.com/sunnypatell" target="_blank" rel="noopener noreferrer">
-                <Github className="w-4 h-4 mr-2" />
+                <Github className="mr-2 h-4 w-4" />
                 GitHub Profile
-                <ExternalLink className="w-3 h-3 ml-1" />
+                <ExternalLink className="ml-1 h-3 w-3" />
               </a>
             </Button>
             <Button variant="outline" asChild>
-              <a href="https://www.linkedin.com/in/sunny-patel-30b460204/" target="_blank" rel="noopener noreferrer">
-                <Linkedin className="w-4 h-4 mr-2" />
+              <a
+                href="https://www.linkedin.com/in/sunny-patel-30b460204/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Linkedin className="mr-2 h-4 w-4" />
                 LinkedIn Profile
-                <ExternalLink className="w-3 h-3 ml-1" />
+                <ExternalLink className="ml-1 h-3 w-3" />
               </a>
             </Button>
           </div>

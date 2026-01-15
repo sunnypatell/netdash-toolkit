@@ -6,15 +6,7 @@
  * @license MIT
  */
 
-import {
-  app,
-  BrowserWindow,
-  ipcMain,
-  shell,
-  Menu,
-  dialog,
-  nativeTheme,
-} from "electron"
+import { app, BrowserWindow, ipcMain, shell, Menu, dialog, nativeTheme } from "electron"
 import * as path from "path"
 import * as http from "http"
 import handler from "serve-handler"
@@ -128,20 +120,22 @@ function createMenu(): void {
 
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac
-      ? [{
-          label: app.name,
-          submenu: [
-            { role: "about" as const },
-            { type: "separator" as const },
-            { role: "services" as const },
-            { type: "separator" as const },
-            { role: "hide" as const },
-            { role: "hideOthers" as const },
-            { role: "unhide" as const },
-            { type: "separator" as const },
-            { role: "quit" as const },
-          ],
-        }]
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: "about" as const },
+              { type: "separator" as const },
+              { role: "services" as const },
+              { type: "separator" as const },
+              { role: "hide" as const },
+              { role: "hideOthers" as const },
+              { role: "unhide" as const },
+              { type: "separator" as const },
+              { role: "quit" as const },
+            ],
+          },
+        ]
       : []),
     {
       label: "Edit",
@@ -174,7 +168,9 @@ function createMenu(): void {
       submenu: [
         { role: "minimize" },
         { role: "zoom" },
-        ...(isMac ? [{ type: "separator" as const }, { role: "front" as const }] : [{ role: "close" as const }]),
+        ...(isMac
+          ? [{ type: "separator" as const }, { role: "front" as const }]
+          : [{ role: "close" as const }]),
       ],
     },
   ]
@@ -190,7 +186,7 @@ function registerAppHandlers(): void {
   ipcMain.handle("app:getVersion", () => app.getVersion())
   ipcMain.handle("app:getPlatform", () => process.platform)
   ipcMain.handle("app:isElectron", () => true)
-  ipcMain.handle("app:getTheme", () => nativeTheme.shouldUseDarkColors ? "dark" : "light")
+  ipcMain.handle("app:getTheme", () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"))
 
   ipcMain.handle("dialog:showOpenDialog", async (_event, options) => {
     if (!mainWindow) return { canceled: true, filePaths: [] }

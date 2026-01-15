@@ -24,7 +24,14 @@ interface ResultCardProps {
   description?: string
 }
 
-export function ResultCard({ title, data, results, badges, className, description }: ResultCardProps) {
+export function ResultCard({
+  title,
+  data,
+  results,
+  badges,
+  className,
+  description,
+}: ResultCardProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
   const copyToClipboard = async (text: string, field: string) => {
@@ -70,7 +77,7 @@ export function ResultCard({ title, data, results, badges, className, descriptio
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">{title}</CardTitle>
-            {description && <p className="text-sm text-muted-foreground mt-1">{description}</p>}
+            {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
           </div>
           {badges && (
             <div className="flex gap-1">
@@ -89,16 +96,23 @@ export function ResultCard({ title, data, results, badges, className, descriptio
             <div
               key={index}
               className={cn(
-                "flex items-center justify-between p-3 rounded-lg transition-colors",
-                item.highlight ? "bg-primary/10 border border-primary/20" : "bg-muted/50",
+                "flex items-center justify-between rounded-lg p-3 transition-colors",
+                item.highlight ? "bg-primary/10 border-primary/20 border" : "bg-muted/50"
               )}
             >
               <div className="flex-1">
-                <div className="text-sm font-medium text-muted-foreground">{item.label}</div>
-                <div className={cn("font-mono text-sm mt-1", item.highlight && "font-semibold text-primary")}>
+                <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
+                <div
+                  className={cn(
+                    "mt-1 font-mono text-sm",
+                    item.highlight && "text-primary font-semibold"
+                  )}
+                >
                   {formatValue(item.value)}
                 </div>
-                {item.description && <div className="text-xs text-muted-foreground mt-1">{item.description}</div>}
+                {item.description && (
+                  <div className="text-muted-foreground mt-1 text-xs">{item.description}</div>
+                )}
               </div>
               {item.copyable !== false && (
                 <Button
@@ -108,16 +122,16 @@ export function ResultCard({ title, data, results, badges, className, descriptio
                   className="ml-2"
                 >
                   {copiedField === item.label ? (
-                    <Check className="w-4 h-4 text-green-600" />
+                    <Check className="h-4 w-4 text-green-600" />
                   ) : (
-                    <Copy className="w-4 h-4" />
+                    <Copy className="h-4 w-4" />
                   )}
                 </Button>
               )}
             </div>
           ))
         ) : (
-          <div className="text-center text-muted-foreground py-4">No results to display</div>
+          <div className="text-muted-foreground py-4 text-center">No results to display</div>
         )}
       </CardContent>
     </Card>

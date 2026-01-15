@@ -191,10 +191,12 @@ export function PortScanner() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Shield className="w-6 h-6 text-primary" />
+        <Shield className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Port Scanner</h1>
-          <p className="text-muted-foreground">Scan network hosts for open ports and running services</p>
+          <p className="text-muted-foreground">
+            Scan network hosts for open ports and running services
+          </p>
         </div>
       </div>
 
@@ -202,15 +204,16 @@ export function PortScanner() {
         <Alert className="border-green-500/50 bg-green-500/10">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription>
-            <strong>Native Mode:</strong> Running in desktop app with real TCP port scanning capabilities.
+            <strong>Native Mode:</strong> Running in desktop app with real TCP port scanning
+            capabilities.
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Browser Limitations:</strong> Due to CORS and browser security policies, this tool provides simulated
-            results. Use the desktop app for real port scanning.
+            <strong>Browser Limitations:</strong> Due to CORS and browser security policies, this
+            tool provides simulated results. Use the desktop app for real port scanning.
           </AlertDescription>
         </Alert>
       )}
@@ -239,16 +242,20 @@ export function PortScanner() {
             </TabsList>
 
             <TabsContent value="common" className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
                 {commonPorts.slice(0, 16).map(({ port, service }) => (
-                  <div key={port} className="flex justify-between p-2 bg-muted/50 rounded">
+                  <div key={port} className="bg-muted/50 flex justify-between rounded p-2">
                     <span className="font-mono">{port}</span>
                     <span className="text-muted-foreground">{service}</span>
                   </div>
                 ))}
               </div>
-              <Button onClick={scanCommonPorts} disabled={!target.trim() || isScanning} className="w-full">
-                <Search className="w-4 h-4 mr-2" />
+              <Button
+                onClick={scanCommonPorts}
+                disabled={!target.trim() || isScanning}
+                className="w-full"
+              >
+                <Search className="mr-2 h-4 w-4" />
                 Scan Common Ports ({commonPorts.length} ports)
               </Button>
             </TabsContent>
@@ -263,8 +270,9 @@ export function PortScanner() {
                   placeholder="80,443,22,21,25,53,110,143"
                   disabled={isScanning}
                 />
-                <div className="text-xs text-muted-foreground mt-1">
-                  {customPorts.split(",").filter((p) => !isNaN(Number.parseInt(p.trim()))).length} ports specified
+                <div className="text-muted-foreground mt-1 text-xs">
+                  {customPorts.split(",").filter((p) => !isNaN(Number.parseInt(p.trim()))).length}{" "}
+                  ports specified
                 </div>
               </div>
               <Button
@@ -272,7 +280,7 @@ export function PortScanner() {
                 disabled={!target.trim() || !customPorts.trim() || isScanning}
                 className="w-full"
               >
-                <Search className="w-4 h-4 mr-2" />
+                <Search className="mr-2 h-4 w-4" />
                 Scan Custom Ports
               </Button>
             </TabsContent>
@@ -296,7 +304,9 @@ export function PortScanner() {
             <CardTitle className="flex items-center justify-between">
               <span>Scan Results - {currentScan.target}</span>
               <div className="flex items-center space-x-2">
-                <Badge variant="outline">{currentScan.results.filter((r) => r.status === "open").length} open</Badge>
+                <Badge variant="outline">
+                  {currentScan.results.filter((r) => r.status === "open").length} open
+                </Badge>
                 <Badge variant="secondary">{currentScan.results.length} total</Badge>
                 {currentScan.completed && (
                   <Button
@@ -305,27 +315,32 @@ export function PortScanner() {
                     onClick={() => exportResults(currentScan)}
                     className="bg-transparent"
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="mr-2 h-4 w-4" />
                     Export
                   </Button>
                 )}
               </div>
             </CardTitle>
-            <CardDescription>Scanned on {new Date(currentScan.timestamp).toLocaleString()}</CardDescription>
+            <CardDescription>
+              Scanned on {new Date(currentScan.timestamp).toLocaleString()}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="max-h-96 space-y-2 overflow-y-auto">
               {currentScan.results.map((result, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div
+                  key={index}
+                  className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
+                >
                   <div className="flex items-center space-x-3">
                     {result.status === "open" ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="h-4 w-4 text-green-600" />
                     ) : (
-                      <X className="w-4 h-4 text-red-600" />
+                      <X className="h-4 w-4 text-red-600" />
                     )}
                     <div>
                       <div className="font-mono text-sm">Port {result.port}</div>
-                      <div className="text-xs text-muted-foreground">{result.service}</div>
+                      <div className="text-muted-foreground text-xs">{result.service}</div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -336,7 +351,9 @@ export function PortScanner() {
                       {result.status}
                     </Badge>
                     {result.responseTime && (
-                      <span className="text-xs text-muted-foreground">{result.responseTime.toFixed(1)}ms</span>
+                      <span className="text-muted-foreground text-xs">
+                        {result.responseTime.toFixed(1)}ms
+                      </span>
                     )}
                   </div>
                 </div>
@@ -355,16 +372,23 @@ export function PortScanner() {
           <CardContent>
             <div className="space-y-3">
               {scanHistory.map((session, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
                   <div>
                     <div className="font-medium">{session.target}</div>
-                    <div className="text-sm text-muted-foreground">{new Date(session.timestamp).toLocaleString()}</div>
+                    <div className="text-muted-foreground text-sm">
+                      {new Date(session.timestamp).toLocaleString()}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{session.results.filter((r) => r.status === "open").length} open</Badge>
+                    <Badge variant="outline">
+                      {session.results.filter((r) => r.status === "open").length} open
+                    </Badge>
                     <Badge variant="secondary">{session.results.length} scanned</Badge>
                     <Button variant="ghost" size="sm" onClick={() => exportResults(session)}>
-                      <Download className="w-4 h-4" />
+                      <Download className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -379,10 +403,10 @@ export function PortScanner() {
           <CardTitle>Port Scanning Reference</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <div className="grid grid-cols-1 gap-6 text-sm md:grid-cols-2">
             <div>
-              <h4 className="font-semibold mb-2">Common Port Categories</h4>
-              <ul className="space-y-1 text-muted-foreground">
+              <h4 className="mb-2 font-semibold">Common Port Categories</h4>
+              <ul className="text-muted-foreground space-y-1">
                 <li>
                   • <strong>1-1023:</strong> Well-known/system ports
                 </li>
@@ -401,8 +425,8 @@ export function PortScanner() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Security Considerations</h4>
-              <ul className="space-y-1 text-muted-foreground">
+              <h4 className="mb-2 font-semibold">Security Considerations</h4>
+              <ul className="text-muted-foreground space-y-1">
                 <li>• Only scan systems you own or have permission</li>
                 <li>• Unauthorized scanning may violate policies</li>
                 <li>• Use firewalls to block unnecessary ports</li>

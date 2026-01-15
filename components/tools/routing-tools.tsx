@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -86,7 +92,10 @@ interface StaticRouteEvaluation {
   error?: string
 }
 
-const evaluateNetworkStatement = (address: string, wildcardMask?: string): NetworkStatementEvaluation => {
+const evaluateNetworkStatement = (
+  address: string,
+  wildcardMask?: string
+): NetworkStatementEvaluation => {
   const warnings: string[] = []
   const trimmedAddress = address.trim()
 
@@ -125,7 +134,7 @@ const evaluateNetworkStatement = (address: string, wildcardMask?: string): Netwo
   }
 
   const wildcardInt = ipv4ToInt(wildcard)
-  const netmaskInt = (~wildcardInt) >>> 0
+  const netmaskInt = ~wildcardInt >>> 0
   const netmask = intToIpv4(netmaskInt)
   let prefix: number
   try {
@@ -134,7 +143,8 @@ const evaluateNetworkStatement = (address: string, wildcardMask?: string): Netwo
     return {
       isValid: false,
       warnings,
-      error: error instanceof Error ? error.message : "Wildcard must translate to a valid subnet mask",
+      error:
+        error instanceof Error ? error.message : "Wildcard must translate to a valid subnet mask",
     }
   }
 
@@ -286,7 +296,7 @@ export function RoutingTools() {
         raw: network,
         evaluation: evaluateNetworkStatement(network.address, network.wildcardMask),
       })),
-    [ospfConfig.networks],
+    [ospfConfig.networks]
   )
 
   const eigrpNetworkEvaluations = useMemo(
@@ -295,10 +305,13 @@ export function RoutingTools() {
         raw: network,
         evaluation: evaluateNetworkStatement(network.address, network.wildcardMask),
       })),
-    [eigrpConfig.networks],
+    [eigrpConfig.networks]
   )
 
-  const staticRouteEvaluations = useMemo(() => staticRoutes.map((route) => evaluateStaticRoute(route)), [staticRoutes])
+  const staticRouteEvaluations = useMemo(
+    () => staticRoutes.map((route) => evaluateStaticRoute(route)),
+    [staticRoutes]
+  )
 
   const ospfConfigText = useMemo(() => {
     let config = `! OSPF Configuration\n`
@@ -512,11 +525,16 @@ export function RoutingTools() {
     return { errors, warnings }
   }, [staticRouteEvaluations, staticRoutes])
 
-  const ospfValidNetworks = ospfNetworkEvaluations.filter((entry) => entry.evaluation.isValid).length
-  const eigrpValidNetworks = eigrpNetworkEvaluations.filter((entry) => entry.evaluation.isValid).length
+  const ospfValidNetworks = ospfNetworkEvaluations.filter(
+    (entry) => entry.evaluation.isValid
+  ).length
+  const eigrpValidNetworks = eigrpNetworkEvaluations.filter(
+    (entry) => entry.evaluation.isValid
+  ).length
   const validStaticRoutes = staticRouteEvaluations.filter((evaluation) => evaluation.isValid)
   const defaultRouteCount = staticRouteEvaluations.filter(
-    (evaluation) => evaluation.isValid && evaluation.destination === "0.0.0.0" && evaluation.mask === "0.0.0.0",
+    (evaluation) =>
+      evaluation.isValid && evaluation.destination === "0.0.0.0" && evaluation.mask === "0.0.0.0"
   ).length
   const floatingRouteCount = staticRouteEvaluations.filter((evaluation, index) => {
     if (!evaluation.isValid) return false
@@ -603,7 +621,12 @@ export function RoutingTools() {
       description: "EIGRP internal routes",
       color: "bg-indigo-100 text-indigo-800",
     },
-    { protocol: "OSPF", distance: 110, description: "Open Shortest Path First", color: "bg-cyan-100 text-cyan-800" },
+    {
+      protocol: "OSPF",
+      distance: 110,
+      description: "Open Shortest Path First",
+      color: "bg-cyan-100 text-cyan-800",
+    },
     {
       protocol: "IS-IS",
       distance: 115,
@@ -633,11 +656,12 @@ export function RoutingTools() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Router className="w-6 h-6 text-primary" />
+        <Router className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">Routing Tools</h1>
           <p className="text-muted-foreground">
-            Configure and generate routing protocols, static routes, and understand administrative distances
+            Configure and generate routing protocols, static routes, and understand administrative
+            distances
           </p>
         </div>
       </div>
@@ -651,11 +675,11 @@ export function RoutingTools() {
         </TabsList>
 
         <TabsContent value="ospf" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Router className="w-5 h-5" />
+                  <Router className="h-5 w-5" />
                   OSPF Configuration
                 </CardTitle>
                 <CardDescription>Generate comprehensive OSPF router configuration</CardDescription>
@@ -668,7 +692,9 @@ export function RoutingTools() {
                       id="ospf-process-id"
                       placeholder="1"
                       value={ospfConfig.processId}
-                      onChange={(e) => setOspfConfig((prev) => ({ ...prev, processId: e.target.value }))}
+                      onChange={(e) =>
+                        setOspfConfig((prev) => ({ ...prev, processId: e.target.value }))
+                      }
                     />
                   </div>
                   <div>
@@ -677,20 +703,22 @@ export function RoutingTools() {
                       id="ospf-router-id"
                       placeholder="1.1.1.1"
                       value={ospfConfig.routerId}
-                      onChange={(e) => setOspfConfig((prev) => ({ ...prev, routerId: e.target.value }))}
+                      onChange={(e) =>
+                        setOspfConfig((prev) => ({ ...prev, routerId: e.target.value }))
+                      }
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex items-center justify-between">
                     <Label>Network Statements</Label>
                     <Button size="sm" variant="outline" onClick={() => addNetwork("ospf")}>
                       Add Network
                     </Button>
                   </div>
                   {ospfConfig.networks.map((network, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-2 mb-2">
+                    <div key={index} className="mb-2 grid grid-cols-3 gap-2">
                       <Input
                         placeholder="192.168.1.0"
                         value={network.address}
@@ -744,7 +772,9 @@ export function RoutingTools() {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={ospfConfig.defaultOriginate}
-                      onCheckedChange={(checked) => setOspfConfig((prev) => ({ ...prev, defaultOriginate: !!checked }))}
+                      onCheckedChange={(checked) =>
+                        setOspfConfig((prev) => ({ ...prev, defaultOriginate: !!checked }))
+                      }
                     />
                     <Label>Default Information Originate</Label>
                   </div>
@@ -762,10 +792,12 @@ export function RoutingTools() {
                         ? "Resolve the following OSPF validation issues:"
                         : "Review OSPF network warnings:"}
                     </strong>
-                    <ul className="list-disc list-inside space-y-1">
-                      {(ospfIssues.errors.length > 0 ? ospfIssues.errors : ospfIssues.warnings).map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
+                    <ul className="list-inside list-disc space-y-1">
+                      {(ospfIssues.errors.length > 0 ? ospfIssues.errors : ospfIssues.warnings).map(
+                        (item, idx) => (
+                          <li key={idx}>{item}</li>
+                        )
+                      )}
                     </ul>
                   </AlertDescription>
                 </Alert>
@@ -776,7 +808,10 @@ export function RoutingTools() {
                 data={[
                   { label: "Process ID", value: ospfConfig.processId },
                   { label: "Router ID", value: ospfConfig.routerId || "Auto-selected" },
-                  { label: "Valid Networks", value: `${ospfValidNetworks}/${ospfConfig.networks.length}` },
+                  {
+                    label: "Valid Networks",
+                    value: `${ospfValidNetworks}/${ospfConfig.networks.length}`,
+                  },
                 ]}
               />
 
@@ -786,23 +821,27 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={ospfConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea
+                      value={ospfConfigText}
+                      readOnly
+                      className="min-h-[300px] font-mono text-sm"
+                    />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(ospfConfigText)}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex space-x-2 mt-4">
+                  <div className="mt-4 flex space-x-2">
                     <Button
                       onClick={() => exportConfig(ospfConfigText, "ospf-config.txt")}
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
                   </div>
@@ -814,21 +853,23 @@ export function RoutingTools() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>OSPF Best Practices:</strong> Use area 0 as backbone, configure router-id manually, and use
-              passive-interface for networks that don't need OSPF neighbors.
+              <strong>OSPF Best Practices:</strong> Use area 0 as backbone, configure router-id
+              manually, and use passive-interface for networks that don't need OSPF neighbors.
             </AlertDescription>
           </Alert>
         </TabsContent>
 
         <TabsContent value="eigrp" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Network className="w-5 h-5" />
+                  <Network className="h-5 w-5" />
                   EIGRP Configuration
                 </CardTitle>
-                <CardDescription>Generate Enhanced Interior Gateway Routing Protocol configuration</CardDescription>
+                <CardDescription>
+                  Generate Enhanced Interior Gateway Routing Protocol configuration
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -838,7 +879,9 @@ export function RoutingTools() {
                       id="eigrp-as"
                       placeholder="100"
                       value={eigrpConfig.asNumber}
-                      onChange={(e) => setEigrpConfig((prev) => ({ ...prev, asNumber: e.target.value }))}
+                      onChange={(e) =>
+                        setEigrpConfig((prev) => ({ ...prev, asNumber: e.target.value }))
+                      }
                     />
                   </div>
                   <div>
@@ -847,20 +890,22 @@ export function RoutingTools() {
                       id="eigrp-router-id"
                       placeholder="1.1.1.1"
                       value={eigrpConfig.routerId}
-                      onChange={(e) => setEigrpConfig((prev) => ({ ...prev, routerId: e.target.value }))}
+                      onChange={(e) =>
+                        setEigrpConfig((prev) => ({ ...prev, routerId: e.target.value }))
+                      }
                     />
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="mb-2 flex items-center justify-between">
                     <Label>Network Statements</Label>
                     <Button size="sm" variant="outline" onClick={() => addNetwork("eigrp")}>
                       Add Network
                     </Button>
                   </div>
                   {eigrpConfig.networks.map((network, index) => (
-                    <div key={index} className="grid grid-cols-2 gap-2 mb-2">
+                    <div key={index} className="mb-2 grid grid-cols-2 gap-2">
                       <Input
                         placeholder="192.168.1.0"
                         value={network.address}
@@ -888,7 +933,9 @@ export function RoutingTools() {
                     <Label>Variance</Label>
                     <Select
                       value={eigrpConfig.variance}
-                      onValueChange={(value) => setEigrpConfig((prev) => ({ ...prev, variance: value }))}
+                      onValueChange={(value) =>
+                        setEigrpConfig((prev) => ({ ...prev, variance: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -905,7 +952,9 @@ export function RoutingTools() {
                     <Label>Maximum Paths</Label>
                     <Select
                       value={eigrpConfig.maximumPaths}
-                      onValueChange={(value) => setEigrpConfig((prev) => ({ ...prev, maximumPaths: value }))}
+                      onValueChange={(value) =>
+                        setEigrpConfig((prev) => ({ ...prev, maximumPaths: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -943,7 +992,9 @@ export function RoutingTools() {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={eigrpConfig.autoSummary}
-                      onCheckedChange={(checked) => setEigrpConfig((prev) => ({ ...prev, autoSummary: !!checked }))}
+                      onCheckedChange={(checked) =>
+                        setEigrpConfig((prev) => ({ ...prev, autoSummary: !!checked }))
+                      }
                     />
                     <Label>Auto-Summary (Not Recommended)</Label>
                   </div>
@@ -961,8 +1012,11 @@ export function RoutingTools() {
                         ? "Resolve the following EIGRP validation issues:"
                         : "Review EIGRP network warnings:"}
                     </strong>
-                    <ul className="list-disc list-inside space-y-1">
-                      {(eigrpIssues.errors.length > 0 ? eigrpIssues.errors : eigrpIssues.warnings).map((item, idx) => (
+                    <ul className="list-inside list-disc space-y-1">
+                      {(eigrpIssues.errors.length > 0
+                        ? eigrpIssues.errors
+                        : eigrpIssues.warnings
+                      ).map((item, idx) => (
                         <li key={idx}>{item}</li>
                       ))}
                     </ul>
@@ -975,7 +1029,10 @@ export function RoutingTools() {
                 data={[
                   { label: "AS Number", value: eigrpConfig.asNumber || "Not set" },
                   { label: "Router ID", value: eigrpConfig.routerId || "Auto-selected" },
-                  { label: "Valid Networks", value: `${eigrpValidNetworks}/${eigrpConfig.networks.length}` },
+                  {
+                    label: "Valid Networks",
+                    value: `${eigrpValidNetworks}/${eigrpConfig.networks.length}`,
+                  },
                 ]}
               />
 
@@ -985,23 +1042,27 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={eigrpConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea
+                      value={eigrpConfigText}
+                      readOnly
+                      className="min-h-[300px] font-mono text-sm"
+                    />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(eigrpConfigText)}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex space-x-2 mt-4">
+                  <div className="mt-4 flex space-x-2">
                     <Button
                       onClick={() => exportConfig(eigrpConfigText, "eigrp-config.txt")}
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
                   </div>
@@ -1013,21 +1074,23 @@ export function RoutingTools() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>EIGRP Best Practices:</strong> Disable auto-summary, use same AS number on all routers, and
-              configure authentication for security.
+              <strong>EIGRP Best Practices:</strong> Disable auto-summary, use same AS number on all
+              routers, and configure authentication for security.
             </AlertDescription>
           </Alert>
         </TabsContent>
 
         <TabsContent value="static" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
+                  <Settings className="h-5 w-5" />
                   Static Route Configuration
                 </CardTitle>
-                <CardDescription>Generate multiple static routes with advanced options</CardDescription>
+                <CardDescription>
+                  Generate multiple static routes with advanced options
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -1171,8 +1234,11 @@ export function RoutingTools() {
                         ? "Resolve the following static route issues before deployment:"
                         : "Static route warnings detected:"}
                     </strong>
-                    <ul className="list-disc list-inside space-y-1">
-                      {(staticIssues.errors.length > 0 ? staticIssues.errors : staticIssues.warnings).map((item, idx) => (
+                    <ul className="list-inside list-disc space-y-1">
+                      {(staticIssues.errors.length > 0
+                        ? staticIssues.errors
+                        : staticIssues.warnings
+                      ).map((item, idx) => (
                         <li key={idx}>{item}</li>
                       ))}
                     </ul>
@@ -1183,7 +1249,10 @@ export function RoutingTools() {
               <ResultCard
                 title="Static Routes Summary"
                 data={[
-                  { label: "Valid Routes", value: `${validStaticRoutes.length}/${staticRoutes.length}` },
+                  {
+                    label: "Valid Routes",
+                    value: `${validStaticRoutes.length}/${staticRoutes.length}`,
+                  },
                   { label: "Default Routes", value: defaultRouteCount.toString() },
                   { label: "Floating Static", value: floatingRouteCount.toString() },
                 ]}
@@ -1195,23 +1264,27 @@ export function RoutingTools() {
                 </CardHeader>
                 <CardContent>
                   <div className="relative">
-                    <Textarea value={staticConfigText} readOnly className="font-mono text-sm min-h-[300px]" />
+                    <Textarea
+                      value={staticConfigText}
+                      readOnly
+                      className="min-h-[300px] font-mono text-sm"
+                    />
                     <Button
                       size="sm"
                       variant="outline"
                       className="absolute top-2 right-2"
                       onClick={() => copyToClipboard(staticConfigText)}
                     >
-                      <Copy className="w-4 h-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="flex space-x-2 mt-4">
+                  <div className="mt-4 flex space-x-2">
                     <Button
                       onClick={() => exportConfig(staticConfigText, "static-routes.txt")}
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="mr-2 h-4 w-4" />
                       Export Routes
                     </Button>
                   </div>
@@ -1223,8 +1296,8 @@ export function RoutingTools() {
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Static Route Tips:</strong> Use 0.0.0.0 0.0.0.0 for default routes, higher AD for backup routes,
-              and track objects for high availability.
+              <strong>Static Route Tips:</strong> Use 0.0.0.0 0.0.0.0 for default routes, higher AD
+              for backup routes, and track objects for high availability.
             </AlertDescription>
           </Alert>
         </TabsContent>
@@ -1242,21 +1315,25 @@ export function RoutingTools() {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    Administrative Distance (AD) determines route preference. Lower values are preferred. When multiple
-                    routes to the same destination exist, the route with the lowest AD is installed.
+                    Administrative Distance (AD) determines route preference. Lower values are
+                    preferred. When multiple routes to the same destination exist, the route with
+                    the lowest AD is installed.
                   </AlertDescription>
                 </Alert>
 
                 <div className="space-y-3">
                   {administrativeDistances.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
                       <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="font-mono text-base px-3 py-1">
+                        <Badge variant="outline" className="px-3 py-1 font-mono text-base">
                           {item.distance}
                         </Badge>
                         <div>
                           <p className="font-medium">{item.protocol}</p>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
+                          <p className="text-muted-foreground text-sm">{item.description}</p>
                         </div>
                       </div>
                       <Badge className={item.color}>
@@ -1278,9 +1355,9 @@ export function RoutingTools() {
                     <CardTitle className="text-lg">Bridge Priority (STP) Reference</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
-                        <h5 className="font-medium mb-2">Priority Values</h5>
+                        <h5 className="mb-2 font-medium">Priority Values</h5>
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span>Default Priority:</span>
@@ -1297,18 +1374,22 @@ export function RoutingTools() {
                         </div>
                       </div>
                       <div>
-                        <h5 className="font-medium mb-2">Common Values</h5>
+                        <h5 className="mb-2 font-medium">Common Values</h5>
                         <div className="flex flex-wrap gap-1">
-                          {[4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768].map((priority) => (
-                            <Badge key={priority} variant="outline" className="text-xs">
-                              {priority}
-                            </Badge>
-                          ))}
+                          {[4096, 8192, 12288, 16384, 20480, 24576, 28672, 32768].map(
+                            (priority) => (
+                              <Badge key={priority} variant="outline" className="text-xs">
+                                {priority}
+                              </Badge>
+                            )
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-mono">spanning-tree vlan [vlan-id] priority [priority]</p>
+                    <div className="bg-muted/50 mt-4 rounded-lg p-3">
+                      <p className="font-mono text-sm">
+                        spanning-tree vlan [vlan-id] priority [priority]
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

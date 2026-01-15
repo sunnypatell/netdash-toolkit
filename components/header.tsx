@@ -13,24 +13,36 @@ interface HeaderProps {
 
 export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
   return (
-    <header className="bg-card border-b border-border px-3 sm:px-4 lg:px-6 py-3 sm:py-4 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/95">
+    <header className="bg-card border-border supports-[backdrop-filter]:bg-card/95 sticky top-0 z-50 border-b px-3 py-3 backdrop-blur sm:px-4 sm:py-4 lg:px-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2 sm:space-x-4">
-          <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="text-foreground lg:hidden shrink-0">
-            <Menu className="w-4 h-4" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleSidebar}
+            className="text-foreground shrink-0 lg:hidden"
+          >
+            <Menu className="h-4 w-4" />
           </Button>
           {!sidebarOpen && (
-            <Button variant="ghost" size="sm" onClick={onToggleSidebar} className="text-foreground hidden lg:flex">
-              <Menu className="w-4 h-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleSidebar}
+              className="text-foreground hidden lg:flex"
+            >
+              <Menu className="h-4 w-4" />
             </Button>
           )}
           <div className="flex items-center space-x-2">
-            <h1 className="text-base sm:text-lg font-semibold text-foreground truncate">Network Toolbox</h1>
+            <h1 className="text-foreground truncate text-base font-semibold sm:text-lg">
+              Network Toolbox
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
-          <div className="hidden sm:flex items-center space-x-2">
+        <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">
+          <div className="hidden items-center space-x-2 sm:flex">
             <Badge variant="outline" className="text-xs">
               v2.3
             </Badge>

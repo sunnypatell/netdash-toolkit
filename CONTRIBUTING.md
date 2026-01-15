@@ -25,16 +25,16 @@ pnpm dev
 
 ### Available Scripts
 
-| command | description |
-|---------|-------------|
-| `pnpm dev` | start next.js dev server |
-| `pnpm build` | production build |
-| `pnpm lint` | run eslint |
-| `pnpm typecheck` | run typescript compiler |
-| `pnpm electron:dev` | start electron dev mode |
-| `pnpm dist:mac` | build macos electron app |
-| `pnpm dist:win` | build windows electron app |
-| `pnpm dist:linux` | build linux electron app |
+| command             | description                |
+| ------------------- | -------------------------- |
+| `pnpm dev`          | start next.js dev server   |
+| `pnpm build`        | production build           |
+| `pnpm lint`         | run eslint                 |
+| `pnpm typecheck`    | run typescript compiler    |
+| `pnpm electron:dev` | start electron dev mode    |
+| `pnpm dist:mac`     | build macos electron app   |
+| `pnpm dist:win`     | build windows electron app |
+| `pnpm dist:linux`   | build linux electron app   |
 
 ## Project Structure
 

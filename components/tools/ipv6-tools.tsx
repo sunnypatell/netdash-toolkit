@@ -152,7 +152,7 @@ export function IPv6Tools() {
   // Generate EUI-64 from MAC address
   const getNetworkPrefix = (
     address: string,
-    prefixLength: number,
+    prefixLength: number
   ): { network: string; error?: string } => {
     const expanded = expandIPv6(address)
     if (expanded.error) {
@@ -297,9 +297,10 @@ export function IPv6Tools() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">IPv6 Tools</h1>
+        <h1 className="text-foreground mb-2 text-3xl font-bold">IPv6 Tools</h1>
         <p className="text-muted-foreground">
-          Comprehensive IPv6 address manipulation, EUI-64 generation, and multicast calculation per RFC 5952.
+          Comprehensive IPv6 address manipulation, EUI-64 generation, and multicast calculation per
+          RFC 5952.
         </p>
       </div>
 
@@ -317,11 +318,11 @@ export function IPv6Tools() {
         </TabsList>
 
         <TabsContent value="calculator" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Network className="w-5 h-5" />
+                  <Network className="h-5 w-5" />
                   Input Configuration
                 </CardTitle>
                 <CardDescription>Enter IPv6 address and MAC for calculations</CardDescription>
@@ -354,7 +355,12 @@ export function IPv6Tools() {
 
                 <div>
                   <Label htmlFor="prefix">Prefix Length</Label>
-                  <Input id="prefix" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="64" />
+                  <Input
+                    id="prefix"
+                    value={prefix}
+                    onChange={(e) => setPrefix(e.target.value)}
+                    placeholder="64"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -458,7 +464,7 @@ export function IPv6Tools() {
               />
 
               <Button onClick={exportResults} variant="outline" className="w-full bg-transparent">
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="mr-2 h-4 w-4" />
                 Export Results
               </Button>
             </div>
@@ -466,11 +472,11 @@ export function IPv6Tools() {
         </TabsContent>
 
         <TabsContent value="reference" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Globe className="w-5 h-5" />
+                  <Globe className="h-5 w-5" />
                   IPv6 Address Types
                 </CardTitle>
               </CardHeader>
@@ -478,27 +484,27 @@ export function IPv6Tools() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="font-medium">Loopback:</span>
-                    <code className="text-xs bg-muted px-1 rounded">::1/128</code>
+                    <code className="bg-muted rounded px-1 text-xs">::1/128</code>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Link-Local:</span>
-                    <code className="text-xs bg-muted px-1 rounded">fe80::/10</code>
+                    <code className="bg-muted rounded px-1 text-xs">fe80::/10</code>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Unique Local:</span>
-                    <code className="text-xs bg-muted px-1 rounded">fc00::/7</code>
+                    <code className="bg-muted rounded px-1 text-xs">fc00::/7</code>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Global Unicast:</span>
-                    <code className="text-xs bg-muted px-1 rounded">2000::/3</code>
+                    <code className="bg-muted rounded px-1 text-xs">2000::/3</code>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Multicast:</span>
-                    <code className="text-xs bg-muted px-1 rounded">ff00::/8</code>
+                    <code className="bg-muted rounded px-1 text-xs">ff00::/8</code>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-medium">Documentation:</span>
-                    <code className="text-xs bg-muted px-1 rounded">2001:db8::/32</code>
+                    <code className="bg-muted rounded px-1 text-xs">2001:db8::/32</code>
                   </div>
                 </div>
               </CardContent>
@@ -507,13 +513,13 @@ export function IPv6Tools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
+                  <Zap className="h-5 w-5" />
                   Compression Rules (RFC 5952)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <ul className="text-muted-foreground list-inside list-disc space-y-1">
                     <li>Remove leading zeros in each group</li>
                     <li>Replace longest sequence of zero groups with ::</li>
                     <li>Use :: only once per address</li>
@@ -530,7 +536,7 @@ export function IPv6Tools() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <ul className="text-muted-foreground list-inside list-disc space-y-1">
                     <li>Split MAC address into two halves</li>
                     <li>Insert FF:FE in the middle</li>
                     <li>Flip the U/L bit (7th bit of first byte)</li>
@@ -548,9 +554,10 @@ export function IPv6Tools() {
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <p className="text-muted-foreground">
-                    Used for Neighbor Discovery Protocol (NDP) to resolve IPv6 addresses to MAC addresses.
+                    Used for Neighbor Discovery Protocol (NDP) to resolve IPv6 addresses to MAC
+                    addresses.
                   </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <ul className="text-muted-foreground list-inside list-disc space-y-1">
                     <li>Prefix: ff02::1:ff00:0/104</li>
                     <li>Last 24 bits from target address</li>
                     <li>More efficient than broadcast</li>

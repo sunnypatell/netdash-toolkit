@@ -5,17 +5,17 @@ import { ExternalLink, Github, Linkedin, Globe, Heart } from "lucide-react"
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <footer className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 border-t backdrop-blur">
       <div className="container mx-auto px-6 py-8">
-        <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+        <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
           <div className="text-center md:text-left">
-            <div className="flex items-center space-x-2 justify-center md:justify-start">
-              <span className="font-semibold text-foreground">NetDash</span>
+            <div className="flex items-center justify-center space-x-2 md:justify-start">
+              <span className="text-foreground font-semibold">NetDash</span>
               <span className="text-muted-foreground">•</span>
-              <span className="text-sm text-muted-foreground">Network Engineering Dashboard</span>
+              <span className="text-muted-foreground text-sm">Network Engineering Dashboard</span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Built with <Heart className="w-3 h-3 inline text-red-500" /> by Sunny Patel
+            <p className="text-muted-foreground mt-1 text-xs">
+              Built with <Heart className="inline h-3 w-3 text-red-500" /> by Sunny Patel
             </p>
           </div>
 
@@ -27,9 +27,9 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
               >
-                <Globe className="w-4 h-4" />
+                <Globe className="h-4 w-4" />
                 <span className="hidden sm:inline">Portfolio</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
               </a>
             </Button>
 
@@ -40,9 +40,9 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
               >
-                <Github className="w-4 h-4" />
+                <Github className="h-4 w-4" />
                 <span className="hidden sm:inline">GitHub</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
               </a>
             </Button>
 
@@ -53,18 +53,18 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1"
               >
-                <Linkedin className="w-4 h-4" />
+                <Linkedin className="h-4 w-4" />
                 <span className="hidden sm:inline">LinkedIn</span>
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
               </a>
             </Button>
           </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-border text-center">
-          <p className="text-xs text-muted-foreground">
-            © 2025 Sunny Patel. This is a demonstration of frontend development capabilities. All network calculations
-            are performed client-side with no data transmission.
+        <div className="border-border mt-6 border-t pt-6 text-center">
+          <p className="text-muted-foreground text-xs">
+            © 2025 Sunny Patel. This is a demonstration of frontend development capabilities. All
+            network calculations are performed client-side with no data transmission.
           </p>
         </div>
       </div>

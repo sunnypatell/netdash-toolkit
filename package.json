@@ -38,8 +38,8 @@
   ],
   "main": "dist-electron/main.js",
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -62,7 +62,8 @@
     "dist:mac": "pnpm electron:build --mac",
     "dist:win": "pnpm electron:build --win",
     "dist:linux": "pnpm electron:build --linux",
-    "dist:all": "pnpm electron:build --mac --win --linux"
+    "dist:all": "pnpm electron:build --mac --win --linux",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -130,6 +131,8 @@
     "electron-builder": "^26.4.0",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.16",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "postcss": "^8.5",
     "prettier": "^3.8.0",
     "prettier-plugin-tailwindcss": "^0.7.2",

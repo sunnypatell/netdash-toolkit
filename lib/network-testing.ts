@@ -53,7 +53,7 @@ export async function testRTT(
   url: string,
   method: "HEAD" | "GET" = "HEAD",
   samples = 5,
-  timeout = 10000,
+  timeout = 10000
 ): Promise<RTTTestResult> {
   let normalizedUrl: URL
   try {
@@ -72,7 +72,7 @@ export async function testRTT(
       urlString,
       method,
       ["Browsers block HTTP endpoints when the app is served over HTTPS. Use an HTTPS test URL."],
-      [],
+      []
     )
   }
 
@@ -129,7 +129,8 @@ export async function testRTT(
   const average = results.reduce((sum, val) => sum + val, 0) / results.length
   const min = Math.min(...results)
   const max = Math.max(...results)
-  const variance = results.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / results.length
+  const variance =
+    results.reduce((sum, val) => sum + Math.pow(val - average, 2), 0) / results.length
   const jitter = Math.sqrt(variance)
 
   return {
@@ -184,7 +185,7 @@ function buildFailedRTTResult(
   requestedMethod: "HEAD" | "GET",
   errors: string[],
   warnings: string[],
-  mode: "cors" | "no-cors" = "cors",
+  mode: "cors" | "no-cors" = "cors"
 ): RTTTestResult {
   return {
     url,
@@ -218,7 +219,7 @@ async function measureSingleSample(
   url: string,
   effectiveMethod: "HEAD" | "GET",
   requestedMethod: "HEAD" | "GET",
-  timeout: number,
+  timeout: number
 ): Promise<RTTMeasurement> {
   try {
     const attempt = await timedFetch(url, effectiveMethod, timeout, "cors")
@@ -226,7 +227,9 @@ async function measureSingleSample(
     if (attempt.response.status === 405 && requestedMethod === "HEAD") {
       const retry = await timedFetch(url, "GET", timeout, "cors")
       if (!isSuccessfulResponse(retry.response)) {
-        throw new Error(`HTTP ${retry.response.status}: ${retry.response.statusText || "Request failed"}`)
+        throw new Error(
+          `HTTP ${retry.response.status}: ${retry.response.statusText || "Request failed"}`
+        )
       }
       return {
         duration: retry.duration,
@@ -237,7 +240,9 @@ async function measureSingleSample(
     }
 
     if (!isSuccessfulResponse(attempt.response)) {
-      throw new Error(`HTTP ${attempt.response.status}: ${attempt.response.statusText || "Request failed"}`)
+      throw new Error(
+        `HTTP ${attempt.response.status}: ${attempt.response.statusText || "Request failed"}`
+      )
     }
 
     return {
@@ -272,7 +277,7 @@ async function timedFetch(
   baseUrl: string,
   method: "HEAD" | "GET",
   timeout: number,
-  mode: RequestMode,
+  mode: RequestMode
 ): Promise<TimedFetchResult> {
   const target = new URL(baseUrl)
   target.searchParams.set("_netdash_ts", Date.now().toString())
@@ -289,14 +294,15 @@ async function timedFetch(
       cache: "no-store",
       signal: controller.signal,
       credentials: "omit",
-      headers: mode === "cors"
-        ? {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-            "User-Agent": "NetworkToolbox/1.0 RTT-Tester",
-          }
-        : undefined,
+      headers:
+        mode === "cors"
+          ? {
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+              "User-Agent": "NetworkToolbox/1.0 RTT-Tester",
+            }
+          : undefined,
     })
     const endTime = performance.now()
 
@@ -347,7 +353,10 @@ function describeRTTError(error: unknown, url: URL, timeout: number): string {
 }
 
 // Enhanced throughput testing with better progress tracking
-export async function testDownloadThroughput(url: string, timeout = 30000): Promise<ThroughputTestResult> {
+export async function testDownloadThroughput(
+  url: string,
+  timeout = 30000
+): Promise<ThroughputTestResult> {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeout)
@@ -419,7 +428,7 @@ export async function testDownloadThroughput(url: string, timeout = 30000): Prom
 export async function testUploadThroughput(
   url: string,
   sizeBytes: number,
-  timeout = 30000,
+  timeout = 30000
 ): Promise<ThroughputTestResult> {
   try {
     // Generate more realistic test data
@@ -478,7 +487,11 @@ export async function testUploadThroughput(
 }
 
 // Enhanced DNS over HTTPS query with better reliability
-export async function queryDNSOverHTTPS(domain: string, recordType = "A", provider = "cloudflare"): Promise<DNSResult> {
+export async function queryDNSOverHTTPS(
+  domain: string,
+  recordType = "A",
+  provider = "cloudflare"
+): Promise<DNSResult> {
   const dohProviders: Record<
     string,
     {
@@ -572,7 +585,9 @@ export async function queryDNSOverHTTPS(domain: string, recordType = "A", provid
           4: "Not Implemented - The name server does not support the requested kind of query",
           5: "Refused - The name server refuses to perform the operation",
         }
-        throw new Error(statusMessages[normalized.Status] || `DNS Error: Status ${normalized.Status}`)
+        throw new Error(
+          statusMessages[normalized.Status] || `DNS Error: Status ${normalized.Status}`
+        )
       }
 
       const records = normalized.Answer.map((answer) => ({
@@ -635,7 +650,12 @@ interface NormalizedDNSResponse {
 }
 
 function normalizeJsonDnsResponse(data: any, fallbackDomain: string): NormalizedDNSResponse {
-  const status = typeof data?.Status === "number" ? data.Status : typeof data?.status === "number" ? data.status : -1
+  const status =
+    typeof data?.Status === "number"
+      ? data.Status
+      : typeof data?.status === "number"
+        ? data.status
+        : -1
   const adFlag = Boolean(data?.AD ?? data?.Ad ?? data?.ad)
 
   const answers: NormalizedDNSAnswer[] = Array.isArray(data?.Answer)
@@ -643,7 +663,7 @@ function normalizeJsonDnsResponse(data: any, fallbackDomain: string): Normalized
         const typeValue =
           typeof record?.type === "number"
             ? record.type
-            : getRecordTypeCode(String(record?.type || "")) ?? 255
+            : (getRecordTypeCode(String(record?.type || "")) ?? 255)
         const ttlValue = Number.parseInt(record?.TTL ?? record?.ttl ?? "0", 10) || 0
         const nameValue = trimTrailingDot(record?.name || record?.Name || fallbackDomain)
         const dataValue = String(record?.data ?? record?.Data ?? record?.value ?? "")
@@ -720,11 +740,7 @@ function encodeDnsQuery(bytes: Uint8Array): string {
     for (const byte of bytes) {
       binary += String.fromCharCode(byte)
     }
-    return window
-      .btoa(binary)
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/g, "")
+    return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
   }
 
   const nodeBuffer = typeof globalThis !== "undefined" ? (globalThis as any).Buffer : undefined
@@ -797,7 +813,11 @@ function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
   }
 }
 
-function readDomainName(message: Uint8Array, offset: number, depth = 0): { name: string; nextOffset: number } {
+function readDomainName(
+  message: Uint8Array,
+  offset: number,
+  depth = 0
+): { name: string; nextOffset: number } {
   if (depth > 10) {
     throw new Error("DNS pointer recursion limit exceeded")
   }
@@ -851,7 +871,12 @@ function readDomainName(message: Uint8Array, offset: number, depth = 0): { name:
   return { name, nextOffset }
 }
 
-function formatRDataFromBytes(type: number, rdata: Uint8Array, message: Uint8Array, rdataOffset: number): string {
+function formatRDataFromBytes(
+  type: number,
+  rdata: Uint8Array,
+  message: Uint8Array,
+  rdataOffset: number
+): string {
   switch (type) {
     case 1: // A
       return Array.from(rdata).join(".")
@@ -861,7 +886,8 @@ function formatRDataFromBytes(type: number, rdata: Uint8Array, message: Uint8Arr
     case 5: // CNAME
     case 12: // PTR
       return readDomainName(message, rdataOffset).name
-    case 15: { // MX
+    case 15: {
+      // MX
       if (rdata.length < 3) {
         return ""
       }
@@ -869,7 +895,8 @@ function formatRDataFromBytes(type: number, rdata: Uint8Array, message: Uint8Arr
       const exchange = readDomainName(message, rdataOffset + 2).name
       return `${preference} ${exchange}`
     }
-    case 16: { // TXT
+    case 16: {
+      // TXT
       const chunks: string[] = []
       let index = 0
       while (index < rdata.length) {
@@ -882,7 +909,8 @@ function formatRDataFromBytes(type: number, rdata: Uint8Array, message: Uint8Arr
       }
       return chunks.join(" ")
     }
-    case 33: { // SRV
+    case 33: {
+      // SRV
       if (rdata.length < 7) {
         return ""
       }
@@ -1012,7 +1040,10 @@ export interface MTUCalculation {
   fragmentationWarning: boolean
 }
 
-export function calculateMTU(linkMTU: number, protocols: Array<{ name: string; size: number }>): MTUCalculation {
+export function calculateMTU(
+  linkMTU: number,
+  protocols: Array<{ name: string; size: number }>
+): MTUCalculation {
   const totalOverhead = protocols.reduce((sum, protocol) => sum + protocol.size, 0)
   const payloadMTU = linkMTU - totalOverhead
 
@@ -1285,7 +1316,8 @@ export function generateEUI64FromMAC(mac: string, prefix: string): string {
   const eui64 = flippedOctet + firstHalf.slice(2) + "FFFE" + secondHalf
 
   // Format as IPv6 interface identifier
-  const iid = `${eui64.slice(0, 4)}:${eui64.slice(4, 8)}:${eui64.slice(8, 12)}:${eui64.slice(12, 16)}`.toLowerCase()
+  const iid =
+    `${eui64.slice(0, 4)}:${eui64.slice(4, 8)}:${eui64.slice(8, 12)}:${eui64.slice(12, 16)}`.toLowerCase()
 
   // Combine with prefix
   const prefixPart = prefix.split("::")[0] || prefix.split("/")[0]

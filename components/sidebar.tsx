@@ -54,19 +54,19 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
   return (
     <div
       className={cn(
-        "bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out",
+        "bg-sidebar border-sidebar-border border-r transition-all duration-300 ease-in-out",
         "fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto",
-        isOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full lg:translate-x-0",
+        isOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full lg:translate-x-0"
       )}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
+        <div className="border-sidebar-border flex items-center justify-between border-b p-4">
           {isOpen && (
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Network className="w-5 h-5 text-primary-foreground" />
+              <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
+                <Network className="text-primary-foreground h-5 w-5" />
               </div>
-              <span className="font-semibold text-sidebar-foreground">NetDash</span>
+              <span className="text-sidebar-foreground font-semibold">NetDash</span>
             </div>
           )}
           <Button
@@ -75,7 +75,7 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
             onClick={onToggle}
             className="text-sidebar-foreground hover:bg-sidebar-accent"
           >
-            <ChevronLeft className={cn("w-4 h-4 transition-transform", !isOpen && "rotate-180")} />
+            <ChevronLeft className={cn("h-4 w-4 transition-transform", !isOpen && "rotate-180")} />
           </Button>
         </div>
 
@@ -89,9 +89,9 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                     key={item.id}
                     variant={activeView === item.id ? "secondary" : "ghost"}
                     className={cn(
-                      "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent",
+                      "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-start",
                       !isOpen && "justify-center px-2",
-                      activeView === item.id && "bg-sidebar-accent text-sidebar-accent-foreground",
+                      activeView === item.id && "bg-sidebar-accent text-sidebar-accent-foreground"
                     )}
                     onClick={() => {
                       onNavigate(item.id)
@@ -100,7 +100,7 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                       }
                     }}
                   >
-                    <Icon className={cn("w-4 h-4", isOpen && "mr-2")} />
+                    <Icon className={cn("h-4 w-4", isOpen && "mr-2")} />
                     {isOpen && <span className="text-sm">{item.label}</span>}
                   </Button>
                 )

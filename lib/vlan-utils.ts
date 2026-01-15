@@ -37,7 +37,10 @@ export function isValidVLANId(id: number): boolean {
 }
 
 // Check for reserved VLAN IDs
-export function isReservedVLAN(id: number, reservedList: number[] = [1, 1002, 1003, 1004, 1005]): boolean {
+export function isReservedVLAN(
+  id: number,
+  reservedList: number[] = [1, 1002, 1003, 1004, 1005]
+): boolean {
   return reservedList.includes(id)
 }
 
@@ -110,11 +113,18 @@ const ipv6CidrRange = (cidr: string): { start: bigint; end: bigint } => {
   return { start: network, end }
 }
 
-const rangesOverlap = <T extends number | bigint>(aStart: T, aEnd: T, bStart: T, bEnd: T): boolean => {
+const rangesOverlap = <T extends number | bigint>(
+  aStart: T,
+  aEnd: T,
+  bStart: T,
+  bEnd: T
+): boolean => {
   return aStart <= bEnd && bStart <= aEnd
 }
 
-export function checkSubnetOverlaps(vlans: VLAN[]): Array<{ vlan1: VLAN; vlan2: VLAN; subnet: string }> {
+export function checkSubnetOverlaps(
+  vlans: VLAN[]
+): Array<{ vlan1: VLAN; vlan2: VLAN; subnet: string }> {
   const overlaps: Array<{ vlan1: VLAN; vlan2: VLAN; subnet: string }> = []
 
   for (let i = 0; i < vlans.length; i++) {
@@ -279,7 +289,7 @@ export function generateSwitchConfig(
   ports: SwitchPort[],
   vendor: "cisco-ios" | "aruba-cx",
   includeGlobalVlans = true,
-  vlans: VLAN[] = [],
+  vlans: VLAN[] = []
 ): string {
   let config = ""
 
@@ -385,5 +395,7 @@ export function exportVLANsToCSV(vlans: VLAN[]): string {
     vlan.description || "",
   ])
 
-  return [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n")
+  return [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join(
+    "\n"
+  )
 }

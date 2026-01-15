@@ -5,7 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -86,38 +92,40 @@ export function DNSTools() {
         <h4 className="font-semibold">Query Results</h4>
         {dnsResults.map((result, index) => (
           <Card key={index} className="p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {result.success ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                 ) : (
-                  <AlertCircle className="w-4 h-4 text-red-600" />
+                  <AlertCircle className="h-4 w-4 text-red-600" />
                 )}
                 <span className="font-mono">{result.domain}</span>
                 <Badge variant="outline">{result.recordType}</Badge>
                 <Badge variant="secondary">{result.provider}</Badge>
                 {result.dnssec && (
                   <Badge variant="outline" className="text-green-600">
-                    <Shield className="w-3 h-3 mr-1" />
+                    <Shield className="mr-1 h-3 w-3" />
                     DNSSEC
                   </Badge>
                 )}
                 {result.success && (
                   <Badge variant="outline" className="text-blue-600">
-                    <Clock className="w-3 h-3 mr-1" />
+                    <Clock className="mr-1 h-3 w-3" />
                     {formatDuration(result.responseTime)}
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground">{new Date(result.timestamp).toLocaleTimeString()}</span>
+              <span className="text-muted-foreground text-xs">
+                {new Date(result.timestamp).toLocaleTimeString()}
+              </span>
             </div>
 
             {result.success ? (
               result.records.length > 0 ? (
                 <div className="space-y-2">
                   {result.records.map((record, recordIndex) => (
-                    <div key={recordIndex} className="p-3 bg-muted/50 rounded-md text-sm">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div key={recordIndex} className="bg-muted/50 rounded-md p-3 text-sm">
+                      <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
                         <div>
                           <span className="text-muted-foreground font-medium">Name:</span>
                           <div className="font-mono text-xs break-all">{record.name}</div>
@@ -139,7 +147,7 @@ export function DNSTools() {
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-md">
+                <div className="text-muted-foreground bg-muted/30 rounded-md p-3 text-sm">
                   No records found for this query
                 </div>
               )
@@ -158,10 +166,12 @@ export function DNSTools() {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-3">
-        <Globe className="w-6 h-6 text-primary" />
+        <Globe className="text-primary h-6 w-6" />
         <div>
           <h1 className="text-2xl font-bold">DNS Tools</h1>
-          <p className="text-muted-foreground">DNS over HTTPS client with multiple provider support</p>
+          <p className="text-muted-foreground">
+            DNS over HTTPS client with multiple provider support
+          </p>
         </div>
       </div>
 
@@ -169,16 +179,17 @@ export function DNSTools() {
         <Alert className="border-green-500/50 bg-green-500/10">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription>
-            <strong>Native Mode:</strong> Running in desktop app with native DNS resolution. Select "Native (System)"
-            provider for direct DNS queries using your system resolver, or use DoH providers for encrypted lookups.
+            <strong>Native Mode:</strong> Running in desktop app with native DNS resolution. Select
+            "Native (System)" provider for direct DNS queries using your system resolver, or use DoH
+            providers for encrypted lookups.
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <Shield className="h-4 w-4" />
           <AlertDescription>
-            <strong>Secure DNS:</strong> All queries use DNS over HTTPS (DoH) for privacy and security. DNSSEC validation
-            is supported where available.
+            <strong>Secure DNS:</strong> All queries use DNS over HTTPS (DoH) for privacy and
+            security. DNSSEC validation is supported where available.
           </AlertDescription>
         </Alert>
       )}
@@ -186,13 +197,15 @@ export function DNSTools() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Search className="w-5 h-5" />
+            <Search className="h-5 w-5" />
             <span>DNS over HTTPS Query</span>
           </CardTitle>
-          <CardDescription>Query DNS records using secure DNS over HTTPS providers with DNSSEC support</CardDescription>
+          <CardDescription>
+            Query DNS records using secure DNS over HTTPS providers with DNSSEC support
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <Label htmlFor="dns-query">Domain Name</Label>
               <Input
@@ -229,9 +242,7 @@ export function DNSTools() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {isNative && (
-                    <SelectItem value="native">Native (System DNS)</SelectItem>
-                  )}
+                  {isNative && <SelectItem value="native">Native (System DNS)</SelectItem>}
                   <SelectItem value="cloudflare">Cloudflare (1.1.1.1)</SelectItem>
                   <SelectItem value="google">Google (8.8.8.8)</SelectItem>
                   <SelectItem value="quad9">Quad9 (9.9.9.9)</SelectItem>
@@ -241,15 +252,19 @@ export function DNSTools() {
               </Select>
             </div>
             <div className="flex items-end">
-              <Button onClick={runDNSQuery} disabled={!dnsQuery.trim() || activeQuery} className="w-full">
+              <Button
+                onClick={runDNSQuery}
+                disabled={!dnsQuery.trim() || activeQuery}
+                className="w-full"
+              >
                 {activeQuery ? (
                   <>
-                    <Activity className="w-4 h-4 mr-2 animate-spin" />
+                    <Activity className="mr-2 h-4 w-4 animate-spin" />
                     Querying...
                   </>
                 ) : (
                   <>
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="mr-2 h-4 w-4" />
                     Query DNS
                   </>
                 )}
@@ -259,7 +274,7 @@ export function DNSTools() {
 
           <Separator />
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-5">
             <Button
               variant="outline"
               size="sm"

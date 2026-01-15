@@ -14,11 +14,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   traceroute: (host: string, options?: { maxHops?: number; timeout?: number }) =>
     ipcRenderer.invoke("network:traceroute", host, options),
 
-  portScan: (
-    host: string,
-    ports: number[],
-    options?: { timeout?: number; concurrent?: number }
-  ) => ipcRenderer.invoke("network:portScan", host, ports, options),
+  portScan: (host: string, ports: number[], options?: { timeout?: number; concurrent?: number }) =>
+    ipcRenderer.invoke("network:portScan", host, ports, options),
 
   dnsLookup: (hostname: string, options?: { server?: string; type?: string }) =>
     ipcRenderer.invoke("network:dnsLookup", hostname, options),
@@ -38,10 +35,7 @@ declare global {
       getVersion: () => Promise<string>
       getPlatform: () => Promise<string>
       isElectron: () => Promise<boolean>
-      ping: (
-        host: string,
-        options?: { timeout?: number; count?: number }
-      ) => Promise<PingResult>
+      ping: (host: string, options?: { timeout?: number; count?: number }) => Promise<PingResult>
       traceroute: (
         host: string,
         options?: { maxHops?: number; timeout?: number }

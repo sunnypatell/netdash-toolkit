@@ -36,7 +36,11 @@ export interface VLSMPlan {
   errorMessage?: string
 }
 
-export function calculateVLSM(baseNetwork: string, basePrefix: number, requirements: VLSMRequirement[]): VLSMPlan {
+export function calculateVLSM(
+  baseNetwork: string,
+  basePrefix: number,
+  requirements: VLSMRequirement[]
+): VLSMPlan {
   try {
     // Validate base network
     const baseSubnet = calculateIPv4Subnet(baseNetwork, basePrefix)
@@ -158,7 +162,7 @@ export function calculateVLSM(baseNetwork: string, basePrefix: number, requireme
 }
 
 export function generateVLSMHeatmap(
-  plan: VLSMPlan,
+  plan: VLSMPlan
 ): Array<{ start: number; end: number; name: string; color: string }> {
   if (!plan.success) return []
 
