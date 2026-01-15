@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/sunnypatell/netdash-toolkit/discussions
+    about: Ask questions, share ideas, and connect with the community
+  - name: Security Vulnerabilities
+    url: https://github.com/sunnypatell/netdash-toolkit/security/advisories/new
+    about: Report security vulnerabilities privately (do not create public issues for security concerns)
+  - name: Stack Overflow
+    url: https://stackoverflow.com/questions/tagged/netdash
+    about: Search for answers or ask questions on Stack Overflow
