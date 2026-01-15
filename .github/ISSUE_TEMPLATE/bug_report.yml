@@ -1,0 +1,139 @@
+name: Bug Report
+description: Report a bug or unexpected behavior in NetDash Toolkit
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees:
+  - sunnypatell
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate and fix the issue.
+
+  - type: checkboxes
+    id: existing-issue
+    attributes:
+      label: Is there an existing issue for this?
+      description: Please search to see if an issue already exists for the bug you encountered.
+      options:
+        - label: I have searched the existing issues and found no duplicates
+          required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which platform are you using?
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux (AppImage)
+        - Linux (Debian/Ubuntu)
+        - Web Browser
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app-version
+    attributes:
+      label: App Version
+      description: Which version of NetDash Toolkit are you using?
+      options:
+        - v1.0.0
+        - Development Build
+        - Web Version
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Affected Tool
+      description: Which tool is affected by this bug?
+      options:
+        - Ping Tool
+        - Traceroute
+        - Port Scanner
+        - DNS Lookup
+        - Subnet Calculator
+        - VLSM Planner
+        - VLAN Manager
+        - IP Conflict Checker
+        - Network Topology Mapper
+        - Bandwidth Monitor
+        - Other / Multiple Tools
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: When I click on the ping tool and enter an IP address...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The tool should have displayed ping results with latency...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Instead, I received an error message saying...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this bug?
+      placeholder: |
+        1. Open the application
+        2. Navigate to Ping Tool
+        3. Enter '8.8.8.8' as the target
+        4. Click 'Start Ping'
+        5. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: If applicable, paste any error messages or console output.
+      render: shell
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain the problem.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Details
+      description: Any additional environment information that might be relevant.
+      placeholder: |
+        - OS Version: macOS 14.2
+        - Browser (if web): Chrome 120
+        - Network: Corporate VPN
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
