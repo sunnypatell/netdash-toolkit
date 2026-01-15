@@ -30,6 +30,8 @@ import {
   Router,
 } from "lucide-react"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 import {
   validateVLAN,
   checkSubnetOverlaps,
@@ -287,6 +289,22 @@ export function VLANManager() {
     }
   }
 
+  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+    const savedVlans = data.vlans as VLAN[] | undefined
+    const savedPorts = data.ports as SwitchPort[] | undefined
+    const savedVendor = data.vendor as "cisco-ios" | "aruba-cx" | undefined
+
+    if (savedVlans) {
+      setVlans(savedVlans)
+    }
+    if (savedPorts) {
+      setPorts(savedPorts)
+    }
+    if (savedVendor) {
+      setSelectedVendor(savedVendor)
+    }
+  }
+
   const overlaps = checkSubnetOverlaps(vlans)
 
   return (
@@ -302,6 +320,7 @@ export function VLANManager() {
           </div>
         </div>
         <div className="flex space-x-2">
+          <LoadFromProject itemType="vlan" onLoad={handleLoadFromProject} />
           <Button variant="outline" onClick={loadSampleConfig}>
             Load Sample
           </Button>

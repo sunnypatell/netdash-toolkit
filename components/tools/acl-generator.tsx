@@ -31,6 +31,8 @@ import {
   Settings,
 } from "lucide-react"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 import { calculateIPv4Subnet, isValidIPv4 } from "@/lib/network-utils"
 import { useToast } from "@/hooks/use-toast"
 
@@ -845,17 +847,45 @@ export function ACLGenerator() {
 
   const currentRules = aclType === "standard" ? standardRules : extendedRules
 
+  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+    const savedAclName = data.aclName as string | undefined
+    const savedAclType = data.aclType as "standard" | "extended" | undefined
+    const savedPlatform = data.platform as string | undefined
+    const savedRules = data.rules as StandardACLRule[] | ExtendedACLRule[] | undefined
+
+    if (savedAclName) {
+      setAclName(savedAclName)
+    }
+    if (savedAclType) {
+      setAclType(savedAclType)
+      if (savedRules) {
+        if (savedAclType === "standard") {
+          setStandardRules(savedRules as StandardACLRule[])
+        } else {
+          setExtendedRules(savedRules as ExtendedACLRule[])
+        }
+      }
+    }
+    if (savedPlatform) {
+      setPlatform(savedPlatform)
+    }
+    setValidationResults([])
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Shield className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">Enhanced ACL Generator</h1>
-          <p className="text-muted-foreground">
-            Generate Standard and Extended Access Control Lists with advanced features and
-            validation
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Shield className="text-primary h-6 w-6" />
+          <div>
+            <h1 className="text-2xl font-bold">Enhanced ACL Generator</h1>
+            <p className="text-muted-foreground">
+              Generate Standard and Extended Access Control Lists with advanced features and
+              validation
+            </p>
+          </div>
         </div>
+        <LoadFromProject itemType="acl" onLoad={handleLoadFromProject} />
       </div>
 
       <Tabs

@@ -20,6 +20,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Copy, Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 import { ResultCard } from "@/components/ui/result-card"
 import {
   calculateIPv4Subnet,
@@ -654,17 +656,41 @@ export function RoutingTools() {
     },
   ]
 
+  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+    const protocol = data.protocol as string | undefined
+
+    if (protocol === "ospf") {
+      const config = data.config as OSPFConfig | undefined
+      if (config) {
+        setOspfConfig(config)
+      }
+    } else if (protocol === "eigrp") {
+      const config = data.config as EIGRPConfig | undefined
+      if (config) {
+        setEigrpConfig(config)
+      }
+    } else if (protocol === "static") {
+      const routes = data.routes as StaticRoute[] | undefined
+      if (routes) {
+        setStaticRoutes(routes)
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Router className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">Routing Tools</h1>
-          <p className="text-muted-foreground">
-            Configure and generate routing protocols, static routes, and understand administrative
-            distances
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <Router className="text-primary h-6 w-6" />
+          <div>
+            <h1 className="text-2xl font-bold">Routing Tools</h1>
+            <p className="text-muted-foreground">
+              Configure and generate routing protocols, static routes, and understand administrative
+              distances
+            </p>
+          </div>
         </div>
+        <LoadFromProject itemType="routing" onLoad={handleLoadFromProject} />
       </div>
 
       <Tabs defaultValue="ospf" className="space-y-4">

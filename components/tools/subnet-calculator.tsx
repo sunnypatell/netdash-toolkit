@@ -8,6 +8,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calculator, Download, Info } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 import { ResultCard } from "@/components/ui/result-card"
 import {
   calculateIPv4Subnet,
@@ -109,6 +111,27 @@ export function SubnetCalculator() {
     return badges
   }
 
+  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+    const input = data.input as { address: string; prefix: string } | undefined
+    const version = data.version as string | undefined
+    const results = data.results as IPv4Result | IPv6Result | undefined
+
+    if (input && results) {
+      if (version === "ipv4") {
+        setIpv4Address(input.address)
+        setIpv4Prefix(input.prefix)
+        setIpv4Results(results as IPv4Result)
+        setIpv6Results(null)
+      } else if (version === "ipv6") {
+        setIpv6Address(input.address)
+        setIpv6Prefix(input.prefix)
+        setIpv6Results(results as IPv6Result)
+        setIpv4Results(null)
+      }
+      setError("")
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
@@ -122,6 +145,7 @@ export function SubnetCalculator() {
           </div>
         </div>
         <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+          <LoadFromProject itemType="subnet" onLoad={handleLoadFromProject} size="sm" />
           <Button
             variant="outline"
             size="sm"

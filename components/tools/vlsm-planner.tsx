@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network, Plus, Trash2, Download, BarChart3, AlertCircle, CheckCircle } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 import { calculateVLSM, generateVLSMHeatmap, exportVLSMPlan } from "@/lib/vlsm-utils"
 import type { VLSMRequirement, VLSMPlan } from "@/lib/vlsm-utils"
 
@@ -109,6 +111,22 @@ export function VLSMPlanner() {
     }
   }
 
+  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+    const savedBaseNetwork = data.baseNetwork as string | undefined
+    const savedBasePrefix = data.basePrefix as number | undefined
+    const savedRequirements = data.requirements as VLSMRequirement[] | undefined
+    const savedPlan = data.plan as VLSMPlan | undefined
+
+    if (savedBaseNetwork && savedBasePrefix !== undefined && savedRequirements) {
+      setBaseNetwork(savedBaseNetwork)
+      setBasePrefix(savedBasePrefix.toString())
+      setRequirements(savedRequirements)
+      if (savedPlan) {
+        setPlan(savedPlan)
+      }
+    }
+  }
+
   const heatmapData = plan ? generateVLSMHeatmap(plan) : []
 
   return (
@@ -124,6 +142,7 @@ export function VLSMPlanner() {
           </div>
         </div>
         <div className="flex space-x-2">
+          <LoadFromProject itemType="vlsm" onLoad={handleLoadFromProject} />
           <Button variant="outline" onClick={loadSamplePlan}>
             Load Sample
           </Button>
