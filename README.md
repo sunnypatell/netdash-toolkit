@@ -16,6 +16,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
+[![CI](https://img.shields.io/github/actions/workflow/status/sunnypatell/netdash-toolkit/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sunnypatell/netdash-toolkit/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 [![Maintenance](https://img.shields.io/badge/Maintained-yes-green?style=flat-square)](https://github.com/sunnypatell/netdash-toolkit/graphs/commit-activity)

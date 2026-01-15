@@ -1,0 +1,15 @@
+# Default owner for everything
+* @sunnypatell
+
+# Frontend components
+/components/ @sunnypatell
+/app/ @sunnypatell
+
+# Core networking logic
+/lib/ @sunnypatell
+
+# Electron desktop app
+/electron/ @sunnypatell
+
+# CI/CD and infrastructure
+/.github/ @sunnypatell

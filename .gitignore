@@ -44,4 +44,6 @@ next-env.d.ts
 *.AppImage
 *.deb
 *.snap
-.vscode/
+# vscode - keep extensions.json for contributors
+.vscode/*
+!.vscode/extensions.json
