@@ -134,32 +134,37 @@ const features = [
   {
     title: "OUI Lookup",
     description:
-      "Live IEEE OUI database integration using macvendors.com API with 18,000+ vendor records. Implements rate-limited bulk processing, real-time vendor lookups, and comprehensive MAC address format support with detailed error handling.",
+      "Live IEEE OUI database integration using macvendors.com API for real-time vendor identification. Implements rate-limited bulk processing with local fallback database, comprehensive MAC address format support, and detailed error handling.",
     icon: Zap,
-    capabilities: ["Live API integration", "18,000+ vendors", "Bulk processing", "Rate limiting"],
+    capabilities: [
+      "Live API integration",
+      "Vendor identification",
+      "Bulk processing",
+      "Rate limiting",
+    ],
   },
   {
     title: "Port Scanner",
     description:
-      "Browser-based port connectivity testing using WebSocket and HTTP probes. Implements concurrent scanning with configurable timeouts, service detection, and comprehensive port status reporting for network security assessment.",
+      "Network port connectivity testing using TCP socket connections (desktop) and HTTP probes (browser). Implements concurrent scanning with configurable timeouts, service detection, and comprehensive port status reporting for network security assessment.",
     icon: Shield,
     capabilities: [
-      "Concurrent scanning",
+      "TCP socket scanning",
       "Service detection",
       "Timeout handling",
       "Security assessment",
     ],
   },
   {
-    title: "Project Management",
+    title: "Network Analyzer",
     description:
-      "Client-side encrypted storage using AES-GCM with PBKDF2 key derivation. Implements JSON schema versioning with SHA-256 integrity hashing, IndexedDB persistence, and secure import/export with password-based encryption.",
+      "Comprehensive network interface analysis with real-time statistics, traffic monitoring, and protocol breakdown. Provides detailed metrics on network performance, interface status, and connection health for troubleshooting.",
     icon: Shield,
     capabilities: [
-      "AES-GCM encryption",
-      "PBKDF2 key derivation",
-      "Schema versioning",
-      "Integrity validation",
+      "Interface analysis",
+      "Traffic monitoring",
+      "Protocol breakdown",
+      "Performance metrics",
     ],
   },
   {
@@ -188,12 +193,12 @@ const technicalHighlights = [
   "Real-time network testing with animated results and comprehensive error handling",
   "Enhanced parsing engines supporting 15+ network data formats from major vendors",
   "Live API integrations with rate limiting and fallback mechanisms for reliability",
-  "IndexedDB with AES-GCM encryption using Web Crypto API for secure local storage",
-  "PWA with service worker caching and offline-first architecture for reliability",
+  "Electron desktop app with native TCP socket access for real network operations",
   "WCAG 2.2 AA accessibility with semantic HTML, ARIA labels, and keyboard navigation",
-  "CSP with script-src 'self' and strict security policies preventing XSS attacks",
   "Performance optimized for 50k+ IP/subnet operations using efficient data structures",
   "Responsive design with CSS Grid/Flexbox and comprehensive dark/light theme support",
+  "Multi-vendor configuration generators for Cisco, Juniper, and Palo Alto platforms",
+  "RFC-compliant implementations for IPv4/IPv6 subnetting, DNS-over-HTTPS, and more",
 ]
 
 const algorithmDetails = [
@@ -223,7 +228,7 @@ const recentImprovements = [
   "Desktop navigation now defaults to an expanded state on larger screens while staying collapsible on mobile.",
   "IPv4 wildcard and subnet validators reject discontiguous masks across routing and ACL tooling with inline guidance.",
   "Enhanced IP Conflict Checker with support for DHCP leases, MAC tables, and 15+ network data formats",
-  "Real-time OUI Lookup integration with macvendors.com API and 18,000+ vendor database",
+  "Real-time OUI Lookup integration with macvendors.com API for vendor identification",
   "Improved search functionality with dynamic filtering and consistent tool counts",
   "Fixed all sample data loading across tools with proper error handling and debugging",
   "Enhanced copy-to-clipboard functionality with visual feedback and error handling",
