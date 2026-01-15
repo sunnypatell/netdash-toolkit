@@ -110,7 +110,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.60.0",
     "react-resizable-panels": "^2.1.7",
-    "recharts": "2.15.4",
+    "recharts": "3.6.0",
     "serve-handler": "^6.1.6",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
