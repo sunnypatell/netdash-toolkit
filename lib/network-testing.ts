@@ -1221,7 +1221,6 @@ const ouiDatabase: Record<string, string> = {
   // Intel
   "00:1B:21": "Intel Corporation",
   "AC:DE:48": "Intel Corporation",
-  "E4:5F:01": "Intel Corporation",
   "00:13:02": "Intel Corporation",
   "00:15:17": "Intel Corporation",
   "00:16:76": "Intel Corporation",

@@ -484,10 +484,6 @@ export function About() {
                           <Badge variant={getVersionBadgeVariant(release.type)}>
                             {release.type}
                           </Badge>
-                          <div className="text-muted-foreground flex items-center gap-1 text-sm">
-                            <Clock className="h-3 w-3" />
-                            {release.date}
-                          </div>
                         </div>
 
                         <h4 className="text-foreground font-medium">{release.title}</h4>

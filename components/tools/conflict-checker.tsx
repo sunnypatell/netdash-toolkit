@@ -60,7 +60,7 @@ export function ConflictChecker() {
           ip: entry.ip,
           mac: entry.mac,
           interface: entry.interface,
-          source: "Native ARP Scan",
+          source: "arp" as const,
           type: "arp" as const,
         }))
 

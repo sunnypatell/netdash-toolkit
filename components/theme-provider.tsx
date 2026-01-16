@@ -1,12 +1,20 @@
 "use client"
 
-import * as React from "react"
-import { ThemeProvider as NextThemesProvider, type ThemeProviderProps } from "next-themes"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const Provider = NextThemesProvider as any
+
+export function ThemeProvider({
+  children,
+  ...props
+}: {
+  children: React.ReactNode
+  [key: string]: unknown
+}) {
   // Ensure consistent theming by defaulting to class-based dark mode
   return (
-    <NextThemesProvider
+    <Provider
       attribute="class"
       defaultTheme="system"
       enableSystem
@@ -14,6 +22,6 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       {...props}
     >
       {children}
-    </NextThemesProvider>
+    </Provider>
   )
 }

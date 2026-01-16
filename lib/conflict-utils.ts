@@ -196,7 +196,7 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
   // Check for conflicts
   for (const [mac, macEntries] of macMap) {
     if (macEntries.length > 1) {
-      const uniqueIPs = macEntries.map((e) => e.ip).filter(Boolean)
+      const uniqueIPs = macEntries.map((e) => e.ip).filter((ip): ip is string => !!ip)
 
       if (uniqueIPs.length > 1) {
         // Check if IPs are in the same subnet (potential conflict)
@@ -358,7 +358,10 @@ export function exportConflictsToCSV(conflicts: Conflict[]): string {
   const rows = conflicts.map((conflict) => {
     const ip = "ip" in conflict ? conflict.ip : ""
     const mac = "mac" in conflict ? conflict.mac : ""
-    const sources = conflict.entries.map((e) => e.source).join("; ")
+    const sources =
+      "entries" in conflict
+        ? conflict.entries.map((e: ConflictEntry) => e.source).join("; ")
+        : [conflict.staticEntry.source, conflict.dhcpEntry.source].join("; ")
     const remediation = conflict.remediation.join("; ")
 
     return [conflict.type, conflict.severity, conflict.description, ip, mac, sources, remediation]

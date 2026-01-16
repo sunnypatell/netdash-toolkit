@@ -116,25 +116,31 @@ export function NetworkTester() {
         })
 
         if (nativeResult) {
+          const sortedTimes = [...nativeResult.times].sort((a, b) => a - b)
+          const jitter =
+            nativeResult.times.length > 1
+              ? Math.sqrt(
+                  nativeResult.times.reduce(
+                    (sum, t) => sum + Math.pow(t - nativeResult.avg, 2),
+                    0
+                  ) / nativeResult.times.length
+                )
+              : 0
           const result: RTTTestResult = {
             url: host,
-            method: "ICMP" as any,
-            samples: nativeResult.times.length,
-            timestamps: nativeResult.times.map((_, i) => Date.now() - (samples - i) * 100),
-            latencies: nativeResult.times,
+            requestedMethod: "HEAD",
+            method: "ICMP",
+            mode: "cors",
+            samples: nativeResult.times,
+            median: sortedTimes[Math.floor(sortedTimes.length / 2)] || 0,
+            p95: sortedTimes[Math.floor(sortedTimes.length * 0.95)] || nativeResult.max,
             average: nativeResult.avg,
             min: nativeResult.min,
             max: nativeResult.max,
-            jitter:
-              nativeResult.times.length > 1
-                ? Math.sqrt(
-                    nativeResult.times.reduce(
-                      (sum, t) => sum + Math.pow(t - nativeResult.avg, 2),
-                      0
-                    ) / nativeResult.times.length
-                  )
-                : 0,
+            jitter,
             packetLoss: nativeResult.packetLoss,
+            success: nativeResult.times.length > 0,
+            timestamp: Date.now(),
           }
           setRttResults([result, ...rttResults.slice(0, 9)])
         }

@@ -26,6 +26,7 @@ export interface ProjectItem {
     | "acl"
     | "dns"
     | "route"
+    | "routing"
     | "mtu"
     | "ipv6"
     | "conflict"
