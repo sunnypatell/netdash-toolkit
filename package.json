@@ -1,6 +1,6 @@
 {
   "name": "netdash-toolkit",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "description": "Professional network engineering toolkit with real networking capabilities - featuring subnet calculations, VLSM planning, VLAN management, real ICMP ping, traceroute, and port scanning",
   "author": {

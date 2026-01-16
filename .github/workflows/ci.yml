@@ -14,8 +14,8 @@ env:
   NODE_VERSION: "20"
 
 jobs:
-  quality:
-    name: Code Quality
+  format:
+    name: Format Check
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -38,17 +38,58 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
+  lint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Run ESLint
         run: pnpm lint
 
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
       - name: Run TypeScript
         run: pnpm typecheck
-        continue-on-error: true
 
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [quality]
+    needs: [format, lint, typecheck]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

@@ -4,15 +4,17 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import {
   collection,
   doc,
-  getDocs,
   setDoc,
   deleteDoc,
   query,
   orderBy,
   onSnapshot,
+  getDoc,
 } from "firebase/firestore"
 import { db, isFirebaseConfigured } from "@/lib/firebase"
 import { useAuth } from "./auth-context"
+import { updateUserIndex, subscribeToSharedProjects } from "@/lib/sharing"
+import type { ShareEntry, ProjectShare, Permission } from "@/types/sharing"
 
 // Types for project items
 export interface ProjectItem {
@@ -46,10 +48,23 @@ export interface Project {
   createdAt: number
   updatedAt: number
   tags: string[]
+  // Sharing fields
+  ownerId?: string
+  ownerEmail?: string
+  sharedWith?: Record<string, ShareEntry>
+  isShared?: boolean
+}
+
+// Shared project with permission info
+export interface SharedProject extends Project {
+  permission: Permission
+  projectPath: string
+  ownerEmail: string
 }
 
 interface ProjectContextType {
   projects: Project[]
+  sharedProjects: SharedProject[]
   loading: boolean
   syncing: boolean
   syncEnabled: boolean
@@ -65,6 +80,16 @@ interface ProjectContextType {
   exportProject: (project: Project) => void
   exportAllProjects: () => void
   importProjects: (jsonString: string) => Promise<number>
+  // Sharing helpers
+  isProjectOwner: (project: Project) => boolean
+  canEditProject: (project: Project | SharedProject) => boolean
+  getSharedProjectById: (id: string) => SharedProject | undefined
+  updateSharedProject: (projectPath: string, updates: Partial<Project>) => Promise<void>
+  addItemToSharedProject: (
+    projectPath: string,
+    item: Omit<ProjectItem, "id" | "createdAt">
+  ) => Promise<void>
+  removeItemFromSharedProject: (projectPath: string, itemId: string) => Promise<void>
 }
 
 const STORAGE_KEY = "netdash-projects"
@@ -79,6 +104,7 @@ const generateId = (): string => {
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
+  const [sharedProjects, setSharedProjects] = useState<SharedProject[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const syncEnabled = !!(user && isFirebaseConfigured() && db)
@@ -108,13 +134,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [projects, loading])
 
-  // Update user profile document for easier identification in Firebase Console
+  // Update user profile and user index for sharing
   useEffect(() => {
     if (!syncEnabled || !db || !user) return
 
     const firestore = db // Capture non-null reference
-    const updateUserProfile = async () => {
+    const updateUserData = async () => {
       try {
+        // Update user profile document
         const userRef = doc(firestore, "users", user.uid)
         await setDoc(
           userRef,
@@ -127,47 +154,55 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           },
           { merge: true }
         )
+
+        // Update user index for email-based search
+        if (user.email) {
+          await updateUserIndex(user.uid, user.email, user.displayName, user.photoURL)
+        }
       } catch (error) {
-        console.error("Failed to update user profile:", error)
+        console.error("Failed to update user data:", error)
       }
     }
 
-    updateUserProfile()
+    updateUserData()
   }, [user, syncEnabled])
 
-  // Sync with Firestore when user is logged in
+  // Sync own projects with Firestore
   useEffect(() => {
     if (!syncEnabled || !db || !user) {
       return
     }
 
+    const firestore = db // Capture non-null reference for callbacks
     setSyncing(true)
 
-    const projectsRef = collection(db, "users", user.uid, "projects")
+    const projectsRef = collection(firestore, "users", user.uid, "projects")
     const q = query(projectsRef, orderBy("updatedAt", "desc"))
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const cloudProjects: Project[] = []
-        snapshot.forEach((doc) => {
-          cloudProjects.push({ id: doc.id, ...doc.data() } as Project)
+        snapshot.forEach((docSnap) => {
+          cloudProjects.push({ id: docSnap.id, ...docSnap.data() } as Project)
         })
 
         // Merge cloud projects with local projects
-        // Cloud takes precedence for existing projects
-        const localProjectIds = new Set(projects.map((p) => p.id))
         const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
 
         // Find local-only projects to upload
         const localOnlyProjects = projects.filter((p) => !cloudProjectIds.has(p.id))
 
-        // Upload local-only projects to cloud
-        if (localOnlyProjects.length > 0) {
+        // Upload local-only projects to cloud with owner info
+        if (localOnlyProjects.length > 0 && user.email) {
           localOnlyProjects.forEach(async (project) => {
             try {
-              const projectRef = doc(db, "users", user.uid, "projects", project.id)
-              await setDoc(projectRef, project)
+              const projectRef = doc(firestore, "users", user.uid, "projects", project.id)
+              await setDoc(projectRef, {
+                ...project,
+                ownerId: user.uid,
+                ownerEmail: user.email,
+              })
             } catch (error) {
               console.error("Failed to upload local project to cloud:", error)
             }
@@ -191,6 +226,44 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe()
   }, [user, syncEnabled])
 
+  // Subscribe to projects shared with the current user
+  useEffect(() => {
+    if (!syncEnabled || !db || !user) {
+      setSharedProjects([])
+      return
+    }
+
+    const firestore = db
+    const unsubscribe = subscribeToSharedProjects(user.uid, async (shares: ProjectShare[]) => {
+      // Load full project data for each share
+      const loadedProjects: SharedProject[] = []
+
+      for (const share of shares) {
+        try {
+          const projectRef = doc(firestore, share.projectPath)
+          const projectSnap = await getDoc(projectRef)
+
+          if (projectSnap.exists()) {
+            const projectData = projectSnap.data() as Project
+            loadedProjects.push({
+              ...projectData,
+              id: projectSnap.id,
+              permission: share.permission,
+              projectPath: share.projectPath,
+              ownerEmail: share.ownerEmail,
+            })
+          }
+        } catch (error) {
+          console.error(`Failed to load shared project ${share.projectId}:`, error)
+        }
+      }
+
+      setSharedProjects(loadedProjects.sort((a, b) => b.updatedAt - a.updatedAt))
+    })
+
+    return () => unsubscribe()
+  }, [user, syncEnabled])
+
   // Save project to Firestore
   const saveToCloud = useCallback(
     async (project: Project) => {
@@ -198,7 +271,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       try {
         const projectRef = doc(db, "users", user.uid, "projects", project.id)
-        await setDoc(projectRef, project)
+        await setDoc(projectRef, {
+          ...project,
+          ownerId: project.ownerId || user.uid,
+          ownerEmail: project.ownerEmail || user.email,
+        })
       } catch (error) {
         console.error("Failed to save project to cloud:", error)
       }
@@ -230,6 +307,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       id: generateId(),
       createdAt: now,
       updatedAt: now,
+      ownerId: user?.uid,
+      ownerEmail: user?.email || undefined,
     }
 
     setProjects((prev) => [newProject, ...prev])
@@ -303,6 +382,153 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return projects.find((p) => p.id === id)
   }
 
+  const getSharedProjectById = (id: string) => {
+    return sharedProjects.find((p) => p.id === id)
+  }
+
+  // Check if current user owns the project
+  const isProjectOwner = (project: Project): boolean => {
+    if (!user) return false
+    // If no ownerId set, assume current user owns it (legacy projects)
+    return !project.ownerId || project.ownerId === user.uid
+  }
+
+  // Check if current user can edit the project
+  const canEditProject = (project: Project | SharedProject): boolean => {
+    if (!user) return false
+
+    // Owner can always edit
+    if (!project.ownerId || project.ownerId === user.uid) {
+      return true
+    }
+
+    // Check if it's a shared project with edit permission
+    if ("permission" in project) {
+      return project.permission === "edit" || project.permission === "admin"
+    }
+
+    // Check sharedWith map
+    if (project.sharedWith && project.sharedWith[user.uid]) {
+      const permission = project.sharedWith[user.uid].permission
+      return permission === "edit" || permission === "admin"
+    }
+
+    return false
+  }
+
+  // Update a shared project
+  const updateSharedProject = async (projectPath: string, updates: Partial<Project>) => {
+    if (!db) return
+
+    try {
+      const projectRef = doc(db, projectPath)
+      await setDoc(
+        projectRef,
+        {
+          ...updates,
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      )
+
+      // Update local state
+      setSharedProjects((prev) =>
+        prev.map((p) => {
+          if (p.projectPath === projectPath) {
+            return { ...p, ...updates, updatedAt: Date.now() }
+          }
+          return p
+        })
+      )
+    } catch (error) {
+      console.error("Failed to update shared project:", error)
+      throw error
+    }
+  }
+
+  // Add item to a shared project
+  const addItemToSharedProject = async (
+    projectPath: string,
+    item: Omit<ProjectItem, "id" | "createdAt">
+  ) => {
+    if (!db) return
+
+    const project = sharedProjects.find((p) => p.projectPath === projectPath)
+    if (!project) return
+
+    const newItem: ProjectItem = {
+      ...item,
+      id: generateId(),
+      createdAt: Date.now(),
+    }
+
+    try {
+      const projectRef = doc(db, projectPath)
+      await setDoc(
+        projectRef,
+        {
+          items: [...project.items, newItem],
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      )
+
+      // Update local state
+      setSharedProjects((prev) =>
+        prev.map((p) => {
+          if (p.projectPath === projectPath) {
+            return {
+              ...p,
+              items: [...p.items, newItem],
+              updatedAt: Date.now(),
+            }
+          }
+          return p
+        })
+      )
+    } catch (error) {
+      console.error("Failed to add item to shared project:", error)
+      throw error
+    }
+  }
+
+  // Remove item from a shared project
+  const removeItemFromSharedProject = async (projectPath: string, itemId: string) => {
+    if (!db) return
+
+    const project = sharedProjects.find((p) => p.projectPath === projectPath)
+    if (!project) return
+
+    try {
+      const projectRef = doc(db, projectPath)
+      await setDoc(
+        projectRef,
+        {
+          items: project.items.filter((item) => item.id !== itemId),
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      )
+
+      // Update local state
+      setSharedProjects((prev) =>
+        prev.map((p) => {
+          if (p.projectPath === projectPath) {
+            return {
+              ...p,
+              items: p.items.filter((item) => item.id !== itemId),
+              updatedAt: Date.now(),
+            }
+          }
+          return p
+        })
+      )
+    } catch (error) {
+      console.error("Failed to remove item from shared project:", error)
+      throw error
+    }
+  }
+
   const exportProject = (project: Project) => {
     const dataStr = JSON.stringify(project, null, 2)
     const blob = new Blob([dataStr], { type: "application/json" })
@@ -349,6 +575,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         id: generateId(),
         createdAt: p.createdAt || now,
         updatedAt: now,
+        ownerId: user?.uid,
+        ownerEmail: user?.email || undefined,
       }))
 
       setProjects((prev) => [...processedProjects, ...prev])
@@ -369,6 +597,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     <ProjectContext.Provider
       value={{
         projects,
+        sharedProjects,
         loading,
         syncing,
         syncEnabled,
@@ -381,6 +610,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         exportProject,
         exportAllProjects,
         importProjects,
+        isProjectOwner,
+        canEditProject,
+        getSharedProjectById,
+        updateSharedProject,
+        addItemToSharedProject,
+        removeItemFromSharedProject,
       }}
     >
       {children}

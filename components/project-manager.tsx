@@ -60,10 +60,20 @@ import {
   CloudOff,
   Loader2,
   Wifi,
+  Share2,
+  Users,
+  Eye,
+  Crown,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useProjects, type ProjectItem, type Project } from "@/contexts/project-context"
+import {
+  useProjects,
+  type ProjectItem,
+  type Project,
+  type SharedProject,
+} from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
+import { ShareProjectDialog } from "@/components/ui/share-project-dialog"
 
 // Helper to format dates
 const formatDate = (timestamp: number) => {
@@ -120,6 +130,7 @@ export function ProjectManager() {
   const { toast } = useToast()
   const {
     projects,
+    sharedProjects,
     loading,
     syncing,
     syncEnabled,
@@ -131,13 +142,18 @@ export function ProjectManager() {
     exportProject,
     exportAllProjects,
     importProjects,
+    isProjectOwner,
+    canEditProject,
   } = useProjects()
   const { user, isConfigured, signInWithGoogle } = useAuth()
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [selectedSharedProject, setSelectedSharedProject] = useState<SharedProject | null>(null)
+  const [projectsTab, setProjectsTab] = useState<"my" | "shared">("my")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false)
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
   // Form states
@@ -154,6 +170,16 @@ export function ProjectManager() {
   const currentProject = selectedProject
     ? projects.find((p) => p.id === selectedProject.id) || null
     : null
+
+  // Update selected shared project when shared projects change
+  const currentSharedProject = selectedSharedProject
+    ? sharedProjects.find((p) => p.id === selectedSharedProject.id) || null
+    : null
+
+  // Get the active project (either own or shared)
+  const activeProject = projectsTab === "my" ? currentProject : currentSharedProject
+  const canEdit = activeProject ? canEditProject(activeProject) : false
+  const isOwner = activeProject ? isProjectOwner(activeProject) : false
 
   // Create a new project
   const handleCreateProject = async () => {
@@ -372,10 +398,10 @@ export function ProjectManager() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Projects List */}
         <Card className="lg:col-span-1">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Projects</CardTitle>
-              <div className="flex items-center space-x-2">
+              {projectsTab === "my" && (
                 <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm">
@@ -427,45 +453,134 @@ export function ProjectManager() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </div>
+              )}
             </div>
-            <CardDescription>
-              {projects.length} project{projects.length !== 1 ? "s" : ""}
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px]">
-              {projects.length === 0 ? (
+            {/* Tabs for My Projects vs Shared */}
+            {sharedProjects.length > 0 || syncEnabled ? (
+              <Tabs
+                value={projectsTab}
+                onValueChange={(v) => setProjectsTab(v as "my" | "shared")}
+                className="mb-4"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="my" className="gap-1">
+                    <Crown className="h-3 w-3" />
+                    My Projects ({projects.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="shared" className="gap-1">
+                    <Users className="h-3 w-3" />
+                    Shared ({sharedProjects.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            ) : null}
+
+            <ScrollArea className="h-[350px]">
+              {projectsTab === "my" ? (
+                projects.length === 0 ? (
+                  <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
+                    <FolderPlus className="mb-2 h-12 w-12 opacity-50" aria-hidden="true" />
+                    <p className="text-sm">No projects yet</p>
+                    <p className="text-xs">Create a new project to get started</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {projects.map((project) => (
+                      <div
+                        key={project.id}
+                        className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+                          currentProject?.id === project.id
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        }`}
+                        onClick={() => {
+                          setSelectedProject(project)
+                          setSelectedSharedProject(null)
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => e.key === "Enter" && setSelectedProject(project)}
+                        aria-label={`Select project: ${project.name}`}
+                        aria-pressed={currentProject?.id === project.id}
+                      >
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">{project.name}</h4>
+                          <div className="flex items-center gap-2">
+                            {project.isShared && (
+                              <Badge variant="outline" className="gap-1 text-xs">
+                                <Share2 className="h-3 w-3" />
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="text-xs">
+                              {project.items.length} items
+                            </Badge>
+                          </div>
+                        </div>
+                        {project.description && (
+                          <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                            {project.description}
+                          </p>
+                        )}
+                        <div className="mt-2 flex items-center space-x-2">
+                          <Clock className="text-muted-foreground h-3 w-3" aria-hidden="true" />
+                          <span className="text-muted-foreground text-xs">
+                            {formatDate(project.updatedAt)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : // Shared projects tab
+              sharedProjects.length === 0 ? (
                 <div className="text-muted-foreground flex flex-col items-center justify-center py-8 text-center">
-                  <FolderPlus className="mb-2 h-12 w-12 opacity-50" aria-hidden="true" />
-                  <p className="text-sm">No projects yet</p>
-                  <p className="text-xs">Create a new project to get started</p>
+                  <Users className="mb-2 h-12 w-12 opacity-50" aria-hidden="true" />
+                  <p className="text-sm">No shared projects</p>
+                  <p className="text-xs">Projects shared with you will appear here</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {projects.map((project) => (
+                  {sharedProjects.map((project) => (
                     <div
                       key={project.id}
                       className={`cursor-pointer rounded-lg border p-3 transition-colors ${
-                        currentProject?.id === project.id
+                        currentSharedProject?.id === project.id
                           ? "border-primary bg-primary/5"
                           : "hover:bg-muted/50"
                       }`}
-                      onClick={() => setSelectedProject(project)}
+                      onClick={() => {
+                        setSelectedSharedProject(project)
+                        setSelectedProject(null)
+                      }}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => e.key === "Enter" && setSelectedProject(project)}
-                      aria-label={`Select project: ${project.name}`}
-                      aria-pressed={currentProject?.id === project.id}
+                      onKeyDown={(e) => e.key === "Enter" && setSelectedSharedProject(project)}
+                      aria-label={`Select shared project: ${project.name}`}
+                      aria-pressed={currentSharedProject?.id === project.id}
                     >
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium">{project.name}</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          {project.items.length} items
+                        <Badge
+                          variant={project.permission === "view" ? "secondary" : "default"}
+                          className="gap-1 text-xs"
+                        >
+                          {project.permission === "view" ? (
+                            <Eye className="h-3 w-3" />
+                          ) : project.permission === "edit" ? (
+                            <Edit className="h-3 w-3" />
+                          ) : (
+                            <Shield className="h-3 w-3" />
+                          )}
+                          {project.permission}
                         </Badge>
                       </div>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Shared by {project.ownerEmail}
+                      </p>
                       {project.description && (
-                        <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                        <p className="text-muted-foreground mt-1 line-clamp-1 text-sm">
                           {project.description}
                         </p>
                       )}
@@ -518,187 +633,228 @@ export function ProjectManager() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{currentProject?.name || "Select a Project"}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>{activeProject?.name || "Select a Project"}</CardTitle>
+                  {currentSharedProject && (
+                    <Badge variant="outline" className="gap-1">
+                      {currentSharedProject.permission === "view" ? (
+                        <Eye className="h-3 w-3" />
+                      ) : currentSharedProject.permission === "edit" ? (
+                        <Edit className="h-3 w-3" />
+                      ) : (
+                        <Shield className="h-3 w-3" />
+                      )}
+                      {currentSharedProject.permission}
+                    </Badge>
+                  )}
+                </div>
                 <CardDescription>
-                  {currentProject?.description || "Choose a project to view its contents"}
+                  {currentSharedProject
+                    ? `Shared by ${currentSharedProject.ownerEmail}`
+                    : activeProject?.description || "Choose a project to view its contents"}
                 </CardDescription>
               </div>
-              {currentProject && (
+              {activeProject && (
                 <div className="flex items-center space-x-2">
-                  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" onClick={openEditDialog}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Edit Project</DialogTitle>
-                        <DialogDescription>Update project details.</DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-name">Project Name</Label>
-                          <Input
-                            id="edit-name"
-                            value={newProjectName}
-                            onChange={(e) => setNewProjectName(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-description">Description</Label>
-                          <Textarea
-                            id="edit-description"
-                            value={newProjectDescription}
-                            onChange={(e) => setNewProjectDescription(e.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
-                          <Input
-                            id="edit-tags"
-                            value={newProjectTags}
-                            onChange={(e) => setNewProjectTags(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                          Cancel
+                  {/* Share button - only for owned projects */}
+                  {isOwner && syncEnabled && (
+                    <Button size="sm" variant="outline" onClick={() => setIsShareDialogOpen(true)}>
+                      <Share2 className="mr-2 h-4 w-4" />
+                      Share
+                    </Button>
+                  )}
+
+                  {/* Edit button - for owners and those with edit permission */}
+                  {canEdit && projectsTab === "my" && (
+                    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" onClick={openEditDialog}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit
                         </Button>
-                        <Button onClick={handleUpdateProject}>Save Changes</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Project</DialogTitle>
+                          <DialogDescription>Update project details.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-name">Project Name</Label>
+                            <Input
+                              id="edit-name"
+                              value={newProjectName}
+                              onChange={(e) => setNewProjectName(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-description">Description</Label>
+                            <Textarea
+                              id="edit-description"
+                              value={newProjectDescription}
+                              onChange={(e) => setNewProjectDescription(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="edit-tags">Tags (comma-separated)</Label>
+                            <Input
+                              id="edit-tags"
+                              value={newProjectTags}
+                              onChange={(e) => setNewProjectTags(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleUpdateProject}>Save Changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
 
-                  <Button size="sm" variant="outline" onClick={() => exportProject(currentProject)}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
+                  {/* Export - available for owners */}
+                  {isOwner && currentProject && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => exportProject(currentProject)}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  )}
 
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Project?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete &quot;{currentProject.name}&quot; and all its
-                          items. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteProject(currentProject.id)}>
+                  {/* Delete - only for owners */}
+                  {isOwner && currentProject && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Project?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete &quot;{currentProject.name}&quot; and all
+                            its items. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteProject(currentProject.id)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            {currentProject ? (
+            {activeProject ? (
               <Tabs defaultValue="items" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="items">Items ({currentProject.items.length})</TabsTrigger>
+                  <TabsTrigger value="items">Items ({activeProject.items.length})</TabsTrigger>
                   <TabsTrigger value="info">Project Info</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="items" className="mt-4">
                   <div className="mb-4 flex items-center justify-between">
                     <p className="text-muted-foreground text-sm">
-                      Saved configurations and results
+                      {!canEdit && currentSharedProject
+                        ? "View-only access"
+                        : "Saved configurations and results"}
                     </p>
-                    <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Item
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add Configuration Item</DialogTitle>
-                          <DialogDescription>
-                            Add a new configuration or result to this project.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="item-name">Item Name</Label>
-                            <Input
-                              id="item-name"
-                              placeholder="My Subnet Calculation"
-                              value={newItemName}
-                              onChange={(e) => setNewItemName(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="item-type">Type</Label>
-                            <Select
-                              value={newItemType}
-                              onValueChange={(v) => setNewItemType(v as ProjectItem["type"])}
-                            >
-                              <SelectTrigger id="item-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="subnet">Subnet Calculation</SelectItem>
-                                <SelectItem value="vlsm">VLSM Plan</SelectItem>
-                                <SelectItem value="vlan">VLAN Configuration</SelectItem>
-                                <SelectItem value="acl">Access Control List</SelectItem>
-                                <SelectItem value="dns">DNS Query</SelectItem>
-                                <SelectItem value="route">Routing Configuration</SelectItem>
-                                <SelectItem value="mtu">MTU Calculation</SelectItem>
-                                <SelectItem value="ipv6">IPv6 Configuration</SelectItem>
-                                <SelectItem value="conflict">IP Conflict Analysis</SelectItem>
-                                <SelectItem value="oui">OUI Lookup</SelectItem>
-                                <SelectItem value="port-scan">Port Scan Result</SelectItem>
-                                <SelectItem value="wireless">Wireless Configuration</SelectItem>
-                                <SelectItem value="other">Other</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="item-data">Data (JSON or plain text)</Label>
-                            <Textarea
-                              id="item-data"
-                              placeholder='{"network": "192.168.1.0/24"}'
-                              className="min-h-[100px] font-mono"
-                              value={newItemData}
-                              onChange={(e) => setNewItemData(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="item-notes">Notes (optional)</Label>
-                            <Textarea
-                              id="item-notes"
-                              placeholder="Additional notes..."
-                              value={newItemNotes}
-                              onChange={(e) => setNewItemNotes(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
-                            Cancel
+                    {canEdit && (
+                      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Item
                           </Button>
-                          <Button onClick={handleAddItem}>Add Item</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add Configuration Item</DialogTitle>
+                            <DialogDescription>
+                              Add a new configuration or result to this project.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="item-name">Item Name</Label>
+                              <Input
+                                id="item-name"
+                                placeholder="My Subnet Calculation"
+                                value={newItemName}
+                                onChange={(e) => setNewItemName(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="item-type">Type</Label>
+                              <Select
+                                value={newItemType}
+                                onValueChange={(v) => setNewItemType(v as ProjectItem["type"])}
+                              >
+                                <SelectTrigger id="item-type">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="subnet">Subnet Calculation</SelectItem>
+                                  <SelectItem value="vlsm">VLSM Plan</SelectItem>
+                                  <SelectItem value="vlan">VLAN Configuration</SelectItem>
+                                  <SelectItem value="acl">Access Control List</SelectItem>
+                                  <SelectItem value="dns">DNS Query</SelectItem>
+                                  <SelectItem value="route">Routing Configuration</SelectItem>
+                                  <SelectItem value="mtu">MTU Calculation</SelectItem>
+                                  <SelectItem value="ipv6">IPv6 Configuration</SelectItem>
+                                  <SelectItem value="conflict">IP Conflict Analysis</SelectItem>
+                                  <SelectItem value="oui">OUI Lookup</SelectItem>
+                                  <SelectItem value="port-scan">Port Scan Result</SelectItem>
+                                  <SelectItem value="wireless">Wireless Configuration</SelectItem>
+                                  <SelectItem value="other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="item-data">Data (JSON or plain text)</Label>
+                              <Textarea
+                                id="item-data"
+                                placeholder='{"network": "192.168.1.0/24"}'
+                                className="min-h-[100px] font-mono"
+                                value={newItemData}
+                                onChange={(e) => setNewItemData(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="item-notes">Notes (optional)</Label>
+                              <Textarea
+                                id="item-notes"
+                                placeholder="Additional notes..."
+                                value={newItemNotes}
+                                onChange={(e) => setNewItemNotes(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleAddItem}>Add Item</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
                   </div>
 
                   <ScrollArea className="h-[350px]">
-                    {currentProject.items.length === 0 ? (
+                    {activeProject.items.length === 0 ? (
                       <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
                         <FileText className="mb-2 h-12 w-12 opacity-50" aria-hidden="true" />
                         <p className="text-sm">No items in this project</p>
@@ -708,7 +864,7 @@ export function ProjectManager() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {currentProject.items.map((item) => {
+                        {activeProject.items.map((item) => {
                           const Icon = getItemIcon(item.type)
                           return (
                             <div key={item.id} className="bg-muted/50 rounded-lg border p-4">
@@ -794,19 +950,19 @@ export function ProjectManager() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-muted-foreground text-sm">Created</Label>
-                        <p className="font-medium">{formatDate(currentProject.createdAt)}</p>
+                        <p className="font-medium">{formatDate(activeProject.createdAt)}</p>
                       </div>
                       <div>
                         <Label className="text-muted-foreground text-sm">Last Updated</Label>
-                        <p className="font-medium">{formatDate(currentProject.updatedAt)}</p>
+                        <p className="font-medium">{formatDate(activeProject.updatedAt)}</p>
                       </div>
                     </div>
 
-                    {currentProject.tags.length > 0 && (
+                    {activeProject.tags.length > 0 && (
                       <div>
                         <Label className="text-muted-foreground text-sm">Tags</Label>
                         <div className="mt-1 flex flex-wrap gap-2">
-                          {currentProject.tags.map((tag) => (
+                          {activeProject.tags.map((tag) => (
                             <Badge key={tag} variant="secondary">
                               {tag}
                             </Badge>
@@ -837,7 +993,7 @@ export function ProjectManager() {
                             "other",
                           ] as ProjectItem["type"][]
                         ).map((type) => {
-                          const count = currentProject.items.filter((i) => i.type === type).length
+                          const count = activeProject.items.filter((i) => i.type === type).length
                           if (count === 0) return null
                           const Icon = getItemIcon(type)
                           return (
@@ -869,6 +1025,15 @@ export function ProjectManager() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Share Project Dialog */}
+      {currentProject && (
+        <ShareProjectDialog
+          project={currentProject}
+          open={isShareDialogOpen}
+          onOpenChange={setIsShareDialogOpen}
+        />
+      )}
     </div>
   )
 }

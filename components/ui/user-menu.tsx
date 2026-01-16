@@ -34,10 +34,11 @@ import {
   AlertCircle,
   CheckCircle,
   Settings,
-  ExternalLink,
+  Users,
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/contexts/project-context"
+import { AccountSettingsDialog } from "@/components/ui/account-settings-dialog"
 
 type AuthView = "signin" | "signup" | "reset"
 
@@ -54,9 +55,10 @@ export function UserMenu() {
     error,
     clearError,
   } = useAuth()
-  const { syncEnabled, syncing, projects } = useProjects()
+  const { syncEnabled, syncing, projects, sharedProjects } = useProjects()
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [authView, setAuthView] = useState<AuthView>("signin")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -498,20 +500,21 @@ export function UserMenu() {
             {projects.length}
           </Badge>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a
-            href="https://console.firebase.google.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between"
-          >
+        {sharedProjects.length > 0 && (
+          <DropdownMenuItem disabled className="flex items-center justify-between">
             <span className="flex items-center">
-              <Settings className="mr-2 h-4 w-4" />
-              Manage Account
+              <Users className="mr-2 h-4 w-4" />
+              Shared with me
             </span>
-            <ExternalLink className="h-3 w-3 opacity-50" />
-          </a>
+            <Badge variant="outline" className="text-xs">
+              {sharedProjects.length}
+            </Badge>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+          <Settings className="mr-2 h-4 w-4" />
+          Account Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="text-red-600 focus:text-red-600">
@@ -519,6 +522,8 @@ export function UserMenu() {
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      <AccountSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </DropdownMenu>
   )
 }

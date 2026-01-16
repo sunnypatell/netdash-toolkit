@@ -6,15 +6,84 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User profiles - users can only read/write their own profile
-    // This stores email, displayName, lastSeen for easier management in Console
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
 
-      // Projects subcollection - user-scoped access
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User profiles - users can read any profile (for sharing UI), write only their own
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+
+      // Projects subcollection - supports sharing
       match /projects/{projectId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Read: owner OR user is in sharedWith map
+        allow read: if isOwner(userId) ||
+          (isAuthenticated() &&
+           resource.data.sharedWith != null &&
+           request.auth.uid in resource.data.sharedWith);
+
+        // Create: only owner, must set ownerId
+        allow create: if isOwner(userId) &&
+          request.resource.data.ownerId == userId;
+
+        // Update: owner can do anything, shared users with edit/admin can update (but not sharing settings)
+        allow update: if isOwner(userId) ||
+          (isAuthenticated() &&
+           resource.data.sharedWith != null &&
+           request.auth.uid in resource.data.sharedWith &&
+           resource.data.sharedWith[request.auth.uid].permission in ['edit', 'admin'] &&
+           // Collaborators cannot modify ownership or sharing settings
+           request.resource.data.ownerId == resource.data.ownerId &&
+           request.resource.data.sharedWith == resource.data.sharedWith &&
+           request.resource.data.ownerEmail == resource.data.ownerEmail &&
+           request.resource.data.isShared == resource.data.isShared);
+
+        // Delete: only owner
+        allow delete: if isOwner(userId);
       }
+    }
+
+    // Project shares collection - for querying "shared with me"
+    match /projectShares/{shareId} {
+      // Read: user can read shares where they are the recipient
+      allow read: if isAuthenticated() &&
+        resource.data.sharedWithUserId == request.auth.uid;
+
+      // Create: only project owner can create shares
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerId == request.auth.uid;
+
+      // Update: only project owner can update shares
+      allow update: if isAuthenticated() &&
+        resource.data.ownerId == request.auth.uid;
+
+      // Delete: project owner OR the shared user (to remove their own access)
+      allow delete: if isAuthenticated() &&
+        (resource.data.ownerId == request.auth.uid ||
+         resource.data.sharedWithUserId == request.auth.uid);
+    }
+
+    // User index collection - for email-to-uid lookups
+    match /userIndex/{emailHash} {
+      // Anyone authenticated can read (for user search when sharing)
+      allow read: if isAuthenticated();
+
+      // Users can only write their own index entry
+      allow create: if isAuthenticated() &&
+        request.resource.data.uid == request.auth.uid;
+
+      allow update: if isAuthenticated() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+
+      allow delete: if isAuthenticated() &&
+        resource.data.uid == request.auth.uid;
     }
 
     // Block all other access by default
