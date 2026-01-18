@@ -5,6 +5,10 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/ui/user-menu"
 import { Badge } from "@/components/ui/badge"
 import { Menu } from "lucide-react"
+import changelog from "@/data/changelog.json"
+
+// Get latest version from changelog
+const latestVersion = changelog.releases[0]?.version ?? "0.0.0"
 
 interface HeaderProps {
   onToggleSidebar: () => void
@@ -48,7 +52,7 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
         <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">
           <div className="hidden items-center space-x-2 sm:flex">
             <Badge variant="outline" className="text-xs">
-              v2.5
+              v{latestVersion}
             </Badge>
           </div>
           <UserMenu />

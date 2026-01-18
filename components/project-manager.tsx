@@ -62,6 +62,8 @@ import {
   Wifi,
   Share2,
   Users,
+  Cable,
+  QrCode,
   Eye,
   Crown,
 } from "lucide-react"
@@ -102,6 +104,8 @@ const getItemIcon = (type: ProjectItem["type"]) => {
     oui: Search,
     "port-scan": Shield,
     wireless: Wifi,
+    cable: Cable,
+    "wifi-qr": QrCode,
     other: FileText,
   }
   return icons[type] || FileText
@@ -123,6 +127,8 @@ const getItemTypeLabel = (type: ProjectItem["type"]) => {
     oui: "OUI Lookup",
     "port-scan": "Port Scan Result",
     wireless: "Wireless Configuration",
+    cable: "Cable Calculation",
+    "wifi-qr": "WiFi QR Code",
     other: "Other",
   }
   return labels[type] || "Other"

@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Route,
   Radio,
+  Cable,
+  QrCode,
 } from "lucide-react"
 
 interface DashboardProps {
@@ -145,6 +147,25 @@ const tools = [
     icon: Search,
     category: "Lookup",
     features: ["IEEE OUI database", "Vendor identification", "MAC analysis"],
+  },
+  {
+    id: "cable-calculator",
+    title: "Cable Calculator",
+    description:
+      "Calculate signal loss for fiber optic and copper cables with TIA standards compliance",
+    icon: Cable,
+    category: "Analysis",
+    features: ["Fiber & copper", "TIA-568 compliant", "Power budget"],
+    popular: true,
+  },
+  {
+    id: "wifi-qr",
+    title: "WiFi QR Generator",
+    description: "Generate QR codes for instant WiFi connection on smartphones",
+    icon: QrCode,
+    category: "Utilities",
+    features: ["WPA2/WPA3/WEP", "PNG/SVG export", "Project saving"],
+    popular: true,
   },
 ]
 

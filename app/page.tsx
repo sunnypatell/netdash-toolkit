@@ -21,6 +21,8 @@ import { PingTraceroute } from "@/components/tools/ping-traceroute"
 import { PortScanner } from "@/components/tools/port-scanner"
 import { RoutingTools } from "@/components/tools/routing-tools"
 import { WirelessTools } from "@/components/tools/wireless-tools"
+import { CableCalculator } from "@/components/tools/cable-calculator"
+import { WifiQRGenerator } from "@/components/tools/wifi-qr-generator"
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
@@ -77,6 +79,10 @@ export default function HomePage() {
         return <PingTraceroute />
       case "port-scanner":
         return <PortScanner />
+      case "cable-calculator":
+        return <CableCalculator />
+      case "wifi-qr":
+        return <WifiQRGenerator />
       case "about":
         return <About />
       case "project-manager":

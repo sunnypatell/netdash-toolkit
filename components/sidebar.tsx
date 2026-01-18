@@ -21,6 +21,8 @@ import {
   Navigation,
   Scan,
   Route,
+  Cable,
+  QrCode,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -46,6 +48,8 @@ const navigationItems = [
   { id: "acl-generator", label: "ACL Generator", icon: Shield },
   { id: "ipv6-tools", label: "IPv6 Tools", icon: Zap },
   { id: "oui-lookup", label: "OUI Lookup", icon: Search },
+  { id: "cable-calculator", label: "Cable Calculator", icon: Cable },
+  { id: "wifi-qr", label: "WiFi QR Generator", icon: QrCode },
   { id: "about", label: "About", icon: Info },
   { id: "project-manager", label: "Projects", icon: FolderOpen },
 ]

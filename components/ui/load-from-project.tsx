@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -20,9 +20,18 @@ import {
 } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { FolderOpen, FileDown } from "lucide-react"
+import { FolderOpen, FileDown, Users } from "lucide-react"
 import { useProjects, type ProjectItem } from "@/contexts/project-context"
 import { useToast } from "@/hooks/use-toast"
+
+// Combined project type for unified handling
+interface CombinedProject {
+  id: string
+  name: string
+  items: ProjectItem[]
+  isShared: boolean
+  ownerEmail?: string
+}
 
 interface LoadFromProjectProps {
   itemType: ProjectItem["type"]
@@ -41,20 +50,47 @@ export function LoadFromProject({
   className,
   disabled = false,
 }: LoadFromProjectProps) {
-  const { projects } = useProjects()
+  const { projects, sharedProjects } = useProjects()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [selectedItemId, setSelectedItemId] = useState<string>("")
 
+  // Combine own projects and shared projects
+  const allProjects = useMemo((): CombinedProject[] => {
+    const ownProjects: CombinedProject[] = projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      items: p.items,
+      isShared: false,
+    }))
+
+    const shared: CombinedProject[] = sharedProjects.map((p) => ({
+      id: `shared-${p.id}`,
+      name: p.name,
+      items: p.items,
+      isShared: true,
+      ownerEmail: p.ownerEmail,
+    }))
+
+    return [...ownProjects, ...shared]
+  }, [projects, sharedProjects])
+
   // Filter projects that have items of the specified type
-  const projectsWithItems = projects.filter((project) =>
-    project.items.some((item) => item.type === itemType)
+  const projectsWithItems = useMemo(
+    () => allProjects.filter((project) => project.items.some((item) => item.type === itemType)),
+    [allProjects, itemType]
   )
 
   // Get items from selected project that match the type
-  const selectedProject = projects.find((p) => p.id === selectedProjectId)
-  const availableItems = selectedProject?.items.filter((item) => item.type === itemType) || []
+  const selectedProject = useMemo(
+    () => projectsWithItems.find((p) => p.id === selectedProjectId),
+    [projectsWithItems, selectedProjectId]
+  )
+  const availableItems = useMemo(
+    () => selectedProject?.items.filter((item) => item.type === itemType) || [],
+    [selectedProject, itemType]
+  )
 
   const handleLoad = () => {
     if (!selectedProjectId || !selectedItemId) {
@@ -66,7 +102,7 @@ export function LoadFromProject({
       return
     }
 
-    const project = projects.find((p) => p.id === selectedProjectId)
+    const project = projectsWithItems.find((p) => p.id === selectedProjectId)
     const item = project?.items.find((i) => i.id === selectedItemId)
 
     if (!item) {
@@ -141,8 +177,19 @@ export function LoadFromProject({
                     const itemCount = project.items.filter((i) => i.type === itemType).length
                     return (
                       <SelectItem key={project.id} value={project.id}>
-                        {project.name} ({itemCount} {itemType}
-                        {itemCount !== 1 ? "s" : ""})
+                        <div className="flex items-center gap-2">
+                          <span>{project.name}</span>
+                          <span className="text-muted-foreground text-xs">
+                            ({itemCount} {itemType}
+                            {itemCount !== 1 ? "s" : ""})
+                          </span>
+                          {project.isShared && (
+                            <Badge variant="secondary" className="ml-1 text-xs">
+                              <Users className="mr-1 h-3 w-3" />
+                              Shared
+                            </Badge>
+                          )}
+                        </div>
                       </SelectItem>
                     )
                   })

@@ -39,7 +39,7 @@
 
 ## What is NetDash?
 
-**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **14+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
+**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **16+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
 
 <br />
 
@@ -88,13 +88,14 @@ Beautiful light and dark themes that adapt to your system preferences.
 
 <div align="center">
 
-|        Category         |                     Tools                     | Description                                                                                     |
-| :---------------------: | :-------------------------------------------: | :---------------------------------------------------------------------------------------------- |
-|  **Address Planning**   | Subnet Calculator, VLSM Planner, VLAN Manager | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
-| **Routing & Switching** | Routing Tools, Wireless Tools, ACL Generator  | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation               |
-|   **Troubleshooting**   |  Conflict Checker, Network Tester, DNS Tools  | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
-|      **Utilities**      |    MTU Calculator, IPv6 Tools, OUI Lookup     | Protocol overhead analysis, EUI-64 generation, MAC vendor identification                        |
-|    **Cloud & Sync**     |        Project Manager, Authentication        | Firebase cloud sync, Google/Email sign-in, cross-device project persistence                     |
+|        Category         |                          Tools                           | Description                                                                                     |
+| :---------------------: | :------------------------------------------------------: | :---------------------------------------------------------------------------------------------- |
+|  **Address Planning**   |      Subnet Calculator, VLSM Planner, VLAN Manager       | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
+| **Routing & Switching** |       Routing Tools, Wireless Tools, ACL Generator       | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation               |
+|   **Troubleshooting**   |       Conflict Checker, Network Tester, DNS Tools        | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
+|      **Utilities**      | MTU Calculator, IPv6 Tools, OUI Lookup, Cable Calculator | Protocol overhead analysis, EUI-64 generation, MAC vendor ID, fiber/copper signal loss          |
+|      **Wireless**       |            Wireless Tools, WiFi QR Generator             | Channel planning, interference analysis, WiFi QR codes for instant network connection           |
+|    **Cloud & Sync**     |             Project Manager, Authentication              | Firebase cloud sync, Google/Email sign-in, cross-device project persistence                     |
 
 </div>
 
@@ -294,6 +295,45 @@ pnpm start
 
 </details>
 
+<details>
+<summary><b>Cable Calculator</b> — Fiber and copper signal loss analysis</summary>
+
+<br />
+
+- **Fiber Optic** (TIA-568.3-D compliant):
+  - Single-mode: OS1, OS2 at 1310nm/1550nm
+  - Multi-mode: OM1, OM2, OM3, OM4, OM5 at 850nm
+  - Connector loss calculation (0.75 dB per mated pair)
+  - Splice loss: fusion (0.1 dB) and mechanical (0.5 dB)
+  - Power budget analysis with link margin warnings
+- **Copper Ethernet** (TIA-568-D compliant):
+  - Cat5e through Cat8 distance validation
+  - Permanent link and channel model support
+  - 10GBASE-T distance limits
+  - Patch cord length validation
+- Export to JSON and save to project
+
+</details>
+
+<details>
+<summary><b>WiFi QR Generator</b> — Instant WiFi connection QR codes</summary>
+
+<br />
+
+- Standard WIFI:// QR code format
+- Security type support:
+  - WPA2-Personal (recommended)
+  - WPA3-Personal (SAE)
+  - WEP (legacy with warning)
+  - Open networks
+- Hidden network support
+- Special character escaping (`;`, `:`, `,`, `\`, `"`)
+- Download as PNG or SVG
+- Copy QR string to clipboard
+- Save configuration to project
+
+</details>
+
 <br />
 
 ---
@@ -370,20 +410,22 @@ netdash-toolkit/
 
 <div align="center">
 
-| Status  | Feature              | Description                                |
-| :-----: | :------------------- | :----------------------------------------- |
-|  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless |
-|  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS            |
-|  Done   | Dark Mode            | System-aware theming                       |
-|  Done   | Cloud Sync           | Firebase auth, project sync across devices |
-|  Done   | Electron App         | Desktop version with native networking     |
-|  Done   | Real ICMP Ping       | Native ping with Electron                  |
-|  Done   | Real Traceroute      | TTL-based hop discovery                    |
-|  Done   | Port Scanner         | TCP/UDP socket scanning                    |
-|  Done   | Network Discovery    | ARP scanning, device enumeration           |
-| Planned | Configuration Backup | SSH-based device config backup             |
-| Planned | SNMP Polling         | Device monitoring via SNMP                 |
-| Planned | Network Topology     | Visual network mapping                     |
+| Status  | Feature              | Description                                   |
+| :-----: | :------------------- | :-------------------------------------------- |
+|  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless    |
+|  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS               |
+|  Done   | Dark Mode            | System-aware theming                          |
+|  Done   | Cloud Sync           | Firebase auth, project sync across devices    |
+|  Done   | Electron App         | Desktop version with native networking        |
+|  Done   | Real ICMP Ping       | Native ping with Electron                     |
+|  Done   | Real Traceroute      | TTL-based hop discovery                       |
+|  Done   | Port Scanner         | TCP/UDP socket scanning                       |
+|  Done   | Network Discovery    | ARP scanning, device enumeration              |
+|  Done   | Cable Calculator     | TIA-compliant fiber/copper signal loss        |
+|  Done   | WiFi QR Generator    | WPA2/WPA3/WEP QR codes for instant connection |
+| Planned | Configuration Backup | SSH-based device config backup                |
+| Planned | SNMP Polling         | Device monitoring via SNMP                    |
+| Planned | Network Topology     | Visual network mapping                        |
 
 </div>
 

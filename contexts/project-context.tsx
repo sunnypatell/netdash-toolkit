@@ -41,6 +41,8 @@ export interface ProjectItem {
     | "oui"
     | "port-scan"
     | "wireless"
+    | "cable"
+    | "wifi-qr"
     | "other"
   name: string
   data: Record<string, unknown>

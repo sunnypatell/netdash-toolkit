@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "2.7.0",
+      "type": "minor",
+      "title": "Cable Calculator & WiFi QR Generator",
+      "changes": [
+        "Added Cable Length/Signal Loss Calculator for fiber optic and copper network cables",
+        "Added WiFi QR Code Generator with WPA2/WPA3/WEP/open network support",
+        "Enhanced Load from Project to include shared projects alongside own projects",
+        "Implemented dynamic version display in header (auto-reads from changelog)",
+        "Fiber calculator supports OS1/OS2 single-mode and OM1-OM5 multi-mode with TIA-568.3-D specs",
+        "Copper calculator validates Cat5e through Cat8 distances per TIA-568-D standards",
+        "WiFi QR codes stored as text in Firebase (free tier compatible)",
+        "Added contextual tips for fiber and copper configurations based on user input"
+      ],
+      "technical": [
+        "Fiber loss calculations with connector pairs, splice counts, and power budget analysis",
+        "Copper channel model with permanent link and patch cord distance validation",
+        "WiFi QR string generation with special character escaping per WIFI:// spec",
+        "LoadFromProject now combines own projects and shared projects with proper type handling",
+        "Robust validation in handleLoadFromProject for cable calculator and WiFi QR generator",
+        "Input sanitization with bounds checking and type validation for loaded configurations",
+        "Dynamic version badge reads releases[0].version from changelog.json",
+        "qrcode library for client-side QR generation with PNG/SVG export"
+      ]
+    },
+    {
       "version": "2.6.0",
       "type": "minor",
       "title": "Project Sharing & Account Management",

@@ -15,13 +15,14 @@ import {
   Shield,
   Calculator,
   GitCommit,
-  Clock,
   Plus,
   Bug,
   Wrench,
   Star,
   Heart,
   Coffee,
+  Cable,
+  QrCode,
 } from "lucide-react"
 import changelogData from "@/data/changelog.json"
 
@@ -192,6 +193,30 @@ const features = [
     icon: Network,
     capabilities: ["Channel planning", "Interference analysis", "WiFi configuration"],
   },
+  {
+    title: "Cable Calculator",
+    description:
+      "TIA-568.3-D and TIA-568-D compliant signal loss calculator for fiber optic and copper cables. Calculates cable attenuation, connector loss, splice loss with power budget analysis for fiber, and validates channel distances for copper Ethernet from Cat5e through Cat8.",
+    icon: Cable,
+    capabilities: [
+      "Fiber attenuation (OS1/OS2, OM1-OM5)",
+      "Copper distance limits",
+      "Power budget analysis",
+      "TIA standards compliant",
+    ],
+  },
+  {
+    title: "WiFi QR Generator",
+    description:
+      "Generate standard WIFI:// QR codes for instant network connection on any smartphone. Supports WPA2, WPA3 (SAE), WEP, and open networks with proper special character escaping and hidden network support. Export as PNG or SVG.",
+    icon: QrCode,
+    capabilities: [
+      "WPA2/WPA3/WEP/Open support",
+      "Special character escaping",
+      "PNG/SVG export",
+      "Project saving",
+    ],
+  },
 ]
 
 const technicalHighlights = [
@@ -231,6 +256,9 @@ const algorithmDetails = [
 ]
 
 const recentImprovements = [
+  "Cable Length/Signal Loss Calculator with TIA-568.3-D fiber and TIA-568-D copper standards",
+  "WiFi QR Code Generator supporting WPA2/WPA3/WEP/open networks with PNG/SVG export",
+  "Load from Project functionality across all tools including shared project support",
   "Complete Project Manager with localStorage persistence for organizing network configurations",
   "Multi-vendor ACL generators now support Cisco IOS, Juniper SRX, and Palo Alto platforms",
   "TTL-based DNS caching for DoH queries with real-time cache statistics visualization",
