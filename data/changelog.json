@@ -9,6 +9,8 @@
         "Implemented in-app account management for updating display name, photo, email, and password",
         "Added 'Shared with me' tab to view and manage projects shared by other users",
         "Introduced real-time sync for shared projects - changes sync instantly between collaborators",
+        "Added 6GHz WiFi 6E/7 support with 59 channels (UNII-5/6/7/8) and 320 MHz bandwidth option",
+        "Fixed project deletion race condition where projects would reappear after refresh",
         "Split CI workflow into separate jobs for better GitHub Actions visibility"
       ],
       "technical": [
@@ -16,7 +18,9 @@
         "Firestore security rules updated for collaborative access control with permission checks",
         "ShareProjectDialog component with email lookup and permission management",
         "AccountSettingsDialog with tabbed interface for profile, email, and password changes",
-        "Firebase reauthentication flow for sensitive account operations"
+        "Firebase reauthentication flow for sensitive account operations",
+        "6GHz channel planner with 802.11be (WiFi 7) speed calculations up to 5764 Mbps",
+        "Deletion tracking ref to prevent Firestore listener from restoring deleted projects"
       ]
     },
     {
