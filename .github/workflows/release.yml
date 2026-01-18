@@ -117,3 +117,107 @@ jobs:
           append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew-cask:
+    name: Update Homebrew Cask
+    runs-on: ubuntu-latest
+    needs: release-electron
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Wait for release assets to be available
+        run: sleep 30
+
+      - name: Download macOS DMGs and calculate hashes
+        id: hashes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          # Download arm64 DMG
+          gh release download "v${VERSION}" \
+            --pattern "NetDash.Toolkit-${VERSION}-mac-arm64.dmg" \
+            --output arm64.dmg
+
+          # Download x64 DMG
+          gh release download "v${VERSION}" \
+            --pattern "NetDash.Toolkit-${VERSION}-mac-x64.dmg" \
+            --output x64.dmg
+
+          # Calculate SHA256 hashes
+          ARM64_SHA=$(sha256sum arm64.dmg | cut -d ' ' -f 1)
+          X64_SHA=$(sha256sum x64.dmg | cut -d ' ' -f 1)
+
+          echo "arm64_sha=${ARM64_SHA}" >> $GITHUB_OUTPUT
+          echo "x64_sha=${X64_SHA}" >> $GITHUB_OUTPUT
+
+          echo "ARM64 SHA256: ${ARM64_SHA}"
+          echo "X64 SHA256: ${X64_SHA}"
+
+      - name: Update Homebrew cask file
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          ARM64_SHA=${{ steps.hashes.outputs.arm64_sha }}
+          X64_SHA=${{ steps.hashes.outputs.x64_sha }}
+
+          cat > Casks/netdash.rb << EOF
+          cask "netdash" do
+            version "${VERSION}"
+
+            on_arm do
+              sha256 "${ARM64_SHA}"
+              url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-arm64.dmg"
+            end
+
+            on_intel do
+              sha256 "${X64_SHA}"
+              url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-x64.dmg"
+            end
+
+            name "NetDash Toolkit"
+            desc "Professional network engineering toolkit with 16+ networking tools"
+            homepage "https://github.com/sunnypatell/netdash-toolkit"
+
+            livecheck do
+              url :url
+              strategy :github_latest
+            end
+
+            app "NetDash Toolkit.app"
+
+            zap trash: [
+              "~/Library/Application Support/NetDash Toolkit",
+              "~/Library/Preferences/com.netdash.toolkit.plist",
+              "~/Library/Saved Application State/com.netdash.toolkit.savedState",
+            ]
+          end
+          EOF
+
+          echo "Updated Casks/netdash.rb:"
+          cat Casks/netdash.rb
+
+      - name: Commit and push cask update
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Casks/netdash.rb
+          git diff --staged --quiet || git commit -m "chore(homebrew): auto-update cask to v${VERSION}
+
+          - updated version to ${VERSION}
+          - updated SHA256 hashes for arm64 and x64 DMGs
+
+          [skip ci]"
+
+          git push origin main
