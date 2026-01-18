@@ -1,18 +1,19 @@
 cask "netdash" do
-  version "1.0.0"
+  version "2.7.0"
 
+  # SHA256 hashes - update after release workflow completes
   on_arm do
-    sha256 "ed29f57c7652da7813e1ee2c46c5e0975cd380f975211abe0840b0cc8b6e69c2"
+    sha256 :no_check
     url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-arm64.dmg"
   end
 
   on_intel do
-    sha256 "67554f55ec02d13dc3a6a6985b94ec77637e3a89bb341a2a2104fdab4af68b43"
+    sha256 :no_check
     url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-x64.dmg"
   end
 
   name "NetDash Toolkit"
-  desc "Professional network engineering toolkit with 14+ networking tools"
+  desc "Professional network engineering toolkit with 16+ networking tools"
   homepage "https://github.com/sunnypatell/netdash-toolkit"
 
   livecheck do
