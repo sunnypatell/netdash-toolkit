@@ -20,6 +20,8 @@ import {
   Bug,
   Wrench,
   Star,
+  Heart,
+  Coffee,
 } from "lucide-react"
 import changelogData from "@/data/changelog.json"
 
@@ -591,6 +593,32 @@ export function About() {
               >
                 <Linkedin className="mr-2 h-4 w-4" />
                 LinkedIn Profile
+                <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </Button>
+            <Button variant="outline" className="border-pink-500/50 hover:bg-pink-500/10" asChild>
+              <a
+                href="https://github.com/sponsors/sunnypatell"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Heart className="mr-2 h-4 w-4 text-pink-500" />
+                Sponsor
+                <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              className="border-yellow-500/50 hover:bg-yellow-500/10"
+              asChild
+            >
+              <a
+                href="https://buymeacoffee.com/sunnypatell"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Coffee className="mr-2 h-4 w-4 text-yellow-500" />
+                Buy Me a Coffee
                 <ExternalLink className="ml-1 h-3 w-3" />
               </a>
             </Button>
