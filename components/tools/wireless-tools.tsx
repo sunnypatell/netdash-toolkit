@@ -46,10 +46,10 @@ interface WirelessConfig {
   ssid: string
   security: "open" | "wep" | "wpa" | "wpa2" | "wpa3" | "wpa2-enterprise"
   channel: string
-  bandwidth: "20" | "40" | "80" | "160"
+  bandwidth: "20" | "40" | "80" | "160" | "320"
   power: string
   band: "2.4" | "5" | "6"
-  mode: "802.11n" | "802.11ac" | "802.11ax"
+  mode: "802.11n" | "802.11ac" | "802.11ax" | "802.11be"
   hidden: boolean
   maxClients: string
   beaconInterval: string
@@ -318,8 +318,493 @@ export function WirelessTools() {
     },
   ]
 
+  // 6GHz band channels (WiFi 6E/7) - UNII-5/6/7/8 (5925-7125 MHz)
+  const channels6: ChannelInfo[] = [
+    // UNII-5 (5925-6425 MHz) - Low Power Indoor (LPI) & Standard Power (SP)
+    {
+      channel: 1,
+      frequency: 5955,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 5,
+      frequency: 5975,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 9,
+      frequency: 5995,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 13,
+      frequency: 6015,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 17,
+      frequency: 6035,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 21,
+      frequency: 6055,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 25,
+      frequency: 6075,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 29,
+      frequency: 6095,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 33,
+      frequency: 6115,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 37,
+      frequency: 6135,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 41,
+      frequency: 6155,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 45,
+      frequency: 6175,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 49,
+      frequency: 6195,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 53,
+      frequency: 6215,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 57,
+      frequency: 6235,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 61,
+      frequency: 6255,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 65,
+      frequency: 6275,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 69,
+      frequency: 6295,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 73,
+      frequency: 6315,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 77,
+      frequency: 6335,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 81,
+      frequency: 6355,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 85,
+      frequency: 6375,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 89,
+      frequency: 6395,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 93,
+      frequency: 6415,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    // UNII-6 (6425-6525 MHz) - Standard Power only
+    {
+      channel: 97,
+      frequency: 6435,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 101,
+      frequency: 6455,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 105,
+      frequency: 6475,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 109,
+      frequency: 6495,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 113,
+      frequency: 6515,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    // UNII-7 (6525-6875 MHz) - Low Power Indoor & Standard Power
+    {
+      channel: 117,
+      frequency: 6535,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 121,
+      frequency: 6555,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 125,
+      frequency: 6575,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 129,
+      frequency: 6595,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 133,
+      frequency: 6615,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 137,
+      frequency: 6635,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 141,
+      frequency: 6655,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 145,
+      frequency: 6675,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 149,
+      frequency: 6695,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 153,
+      frequency: 6715,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 157,
+      frequency: 6735,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 161,
+      frequency: 6755,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 165,
+      frequency: 6775,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 169,
+      frequency: 6795,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 173,
+      frequency: 6815,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 177,
+      frequency: 6835,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 181,
+      frequency: 6855,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    // UNII-8 (6875-7125 MHz) - Standard Power only
+    {
+      channel: 185,
+      frequency: 6875,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 189,
+      frequency: 6895,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 193,
+      frequency: 6915,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 197,
+      frequency: 6935,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 201,
+      frequency: 6955,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 205,
+      frequency: 6975,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 209,
+      frequency: 6995,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 213,
+      frequency: 7015,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 217,
+      frequency: 7035,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 221,
+      frequency: 7055,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 225,
+      frequency: 7075,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 229,
+      frequency: 7095,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+    {
+      channel: 233,
+      frequency: 7115,
+      bandwidth: 20,
+      interference: "low",
+      recommended: true,
+      dfs: false,
+    },
+  ]
+
   const calculateWiFiCapacity = () => {
-    const currentChannels = wirelessConfig.band === "2.4" ? channels24 : channels5
+    const currentChannels =
+      wirelessConfig.band === "2.4"
+        ? channels24
+        : wirelessConfig.band === "5"
+          ? channels5
+          : channels6
     const selectedChannel = currentChannels.find(
       (ch) => ch.channel.toString() === wirelessConfig.channel
     )
@@ -358,6 +843,7 @@ export function WirelessTools() {
         }
         break
       case "802.11ax":
+        // WiFi 6/6E supports 2.4GHz, 5GHz, and 6GHz
         switch (Number.parseInt(wirelessConfig.bandwidth)) {
           case 20:
             theoreticalSpeed = wirelessConfig.band === "2.4" ? 143 : 287
@@ -370,6 +856,26 @@ export function WirelessTools() {
             break
           case 160:
             theoreticalSpeed = 2402
+            break
+        }
+        break
+      case "802.11be":
+        // WiFi 7 - supports up to 320 MHz channels on 6GHz
+        switch (Number.parseInt(wirelessConfig.bandwidth)) {
+          case 20:
+            theoreticalSpeed = wirelessConfig.band === "2.4" ? 172 : 344
+            break
+          case 40:
+            theoreticalSpeed = wirelessConfig.band === "2.4" ? 344 : 688
+            break
+          case 80:
+            theoreticalSpeed = 1441
+            break
+          case 160:
+            theoreticalSpeed = 2882
+            break
+          case 320:
+            theoreticalSpeed = 5764 // 320 MHz only on 6GHz
             break
         }
         break
@@ -424,8 +930,13 @@ export function WirelessTools() {
 
     config += `!\n`
 
-    // Radio configuration
-    const radioInterface = wirelessConfig.band === "2.4" ? "Dot11Radio0" : "Dot11Radio1"
+    // Radio configuration - 2.4GHz=Dot11Radio0, 5GHz=Dot11Radio1, 6GHz=Dot11Radio2
+    const radioInterface =
+      wirelessConfig.band === "2.4"
+        ? "Dot11Radio0"
+        : wirelessConfig.band === "5"
+          ? "Dot11Radio1"
+          : "Dot11Radio2"
     config += `interface ${radioInterface}\n`
     config += `   no shutdown\n`
     config += `   ssid ${wirelessConfig.ssid}\n`
@@ -452,6 +963,13 @@ export function WirelessTools() {
       case "802.11ax":
         config += `   dot11 ax enable\n`
         config += `   channel width ${wirelessConfig.bandwidth}\n`
+        break
+      case "802.11be":
+        config += `   dot11 be enable\n`
+        config += `   channel width ${wirelessConfig.bandwidth}\n`
+        if (wirelessConfig.band === "6") {
+          config += `   ! 6GHz band - requires WiFi 6E/7 capable clients\n`
+        }
         break
     }
 
@@ -500,7 +1018,8 @@ export function WirelessTools() {
     URL.revokeObjectURL(url)
   }
 
-  const currentChannels = wirelessConfig.band === "2.4" ? channels24 : channels5
+  const currentChannels =
+    wirelessConfig.band === "2.4" ? channels24 : wirelessConfig.band === "5" ? channels5 : channels6
   const recommended = currentChannels.filter((ch) => ch.recommended && ch.interference === "low")
   const acceptable = currentChannels.filter((ch) => ch.interference === "medium")
   const avoid = currentChannels.filter((ch) => ch.interference === "high")
@@ -542,7 +1061,7 @@ export function WirelessTools() {
                   <Select
                     value={wirelessConfig.band}
                     onValueChange={(value) =>
-                      setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))
+                      setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" | "6" }))
                     }
                   >
                     <SelectTrigger>
@@ -551,6 +1070,7 @@ export function WirelessTools() {
                     <SelectContent>
                       <SelectItem value="2.4">2.4 GHz</SelectItem>
                       <SelectItem value="5">5 GHz</SelectItem>
+                      <SelectItem value="6">6 GHz (WiFi 6E/7)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -569,8 +1089,15 @@ export function WirelessTools() {
                     <SelectContent>
                       <SelectItem value="20">20 MHz</SelectItem>
                       <SelectItem value="40">40 MHz</SelectItem>
-                      {wirelessConfig.band === "5" && <SelectItem value="80">80 MHz</SelectItem>}
-                      {wirelessConfig.band === "5" && <SelectItem value="160">160 MHz</SelectItem>}
+                      {(wirelessConfig.band === "5" || wirelessConfig.band === "6") && (
+                        <SelectItem value="80">80 MHz</SelectItem>
+                      )}
+                      {(wirelessConfig.band === "5" || wirelessConfig.band === "6") && (
+                        <SelectItem value="160">160 MHz</SelectItem>
+                      )}
+                      {wirelessConfig.band === "6" && (
+                        <SelectItem value="320">320 MHz (WiFi 7)</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -578,10 +1105,22 @@ export function WirelessTools() {
                 <Alert>
                   <Info className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>2.4 GHz:</strong> Use channels 1, 6, 11 to avoid overlap.
-                    <strong>5 GHz:</strong> More channels available with less congestion.
+                    <strong>2.4 GHz:</strong> Use channels 1, 6, 11 to avoid overlap.{" "}
+                    <strong>5 GHz:</strong> More channels available with less congestion.{" "}
+                    <strong>6 GHz:</strong> 59 clean channels, requires WiFi 6E/7 devices.
                   </AlertDescription>
                 </Alert>
+
+                {wirelessConfig.band === "6" && (
+                  <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800 dark:text-blue-200">
+                      <strong>6GHz Band Requirements:</strong> Only WiFi 6E (802.11ax) and WiFi 7
+                      (802.11be) devices can connect. Legacy devices will not see this network. 320
+                      MHz channels are exclusive to WiFi 7.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
 
@@ -730,7 +1269,8 @@ export function WirelessTools() {
                       <SelectContent>
                         <SelectItem value="802.11n">802.11n (WiFi 4)</SelectItem>
                         <SelectItem value="802.11ac">802.11ac (WiFi 5)</SelectItem>
-                        <SelectItem value="802.11ax">802.11ax (WiFi 6)</SelectItem>
+                        <SelectItem value="802.11ax">802.11ax (WiFi 6/6E)</SelectItem>
+                        <SelectItem value="802.11be">802.11be (WiFi 7)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -739,7 +1279,7 @@ export function WirelessTools() {
                     <Select
                       value={wirelessConfig.band}
                       onValueChange={(value) =>
-                        setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" }))
+                        setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" | "6" }))
                       }
                     >
                       <SelectTrigger>
@@ -748,6 +1288,7 @@ export function WirelessTools() {
                       <SelectContent>
                         <SelectItem value="2.4">2.4 GHz</SelectItem>
                         <SelectItem value="5">5 GHz</SelectItem>
+                        <SelectItem value="6">6 GHz (WiFi 6E/7)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -768,9 +1309,14 @@ export function WirelessTools() {
                       <SelectContent>
                         <SelectItem value="20">20 MHz</SelectItem>
                         <SelectItem value="40">40 MHz</SelectItem>
-                        {wirelessConfig.band === "5" && <SelectItem value="80">80 MHz</SelectItem>}
-                        {wirelessConfig.band === "5" && (
+                        {(wirelessConfig.band === "5" || wirelessConfig.band === "6") && (
+                          <SelectItem value="80">80 MHz</SelectItem>
+                        )}
+                        {(wirelessConfig.band === "5" || wirelessConfig.band === "6") && (
                           <SelectItem value="160">160 MHz</SelectItem>
+                        )}
+                        {wirelessConfig.band === "6" && (
+                          <SelectItem value="320">320 MHz (WiFi 7)</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -1001,7 +1547,8 @@ export function WirelessTools() {
                       <SelectContent>
                         <SelectItem value="802.11n">802.11n (WiFi 4)</SelectItem>
                         <SelectItem value="802.11ac">802.11ac (WiFi 5)</SelectItem>
-                        <SelectItem value="802.11ax">802.11ax (WiFi 6)</SelectItem>
+                        <SelectItem value="802.11ax">802.11ax (WiFi 6/6E)</SelectItem>
+                        <SelectItem value="802.11be">802.11be (WiFi 7)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
