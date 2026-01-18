@@ -108,8 +108,8 @@ Beautiful light and dark themes that adapt to your system preferences.
 
 ### Prerequisites
 
-- **Node.js** 18.0 or later
-- **pnpm** (recommended) or npm
+- **Node.js** 20.0 or later
+- **pnpm** 9.0 or later (recommended) or npm
 
 ### Installation
 

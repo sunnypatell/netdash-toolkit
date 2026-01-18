@@ -1,6 +1,25 @@
 {
   "releases": [
     {
+      "version": "2.6.0",
+      "type": "minor",
+      "title": "Project Sharing & Account Management",
+      "changes": [
+        "Added project sharing with permission levels (view/edit/admin) - share projects via email like Google Docs",
+        "Implemented in-app account management for updating display name, photo, email, and password",
+        "Added 'Shared with me' tab to view and manage projects shared by other users",
+        "Introduced real-time sync for shared projects - changes sync instantly between collaborators",
+        "Split CI workflow into separate jobs for better GitHub Actions visibility"
+      ],
+      "technical": [
+        "New Firestore collections: projectShares for recipient queries, userIndex for email lookups",
+        "Firestore security rules updated for collaborative access control with permission checks",
+        "ShareProjectDialog component with email lookup and permission management",
+        "AccountSettingsDialog with tabbed interface for profile, email, and password changes",
+        "Firebase reauthentication flow for sensitive account operations"
+      ]
+    },
+    {
       "version": "2.5.0",
       "type": "minor",
       "title": "Cloud Sync & Authentication",

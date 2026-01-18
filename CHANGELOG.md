@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.6.0] - 2025-01-16
+## [2.6.0] - 2026-01-16
 
 ### Added
 
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated firestore security rules for collaborative access control
 - added `ShareProjectDialog` and `AccountSettingsDialog` components
 
-## [2.5.0] - 2025-01-15
+## [2.5.0] - 2026-01-15
 
 ### Added
 
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - settings menu dark theme colors
 - one tap only shows when user is not signed in
 
-## [2.4.0] - 2025-01-14
+## [2.4.0] - 2026-01-14
 
 ### Added
 
