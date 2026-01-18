@@ -1,6 +1,14 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react"
 import {
   collection,
   doc,
@@ -110,6 +118,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false)
   const syncEnabled = !!(user && isFirebaseConfigured() && db)
 
+  // Track projects being deleted to prevent listener from restoring them
+  const deletingIdsRef = useRef<Set<string>>(new Set())
+
   // Load projects from localStorage on initial mount
   useEffect(() => {
     try {
@@ -211,9 +222,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         }
 
         // Merge: cloud projects + local-only projects
-        const mergedProjects = [...cloudProjects, ...localOnlyProjects].sort(
-          (a, b) => b.updatedAt - a.updatedAt
-        )
+        // Filter out any projects that are currently being deleted
+        const mergedProjects = [...cloudProjects, ...localOnlyProjects]
+          .filter((p) => !deletingIdsRef.current.has(p.id))
+          .sort((a, b) => b.updatedAt - a.updatedAt)
 
         setProjects(mergedProjects)
         setSyncing(false)
@@ -332,8 +344,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
 
   const deleteProject = async (id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id))
+    // Add to deletion tracking to prevent listener from restoring
+    deletingIdsRef.current.add(id)
+
+    // Delete from cloud first (wait for completion)
     await deleteFromCloud(id)
+
+    // Then update local state
+    setProjects((prev) => prev.filter((p) => p.id !== id))
+
+    // Clean up tracking ref
+    deletingIdsRef.current.delete(id)
   }
 
   const addItemToProject = async (
