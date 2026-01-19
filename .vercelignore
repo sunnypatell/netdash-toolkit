@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+out
+dist-electron
+release
+
+# Electron specific
+electron
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.rpm
+
+# Development
+.turbo
+*.log
+.DS_Store
+
+# IDE
+.idea
+.vscode
+
+# Test coverage
+coverage
