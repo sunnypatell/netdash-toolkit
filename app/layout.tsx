@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
+import { Analytics } from "@vercel/analytics/react"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -46,6 +47,7 @@ export default function RootLayout({
             </AuthProvider>
           </ThemeProvider>
         </Suspense>
+        <Analytics />
       </body>
     </html>
   )
