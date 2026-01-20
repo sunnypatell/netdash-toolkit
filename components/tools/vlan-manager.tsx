@@ -308,25 +308,25 @@ export function VLANManager() {
   const overlaps = checkSubnetOverlaps(vlans)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Layers className="text-primary h-6 w-6" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div className="flex items-start space-x-3">
+          <Layers className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold">VLAN Manager</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl font-bold sm:text-2xl">VLAN Manager</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Design and manage VLANs with switch configuration templates
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
-          <LoadFromProject itemType="vlan" onLoad={handleLoadFromProject} />
-          <Button variant="outline" onClick={loadSampleConfig}>
-            Load Sample
+        <div className="flex flex-wrap gap-2">
+          <LoadFromProject itemType="vlan" onLoad={handleLoadFromProject} size="sm" />
+          <Button variant="outline" size="sm" onClick={loadSampleConfig}>
+            <span className="hidden sm:inline">Load </span>Sample
           </Button>
-          <Button variant="outline" onClick={exportVLANs}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
+          <Button variant="outline" size="sm" onClick={exportVLANs}>
+            <Download className="mr-1 h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Export </span>CSV
           </Button>
           {vlans.length > 0 && (
             <SaveToProject
@@ -338,6 +338,7 @@ export function VLANManager() {
                 vendor: selectedVendor,
               }}
               toolSource="VLAN Manager"
+              size="sm"
             />
           )}
         </div>
@@ -359,11 +360,31 @@ export function VLANManager() {
       )}
 
       <Tabs defaultValue="vlans" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="vlans">VLANs</TabsTrigger>
-          <TabsTrigger value="ports">Switch Ports</TabsTrigger>
-          <TabsTrigger value="config">Configuration</TabsTrigger>
-          <TabsTrigger value="validation">Validation</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:h-10 sm:grid-cols-4 sm:gap-0 sm:p-1">
+          <TabsTrigger
+            value="vlans"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            VLANs
+          </TabsTrigger>
+          <TabsTrigger
+            value="ports"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Ports
+          </TabsTrigger>
+          <TabsTrigger
+            value="config"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Config
+          </TabsTrigger>
+          <TabsTrigger
+            value="validation"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Validation
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="vlans" className="space-y-6">

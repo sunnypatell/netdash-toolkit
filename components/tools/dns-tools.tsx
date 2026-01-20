@@ -193,12 +193,12 @@ export function DNSTools() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Globe className="text-primary h-6 w-6" />
+    <div className="tool-container">
+      <div className="flex items-start space-x-3">
+        <Globe className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
         <div>
-          <h1 className="text-2xl font-bold">DNS Tools</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-responsive-xl font-bold">DNS Tools</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             DNS over HTTPS client with multiple provider support
           </p>
         </div>

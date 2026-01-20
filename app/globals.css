@@ -129,3 +129,61 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile-first responsive utilities */
+@layer components {
+  /* Tool page container with responsive spacing */
+  .tool-container {
+    @apply space-y-4 sm:space-y-6;
+  }
+
+  /* Responsive grids that work on mobile */
+  .responsive-grid-2 {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2;
+  }
+  .responsive-grid-3 {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3;
+  }
+  .responsive-grid-4 {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4;
+  }
+
+  /* Mobile-friendly form row */
+  .form-row {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+  }
+
+  /* Results grid - stacks on mobile */
+  .results-grid {
+    @apply grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2;
+  }
+
+  /* Stat display classes */
+  .stat-value {
+    @apply text-xl font-bold sm:text-2xl;
+  }
+  .stat-label {
+    @apply text-muted-foreground text-xs font-medium sm:text-sm;
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl;
+  }
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl;
+  }
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
+
+  /* Button groups that wrap */
+  .button-group {
+    @apply flex flex-wrap gap-2;
+  }
+
+  /* Responsive card padding */
+  .card-responsive {
+    @apply p-4 sm:p-6;
+  }
+}

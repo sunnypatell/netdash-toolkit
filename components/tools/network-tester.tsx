@@ -376,11 +376,11 @@ export function NetworkTester() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Activity className="text-primary h-6 w-6" />
+      <div className="flex items-start space-x-3">
+        <Activity className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
         <div>
-          <h1 className="text-2xl font-bold">Network Testing Tools</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl font-bold sm:text-2xl">Network Testing Tools</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Test RTT, throughput, DNS resolution, and network utilities
           </p>
         </div>
@@ -406,13 +406,43 @@ export function NetworkTester() {
       )}
 
       <Tabs defaultValue="rtt" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="rtt">RTT Test</TabsTrigger>
-          <TabsTrigger value="throughput">Throughput</TabsTrigger>
-          <TabsTrigger value="dns">DNS Tools</TabsTrigger>
-          <TabsTrigger value="mtu">MTU Calc</TabsTrigger>
-          <TabsTrigger value="oui">OUI Lookup</TabsTrigger>
-          <TabsTrigger value="ipv6">IPv6 Tools</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:h-10 sm:grid-cols-3 sm:gap-0 sm:p-1 lg:grid-cols-6">
+          <TabsTrigger
+            value="rtt"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            RTT
+          </TabsTrigger>
+          <TabsTrigger
+            value="throughput"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Throughput
+          </TabsTrigger>
+          <TabsTrigger
+            value="dns"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            DNS
+          </TabsTrigger>
+          <TabsTrigger
+            value="mtu"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            MTU
+          </TabsTrigger>
+          <TabsTrigger
+            value="oui"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            OUI
+          </TabsTrigger>
+          <TabsTrigger
+            value="ipv6"
+            className="data-[state=active]:bg-background border-input bg-muted rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            IPv6
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="rtt" className="space-y-6">

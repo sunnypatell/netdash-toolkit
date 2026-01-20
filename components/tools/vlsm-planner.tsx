@@ -130,30 +130,30 @@ export function VLSMPlanner() {
   const heatmapData = plan ? generateVLSMHeatmap(plan) : []
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Network className="text-primary h-6 w-6" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+        <div className="flex items-start space-x-3">
+          <Network className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold">VLSM Planner</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl font-bold sm:text-2xl">VLSM Planner</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Plan Variable Length Subnet Masking with optimal allocation
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
-          <LoadFromProject itemType="vlsm" onLoad={handleLoadFromProject} />
-          <Button variant="outline" onClick={loadSamplePlan}>
-            Load Sample
+        <div className="flex flex-wrap gap-2">
+          <LoadFromProject itemType="vlsm" onLoad={handleLoadFromProject} size="sm" />
+          <Button variant="outline" size="sm" onClick={loadSamplePlan}>
+            <span className="hidden sm:inline">Load </span>Sample
           </Button>
           {plan && (
             <>
-              <Button variant="outline" onClick={() => exportPlan("csv")}>
-                <Download className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => exportPlan("csv")}>
+                <Download className="mr-1 h-4 w-4 sm:mr-2" />
                 CSV
               </Button>
-              <Button variant="outline" onClick={() => exportPlan("text")}>
-                <Download className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => exportPlan("text")}>
+                <Download className="mr-1 h-4 w-4 sm:mr-2" />
                 Text
               </Button>
               {plan.success && (
@@ -167,6 +167,7 @@ export function VLSMPlanner() {
                     plan,
                   }}
                   toolSource="VLSM Planner"
+                  size="sm"
                 />
               )}
             </>
