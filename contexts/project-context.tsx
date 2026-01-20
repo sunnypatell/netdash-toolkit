@@ -300,14 +300,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Delete from Firestore
   const deleteFromCloud = useCallback(
-    async (projectId: string) => {
-      if (!syncEnabled || !db || !user) return
+    async (projectId: string): Promise<boolean> => {
+      if (!syncEnabled || !db || !user) return true // Local-only deletion is fine
 
       try {
         const projectRef = doc(db, "users", user.uid, "projects", projectId)
         await deleteDoc(projectRef)
+        return true
       } catch (error) {
         console.error("Failed to delete project from cloud:", error)
+        throw error // Propagate error so caller knows deletion failed
       }
     },
     [syncEnabled, user]
@@ -345,18 +347,36 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string): Promise<{ success: boolean; error?: string }> => {
     // Add to deletion tracking to prevent listener from restoring
     deletingIdsRef.current.add(id)
 
-    // Delete from cloud first (wait for completion)
-    await deleteFromCloud(id)
+    try {
+      // Delete from cloud first (wait for completion)
+      await deleteFromCloud(id)
 
-    // Then update local state
-    setProjects((prev) => prev.filter((p) => p.id !== id))
+      // Then update local state
+      setProjects((prev) => prev.filter((p) => p.id !== id))
 
-    // Clean up tracking ref
-    deletingIdsRef.current.delete(id)
+      // Clean up tracking ref only on success
+      deletingIdsRef.current.delete(id)
+
+      return { success: true }
+    } catch (error) {
+      // Keep the ID in deletingIdsRef to prevent restoration during retry
+      // But allow future deletion attempts
+      console.error("Delete project failed:", error)
+
+      // Remove from tracking after a delay to allow retry
+      setTimeout(() => {
+        deletingIdsRef.current.delete(id)
+      }, 5000)
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to delete project from cloud",
+      }
+    }
   }
 
   const addItemToProject = async (

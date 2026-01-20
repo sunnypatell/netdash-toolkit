@@ -245,15 +245,23 @@ export function ProjectManager() {
 
   // Delete a project
   const handleDeleteProject = async (id: string) => {
-    await deleteProject(id)
-    if (selectedProject?.id === id) {
-      setSelectedProject(null)
-    }
+    const result = await deleteProject(id)
 
-    toast({
-      title: "Project deleted",
-      description: "Project has been removed",
-    })
+    if (result.success) {
+      if (selectedProject?.id === id) {
+        setSelectedProject(null)
+      }
+      toast({
+        title: "Project deleted",
+        description: "Project has been removed",
+      })
+    } else {
+      toast({
+        title: "Delete failed",
+        description: result.error || "Failed to delete project. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Add item to project
