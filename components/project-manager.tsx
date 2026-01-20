@@ -66,6 +66,12 @@ import {
   QrCode,
   Eye,
   Crown,
+  ArrowRightLeft,
+  List,
+  Shuffle,
+  Gauge,
+  Lock,
+  Mail,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -106,6 +112,13 @@ const getItemIcon = (type: ProjectItem["type"]) => {
     wireless: Wifi,
     cable: Cable,
     "wifi-qr": QrCode,
+    "ip-converter": ArrowRightLeft,
+    "ip-range": List,
+    "random-gen": Shuffle,
+    bandwidth: Gauge,
+    "ssl-check": Lock,
+    whois: Globe,
+    "email-diag": Mail,
     other: FileText,
   }
   return icons[type] || FileText
@@ -129,6 +142,13 @@ const getItemTypeLabel = (type: ProjectItem["type"]) => {
     wireless: "Wireless Configuration",
     cable: "Cable Calculation",
     "wifi-qr": "WiFi QR Code",
+    "ip-converter": "IP Conversion",
+    "ip-range": "IP Range",
+    "random-gen": "Random Generator",
+    bandwidth: "Bandwidth Calculation",
+    "ssl-check": "SSL Certificate",
+    whois: "WHOIS Lookup",
+    "email-diag": "Email Diagnostics",
     other: "Other",
   }
   return labels[type] || "Other"

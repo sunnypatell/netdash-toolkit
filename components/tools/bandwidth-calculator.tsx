@@ -17,6 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download, Clock, HardDrive, Gauge, ArrowRight, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
+import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 
 type SizeUnit = "B" | "KB" | "MB" | "GB" | "TB" | "PB"
 type SpeedUnit = "bps" | "Kbps" | "Mbps" | "Gbps" | "Bps" | "KBps" | "MBps" | "GBps"
@@ -173,12 +176,54 @@ export function BandwidthCalculator() {
     { name: "WiFi 7 (802.11be)", speed: "5760 Mbps" },
   ]
 
+  const handleLoadFromProject = (data: Record<string, unknown>, _item: ProjectItem) => {
+    const input = data.input as
+      | {
+          fileSize?: string
+          fileSizeUnit?: SizeUnit
+          transferSpeed?: string
+          transferSpeedUnit?: SpeedUnit
+        }
+      | undefined
+    if (input) {
+      if (input.fileSize) setFileSize(input.fileSize)
+      if (input.fileSizeUnit) setFileSizeUnit(input.fileSizeUnit)
+      if (input.transferSpeed) setTransferSpeed(input.transferSpeed)
+      if (input.transferSpeedUnit) setTransferSpeedUnit(input.transferSpeedUnit)
+    }
+  }
+
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Gauge}
         title="Bandwidth Calculator"
         description="Calculate transfer times, download sizes, and convert between speed units"
+        actions={
+          <>
+            <LoadFromProject itemType="bandwidth" onLoad={handleLoadFromProject} size="sm" />
+            <SaveToProject
+              itemType="bandwidth"
+              itemName={`${fileSize} ${fileSizeUnit} @ ${transferSpeed} ${transferSpeedUnit}`}
+              itemData={{
+                input: {
+                  fileSize,
+                  fileSizeUnit,
+                  transferSpeed,
+                  transferSpeedUnit,
+                  overhead,
+                },
+                result: {
+                  transferTime: transferTimeResult.formatted,
+                  totalSeconds: transferTimeResult.totalSeconds,
+                  effectiveSpeedMbps: transferTimeResult.effectiveSpeedMbps,
+                },
+              }}
+              toolSource="Bandwidth Calculator"
+              size="sm"
+            />
+          </>
+        }
       />
 
       <Tabs defaultValue="transfer-time" className="space-y-4">

@@ -12,6 +12,9 @@ import { Copy, Download, AlertTriangle, List, ArrowDown, ArrowUp } from "lucide-
 import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
 import { ResultCard } from "@/components/ui/result-card"
+import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 
 interface EnumerationResult {
   networkAddress: string
@@ -187,12 +190,44 @@ export function IPEnumerator() {
     URL.revokeObjectURL(url)
   }
 
+  const handleLoadFromProject = (data: Record<string, unknown>, _item: ProjectItem) => {
+    const input = data.input as { cidr: string } | undefined
+    if (input?.cidr) {
+      setCidrInput(input.cidr)
+    }
+  }
+
   return (
     <div className="tool-container">
       <ToolHeader
         icon={List}
         title="IP Range Enumerator"
         description="List all IP addresses within a CIDR block with network details"
+        actions={
+          <>
+            <LoadFromProject itemType="ip-range" onLoad={handleLoadFromProject} size="sm" />
+            {result && (
+              <SaveToProject
+                itemType="ip-range"
+                itemName={cidrInput}
+                itemData={{
+                  input: { cidr: cidrInput },
+                  result: {
+                    networkAddress: result.networkAddress,
+                    broadcastAddress: result.broadcastAddress,
+                    subnetMask: result.subnetMask,
+                    firstUsable: result.firstUsable,
+                    lastUsable: result.lastUsable,
+                    totalHosts: result.totalHosts,
+                    usableHosts: result.usableHosts,
+                  },
+                }}
+                toolSource="IP Range Enumerator"
+                size="sm"
+              />
+            )}
+          </>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -43,6 +43,13 @@ export interface ProjectItem {
     | "wireless"
     | "cable"
     | "wifi-qr"
+    | "ip-converter"
+    | "ip-range"
+    | "random-gen"
+    | "bandwidth"
+    | "ssl-check"
+    | "whois"
+    | "email-diag"
     | "other"
   name: string
   data: Record<string, unknown>

@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Copy, Download, RefreshCw, Shuffle, Trash2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
+import { SaveToProject } from "@/components/ui/save-to-project"
 
 type IPType = "any" | "private-a" | "private-b" | "private-c" | "public" | "loopback" | "link-local"
 type MACType = "unicast" | "multicast" | "local" | "universal"
@@ -274,12 +275,29 @@ export function RandomGenerator() {
     </div>
   )
 
+  const allItems = [...generatedIPs, ...generatedMACs, ...generatedIPv6s]
+
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Shuffle}
         title="Random Generator"
         description="Generate random IPv4, IPv6, and MAC addresses for testing and development"
+        actions={
+          allItems.length > 0 ? (
+            <SaveToProject
+              itemType="random-gen"
+              itemName={`${allItems.length} generated addresses`}
+              itemData={{
+                ipv4: generatedIPs.map((i) => i.value),
+                ipv6: generatedIPv6s.map((i) => i.value),
+                mac: generatedMACs.map((i) => i.value),
+              }}
+              toolSource="Random Generator"
+              size="sm"
+            />
+          ) : undefined
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

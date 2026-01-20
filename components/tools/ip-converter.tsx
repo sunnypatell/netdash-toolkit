@@ -11,6 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, Check, RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
+import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import type { ProjectItem } from "@/contexts/project-context"
 
 interface ConversionResult {
   dottedDecimal: string
@@ -179,12 +182,37 @@ export function IPConverter() {
     </div>
   )
 
+  const handleLoadFromProject = (data: Record<string, unknown>, _item: ProjectItem) => {
+    const input = data.input as { value: string; format: string } | undefined
+    if (input) {
+      setIpInput(input.value)
+      setInputFormat(input.format as typeof inputFormat)
+    }
+  }
+
   return (
     <div className="tool-container">
       <ToolHeader
         icon={ArrowRightLeft}
         title="IP Address Converter"
         description="Convert IPv4 addresses between binary, decimal, hexadecimal, and dotted-decimal formats"
+        actions={
+          <>
+            <LoadFromProject itemType="ip-converter" onLoad={handleLoadFromProject} size="sm" />
+            {result && (
+              <SaveToProject
+                itemType="ip-converter"
+                itemName={result.dottedDecimal}
+                itemData={{
+                  input: { value: ipInput, format: inputFormat },
+                  result: result,
+                }}
+                toolSource="IP Converter"
+                size="sm"
+              />
+            )}
+          </>
+        }
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
