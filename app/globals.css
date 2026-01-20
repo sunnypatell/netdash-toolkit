@@ -134,7 +134,7 @@
 @layer components {
   /* Tool page container with responsive spacing */
   .tool-container {
-    @apply space-y-4 sm:space-y-6;
+    @apply space-y-4 overflow-x-hidden sm:space-y-6;
   }
 
   /* Responsive grids that work on mobile */

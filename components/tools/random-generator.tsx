@@ -254,7 +254,10 @@ export function RandomGenerator() {
       {items.length > 0 ? (
         <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-3">
           {items.map((item, index) => (
-            <div key={index} className="hover:bg-muted/50 rounded px-2 py-1 font-mono text-sm">
+            <div
+              key={index}
+              className="hover:bg-muted/50 rounded px-2 py-1 font-mono text-sm break-all"
+            >
               {item.value}
             </div>
           ))}

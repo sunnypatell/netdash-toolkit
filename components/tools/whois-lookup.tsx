@@ -602,13 +602,13 @@ export function WhoisLookup() {
               {ipResult.startAddress && (
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Range Start</p>
-                  <p className="font-mono font-medium">{ipResult.startAddress}</p>
+                  <p className="font-mono font-medium break-all">{ipResult.startAddress}</p>
                 </div>
               )}
               {ipResult.endAddress && (
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-sm">Range End</p>
-                  <p className="font-mono font-medium">{ipResult.endAddress}</p>
+                  <p className="font-mono font-medium break-all">{ipResult.endAddress}</p>
                 </div>
               )}
               {ipResult.ipVersion && (
