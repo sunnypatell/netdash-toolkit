@@ -614,22 +614,22 @@ export function ProjectManager() {
 
             <Separator className="my-4" />
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1"
+                className="min-w-[100px] flex-1"
                 onClick={exportAllProjects}
                 disabled={projects.length === 0}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Export All
+                <span className="sm:inline">Export</span>
               </Button>
-              <label htmlFor="import-projects">
-                <Button variant="outline" size="sm" className="flex-1" asChild>
+              <label htmlFor="import-projects" className="min-w-[100px] flex-1">
+                <Button variant="outline" size="sm" className="w-full" asChild>
                   <span>
                     <Upload className="mr-2 h-4 w-4" />
-                    Import
+                    <span className="sm:inline">Import</span>
                   </span>
                 </Button>
               </label>
@@ -646,13 +646,15 @@ export function ProjectManager() {
 
         {/* Project Details */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CardTitle>{activeProject?.name || "Select a Project"}</CardTitle>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="truncate">
+                    {activeProject?.name || "Select a Project"}
+                  </CardTitle>
                   {currentSharedProject && (
-                    <Badge variant="outline" className="gap-1">
+                    <Badge variant="outline" className="shrink-0 gap-1">
                       {currentSharedProject.permission === "view" ? (
                         <Eye className="h-3 w-3" />
                       ) : currentSharedProject.permission === "edit" ? (
@@ -664,19 +666,19 @@ export function ProjectManager() {
                     </Badge>
                   )}
                 </div>
-                <CardDescription>
+                <CardDescription className="line-clamp-2">
                   {currentSharedProject
                     ? `Shared by ${currentSharedProject.ownerEmail}`
                     : activeProject?.description || "Choose a project to view its contents"}
                 </CardDescription>
               </div>
               {activeProject && (
-                <div className="flex items-center space-x-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {/* Share button - only for owned projects */}
                   {isOwner && syncEnabled && (
                     <Button size="sm" variant="outline" onClick={() => setIsShareDialogOpen(true)}>
-                      <Share2 className="mr-2 h-4 w-4" />
-                      Share
+                      <Share2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Share</span>
                     </Button>
                   )}
 
@@ -685,8 +687,8 @@ export function ProjectManager() {
                     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline" onClick={openEditDialog}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
+                          <Edit className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Edit</span>
                         </Button>
                       </DialogTrigger>
                       <DialogContent>
@@ -737,8 +739,8 @@ export function ProjectManager() {
                       variant="outline"
                       onClick={() => exportProject(currentProject)}
                     >
-                      <Download className="mr-2 h-4 w-4" />
-                      Export
+                      <Download className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Export</span>
                     </Button>
                   )}
 
@@ -747,8 +749,8 @@ export function ProjectManager() {
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button size="sm" variant="destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
+                          <Trash2 className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Delete</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
@@ -883,18 +885,21 @@ export function ProjectManager() {
                         {activeProject.items.map((item) => {
                           const Icon = getItemIcon(item.type)
                           return (
-                            <div key={item.id} className="bg-muted/50 rounded-lg border p-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <Icon className="text-primary h-5 w-5" aria-hidden="true" />
-                                  <div>
-                                    <h4 className="font-medium">{item.name}</h4>
+                            <div key={item.id} className="bg-muted/50 rounded-lg border p-3 sm:p-4">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                                  <Icon
+                                    className="text-primary h-5 w-5 shrink-0"
+                                    aria-hidden="true"
+                                  />
+                                  <div className="min-w-0">
+                                    <h4 className="truncate font-medium">{item.name}</h4>
                                     <Badge variant="outline" className="mt-1 text-xs">
                                       {getItemTypeLabel(item.type)}
                                     </Badge>
                                   </div>
                                 </div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex shrink-0 items-center gap-1">
                                   <Button
                                     size="sm"
                                     variant="ghost"
