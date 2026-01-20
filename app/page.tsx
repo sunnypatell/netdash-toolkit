@@ -23,6 +23,14 @@ import { RoutingTools } from "@/components/tools/routing-tools"
 import { WirelessTools } from "@/components/tools/wireless-tools"
 import { CableCalculator } from "@/components/tools/cable-calculator"
 import { WifiQRGenerator } from "@/components/tools/wifi-qr-generator"
+import { IPConverter } from "@/components/tools/ip-converter"
+import { IPEnumerator } from "@/components/tools/ip-enumerator"
+import { RandomGenerator } from "@/components/tools/random-generator"
+import { BandwidthCalculator } from "@/components/tools/bandwidth-calculator"
+import { SSLChecker } from "@/components/tools/ssl-checker"
+import { WhoisLookup } from "@/components/tools/whois-lookup"
+import { EmailDiagnostics } from "@/components/tools/email-diagnostics"
+import { ReferenceHub } from "@/components/tools/reference-hub"
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
@@ -83,6 +91,22 @@ export default function HomePage() {
         return <CableCalculator />
       case "wifi-qr":
         return <WifiQRGenerator />
+      case "ip-converter":
+        return <IPConverter />
+      case "ip-enumerator":
+        return <IPEnumerator />
+      case "random-generator":
+        return <RandomGenerator />
+      case "bandwidth-calculator":
+        return <BandwidthCalculator />
+      case "ssl-checker":
+        return <SSLChecker />
+      case "whois-lookup":
+        return <WhoisLookup />
+      case "email-diagnostics":
+        return <EmailDiagnostics />
+      case "reference-hub":
+        return <ReferenceHub />
       case "about":
         return <About />
       case "project-manager":

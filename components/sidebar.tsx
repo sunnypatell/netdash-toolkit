@@ -23,6 +23,13 @@ import {
   Route,
   Cable,
   QrCode,
+  ArrowRightLeft,
+  List,
+  Shuffle,
+  Gauge,
+  Lock,
+  Mail,
+  BookOpen,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -50,6 +57,14 @@ const navigationItems = [
   { id: "oui-lookup", label: "OUI Lookup", icon: Search },
   { id: "cable-calculator", label: "Cable Calculator", icon: Cable },
   { id: "wifi-qr", label: "WiFi QR Generator", icon: QrCode },
+  { id: "ip-converter", label: "IP Converter", icon: ArrowRightLeft },
+  { id: "ip-enumerator", label: "IP Enumerator", icon: List },
+  { id: "random-generator", label: "Random Generator", icon: Shuffle },
+  { id: "bandwidth-calculator", label: "Bandwidth Calculator", icon: Gauge },
+  { id: "ssl-checker", label: "SSL/TLS Checker", icon: Lock },
+  { id: "whois-lookup", label: "WHOIS Lookup", icon: Search },
+  { id: "email-diagnostics", label: "Email Diagnostics", icon: Mail },
+  { id: "reference-hub", label: "Reference Hub", icon: BookOpen },
   { id: "about", label: "About", icon: Info },
   { id: "project-manager", label: "Projects", icon: FolderOpen },
 ]
