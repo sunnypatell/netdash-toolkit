@@ -31,6 +31,21 @@ import { SSLChecker } from "@/components/tools/ssl-checker"
 import { WhoisLookup } from "@/components/tools/whois-lookup"
 import { EmailDiagnostics } from "@/components/tools/email-diagnostics"
 import { ReferenceHub } from "@/components/tools/reference-hub"
+import { HTTPHeaders } from "@/components/tools/http-headers"
+import { SecurityHeaders } from "@/components/tools/security-headers"
+import { RedirectChecker } from "@/components/tools/redirect-checker"
+import { UserAgentParser } from "@/components/tools/user-agent-parser"
+import { HashGenerator } from "@/components/tools/hash-generator"
+import { PasswordGenerator } from "@/components/tools/password-generator"
+import { Base64Encoder } from "@/components/tools/base64-encoder"
+import { URLEncoder } from "@/components/tools/url-encoder"
+import { JSONFormatter } from "@/components/tools/json-formatter"
+import { JWTDecoder } from "@/components/tools/jwt-decoder"
+import { TimestampConverter } from "@/components/tools/timestamp-converter"
+import { CronParser } from "@/components/tools/cron-parser"
+import { RegexTester } from "@/components/tools/regex-tester"
+import { ColorConverter } from "@/components/tools/color-converter"
+import { LoremGenerator } from "@/components/tools/lorem-generator"
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
@@ -107,6 +122,36 @@ export default function HomePage() {
         return <EmailDiagnostics />
       case "reference-hub":
         return <ReferenceHub />
+      case "http-headers":
+        return <HTTPHeaders />
+      case "security-headers":
+        return <SecurityHeaders />
+      case "redirect-checker":
+        return <RedirectChecker />
+      case "user-agent-parser":
+        return <UserAgentParser />
+      case "hash-generator":
+        return <HashGenerator />
+      case "password-generator":
+        return <PasswordGenerator />
+      case "base64-encoder":
+        return <Base64Encoder />
+      case "url-encoder":
+        return <URLEncoder />
+      case "json-formatter":
+        return <JSONFormatter />
+      case "jwt-decoder":
+        return <JWTDecoder />
+      case "timestamp-converter":
+        return <TimestampConverter />
+      case "cron-parser":
+        return <CronParser />
+      case "regex-tester":
+        return <RegexTester />
+      case "color-converter":
+        return <ColorConverter />
+      case "lorem-generator":
+        return <LoremGenerator />
       case "about":
         return <About />
       case "project-manager":
