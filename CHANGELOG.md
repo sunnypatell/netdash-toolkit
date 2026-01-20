@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-01-19
+
+### Added
+
+- **24 new networking tools** - massive expansion of the toolkit:
+  - **converters**: ip address converter (binary/hex/decimal/ipv6-mapped), data unit converter, subnet mask converter, mac formatter
+  - **calculators**: bandwidth calculator, network calculator (latency/throughput/ip math), uptime calculator
+  - **generators**: random ip/mac/ipv6 generator, wifi qr generator enhancements
+  - **diagnostics**: ssl/tls checker, whois lookup, email diagnostics (spf/dkim/dmarc), redirect checker, http headers analyzer
+  - **utilities**: ip range enumerator, url encoder/decoder, regex tester, json formatter, base64 encoder, lorem ipsum generator, cron parser, timestamp converter, hash generator (sha/md5), jwt decoder, password generator, user agent parser
+  - **reference pages**: port reference, cidr reference, protocol reference, ipv6 reference, common subnets
+- **centralized tool registry** - new `lib/tool-registry.ts` for unified tool management with metadata, categories, and search
+- **reusable copybutton component** - consistent copy-to-clipboard with visual checkmark feedback across all tools
+- **cors proxy fallback** - tools that fetch external resources now fallback to proxy when direct requests fail
+
+### Changed
+
+- **unified dashboard** - tools now dynamically rendered from centralized registry
+- **sidebar starts collapsed** - cleaner default ui on desktop
+- **improved tool organization** - tools grouped by category in navigation
+
+### Fixed
+
+- **copy button feedback** - all copy buttons now show checkmark confirmation
+- **project deletion** - fixed type mismatch in deleteProject return type
+- **cors handling** - ssl checker, whois lookup, and email diagnostics now work in browser mode
+
+### Technical
+
+- added tool registry pattern for scalable tool management
+- refactored 13+ tools to use shared copybutton component
+- removed redundant toast notifications from copy operations
+- improved type safety in project context
+
+## [2.7.0] - 2026-01-17
+
+### Added
+
+- **9 new networking tools**: data unit converter, uptime calculator, mac formatter, network calculator, subnet mask converter, port reference, cidr reference, protocol reference, ipv6 reference
+- **cors proxy fallback** - improved browser compatibility for external api requests
+
+### Fixed
+
+- sidebar now starts collapsed by default
+
 ## [2.6.0] - 2026-01-16
 
 ### Added
@@ -75,7 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive design for mobile and tablet devices
 - 100% client-side calculations for privacy
 
-[Unreleased]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/sunnypatell/netdash-toolkit/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.7.0...v3.0.0
+[2.7.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v1.0.0...v2.4.0

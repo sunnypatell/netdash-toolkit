@@ -39,7 +39,7 @@
 
 ## What is NetDash?
 
-**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **16+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
+**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **40+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
 
 <br />
 
@@ -95,7 +95,11 @@ Beautiful light and dark themes that adapt to your system preferences.
 |   **Troubleshooting**   |       Conflict Checker, Network Tester, DNS Tools        | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
 |      **Utilities**      | MTU Calculator, IPv6 Tools, OUI Lookup, Cable Calculator | Protocol overhead analysis, EUI-64 generation, MAC vendor ID, fiber/copper signal loss          |
 |      **Wireless**       |            Wireless Tools, WiFi QR Generator             | Channel planning, interference analysis, WiFi QR codes for instant network connection           |
-|    **Cloud & Sync**     |             Project Manager, Authentication              | Firebase cloud sync, Google/Email sign-in, cross-device project persistence                     |
+|     **Converters**      |   IP Converter, Data Unit, Subnet Mask, MAC Formatter    | Binary/hex/decimal IP conversion, data unit conversion, MAC address formatting                  |
+|     **Diagnostics**     |   SSL Checker, WHOIS, Email Diagnostics, HTTP Headers    | TLS certificate analysis, domain lookup, SPF/DKIM/DMARC validation, header inspection           |
+|      **Dev Tools**      |   JSON Formatter, Regex Tester, JWT Decoder, Hash Gen    | JSON beautification, regex testing with highlighting, JWT decoding, SHA/MD5 hashing             |
+|      **Reference**      |     Port Reference, CIDR Reference, Protocol Numbers     | Searchable port database, CIDR cheat sheet, protocol reference tables                           |
+|    **Cloud & Sync**     |         Project Manager, Sharing, Authentication         | Firebase cloud sync, project sharing, Google/Email sign-in, cross-device persistence            |
 
 </div>
 
@@ -388,11 +392,14 @@ netdash-toolkit/
 │   ├── sidebar.tsx        # Navigation sidebar
 │   └── header.tsx         # Application header
 ├── lib/                   # Utility libraries
+│   ├── tool-registry.ts   # Centralized tool metadata and search
 │   ├── network-utils.ts   # IPv4/IPv6 calculations
 │   ├── network-testing.ts # RTT, DNS, throughput utilities
 │   ├── conflict-utils.ts  # Conflict detection algorithms
 │   ├── vlan-utils.ts      # VLAN validation and config generation
 │   ├── vlsm-utils.ts      # VLSM planning algorithms
+│   ├── firebase.ts        # Firebase configuration and auth
+│   ├── sharing.ts         # Project sharing utilities
 │   └── parsers.ts         # Multi-format data parsers
 ├── hooks/                 # React hooks
 │   └── use-toast.ts       # Toast notification hook
@@ -416,6 +423,7 @@ netdash-toolkit/
 |  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS               |
 |  Done   | Dark Mode            | System-aware theming                          |
 |  Done   | Cloud Sync           | Firebase auth, project sync across devices    |
+|  Done   | Project Sharing      | Share projects with collaborators via email   |
 |  Done   | Electron App         | Desktop version with native networking        |
 |  Done   | Real ICMP Ping       | Native ping with Electron                     |
 |  Done   | Real Traceroute      | TTL-based hop discovery                       |
@@ -423,6 +431,11 @@ netdash-toolkit/
 |  Done   | Network Discovery    | ARP scanning, device enumeration              |
 |  Done   | Cable Calculator     | TIA-compliant fiber/copper signal loss        |
 |  Done   | WiFi QR Generator    | WPA2/WPA3/WEP QR codes for instant connection |
+|  Done   | SSL/TLS Checker      | Certificate analysis and security scoring     |
+|  Done   | WHOIS Lookup         | Domain and IP registration data               |
+|  Done   | Email Diagnostics    | SPF, DKIM, DMARC validation                   |
+|  Done   | Developer Tools      | JSON, Regex, JWT, Hash, Password generators   |
+|  Done   | Reference Pages      | Port numbers, CIDR, protocols, IPv6           |
 | Planned | Configuration Backup | SSH-based device config backup                |
 | Planned | SNMP Polling         | Device monitoring via SNMP                    |
 | Planned | Network Topology     | Visual network mapping                        |

@@ -1,6 +1,31 @@
 {
   "releases": [
     {
+      "version": "3.0.0",
+      "type": "major",
+      "title": "Major Expansion - 40+ Networking Tools",
+      "changes": [
+        "Expanded from 16 to 40+ professional networking tools",
+        "Added 15 new tools with centralized registry system",
+        "Added 9 new networking tools with CORS proxy fallback",
+        "Added 8 new networking tools and reference hub pages",
+        "Reorganized sidebar with collapsible tool categories",
+        "Added mobile-first responsive design system across all tools",
+        "Created reusable CopyButton component with visual checkmark feedback",
+        "Sidebar now starts collapsed by default for cleaner UX",
+        "Added project integration to all new tools",
+        "Fixed project deletion error handling in Firebase"
+      ],
+      "technical": [
+        "Centralized tool registry for unified tool management",
+        "CORS proxy fallback for browser-based external requests",
+        "Mobile-first responsive design with breakpoint-aware layouts",
+        "Reusable CopyButton with 2-second state feedback animation",
+        "Collapsible sidebar categories with localStorage persistence",
+        "Improved Firestore security rules for project operations"
+      ]
+    },
+    {
       "version": "2.7.0",
       "type": "minor",
       "title": "Cable Calculator & WiFi QR Generator",
