@@ -49,6 +49,31 @@ export function OUILookup() {
       const oui = cleanMac.substring(0, 6).toUpperCase()
       const formattedOui = `${oui.substring(0, 2)}:${oui.substring(2, 4)}:${oui.substring(4, 6)}`
 
+      // Try maclookup.app first (more reliable, has CORS support)
+      try {
+        const response = await fetch(`https://api.maclookup.app/v2/macs/${oui}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.found && data.company) {
+            return {
+              mac: macAddress,
+              oui: formattedOui,
+              vendor: data.company,
+              found: true,
+            }
+          }
+        }
+      } catch (primaryError) {
+        console.warn("Primary API (maclookup.app) failed, trying fallback:", primaryError)
+      }
+
+      // Fallback to macvendors.com via CORS proxy
       const proxyUrl = "https://api.allorigins.win/get?url="
       const targetUrl = encodeURIComponent(`https://api.macvendors.com/${formattedOui}`)
 
@@ -93,48 +118,197 @@ export function OUILookup() {
 
   const getLocalOUIVendor = (oui: string): string | null => {
     const localOUI: Record<string, string> = {
+      // VMware
       "005056": "VMware",
       "000C29": "VMware",
-      "001B21": "Intel",
-      "00155D": "Microsoft",
-      "080027": "VirtualBox",
-      "000585": "Juniper",
-      F01898: "Apple",
-      "001C73": "Arista",
-      "001122": "Cisco",
-      "00D0C9": "Intel",
-      "0050C2": "IEEE Registration Authority",
+      "001C14": "VMware",
+      // Microsoft
+      "00155D": "Microsoft Corporation",
+      "0017FA": "Microsoft Corporation",
+      "0003FF": "Microsoft Corporation",
+      // Intel
+      "001B21": "Intel Corporation",
+      ACDE48: "Intel Corporation",
+      "001302": "Intel Corporation",
+      "001517": "Intel Corporation",
+      "001676": "Intel Corporation",
+      "0019D1": "Intel Corporation",
+      "001E67": "Intel Corporation",
+      "00216A": "Intel Corporation",
+      "0024D7": "Intel Corporation",
+      // VirtualBox/QEMU
+      "080027": "Oracle VirtualBox",
       "525400": "QEMU/KVM",
-      "020054": "Novell",
-      "00E04C": "Realtek",
-      "001560": "Apple",
-      "3C0754": "Apple",
-      F0766F: "Apple",
-      A45E60: "Apple",
-      "8C8590": "Apple",
-      "7C6D62": "Apple",
-      "685B35": "Apple",
-      "609AC1": "Apple",
-      "5C969D": "Apple",
-      "5855CA": "Apple",
-      "4C32759": "Apple",
-      "40A6D9": "Apple",
-      "3451C9": "Apple",
-      "2CF0EE": "Apple",
-      "28E02C": "Apple",
-      "24A2E1": "Apple",
-      "20768F": "Apple",
-      "1C1AC0": "Apple",
-      "18AF61": "Apple",
-      "14109F": "Apple",
-      "10417F": "Apple",
-      "0C74C2": "Apple",
-      "04489A": "Apple",
-      "0017F2": "Apple",
-      "001451": "Apple",
-      "000A95": "Apple",
-      "000393": "Apple",
-      "00030D": "Apple",
+      "001C42": "Parallels",
+      "00163E": "Xensource (Citrix)",
+      // Apple
+      F01898: "Apple Inc",
+      B42E99: "Apple Inc",
+      "000393": "Apple Inc",
+      "000502": "Apple Inc",
+      "000A27": "Apple Inc",
+      "000A95": "Apple Inc",
+      "000D93": "Apple Inc",
+      "001124": "Apple Inc",
+      "001451": "Apple Inc",
+      "0016CB": "Apple Inc",
+      "0017F2": "Apple Inc",
+      "0019E3": "Apple Inc",
+      "001B63": "Apple Inc",
+      "001EC2": "Apple Inc",
+      "0021E9": "Apple Inc",
+      "002312": "Apple Inc",
+      "0023DF": "Apple Inc",
+      "002500": "Apple Inc",
+      "00254B": "Apple Inc",
+      "0025BC": "Apple Inc",
+      "002608": "Apple Inc",
+      "00264A": "Apple Inc",
+      "0026B0": "Apple Inc",
+      "0026BB": "Apple Inc",
+      // Cisco
+      "00000C": "Cisco Systems",
+      "000142": "Cisco Systems",
+      "000143": "Cisco Systems",
+      "000196": "Cisco Systems",
+      "000197": "Cisco Systems",
+      "000216": "Cisco Systems",
+      "000217": "Cisco Systems",
+      "00023D": "Cisco Systems",
+      "00024A": "Cisco Systems",
+      "00024B": "Cisco Systems",
+      // Dell
+      "001422": "Dell Inc",
+      "001AA0": "Dell Inc",
+      "00219B": "Dell Inc",
+      "0023AE": "Dell Inc",
+      "0024E8": "Dell Inc",
+      "002564": "Dell Inc",
+      "0026B9": "Dell Inc",
+      B083FE: "Dell Inc",
+      D067E5: "Dell Inc",
+      F01FAF: "Dell Inc",
+      // HP/HPE
+      "001083": "Hewlett Packard Enterprise",
+      "00110A": "Hewlett Packard Enterprise",
+      "001321": "Hewlett Packard Enterprise",
+      "001560": "Hewlett Packard Enterprise",
+      "001635": "Hewlett Packard Enterprise",
+      "001708": "Hewlett Packard Enterprise",
+      "001871": "Hewlett Packard Enterprise",
+      "0019BB": "Hewlett Packard Enterprise",
+      "001A4B": "Hewlett Packard Enterprise",
+      "001B78": "Hewlett Packard Enterprise",
+      "001CC4": "Hewlett Packard Enterprise",
+      "001E0B": "Hewlett Packard Enterprise",
+      "001F29": "Hewlett Packard Enterprise",
+      "00215A": "Hewlett Packard Enterprise",
+      "002264": "Hewlett Packard Enterprise",
+      "00237D": "Hewlett Packard Enterprise",
+      "002481": "Hewlett Packard Enterprise",
+      "0025B3": "Hewlett Packard Enterprise",
+      "002655": "Hewlett Packard Enterprise",
+      // Juniper
+      "000585": "Juniper Networks",
+      "00121E": "Juniper Networks",
+      "0017CB": "Juniper Networks",
+      "0019E2": "Juniper Networks",
+      "001BC0": "Juniper Networks",
+      "001DB5": "Juniper Networks",
+      "002159": "Juniper Networks",
+      "002283": "Juniper Networks",
+      "00239C": "Juniper Networks",
+      "0024DC": "Juniper Networks",
+      "002688": "Juniper Networks",
+      "2C6BF5": "Juniper Networks",
+      "3C6104": "Juniper Networks",
+      "5C5EAB": "Juniper Networks",
+      "841888": "Juniper Networks",
+      "84B59C": "Juniper Networks",
+      "9CCC83": "Juniper Networks",
+      // Arista
+      "001C73": "Arista Networks",
+      "28993A": "Arista Networks",
+      "444CA8": "Arista Networks",
+      "500800": "Arista Networks",
+      // Fortinet
+      "00090F": "Fortinet",
+      "906CAC": "Fortinet",
+      // Palo Alto
+      "001B17": "Palo Alto Networks",
+      "8CEA1B": "Palo Alto Networks",
+      // Ubiquiti
+      "00156D": "Ubiquiti Networks",
+      "0418D6": "Ubiquiti Networks",
+      "24A43C": "Ubiquiti Networks",
+      "687251": "Ubiquiti Networks",
+      "788A20": "Ubiquiti Networks",
+      "802AA8": "Ubiquiti Networks",
+      B4FBE4: "Ubiquiti Networks",
+      DC9FDB: "Ubiquiti Networks",
+      E8DE27: "Ubiquiti Networks",
+      F09FC2: "Ubiquiti Networks",
+      FCECDA: "Ubiquiti Networks",
+      // Raspberry Pi
+      DCA632: "Raspberry Pi Foundation",
+      B827EB: "Raspberry Pi Foundation",
+      E45F01: "Raspberry Pi Foundation",
+      // Network Equipment
+      "000496": "Extreme Networks",
+      "00E02B": "Extreme Networks",
+      "000130": "Foundry Networks",
+      "00E052": "Foundry Networks",
+      "00A0C9": "Intel Corporation",
+      "00E081": "Tyan Computer",
+      "0020AF": "3Com Corporation",
+      "005004": "3Com Corporation",
+      "006008": "3Com Corporation",
+      "006097": "3Com Corporation",
+      "00A024": "3Com Corporation",
+      // Consumer Electronics
+      "00E04C": "Realtek Semiconductor",
+      "001217": "Cisco-Linksys",
+      "00E018": "Asustek Computer",
+      "001731": "Asustek Computer",
+      "002354": "Asustek Computer",
+      "485B39": "Asustek Computer",
+      "00E09D": "Shandong Intelligent Optical",
+      "001E58": "D-Link Corporation",
+      "0019E0": "TP-Link Technologies",
+      "5C899A": "TP-Link Technologies",
+      E894F6: "TP-Link Technologies",
+      "001438": "Hewlett Packard",
+      "0015C5": "Dell",
+      B8AC6F: "Dell",
+      "0050F2": "Microsoft",
+      "001DD8": "Microsoft",
+      "7C1E52": "Microsoft",
+      // Samsung
+      "002119": "Samsung Electronics",
+      "0021D1": "Samsung Electronics",
+      "002339": "Samsung Electronics",
+      "0024E9": "Samsung Electronics",
+      "0025C3": "Samsung Electronics",
+      "0026E2": "Samsung Electronics",
+      "00265D": "Samsung Electronics",
+      "5CCACF": "Samsung Electronics",
+      "942E63": "Samsung Electronics",
+      A82BB9: "Samsung Electronics",
+      // Google
+      "001A11": "Google",
+      "3C5AB4": "Google",
+      "54608B": "Google",
+      "94EB2C": "Google",
+      F4F5D8: "Google",
+      // Amazon
+      "0C47C9": "Amazon Technologies",
+      "18742E": "Amazon Technologies",
+      "34D270": "Amazon Technologies",
+      "44650D": "Amazon Technologies",
+      "68372B": "Amazon Technologies",
+      "84D6D0": "Amazon Technologies",
+      A002DC: "Amazon Technologies",
+      FC65DE: "Amazon Technologies",
     }
 
     return localOUI[oui] || null
@@ -271,10 +445,10 @@ export function OUILookup() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Live API Integration:</strong> This tool uses the macvendors.com API with over
-          18,000 vendor records. Rate limited to 1 request per second for bulk lookups.{" "}
+          <strong>Live API Integration:</strong> This tool uses maclookup.app as the primary API
+          with macvendors.com as fallback. Over 50,000 vendor records available.{" "}
           <a
-            href="https://macvendors.com/api"
+            href="https://maclookup.app/api-v2/documentation"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary inline-flex items-center hover:underline"
@@ -371,12 +545,16 @@ export function OUILookup() {
             <CardContent>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span>Data Source:</span>
-                  <Badge variant="secondary">macvendors.com</Badge>
+                  <span>Primary API:</span>
+                  <Badge variant="secondary">maclookup.app</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span>Fallback API:</span>
+                  <Badge variant="outline">macvendors.com</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span>Database Size:</span>
-                  <span className="text-muted-foreground">18,000+ vendors</span>
+                  <span className="text-muted-foreground">50,000+ vendors</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Rate Limit:</span>

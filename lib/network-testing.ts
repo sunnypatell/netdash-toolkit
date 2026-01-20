@@ -618,7 +618,7 @@ export async function queryDNSOverHTTPS(
   > = {
     cloudflare: { url: "https://cloudflare-dns.com/dns-query", format: "json" },
     google: { url: "https://dns.google/resolve", format: "json" },
-    quad9: { url: "https://dns.quad9.net:5053/dns-query", format: "dns-message" },
+    quad9: { url: "https://dns.quad9.net/dns-query", format: "dns-message" },
     opendns: { url: "https://doh.opendns.com/dns-query", format: "dns-message" },
     adguard: { url: "https://dns.adguard-dns.com/resolve", format: "json" },
   }
