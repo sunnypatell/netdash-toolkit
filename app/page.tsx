@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Dashboard } from "@/components/dashboard"
@@ -50,25 +50,6 @@ import { LoremGenerator } from "@/components/tools/lorem-generator"
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    const mediaQuery = window.matchMedia("(min-width: 1024px)")
-    const handleChange = (event: MediaQueryListEvent) => {
-      setSidebarOpen(event.matches)
-    }
-
-    setSidebarOpen(mediaQuery.matches)
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", handleChange)
-      return () => mediaQuery.removeEventListener("change", handleChange)
-    }
-
-    mediaQuery.addListener(handleChange)
-    return () => mediaQuery.removeListener(handleChange)
-  }, [])
 
   const renderContent = () => {
     switch (activeView) {
