@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Download } from "lucide-react"
+import { AlertTriangle, Download, Ruler } from "lucide-react"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
 
 interface ProtocolOverhead {
@@ -102,13 +103,12 @@ export function MTUCalculator() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-foreground mb-2 text-3xl font-bold">MTU Calculator</h1>
-        <p className="text-muted-foreground">
-          Calculate Maximum Transmission Unit and payload sizes with protocol overhead analysis.
-        </p>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Ruler}
+        title="MTU Calculator"
+        description="Calculate Maximum Transmission Unit and payload sizes with protocol overhead analysis."
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

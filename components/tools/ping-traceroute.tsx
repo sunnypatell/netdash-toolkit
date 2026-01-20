@@ -20,6 +20,7 @@ import {
   Server,
 } from "lucide-react"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 interface NetworkInterface {
   name: string
@@ -374,16 +375,12 @@ export function PingTraceroute() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Activity className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">Ping & Traceroute</h1>
-          <p className="text-muted-foreground">
-            Test network connectivity and trace packet paths to destinations
-          </p>
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Activity}
+        title="Ping & Traceroute"
+        description="Test network connectivity and trace packet paths to destinations"
+      />
 
       {isNative ? (
         <Alert className="border-green-500/50 bg-green-500/10">

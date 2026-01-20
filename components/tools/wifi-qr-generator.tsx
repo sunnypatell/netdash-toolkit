@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Download, Copy, Check, Eye, EyeOff, QrCode, Info, Wifi } from "lucide-react"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import { useToast } from "@/hooks/use-toast"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -255,14 +256,12 @@ export function WifiQRGenerator() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-foreground mb-2 text-3xl font-bold">WiFi QR Code Generator</h1>
-        <p className="text-muted-foreground">
-          Generate QR codes for WiFi network credentials. Scan with any smartphone to connect
-          instantly.
-        </p>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={QrCode}
+        title="WiFi QR Code Generator"
+        description="Generate QR codes for WiFi network credentials. Scan with any smartphone to connect instantly."
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { ResultCard } from "@/components/ui/result-card"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 interface ChannelInfo {
   channel: number
@@ -1026,23 +1027,39 @@ export function WirelessTools() {
   const capacityData = calculateWiFiCapacity()
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Wifi className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">Wireless Tools</h1>
-          <p className="text-muted-foreground">
-            Plan wireless channels, calculate capacity, and generate WiFi configurations
-          </p>
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Wifi}
+        title="Wireless Tools"
+        description="Plan wireless channels, calculate capacity, and generate WiFi configurations"
+      />
 
       <Tabs defaultValue="channel-planning" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="channel-planning">Channel Planning</TabsTrigger>
-          <TabsTrigger value="capacity-calculator">Capacity Calculator</TabsTrigger>
-          <TabsTrigger value="wifi-config">WiFi Config</TabsTrigger>
-          <TabsTrigger value="security">Security Guide</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:w-full sm:grid-cols-4 sm:gap-0 sm:p-1">
+          <TabsTrigger
+            value="channel-planning"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Channel Planning
+          </TabsTrigger>
+          <TabsTrigger
+            value="capacity-calculator"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Capacity
+          </TabsTrigger>
+          <TabsTrigger
+            value="wifi-config"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            WiFi Config
+          </TabsTrigger>
+          <TabsTrigger
+            value="security"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Security Guide
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="channel-planning" className="space-y-4">

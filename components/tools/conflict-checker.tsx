@@ -30,6 +30,7 @@ import {
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/parsers"
 import type { ConflictAnalysisResult } from "@/lib/conflict-utils"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 export function ConflictChecker() {
   const [parsedData, setParsedData] = useState<
@@ -205,53 +206,49 @@ export function ConflictChecker() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <AlertTriangle className="text-primary h-6 w-6" />
-          <div>
-            <h1 className="text-2xl font-bold">IP Conflict Checker</h1>
-            <p className="text-muted-foreground">
-              Detect IP and MAC conflicts from multiple data sources
-            </p>
+    <div className="tool-container">
+      <ToolHeader
+        icon={AlertTriangle}
+        title="IP Conflict Checker"
+        description="Detect IP and MAC conflicts from multiple data sources"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {isNative && (
+              <Badge variant="outline" className="border-green-600 text-green-600">
+                <Zap className="mr-1 h-3 w-3" />
+                Native Mode
+              </Badge>
+            )}
+            {isNative && (
+              <Button onClick={runNativeArpScan} disabled={isScanning} size="sm">
+                {isScanning ? (
+                  <>
+                    <Activity className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Scan className="mr-2 h-4 w-4" />
+                    Scan Local Network
+                  </>
+                )}
+              </Button>
+            )}
+            {analysis && analysis.conflicts.length > 0 && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => exportConflicts("csv")}>
+                  <Download className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Export </span>CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => exportConflicts("report")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Remediation </span>Report
+                </Button>
+              </>
+            )}
           </div>
-          {isNative && (
-            <Badge variant="outline" className="border-green-600 text-green-600">
-              <Zap className="mr-1 h-3 w-3" />
-              Native Mode
-            </Badge>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          {isNative && (
-            <Button onClick={runNativeArpScan} disabled={isScanning}>
-              {isScanning ? (
-                <>
-                  <Activity className="mr-2 h-4 w-4 animate-spin" />
-                  Scanning...
-                </>
-              ) : (
-                <>
-                  <Scan className="mr-2 h-4 w-4" />
-                  Scan Local Network
-                </>
-              )}
-            </Button>
-          )}
-          {analysis && analysis.conflicts.length > 0 && (
-            <>
-              <Button variant="outline" onClick={() => exportConflicts("csv")}>
-                <Download className="mr-2 h-4 w-4" />
-                Export CSV
-              </Button>
-              <Button variant="outline" onClick={() => exportConflicts("report")}>
-                <FileText className="mr-2 h-4 w-4" />
-                Remediation Report
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {isNative && (
         <Alert className="border-green-500/50 bg-green-500/10">
@@ -265,10 +262,25 @@ export function ConflictChecker() {
       )}
 
       <Tabs defaultValue="input" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="input">Data Input</TabsTrigger>
-          <TabsTrigger value="analysis">Conflict Analysis</TabsTrigger>
-          <TabsTrigger value="remediation">Remediation</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:w-full sm:grid-cols-3 sm:gap-0 sm:p-1">
+          <TabsTrigger
+            value="input"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Data Input
+          </TabsTrigger>
+          <TabsTrigger
+            value="analysis"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Conflict Analysis
+          </TabsTrigger>
+          <TabsTrigger
+            value="remediation"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Remediation
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="input" className="space-y-6">

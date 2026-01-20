@@ -17,7 +17,9 @@ import {
   AlertCircle,
   Copy,
   ExternalLink,
+  Network,
 } from "lucide-react"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 interface OUIResult {
   mac: string
@@ -431,16 +433,12 @@ export function OUILookup() {
   const macValidation = validateMacFormat(macInput)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Wifi className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">OUI Lookup</h1>
-          <p className="text-muted-foreground">
-            Look up MAC address vendor information using the live macvendors.com API database
-          </p>
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Network}
+        title="OUI Lookup"
+        description="Look up MAC address vendor information using the live macvendors.com API database"
+      />
 
       <Alert>
         <Info className="h-4 w-4" />

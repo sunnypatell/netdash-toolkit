@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Shield, Search, AlertCircle, CheckCircle, X, Download, Zap } from "lucide-react"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { isElectron, electronNetwork } from "@/lib/electron"
 
 interface PortScanResult {
@@ -189,16 +190,12 @@ export function PortScanner() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <Shield className="text-primary h-6 w-6" />
-        <div>
-          <h1 className="text-2xl font-bold">Port Scanner</h1>
-          <p className="text-muted-foreground">
-            Scan network hosts for open ports and running services
-          </p>
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Shield}
+        title="Port Scanner"
+        description="Scan network hosts for open ports and running services"
+      />
 
       {isNative ? (
         <Alert className="border-green-500/50 bg-green-500/10">

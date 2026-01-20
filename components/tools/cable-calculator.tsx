@@ -14,8 +14,9 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, Download, Info, CheckCircle2, Lightbulb } from "lucide-react"
+import { AlertTriangle, Download, Info, CheckCircle2, Lightbulb, Cable } from "lucide-react"
 import { ResultCard } from "@/components/ui/result-card"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -401,21 +402,27 @@ export function CableCalculator() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-foreground mb-2 text-3xl font-bold">
-          Cable Length & Signal Loss Calculator
-        </h1>
-        <p className="text-muted-foreground">
-          Calculate signal attenuation for fiber optic and copper network cables per TIA/IEEE
-          standards.
-        </p>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Cable}
+        title="Cable Length & Signal Loss Calculator"
+        description="Calculate signal attenuation for fiber optic and copper network cables per TIA/IEEE standards."
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-          <TabsTrigger value="fiber">Fiber Optic</TabsTrigger>
-          <TabsTrigger value="copper">Copper Ethernet</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:w-full sm:grid-cols-2 sm:gap-0 sm:p-1 lg:w-[400px]">
+          <TabsTrigger
+            value="fiber"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Fiber Optic
+          </TabsTrigger>
+          <TabsTrigger
+            value="copper"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Copper Ethernet
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="fiber" className="mt-6">

@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download, AlertTriangle, Globe, Network, Zap } from "lucide-react"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
 
 export function IPv6Tools() {
@@ -295,14 +296,12 @@ export function IPv6Tools() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-foreground mb-2 text-3xl font-bold">IPv6 Tools</h1>
-        <p className="text-muted-foreground">
-          Comprehensive IPv6 address manipulation, EUI-64 generation, and multicast calculation per
-          RFC 5952.
-        </p>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Globe}
+        title="IPv6 Tools"
+        description="Comprehensive IPv6 address manipulation, EUI-64 generation, and multicast calculation per RFC 5952."
+      />
 
       {error && (
         <Alert variant="destructive">

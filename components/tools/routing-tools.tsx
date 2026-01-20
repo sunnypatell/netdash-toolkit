@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Copy, Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
+import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
@@ -678,27 +679,40 @@ export function RoutingTools() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Router className="text-primary h-6 w-6" />
-          <div>
-            <h1 className="text-2xl font-bold">Routing Tools</h1>
-            <p className="text-muted-foreground">
-              Configure and generate routing protocols, static routes, and understand administrative
-              distances
-            </p>
-          </div>
-        </div>
-        <LoadFromProject itemType="routing" onLoad={handleLoadFromProject} />
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Router}
+        title="Routing Tools"
+        description="Configure and generate routing protocols, static routes, and understand administrative distances"
+        actions={<LoadFromProject itemType="routing" onLoad={handleLoadFromProject} />}
+      />
 
       <Tabs defaultValue="ospf" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="ospf">OSPF</TabsTrigger>
-          <TabsTrigger value="eigrp">EIGRP</TabsTrigger>
-          <TabsTrigger value="static">Static Routes</TabsTrigger>
-          <TabsTrigger value="admin-distance">Admin Distance</TabsTrigger>
+        <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:w-full sm:grid-cols-4 sm:gap-0 sm:p-1">
+          <TabsTrigger
+            value="ospf"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            OSPF
+          </TabsTrigger>
+          <TabsTrigger
+            value="eigrp"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            EIGRP
+          </TabsTrigger>
+          <TabsTrigger
+            value="static"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Static Routes
+          </TabsTrigger>
+          <TabsTrigger
+            value="admin-distance"
+            className="border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+          >
+            Admin Distance
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ospf" className="space-y-4">
