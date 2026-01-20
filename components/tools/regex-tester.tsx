@@ -9,9 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, FileSearch, CheckCircle2, XCircle } from "lucide-react"
+import { FileSearch, CheckCircle2, XCircle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface Match {
   match: string
@@ -27,7 +27,6 @@ interface RegexResult {
 }
 
 export function RegexTester() {
-  const { toast } = useToast()
   const [pattern, setPattern] = useState("\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b")
   const [testString, setTestString] = useState(
     "Contact us at support@example.com or sales@company.org for more information."
@@ -100,15 +99,6 @@ export function RegexTester() {
     return parts
   }, [testString, result])
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Pattern copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const presets = [
     { label: "Email", pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" },
     { label: "URL", pattern: "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+" },
@@ -163,9 +153,7 @@ export function RegexTester() {
                       .join("")}
                   </span>
                 </div>
-                <Button variant="outline" onClick={() => copyToClipboard(pattern)}>
-                  <Copy className="h-4 w-4" />
-                </Button>
+                <CopyButton value={pattern} variant="outline" />
               </div>
             </div>
 

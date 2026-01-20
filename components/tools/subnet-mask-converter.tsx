@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Binary, Copy, AlertTriangle } from "lucide-react"
+import { Binary, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface MaskResult {
   cidr: number
@@ -36,7 +36,6 @@ const PRESET_MASKS = [
 ]
 
 export function SubnetMaskConverter() {
-  const { toast } = useToast()
   const [input, setInput] = useState("255.255.255.0")
   const [error, setError] = useState<string | null>(null)
 
@@ -134,24 +133,13 @@ export function SubnetMaskConverter() {
     }
   }, [input])
 
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: label + " copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const FormatRow = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-center justify-between rounded-lg border p-3">
       <div>
         <p className="text-muted-foreground text-xs">{label}</p>
         <p className="font-mono text-sm">{value}</p>
       </div>
-      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value, label)}>
-        <Copy className="h-4 w-4" />
-      </Button>
+      <CopyButton value={value} size="sm" />
     </div>
   )
 

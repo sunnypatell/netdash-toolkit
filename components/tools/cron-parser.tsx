@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Timer, CheckCircle2, XCircle, Calendar } from "lucide-react"
+import { Timer, CheckCircle2, XCircle, Calendar } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface CronPart {
   field: string
@@ -166,19 +166,9 @@ function parseCron(expression: string): CronResult {
 }
 
 export function CronParser() {
-  const { toast } = useToast()
   const [expression, setExpression] = useState("0 9 * * 1-5")
 
   const result = useMemo(() => parseCron(expression), [expression])
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Cron expression copied" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
 
   const presets = [
     { label: "Every minute", cron: "* * * * *" },
@@ -226,13 +216,7 @@ export function CronParser() {
                   placeholder="* * * * *"
                   className="font-mono text-lg"
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => copyToClipboard(expression)}
-                  disabled={!expression}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+                <CopyButton value={expression} variant="outline" />
               </div>
             </div>
 

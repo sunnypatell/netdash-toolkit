@@ -13,9 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { HardDrive, Copy } from "lucide-react"
+import { HardDrive } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 type DataUnit = "b" | "B" | "Kb" | "KB" | "Mb" | "MB" | "Gb" | "GB" | "Tb" | "TB" | "Pb" | "PB"
 type Base = "binary" | "decimal"
@@ -52,7 +52,6 @@ const BINARY_UNITS = {
 }
 
 export function DataUnitConverter() {
-  const { toast } = useToast()
   const [value, setValue] = useState("100")
   const [unit, setUnit] = useState<DataUnit>("MB")
 
@@ -91,15 +90,6 @@ export function DataUnitConverter() {
     return results
   }, [value, unit])
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Value copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const ResultRow = ({
     label,
     fullName,
@@ -117,9 +107,7 @@ export function DataUnitConverter() {
         <span className="text-muted-foreground ml-2 text-sm">{label}</span>
         <p className="text-muted-foreground text-xs">{fullName}</p>
       </div>
-      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value.toString())}>
-        <Copy className="h-4 w-4" />
-      </Button>
+      <CopyButton value={value.toString()} size="sm" />
     </div>
   )
 

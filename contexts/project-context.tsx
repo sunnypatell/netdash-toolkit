@@ -88,7 +88,7 @@ interface ProjectContextType {
   syncEnabled: boolean
   addProject: (project: Omit<Project, "id" | "createdAt" | "updatedAt">) => Promise<Project>
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>
-  deleteProject: (id: string) => Promise<void>
+  deleteProject: (id: string) => Promise<{ success: boolean; error?: string }>
   addItemToProject: (
     projectId: string,
     item: Omit<ProjectItem, "id" | "createdAt">

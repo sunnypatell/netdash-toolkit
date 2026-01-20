@@ -14,13 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Calculator, Copy } from "lucide-react"
+import { Calculator } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 export function NetworkCalculator() {
-  const { toast } = useToast()
-
   // Latency Calculator
   const [distance, setDistance] = useState("1000")
   const [distanceUnit, setDistanceUnit] = useState<"km" | "mi">("km")
@@ -129,15 +127,6 @@ export function NetworkCalculator() {
       max: intToIP(max >>> 0),
     }
   }, [ip1, ip2])
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Value copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
 
   return (
     <div className="tool-container">
@@ -399,13 +388,7 @@ export function NetworkCalculator() {
                           <span className="text-muted-foreground text-sm">{item.label}: </span>
                           <span className="font-mono">{item.value}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(item.value)}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                        <CopyButton value={item.value} size="sm" />
                       </div>
                     ))}
                   </div>

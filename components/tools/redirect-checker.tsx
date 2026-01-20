@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowRight, AlertTriangle, Loader2, ExternalLink, Copy, Globe, Info } from "lucide-react"
+import { ArrowRight, AlertTriangle, Loader2, ExternalLink, Globe, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface RedirectHop {
   url: string
@@ -29,7 +29,6 @@ interface RedirectResult {
 }
 
 export function RedirectChecker() {
-  const { toast } = useToast()
   const [url, setUrl] = useState("http://github.com")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<RedirectResult | null>(null)
@@ -139,15 +138,6 @@ export function RedirectChecker() {
       setError("Unable to check redirects. The site may be blocking requests.")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "URL copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
     }
   }
 
@@ -287,14 +277,7 @@ export function RedirectChecker() {
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="flex-1 font-mono text-sm break-all">{hop.url}</p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyToClipboard(hop.url)}
-                            className="flex-shrink-0"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                          <CopyButton value={hop.url} size="sm" className="flex-shrink-0" />
                           <a
                             href={hop.url}
                             target="_blank"

@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Copy, Clock, RefreshCw, Calendar } from "lucide-react"
+import { Clock, RefreshCw, Calendar } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 import { ResultCard } from "@/components/ui/result-card"
 
 export function TimestampConverter() {
-  const { toast } = useToast()
   const [timestamp, setTimestamp] = useState("")
   const [dateInput, setDateInput] = useState("")
   const [timeInput, setTimeInput] = useState("")
@@ -75,15 +74,6 @@ export function TimestampConverter() {
     }
   }, [dateInput, timeInput])
 
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: `${label} copied` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const setNow = () => {
     const now = new Date()
     setTimestamp(Math.floor(now.getTime() / 1000).toString())
@@ -126,13 +116,7 @@ export function TimestampConverter() {
                   <p className="text-muted-foreground text-xs">Unix Timestamp (seconds)</p>
                   <p className="font-mono text-lg font-bold">{currentTimestamp}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(currentTimestamp.toString(), "Timestamp")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+                <CopyButton value={currentTimestamp.toString()} size="sm" />
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-3">
@@ -140,13 +124,7 @@ export function TimestampConverter() {
                   <p className="text-muted-foreground text-xs">Milliseconds</p>
                   <p className="font-mono text-lg font-bold">{currentMs}</p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToClipboard(currentMs.toString(), "Milliseconds")}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+                <CopyButton value={currentMs.toString()} size="sm" />
               </div>
 
               <div className="rounded-lg border p-3">

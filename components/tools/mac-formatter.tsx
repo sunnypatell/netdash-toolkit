@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Cpu, Copy, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Cpu, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface MACInfo {
   raw: string
@@ -32,7 +32,6 @@ interface MACInfo {
 }
 
 export function MACFormatter() {
-  const { toast } = useToast()
   const [input, setInput] = useState("00:1A:2B:3C:4D:5E")
   const [error, setError] = useState<string | null>(null)
 
@@ -94,24 +93,13 @@ export function MACFormatter() {
     }
   }, [input])
 
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: `${label} copied to clipboard` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const FormatRow = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-center justify-between rounded-lg border p-3">
       <div>
         <p className="text-muted-foreground text-xs">{label}</p>
         <p className="font-mono text-sm">{value}</p>
       </div>
-      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value, label)}>
-        <Copy className="h-4 w-4" />
-      </Button>
+      <CopyButton value={value} size="sm" />
     </div>
   )
 
@@ -237,13 +225,7 @@ export function MACFormatter() {
                 <p className="text-muted-foreground text-sm">EUI-64 (for IPv6 SLAAC)</p>
                 <div className="mt-1 flex items-center gap-2">
                   <p className="font-mono text-sm">{result.eui64}</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(result.eui64, "EUI-64")}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <CopyButton value={result.eui64} size="sm" />
                 </div>
               </div>
             </div>

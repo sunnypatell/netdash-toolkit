@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, FileText, AlertTriangle, CheckCircle2, XCircle, Loader2, Info } from "lucide-react"
+import { FileText, AlertTriangle, CheckCircle2, XCircle, Loader2, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface HeaderInfo {
   name: string
@@ -67,7 +67,6 @@ const SECURITY_HEADERS = [
 ]
 
 export function HTTPHeaders() {
-  const { toast } = useToast()
   const [url, setUrl] = useState("https://example.com")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
@@ -145,15 +144,6 @@ export function HTTPHeaders() {
       setError("Unable to fetch headers. The site may be blocking requests.")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Header value copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
     }
   }
 
@@ -300,14 +290,7 @@ export function HTTPHeaders() {
                           {header.name}
                         </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(header.value)}
-                        className="flex-shrink-0"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                      <CopyButton value={header.value} size="sm" className="flex-shrink-0" />
                     </div>
                     <p className="text-muted-foreground font-mono text-xs break-all">
                       {header.value}

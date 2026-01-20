@@ -3,11 +3,10 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Network, Copy } from "lucide-react"
+import { Network } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface CIDREntry {
   cidr: number
@@ -59,17 +58,7 @@ const generateCIDRTable = (): CIDREntry[] => {
 const CIDR_TABLE = generateCIDRTable()
 
 export function CIDRReference() {
-  const { toast } = useToast()
   const [tab, setTab] = useState("common")
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Value copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
 
   const commonCIDRs = CIDR_TABLE.filter((e) =>
     [8, 16, 24, 25, 26, 27, 28, 29, 30, 31, 32].includes(e.cidr)
@@ -95,9 +84,7 @@ export function CIDRReference() {
       <td className="p-2 text-right">{formatNumber(entry.hosts)}</td>
       <td className="p-2 text-right">{formatNumber(entry.usable)}</td>
       <td className="p-2">
-        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(entry.mask)}>
-          <Copy className="h-3 w-3" />
-        </Button>
+        <CopyButton value={entry.mask} size="sm" />
       </td>
     </tr>
   )

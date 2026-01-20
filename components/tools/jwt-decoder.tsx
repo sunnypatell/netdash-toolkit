@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Copy, Key, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react"
+import { Key, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface JWTHeader {
@@ -74,7 +74,6 @@ function decodeJWT(token: string): DecodedJWT | null {
 }
 
 export function JWTDecoder() {
-  const { toast } = useToast()
   const [token, setToken] = useState("")
   const [decoded, setDecoded] = useState<DecodedJWT | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -95,15 +94,6 @@ export function JWTDecoder() {
       setError("Invalid JWT format. Make sure it has three parts separated by dots.")
     }
   }, [token])
-
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: `${label} copied to clipboard` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
 
   const loadSample = () => {
     // Sample JWT (expired, for demo purposes)
@@ -214,15 +204,7 @@ export function JWTDecoder() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Header</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        copyToClipboard(JSON.stringify(decoded.header, null, 2), "Header")
-                      }
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    <CopyButton value={JSON.stringify(decoded.header, null, 2)} size="sm" />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -242,15 +224,7 @@ export function JWTDecoder() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Payload</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        copyToClipboard(JSON.stringify(decoded.payload, null, 2), "Payload")
-                      }
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    <CopyButton value={JSON.stringify(decoded.payload, null, 2)} size="sm" />
                   </div>
                 </CardHeader>
                 <CardContent>

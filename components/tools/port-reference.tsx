@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Server, Search } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface PortEntry {
   port: number
@@ -427,6 +428,7 @@ export function PortReference() {
                   <th className="p-2 text-left font-medium">Protocol</th>
                   <th className="p-2 text-left font-medium">Service</th>
                   <th className="p-2 text-left font-medium">Description</th>
+                  <th className="p-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -442,6 +444,9 @@ export function PortReference() {
                     </td>
                     <td className="p-2 font-medium">{port.service}</td>
                     <td className="text-muted-foreground p-2">{port.description}</td>
+                    <td className="p-2">
+                      <CopyButton value={port.port.toString()} size="sm" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

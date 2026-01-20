@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, Check, RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
+import { RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -31,10 +31,8 @@ interface ConversionResult {
 }
 
 export function IPConverter() {
-  const { toast } = useToast()
   const [ipInput, setIpInput] = useState("192.168.1.1")
   const [inputFormat, setInputFormat] = useState<"dotted" | "decimal" | "binary" | "hex">("dotted")
-  const [copied, setCopied] = useState<string | null>(null)
 
   // Parse IP from different formats
   const parseIP = (input: string, format: string): number | null => {
@@ -146,39 +144,13 @@ export function IPConverter() {
     return convertIP(ipInt)
   }, [ipInput, inputFormat])
 
-  const copyToClipboard = async (value: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(label)
-      setTimeout(() => setCopied(null), 2000)
-      toast({ title: "Copied", description: `${label} copied to clipboard` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
-  const CopyButton = ({ value, label }: { value: string; label: string }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => copyToClipboard(value, label)}
-      className="h-8 w-8 p-0"
-    >
-      {copied === label ? (
-        <Check className="h-4 w-4 text-green-600" />
-      ) : (
-        <Copy className="h-4 w-4" />
-      )}
-    </Button>
-  )
-
   const ResultRow = ({ label, value }: { label: string; value: string }) => (
     <div className="flex items-center justify-between rounded-lg border p-3">
       <div className="min-w-0 flex-1">
         <p className="text-muted-foreground text-xs">{label}</p>
         <p className="truncate font-mono text-sm">{value}</p>
       </div>
-      <CopyButton value={value} label={label} />
+      <CopyButton value={value} size="sm" />
     </div>
   )
 
@@ -321,7 +293,7 @@ export function IPConverter() {
                         <p className="text-muted-foreground text-xs">Binary (with dots)</p>
                         <p className="font-mono text-sm break-all">{result.binary}</p>
                       </div>
-                      <CopyButton value={result.binary} label="Binary" />
+                      <CopyButton value={result.binary} size="sm" />
                     </div>
                   </div>
                 </CardContent>
