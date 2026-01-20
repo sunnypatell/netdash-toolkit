@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, FileText, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { Copy, FileText, AlertTriangle, CheckCircle2, XCircle, Loader2, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
 
@@ -84,11 +84,21 @@ export function HTTPHeaders() {
         targetUrl = "https://" + targetUrl
       }
 
-      // Use a CORS proxy or direct fetch with no-cors mode
-      const response = await fetch(targetUrl, {
-        method: "HEAD",
-        mode: "cors",
-      })
+      // Try direct fetch first (works in Electron or for CORS-enabled sites)
+      let response: Response | null = null
+      let usedProxy = false
+
+      try {
+        response = await fetch(targetUrl, {
+          method: "HEAD",
+          mode: "cors",
+        })
+      } catch {
+        // If direct fetch fails, try with a CORS proxy
+        usedProxy = true
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+        response = await fetch(proxyUrl)
+      }
 
       const headers: HeaderInfo[] = []
       const recommendations: string[] = []
@@ -106,13 +116,20 @@ export function HTTPHeaders() {
 
       // Check for missing security headers
       let securityScore = 100
-      SECURITY_HEADERS.forEach((header) => {
-        const found = headers.some((h) => h.name.toLowerCase() === header)
-        if (!found) {
-          securityScore -= 15
-          recommendations.push(`Missing ${header} header`)
-        }
-      })
+      if (!usedProxy) {
+        SECURITY_HEADERS.forEach((header) => {
+          const found = headers.some((h) => h.name.toLowerCase() === header)
+          if (!found) {
+            securityScore -= 15
+            recommendations.push(`Missing ${header} header`)
+          }
+        })
+      } else {
+        securityScore = 0
+        recommendations.push(
+          "Headers retrieved via proxy - security analysis may be incomplete. Use the Electron app for accurate results."
+        )
+      }
 
       securityScore = Math.max(0, securityScore)
 
@@ -125,41 +142,7 @@ export function HTTPHeaders() {
         recommendations,
       })
     } catch (err) {
-      // Try with a public API as fallback
-      try {
-        let targetUrl = url.trim()
-        if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-          targetUrl = "https://" + targetUrl
-        }
-
-        const apiUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
-        const response = await fetch(apiUrl)
-
-        const headers: HeaderInfo[] = []
-        response.headers.forEach((value, name) => {
-          const lowerName = name.toLowerCase()
-          const info = HEADER_CATEGORIES[lowerName]
-          headers.push({
-            name,
-            value,
-            category: info?.category || "other",
-            description: info?.description,
-          })
-        })
-
-        setResult({
-          url: targetUrl,
-          status: response.status,
-          statusText: response.statusText,
-          headers: headers.sort((a, b) => a.name.localeCompare(b.name)),
-          securityScore: 0,
-          recommendations: ["Headers retrieved via proxy - security analysis may be incomplete"],
-        })
-      } catch {
-        setError(
-          "Unable to fetch headers. This may be due to CORS restrictions. Try using the Electron app for full access."
-        )
-      }
+      setError("Unable to fetch headers. The site may be blocking requests.")
     } finally {
       setLoading(false)
     }
@@ -275,8 +258,8 @@ export function HTTPHeaders() {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Recommendations</p>
                     {result.recommendations.map((rec, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <XCircle className="h-4 w-4 flex-shrink-0 text-red-500" />
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
                         <span className="text-muted-foreground">{rec}</span>
                       </div>
                     ))}

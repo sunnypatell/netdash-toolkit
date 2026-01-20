@@ -46,6 +46,15 @@ import { CronParser } from "@/components/tools/cron-parser"
 import { RegexTester } from "@/components/tools/regex-tester"
 import { ColorConverter } from "@/components/tools/color-converter"
 import { LoremGenerator } from "@/components/tools/lorem-generator"
+import { DataUnitConverter } from "@/components/tools/data-unit-converter"
+import { UptimeCalculator } from "@/components/tools/uptime-calculator"
+import { NetworkCalculator } from "@/components/tools/network-calculator"
+import { MACFormatter } from "@/components/tools/mac-formatter"
+import { SubnetMaskConverter } from "@/components/tools/subnet-mask-converter"
+import { PortReference } from "@/components/tools/port-reference"
+import { CIDRReference } from "@/components/tools/cidr-reference"
+import { ProtocolReference } from "@/components/tools/protocol-reference"
+import { IPv6Reference } from "@/components/tools/ipv6-reference"
 
 export default function HomePage() {
   const [activeView, setActiveView] = useState("dashboard")
@@ -133,6 +142,24 @@ export default function HomePage() {
         return <ColorConverter />
       case "lorem-generator":
         return <LoremGenerator />
+      case "data-unit-converter":
+        return <DataUnitConverter />
+      case "uptime-calculator":
+        return <UptimeCalculator />
+      case "network-calculator":
+        return <NetworkCalculator />
+      case "mac-formatter":
+        return <MACFormatter />
+      case "subnet-mask-converter":
+        return <SubnetMaskConverter />
+      case "port-reference":
+        return <PortReference />
+      case "cidr-reference":
+        return <CIDRReference />
+      case "protocol-reference":
+        return <ProtocolReference />
+      case "ipv6-reference":
+        return <IPv6Reference />
       case "about":
         return <About />
       case "project-manager":

@@ -34,6 +34,7 @@ interface AnalysisResult {
   score: number
   grade: string
   headers: SecurityHeader[]
+  usedProxy: boolean
 }
 
 const SECURITY_HEADER_SPECS: Array<{
@@ -129,10 +130,21 @@ export function SecurityHeaders() {
         targetUrl = "https://" + targetUrl
       }
 
-      const response = await fetch(targetUrl, {
-        method: "HEAD",
-        mode: "cors",
-      })
+      // Try direct fetch first (works in Electron or for CORS-enabled sites)
+      let response: Response | null = null
+      let usedProxy = false
+
+      try {
+        response = await fetch(targetUrl, {
+          method: "HEAD",
+          mode: "cors",
+        })
+      } catch {
+        // If direct fetch fails, try with a CORS proxy
+        usedProxy = true
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+        response = await fetch(proxyUrl)
+      }
 
       const headersMap = new Map<string, string>()
       response.headers.forEach((value, name) => {
@@ -162,24 +174,27 @@ export function SecurityHeaders() {
         }
       })
 
-      const percentage = Math.round((score / maxScore) * 100)
+      const percentage = usedProxy ? 0 : Math.round((score / maxScore) * 100)
       let grade = "F"
-      if (percentage >= 90) grade = "A+"
-      else if (percentage >= 80) grade = "A"
-      else if (percentage >= 70) grade = "B"
-      else if (percentage >= 60) grade = "C"
-      else if (percentage >= 50) grade = "D"
+      if (!usedProxy) {
+        if (percentage >= 90) grade = "A+"
+        else if (percentage >= 80) grade = "A"
+        else if (percentage >= 70) grade = "B"
+        else if (percentage >= 60) grade = "C"
+        else if (percentage >= 50) grade = "D"
+      } else {
+        grade = "?"
+      }
 
       setResult({
         url: targetUrl,
         score: percentage,
         grade,
         headers,
+        usedProxy,
       })
     } catch {
-      setError(
-        "Unable to fetch headers due to CORS restrictions. The target server must allow cross-origin requests, or use the Electron app for full access."
-      )
+      setError("Unable to fetch headers. The site may be blocking requests.")
     } finally {
       setLoading(false)
     }
@@ -189,6 +204,7 @@ export function SecurityHeaders() {
     if (grade.startsWith("A")) return "text-green-600 bg-green-100"
     if (grade === "B") return "text-blue-600 bg-blue-100"
     if (grade === "C") return "text-yellow-600 bg-yellow-100"
+    if (grade === "?") return "text-gray-600 bg-gray-100"
     return "text-red-600 bg-red-100"
   }
 
@@ -238,6 +254,16 @@ export function SecurityHeaders() {
 
             {result && (
               <div className="space-y-4 pt-4">
+                {result.usedProxy && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      Headers retrieved via proxy - results may be incomplete. Use the Electron app
+                      for accurate security analysis.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="text-center">
                   <div
                     className={`inline-flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold ${getGradeColor(result.grade)}`}

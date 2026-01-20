@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowRight, AlertTriangle, Loader2, ExternalLink, Copy, Globe } from "lucide-react"
+import { ArrowRight, AlertTriangle, Loader2, ExternalLink, Copy, Globe, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { useToast } from "@/hooks/use-toast"
 
@@ -88,13 +88,15 @@ export function RedirectChecker() {
             break
           }
         } catch {
-          // Try with a CORS proxy for the last hop
+          // CORS error - can't follow redirects in browser
           hops.push({
             url: currentUrl,
             status: 0,
-            statusText: "CORS Error - Unable to follow",
+            statusText: "CORS blocked",
           })
-          warnings.push(`Could not follow redirect to ${currentUrl} due to CORS restrictions`)
+          warnings.push(
+            `Could not follow redirect to ${currentUrl} due to CORS. Use the Electron app for full redirect tracing.`
+          )
           break
         }
       }
@@ -133,10 +135,8 @@ export function RedirectChecker() {
         isHttpsUpgrade,
         warnings,
       })
-    } catch (err) {
-      setError(
-        "Unable to check redirects. This may be due to CORS restrictions. Try using the Electron app for full access."
-      )
+    } catch {
+      setError("Unable to check redirects. The site may be blocking requests.")
     } finally {
       setLoading(false)
     }
@@ -235,7 +235,7 @@ export function RedirectChecker() {
 
                 {result.warnings.length > 0 && (
                   <Alert>
-                    <AlertTriangle className="h-4 w-4" />
+                    <Info className="h-4 w-4" />
                     <AlertDescription>
                       <ul className="list-inside list-disc text-sm">
                         {result.warnings.map((warning, i) => (
