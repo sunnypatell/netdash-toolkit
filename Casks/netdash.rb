@@ -1,18 +1,18 @@
 cask "netdash" do
-  version "3.0.0"
+  version "3.0.1"
 
   on_arm do
-    sha256 "dfd0e39f1e6557b5ac144925bef70346bbade6c92eb161c21ac0032b03544134"
-    url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-arm64.dmg"
+    sha256 "c37f0394db2442d112f83c5db0929756b8fcd9c69863e416ea0f3120fb39c844"
+    url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash-Toolkit-#{version}-mac-arm64.dmg"
   end
 
   on_intel do
-    sha256 "5d41dda13ad1db0bbd7158983d749f96ce72f37b7c4ffe498b40115eab0cf7bc"
-    url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash.Toolkit-#{version}-mac-x64.dmg"
+    sha256 "a094da923ecc86d1f5cd0c004d8bbb3bffefa965528bb652ca1be66403cd7c32"
+    url "https://github.com/sunnypatell/netdash-toolkit/releases/download/v#{version}/NetDash-Toolkit-#{version}-mac-x64.dmg"
   end
 
   name "NetDash Toolkit"
-  desc "Professional network engineering toolkit with 16+ networking tools"
+  desc "Professional network engineering toolkit with 40+ networking tools"
   homepage "https://github.com/sunnypatell/netdash-toolkit"
 
   livecheck do
