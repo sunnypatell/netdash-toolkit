@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-06-11
+
 ### Added
 
 - **supply-chain hardened release pipeline** - releases now ship slsa build level 3 provenance (`.intoto.jsonl`), github artifact attestations, a cyclonedx sbom, and `checksums.txt`; release notes automatically include checksums, verification commands, and per-platform install notes
