@@ -22,9 +22,15 @@ cask "netdash" do
 
   app "NetDash Toolkit.app"
 
+  caveats <<~CAVEATS
+    this app is ad-hoc signed (not notarized). install with
+    --no-quarantine, or clear the quarantine flag after install:
+      xattr -cr "/Applications/NetDash Toolkit.app"
+  CAVEATS
+
   zap trash: [
-    "~/Library/Application Support/NetDash Toolkit",
-    "~/Library/Preferences/com.netdash.toolkit.plist",
-    "~/Library/Saved Application State/com.netdash.toolkit.savedState",
+    "~/Library/Application Support/netdash-toolkit",
+    "~/Library/Preferences/com.sunnypatell.netdash-toolkit.plist",
+    "~/Library/Saved Application State/com.sunnypatell.netdash-toolkit.savedState",
   ]
 end

@@ -12,6 +12,8 @@ Desktop.ini
 
 # dependencies
 /node_modules
+# pnpm repo - keep npm's lockfile out
+package-lock.json
 
 # next.js
 /.next/

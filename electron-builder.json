@@ -2,8 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
   "appId": "com.sunnypatell.netdash-toolkit",
   "productName": "NetDash Toolkit",
-  "copyright": "Copyright © 2024-2025 Sunny Patel",
-  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "copyright": "Copyright © 2024-2026 Sunny Patel",
+  "artifactName": "NetDash-Toolkit-${version}-${os}-${arch}.${ext}",
   "directories": {
     "output": "release",
     "buildResources": "electron/resources"
@@ -81,7 +81,11 @@
     "requestedExecutionLevel": "asInvoker",
     "legalTrademarks": "NetDash Toolkit is a trademark of Sunny Patel"
   },
+  "portable": {
+    "artifactName": "NetDash-Toolkit-${version}-win-${arch}-portable.${ext}"
+  },
   "nsis": {
+    "artifactName": "NetDash-Toolkit-${version}-win-${arch}-setup.${ext}",
     "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true,
