@@ -58,3 +58,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "tailwindcss"
         update-types: ["version-update:semver-major"]
+      # eslint 9 (flat config) is incompatible with `next lint` on next 14;
+      # both move together with the next major
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-next"
+        update-types: ["version-update:semver-major"]
