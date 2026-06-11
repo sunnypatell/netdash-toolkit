@@ -1,0 +1,26 @@
+# config for github's auto-generated release notes (categorizes merged prs
+# by label; the release workflow appends checksums + verification below it)
+changelog:
+  exclude:
+    labels:
+      - stale
+      - invalid
+      - duplicate
+      - wontfix
+  categories:
+    - title: 🚀 features
+      labels:
+        - enhancement
+    - title: 🐛 fixes
+      labels:
+        - bug
+    - title: 📚 documentation
+      labels:
+        - documentation
+    - title: 🧰 maintenance & dependencies
+      labels:
+        - dependencies
+        - ci
+    - title: other changes
+      labels:
+        - "*"

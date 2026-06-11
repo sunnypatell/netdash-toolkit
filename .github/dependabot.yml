@@ -1,0 +1,60 @@
+# deliberately low-noise: monthly cadence, everything grouped into ONE pr
+# per ecosystem, max 2 open prs total. worst case = 2 prs/month, no
+# per-dependency spam. security advisories still surface immediately via
+# github's own alerts regardless of this schedule.
+#
+# this also keeps the sha-pinned actions in .github/workflows fresh —
+# without it, pins rot silently.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    # 7-day cooldown: a compromised action release gets caught upstream
+    # before a bump lands here
+    cooldown:
+      default-days: 7
+    groups:
+      gha:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    # 7-day cooldown: a compromised upstream release (tj-actions pattern)
+    # gets caught publicly before a bump lands here
+    cooldown:
+      default-days: 7
+    groups:
+      npm-all:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+    ignore:
+      # framework majors are hands-on migrations, not auto-bumps; grouped
+      # majors produce unmergeable prs. minors + patches still flow.
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "electron"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]

@@ -1,3 +1,15 @@
+# ci: quality gates + web build + electron packaging smoke test.
+#
+# design notes:
+# - one consolidated quality job instead of 3 separate jobs (format/lint/
+#   typecheck used to each pay a full checkout+install; same coverage, third
+#   of the wall clock).
+# - electron packaging (--dir) runs on every push/PR; previously electron
+#   packaging was only ever exercised at release time, which is the worst
+#   possible moment to find out it broke.
+# - caching: pnpm store (integrity-checked by the lockfile), .next/cache,
+#   and the electron + electron-builder binary caches. release builds in
+#   release.yml deliberately do NOT use these caches (hermetic builds).
 name: CI
 
 on:
@@ -6,107 +18,86 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NODE_VERSION: "20"
-
 jobs:
-  format:
-    name: Format Check
+  quality:
+    name: Quality (format, lint, types)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      - name: Harden runner (egress audit)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          version: 9
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Setup toolchain
+        uses: ./.github/actions/setup
 
       - name: Check formatting
         run: pnpm format:check
 
-  lint:
-    name: ESLint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Run ESLint
         run: pnpm lint
 
-  typecheck:
-    name: TypeScript
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run TypeScript
+      - name: Typecheck (app)
         run: pnpm typecheck
 
+      - name: Typecheck (electron main/preload)
+        run: pnpm electron:compile
+
   build:
-    name: Build
+    name: Build (web + electron pack)
     runs-on: ubuntu-latest
-    needs: [format, lint, typecheck]
+    timeout-minutes: 20
+    needs: quality
     steps:
+      - name: Harden runner (egress audit)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          version: 9
+          persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup toolchain
+        uses: ./.github/actions/setup
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'components/**', 'contexts/**', 'hooks/**', 'lib/**', 'styles/**', 'types/**', 'next.config.mjs') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore Electron binary caches
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Build application
+      - name: Build web application
         run: pnpm build
+
+      - name: Pack Electron app (smoke test)
+        run: pnpm electron:compile && pnpm exec electron-builder --linux --dir
+
+      - name: Assert packaged app launchable artifacts exist
+        run: |
+          test -x "release/linux-unpacked/netdash-toolkit" || { echo "::error::packed electron binary missing"; exit 1; }
+          test -f "release/linux-unpacked/resources/app.asar" || { echo "::error::app.asar missing from package"; exit 1; }

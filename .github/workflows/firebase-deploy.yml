@@ -9,17 +9,35 @@ on:
       - "firestore.indexes.json"
       - "storage.rules"
       - ".github/workflows/firebase-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Deploy Firestore Rules
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Harden runner (egress audit)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
 
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      # previously @master (unpinned, third-party, holding the firebase
+      # token) — now pinned to a release sha like everything else.
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@master
+        uses: w9jds/firebase-action@b3c725170700a48b168a32972e7aaa4c92bf1061 # v15.19.1
         with:
           args: deploy --only firestore:rules
         env:
