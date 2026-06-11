@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **supply-chain hardened release pipeline** - releases now ship slsa build level 3 provenance (`.intoto.jsonl`), github artifact attestations, a cyclonedx sbom, and `checksums.txt`; release notes automatically include checksums, verification commands, and per-platform install notes
+- **openssf scorecard, dependency review, and workflow lint (actionlint + zizmor)** workflows; codeql now also scans the github actions workflows themselves
+- **electron packaging smoke test in ci** - every push/pr packs the linux app, so packaging breakage is caught before release time
+- **grouped monthly dependabot** - one rolled-up pr per ecosystem per month (max 2 open total), 7-day cooldown on npm bumps
+- **repository rulesets as code** (`.github/rulesets/`) - main branch and release tags protected against deletion/force-push
+
+### Changed
+
+- **all github actions pinned to commit shas** with version comments (firebase action was unpinned `@master`)
+- **release artifacts renamed** from `NetDash.Toolkit-*` to `NetDash-Toolkit-*` - github's space-to-dot filename mangling would break provenance verification, and the windows nsis/portable targets previously collided on the same filename (only one ever made it to the release); installers now ship as `-setup.exe`, portable as `-portable.exe`
+- **homebrew cask job rewritten** - dmg hashes flow from the publish job's outputs instead of re-downloading assets after a `sleep 30`; install instructions now recommend `--no-quarantine`
+- **pnpm version pinned** via the `packageManager` field (single source of truth for local dev + ci)
+- **security policy corrected** - supported-versions table updated to 3.x, telemetry/sandboxing claims now match the actual code, added release-verification instructions
+
+### Removed
+
+- **package-lock.json** - this is a pnpm repo; the stray npm lockfile is now gitignored
+
 ## [3.0.0] - 2026-01-19
 
 ### Added

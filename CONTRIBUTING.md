@@ -7,7 +7,7 @@ thanks for your interest in contributing! this guide will help you get started.
 ### Prerequisites
 
 - Node.js 20+
-- pnpm 9+
+- pnpm 10+ (exact version pinned in `package.json`'s `packageManager` field)
 
 ### Getting Started
 

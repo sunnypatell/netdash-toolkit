@@ -17,6 +17,10 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/sunnypatell/netdash-toolkit/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/sunnypatell/netdash-toolkit/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sunnypatell/netdash-toolkit?style=flat-square&label=release)](https://github.com/sunnypatell/netdash-toolkit/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/sunnypatell/netdash-toolkit/total?style=flat-square&label=downloads)](https://github.com/sunnypatell/netdash-toolkit/releases)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sunnypatell/netdash-toolkit/badge?style=flat-square)](https://scorecard.dev/viewer/?uri=github.com/sunnypatell/netdash-toolkit)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev/spec/v1.0/levels)
 [![License](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 [![Maintenance](https://img.shields.io/badge/Maintained-yes-green?style=flat-square)](https://github.com/sunnypatell/netdash-toolkit/graphs/commit-activity)
@@ -487,11 +491,10 @@ NetDash Toolkit is available as a native desktop application with **real network
 
 ```bash
 brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
-brew install --cask netdash
-sudo xattr -cr "/Applications/NetDash Toolkit.app"
+brew install --cask --no-quarantine netdash
 ```
 
-> **Note:** The `xattr` command removes the quarantine flag since the app is unsigned.
+> **Note:** `--no-quarantine` skips Gatekeeper's quarantine flag — the app is ad-hoc signed, not notarized (notarization requires a paid Apple Developer ID). If you installed without the flag or downloaded the DMG directly, run `xattr -cr "/Applications/NetDash Toolkit.app"` instead. Every release ships SHA-256 checksums and [SLSA Build L3 provenance](https://github.com/sunnypatell/netdash-toolkit/attestations) so you can verify exactly what you're running — see the release notes for copy-paste verification commands.
 
 ### Building from Source
 

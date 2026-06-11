@@ -48,10 +48,10 @@ Fixes #
 ### Tests Performed
 
 - [ ] Manual testing
-- [ ] Unit tests pass (`npm test`)
-- [ ] Build succeeds (`npm run build`)
-- [ ] Lint passes (`npm run lint`)
-- [ ] Type check passes (`npm run typecheck`)
+- [ ] Build succeeds (`pnpm build`)
+- [ ] Lint passes (`pnpm lint`)
+- [ ] Type check passes (`pnpm typecheck`)
+- [ ] Electron compiles (`pnpm electron:compile`)
 
 ### Test Steps
 
