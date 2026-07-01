@@ -5,10 +5,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Github, Linkedin } from "@/components/icons/brand-icons"
 import {
   ExternalLink,
-  Github,
-  Linkedin,
   Globe,
   Network,
   Zap,

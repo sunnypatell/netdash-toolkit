@@ -20,7 +20,10 @@ interface HashResult {
 
 // Web Crypto API hash function
 async function computeHash(data: ArrayBuffer | string, algorithm: string): Promise<string> {
-  let buffer: ArrayBuffer
+  // BufferSource, not ArrayBuffer: TextEncoder.encode returns a Uint8Array,
+  // which ts 6's generic-typed-array lib no longer widens to ArrayBuffer.
+  // crypto.subtle.digest accepts BufferSource, so both branches are valid.
+  let buffer: BufferSource
 
   if (typeof data === "string") {
     buffer = new TextEncoder().encode(data)
