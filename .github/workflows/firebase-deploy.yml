@@ -23,23 +23,37 @@ jobs:
     name: Deploy Firestore Rules
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # secrets can't be used directly in `if:`, so surface presence via env
+    env:
+      GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
       - name: Harden runner (egress audit)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
 
+      # firebase login:ci tokens are deprecated and google is revoking them;
+      # this skips cleanly (green) until FIREBASE_SERVICE_ACCOUNT is set, then
+      # deploys via the supported service-account path. to enable: create a
+      # service account with the firebase rules admin role, download its json
+      # key, and add it as the FIREBASE_SERVICE_ACCOUNT repo secret.
+      - name: Skip notice (no service account configured)
+        if: env.GCP_SA_KEY == ''
+        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT not set — skipping firestore rules deploy. add the secret to enable."
+
       - name: Checkout repository
+        if: env.GCP_SA_KEY != ''
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
-      # previously @master (unpinned, third-party, holding the firebase
-      # token) — now pinned to a release sha like everything else.
+      # pinned to a release sha; authenticates via GCP_SA_KEY (service
+      # account json), the non-deprecated method.
       - name: Deploy to Firebase
+        if: env.GCP_SA_KEY != ''
         uses: w9jds/firebase-action@fb9061988465d393a2456a3983a93e6cae2e892b # v15.22.1
         with:
           args: deploy --only firestore:rules
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           PROJECT_ID: netdash-toolkit

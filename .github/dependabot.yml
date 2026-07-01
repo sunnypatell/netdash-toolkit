@@ -46,21 +46,10 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # framework majors are hands-on migrations, not auto-bumps; grouped
-      # majors produce unmergeable prs. minors + patches still flow.
-      - dependency-name: "next"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "react-dom"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "electron"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "tailwindcss"
-        update-types: ["version-update:semver-major"]
-      # eslint 9 (flat config) is incompatible with `next lint` on next 14;
-      # both move together with the next major
-      - dependency-name: "eslint"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint-config-next"
+      # majors are hands-on migrations (a single grouped major pr is
+      # unmergeable — see the 15-major #27). only minor + patch flow into the
+      # monthly grouped pr; do majors by hand. security fixes still surface as
+      # dependabot alerts + security-update prs even when a version-major is
+      # ignored here.
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
