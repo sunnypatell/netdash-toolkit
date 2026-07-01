@@ -30,14 +30,14 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
       # previously @master (unpinned, third-party, holding the firebase
       # token) — now pinned to a release sha like everything else.
       - name: Deploy to Firebase
-        uses: w9jds/firebase-action@b3c725170700a48b168a32972e7aaa4c92bf1061 # v15.19.1
+        uses: w9jds/firebase-action@fb9061988465d393a2456a3983a93e6cae2e892b # v15.22.1
         with:
           args: deploy --only firestore:rules
         env:
