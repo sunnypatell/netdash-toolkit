@@ -3,6 +3,9 @@
     "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "node",
+    // node10 resolution is deprecated in ts 6 but correct for this commonjs
+    // electron main; node16 would force explicit .js on every relative import
+    "ignoreDeprecations": "6.0",
     "outDir": "../dist-electron",
     "rootDir": ".",
     "strict": true,

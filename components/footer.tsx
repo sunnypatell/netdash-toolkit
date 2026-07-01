@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Github, Linkedin, Globe, Heart } from "lucide-react"
+import { ExternalLink, Globe, Heart } from "lucide-react"
+import { Github, Linkedin } from "@/components/icons/brand-icons"
 
 export function Footer() {
   return (
