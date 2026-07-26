@@ -113,7 +113,7 @@
     "geist": "^1.7.2",
     "input-otp": "1.4.2",
     "lucide-react": "^1.21.0",
-    "next": "15.5.19",
+    "next": "15.5.21",
     "next-themes": "latest",
     "qrcode": "^1.5.4",
     "react": "^18",
