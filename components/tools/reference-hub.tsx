@@ -16,6 +16,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { BookOpen, Search, Network, Globe, Server, Layers, Binary, Copy } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { copyText } from "@/lib/clipboard"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -405,9 +406,12 @@ const COMMON_SUBNETS = [
 export function ReferenceHub() {
   const [searchTerm, setSearchTerm] = useState("")
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard")
+  const copyToClipboard = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Copy failed")
+    }
   }
 
   // Filtered data based on search

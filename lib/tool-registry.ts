@@ -1,3 +1,4 @@
+import type { ComponentType } from "react"
 import type { LucideIcon } from "lucide-react"
 import {
   Calculator,
@@ -84,19 +85,23 @@ export type ProjectItemType =
   | "other"
 
 // Complete tool definition
+// a lazy import thunk; each tool becomes its own chunk, loaded on navigation
+export type ToolLoader = () => Promise<{ default: ComponentType }>
+
 export interface ToolDefinition {
-  id: string
-  label: string
-  title: string // Full title for dashboard/about
+  slug: string // url segment under /tools/, and the only tool id anywhere
+  label: string // sidebar label
+  title: string // full title for dashboard/about
   description: string
   icon: LucideIcon
   category: ToolCategory
-  categoryLabel: string // Human readable category
   features: string[]
   popular?: boolean
+  // set only when the component actually renders SaveToProject; the registry
+  // must not promise persistence the tool doesn't implement
   projectItemType?: ProjectItemType
-  componentName: string // For dynamic imports
-  keywords: string[] // For search
+  keywords: string[] // drives search
+  load: ToolLoader
 }
 
 // Category metadata
@@ -157,695 +162,654 @@ export const categories: CategoryDefinition[] = [
 export const tools: ToolDefinition[] = [
   // === CALCULATORS ===
   {
-    id: "subnet-calculator",
+    slug: "subnet-calculator",
     label: "Subnet Calculator",
     title: "Subnet Calculator",
     description:
       "Calculate network addresses, broadcast addresses, and host ranges for IPv4 and IPv6",
     icon: Calculator,
     category: "calculators",
-    categoryLabel: "Core Tools",
     features: ["IPv4 & IPv6 support", "CIDR notation", "Wildcard masks"],
     popular: true,
     projectItemType: "subnet",
-    componentName: "SubnetCalculator",
+    load: () =>
+      import("@/components/tools/subnet-calculator").then((m) => ({ default: m.SubnetCalculator })),
     keywords: ["subnet", "cidr", "network", "ip", "mask", "calculate"],
   },
   {
-    id: "vlsm-planner",
+    slug: "vlsm-planner",
     label: "VLSM Planner",
     title: "VLSM Planner",
     description: "Plan Variable Length Subnet Masking with optimal allocation and minimal waste",
     icon: Network,
     category: "calculators",
-    categoryLabel: "Planning",
     features: ["Optimal allocation", "Fragmentation analysis", "Export plans"],
     popular: true,
     projectItemType: "vlsm",
-    componentName: "VLSMPlanner",
+    load: () => import("@/components/tools/vlsm-planner").then((m) => ({ default: m.VLSMPlanner })),
     keywords: ["vlsm", "subnet", "planning", "allocation", "network design"],
   },
   {
-    id: "mtu-calculator",
+    slug: "mtu-calculator",
     label: "MTU Calculator",
     title: "MTU Calculator",
     description: "Calculate MTU and header overhead for various network stacks",
     icon: Wifi,
     category: "calculators",
-    categoryLabel: "Analysis",
     features: ["Protocol stacks", "Overhead calculation", "Fragmentation warnings"],
-    projectItemType: "mtu",
-    componentName: "MTUCalculator",
+    load: () =>
+      import("@/components/tools/mtu-calculator").then((m) => ({ default: m.MTUCalculator })),
     keywords: ["mtu", "packet", "fragmentation", "overhead", "header"],
   },
   {
-    id: "bandwidth-calculator",
+    slug: "bandwidth-calculator",
     label: "Bandwidth Calculator",
     title: "Bandwidth Calculator",
     description: "Calculate transfer times, throughput, and bandwidth requirements",
     icon: Gauge,
     category: "calculators",
-    categoryLabel: "Analysis",
     features: ["Transfer time", "Throughput calc", "Unit conversion"],
     popular: true,
     projectItemType: "bandwidth",
-    componentName: "BandwidthCalculator",
+    load: () =>
+      import("@/components/tools/bandwidth-calculator").then((m) => ({
+        default: m.BandwidthCalculator,
+      })),
     keywords: ["bandwidth", "transfer", "speed", "throughput", "download"],
   },
   {
-    id: "cable-calculator",
+    slug: "cable-calculator",
     label: "Cable Calculator",
     title: "Cable Calculator",
     description:
       "Calculate signal loss for fiber optic and copper cables with TIA standards compliance",
     icon: Cable,
     category: "calculators",
-    categoryLabel: "Analysis",
     features: ["Fiber & copper", "TIA-568 compliant", "Power budget"],
     popular: true,
     projectItemType: "cable",
-    componentName: "CableCalculator",
+    load: () =>
+      import("@/components/tools/cable-calculator").then((m) => ({ default: m.CableCalculator })),
     keywords: ["cable", "fiber", "copper", "signal loss", "attenuation"],
   },
 
   // === IP TOOLS ===
   {
-    id: "ip-converter",
+    slug: "ip-converter",
     label: "IP Converter",
     title: "IP Address Converter",
     description:
       "Convert IPv4 addresses between binary, decimal, hexadecimal, and dotted-decimal formats",
     icon: ArrowRightLeft,
     category: "ip-tools",
-    categoryLabel: "Converters",
     features: ["Binary/Hex/Decimal", "IPv6 mapped", "All formats"],
     projectItemType: "ip-converter",
-    componentName: "IPConverter",
+    load: () => import("@/components/tools/ip-converter").then((m) => ({ default: m.IPConverter })),
     keywords: ["ip", "convert", "binary", "hex", "decimal", "ipv4"],
   },
   {
-    id: "ip-enumerator",
+    slug: "ip-enumerator",
     label: "IP Enumerator",
     title: "IP Range Enumerator",
     description: "List all IP addresses within a CIDR block with network details",
     icon: List,
     category: "ip-tools",
-    categoryLabel: "Converters",
     features: ["CIDR to list", "Export CSV/JSON", "Network details"],
     projectItemType: "ip-range",
-    componentName: "IPEnumerator",
+    load: () =>
+      import("@/components/tools/ip-enumerator").then((m) => ({ default: m.IPEnumerator })),
     keywords: ["ip", "range", "list", "enumerate", "cidr", "hosts"],
   },
   {
-    id: "ipv6-tools",
+    slug: "ipv6-tools",
     label: "IPv6 Tools",
     title: "IPv6 Tools",
     description: "IPv6 address manipulation, compression, and EUI-64 generation",
     icon: Zap,
     category: "ip-tools",
-    categoryLabel: "IPv6",
     features: ["Address compression", "EUI-64 generation", "Solicited-node multicast"],
-    projectItemType: "ipv6",
-    componentName: "IPv6Tools",
+    load: () => import("@/components/tools/ipv6-tools").then((m) => ({ default: m.IPv6Tools })),
     keywords: ["ipv6", "eui64", "compression", "address", "multicast"],
   },
   {
-    id: "conflict-checker",
+    slug: "conflict-checker",
     label: "Conflict Checker",
     title: "IP Conflict Checker",
     description: "Detect IP and MAC conflicts from ARP tables, DHCP leases, and inventories",
     icon: AlertTriangle,
     category: "ip-tools",
-    categoryLabel: "Troubleshooting",
     features: ["Multi-source parsing", "Conflict detection", "Remediation tips"],
-    projectItemType: "conflict",
-    componentName: "ConflictChecker",
+    load: () =>
+      import("@/components/tools/conflict-checker").then((m) => ({ default: m.ConflictChecker })),
     keywords: ["ip", "mac", "conflict", "duplicate", "arp", "dhcp"],
   },
 
   // === NETWORK CONFIG ===
   {
-    id: "vlan-manager",
+    slug: "vlan-manager",
     label: "VLAN Manager",
     title: "VLAN Manager",
     description: "Design and manage VLANs with switch configuration templates",
     icon: Layers,
     category: "network",
-    categoryLabel: "Configuration",
     features: ["Switch templates", "Trunk planning", "Cisco & Aruba"],
     projectItemType: "vlan",
-    componentName: "VLANManager",
+    load: () => import("@/components/tools/vlan-manager").then((m) => ({ default: m.VLANManager })),
     keywords: ["vlan", "switch", "trunk", "tagging", "802.1q"],
   },
   {
-    id: "routing-tools",
+    slug: "routing-tools",
     label: "Routing Tools",
     title: "Routing Tools",
     description: "Configure OSPF, EIGRP, static routes, and administrative distances",
     icon: Route,
     category: "network",
-    categoryLabel: "Configuration",
     features: ["OSPF & EIGRP", "Static routes", "Admin distances"],
     popular: true,
     projectItemType: "routing",
-    componentName: "RoutingTools",
+    load: () =>
+      import("@/components/tools/routing-tools").then((m) => ({ default: m.RoutingTools })),
     keywords: ["routing", "ospf", "eigrp", "static", "route", "gateway"],
   },
   {
-    id: "acl-generator",
+    slug: "acl-generator",
     label: "ACL Generator",
     title: "ACL Generator",
     description: "Generate standard and extended access control lists with validation",
     icon: Shield,
     category: "network",
-    categoryLabel: "Security",
     features: ["Standard & Extended", "Multi-vendor", "Rule validation"],
     projectItemType: "acl",
-    componentName: "ACLGenerator",
+    load: () =>
+      import("@/components/tools/acl-generator").then((m) => ({ default: m.ACLGenerator })),
     keywords: ["acl", "firewall", "access list", "security", "rules"],
   },
   {
-    id: "wireless-tools",
+    slug: "wireless-tools",
     label: "Wireless Tools",
     title: "Wireless Tools",
     description: "Channel planning, interference analysis, and WiFi configuration",
     icon: Radio,
     category: "network",
-    categoryLabel: "Wireless",
     features: ["Channel planning", "Interference analysis", "WiFi config"],
     popular: true,
-    projectItemType: "wireless",
-    componentName: "WirelessTools",
+    load: () =>
+      import("@/components/tools/wireless-tools").then((m) => ({ default: m.WirelessTools })),
     keywords: ["wifi", "wireless", "channel", "interference", "2.4ghz", "5ghz"],
   },
 
   // === DIAGNOSTICS ===
   {
-    id: "network-tester",
+    slug: "network-tester",
     label: "Network Tester",
     title: "Network Tester",
     description: "Test RTT, throughput, and connectivity to user-defined endpoints",
     icon: Activity,
     category: "diagnostics",
-    categoryLabel: "Testing",
     features: ["RTT measurement", "Throughput tests", "CORS-enabled"],
     popular: true,
-    projectItemType: "other",
-    componentName: "NetworkTester",
+    load: () =>
+      import("@/components/tools/network-tester").then((m) => ({ default: m.NetworkTester })),
     keywords: ["test", "connectivity", "rtt", "latency", "throughput"],
   },
   {
-    id: "dns-tools",
+    slug: "dns-tools",
     label: "DNS Tools",
     title: "DNS Tools",
     description: "DNS over HTTPS client with multiple provider support and caching",
     icon: Globe,
     category: "diagnostics",
-    categoryLabel: "Network Services",
     features: ["DoH support", "Multiple providers", "DNSSEC validation"],
-    projectItemType: "dns",
-    componentName: "DNSTools",
+    load: () => import("@/components/tools/dns-tools").then((m) => ({ default: m.DNSTools })),
     keywords: ["dns", "lookup", "doh", "resolver", "records"],
   },
   {
-    id: "ping-traceroute",
+    slug: "ping-traceroute",
     label: "Ping & Traceroute",
     title: "Ping & Traceroute",
     description: "Test network connectivity and trace packet paths to destinations",
     icon: Navigation,
     category: "diagnostics",
-    categoryLabel: "Testing",
     features: ["Connectivity tests", "Path tracing", "Latency measurement"],
     popular: true,
-    projectItemType: "other",
-    componentName: "PingTraceroute",
+    load: () =>
+      import("@/components/tools/ping-traceroute").then((m) => ({ default: m.PingTraceroute })),
     keywords: ["ping", "traceroute", "tracert", "icmp", "path"],
   },
   {
-    id: "port-scanner",
+    slug: "port-scanner",
     label: "Port Scanner",
     title: "Port Scanner",
     description: "Scan network hosts for open ports and running services",
     icon: Scan,
     category: "diagnostics",
-    categoryLabel: "Security",
     features: ["Common ports", "Custom ranges", "Service detection"],
-    projectItemType: "port-scan",
-    componentName: "PortScanner",
+    load: () => import("@/components/tools/port-scanner").then((m) => ({ default: m.PortScanner })),
     keywords: ["port", "scan", "service", "open", "tcp"],
   },
   {
-    id: "ssl-checker",
+    slug: "ssl-checker",
     label: "SSL/TLS Checker",
     title: "SSL/TLS Checker",
     description: "Analyze SSL certificates, expiry dates, and TLS configuration",
     icon: Lock,
     category: "diagnostics",
-    categoryLabel: "Security",
     features: ["Certificate info", "Expiry check", "Chain validation"],
-    projectItemType: "ssl-check",
-    componentName: "SSLChecker",
+    load: () => import("@/components/tools/ssl-checker").then((m) => ({ default: m.SSLChecker })),
     keywords: ["ssl", "tls", "certificate", "https", "security"],
   },
   {
-    id: "whois-lookup",
+    slug: "whois-lookup",
     label: "WHOIS Lookup",
     title: "WHOIS Lookup",
     description: "Look up domain registration and IP block ownership information",
     icon: Search,
     category: "diagnostics",
-    categoryLabel: "Lookup",
     features: ["Domain info", "IP ownership", "Registrar data"],
-    projectItemType: "whois",
-    componentName: "WhoisLookup",
+    load: () => import("@/components/tools/whois-lookup").then((m) => ({ default: m.WhoisLookup })),
     keywords: ["whois", "domain", "registration", "ownership", "registrar"],
   },
   {
-    id: "email-diagnostics",
+    slug: "email-diagnostics",
     label: "Email Diagnostics",
     title: "Email Diagnostics",
     description: "Check MX records, SPF, DKIM, and DMARC configurations",
     icon: Mail,
     category: "diagnostics",
-    categoryLabel: "Email",
     features: ["MX records", "SPF/DKIM/DMARC", "Deliverability"],
-    projectItemType: "email-diag",
-    componentName: "EmailDiagnostics",
+    load: () =>
+      import("@/components/tools/email-diagnostics").then((m) => ({ default: m.EmailDiagnostics })),
     keywords: ["email", "mx", "spf", "dkim", "dmarc", "smtp"],
   },
 
   // === GENERATORS ===
   {
-    id: "random-generator",
+    slug: "random-generator",
     label: "Random Generator",
     title: "Random Generator",
     description: "Generate random IP addresses, MAC addresses, and network values",
     icon: Shuffle,
     category: "generators",
-    categoryLabel: "Utilities",
     features: ["Random IPs", "Random MACs", "Bulk generation"],
     projectItemType: "random-gen",
-    componentName: "RandomGenerator",
+    load: () =>
+      import("@/components/tools/random-generator").then((m) => ({ default: m.RandomGenerator })),
     keywords: ["random", "generate", "ip", "mac", "uuid"],
   },
   {
-    id: "wifi-qr",
+    slug: "wifi-qr",
     label: "WiFi QR Generator",
     title: "WiFi QR Generator",
     description: "Generate QR codes for instant WiFi connection on smartphones",
     icon: QrCode,
     category: "generators",
-    categoryLabel: "Utilities",
     features: ["WPA2/WPA3/WEP", "PNG/SVG export", "Project saving"],
     popular: true,
     projectItemType: "wifi-qr",
-    componentName: "WifiQRGenerator",
+    load: () =>
+      import("@/components/tools/wifi-qr-generator").then((m) => ({ default: m.WifiQRGenerator })),
     keywords: ["wifi", "qr", "code", "wireless", "connect"],
   },
 
   // === REFERENCE ===
   {
-    id: "reference-hub",
+    slug: "reference-hub",
     label: "Reference Hub",
     title: "Reference Hub",
     description: "Comprehensive networking reference including ports, protocols, and standards",
     icon: BookOpen,
     category: "reference",
-    categoryLabel: "Reference",
     features: ["Port numbers", "Protocols", "Quick reference"],
-    componentName: "ReferenceHub",
+    load: () =>
+      import("@/components/tools/reference-hub").then((m) => ({ default: m.ReferenceHub })),
     keywords: ["reference", "ports", "protocols", "standards", "cheatsheet"],
   },
   {
-    id: "oui-lookup",
+    slug: "oui-lookup",
     label: "OUI Lookup",
     title: "OUI Lookup",
     description: "Look up MAC address vendor information using IEEE OUI database",
     icon: Search,
     category: "reference",
-    categoryLabel: "Lookup",
     features: ["IEEE OUI database", "Vendor identification", "MAC analysis"],
-    projectItemType: "oui",
-    componentName: "OUILookup",
+    load: () => import("@/components/tools/oui-lookup").then((m) => ({ default: m.OUILookup })),
     keywords: ["oui", "mac", "vendor", "manufacturer", "ieee"],
   },
 
   // === DIAGNOSTICS (continued) ===
   {
-    id: "http-headers",
+    slug: "http-headers",
     label: "HTTP Headers",
     title: "HTTP Headers Analyzer",
     description: "Analyze HTTP response headers and security configuration",
     icon: FileText,
     category: "diagnostics",
-    categoryLabel: "Web Analysis",
     features: ["Header analysis", "Security score", "Category sorting"],
-    componentName: "HTTPHeaders",
+    load: () => import("@/components/tools/http-headers").then((m) => ({ default: m.HTTPHeaders })),
     keywords: ["http", "headers", "response", "security", "web"],
   },
   {
-    id: "security-headers",
+    slug: "security-headers",
     label: "Security Headers",
     title: "Security Headers Checker",
     description: "Analyze HTTP security headers and get recommendations",
     icon: Shield,
     category: "diagnostics",
-    categoryLabel: "Security",
     features: ["HSTS check", "CSP analysis", "Security grade"],
     popular: true,
-    componentName: "SecurityHeaders",
+    load: () =>
+      import("@/components/tools/security-headers").then((m) => ({ default: m.SecurityHeaders })),
     keywords: ["security", "headers", "hsts", "csp", "xss"],
   },
   {
-    id: "redirect-checker",
+    slug: "redirect-checker",
     label: "Redirect Checker",
     title: "Redirect Checker",
     description: "Trace HTTP redirect chains and analyze URL redirections",
     icon: Globe,
     category: "diagnostics",
-    categoryLabel: "Web Analysis",
     features: ["Redirect chain", "HTTPS upgrade", "Loop detection"],
-    componentName: "RedirectChecker",
+    load: () =>
+      import("@/components/tools/redirect-checker").then((m) => ({ default: m.RedirectChecker })),
     keywords: ["redirect", "301", "302", "url", "chain"],
   },
   {
-    id: "user-agent-parser",
+    slug: "user-agent-parser",
     label: "User Agent Parser",
     title: "User Agent Parser",
     description: "Parse and analyze browser user agent strings",
     icon: Monitor,
     category: "diagnostics",
-    categoryLabel: "Web Analysis",
     features: ["Browser detection", "OS detection", "Device type"],
-    componentName: "UserAgentParser",
+    load: () =>
+      import("@/components/tools/user-agent-parser").then((m) => ({ default: m.UserAgentParser })),
     keywords: ["user agent", "browser", "device", "mobile", "desktop"],
   },
 
   // === DEV TOOLS ===
   {
-    id: "hash-generator",
+    slug: "hash-generator",
     label: "Hash Generator",
     title: "Hash Generator",
     description: "Generate and verify cryptographic hashes (SHA-256, SHA-384, SHA-512, SHA-1)",
     icon: Hash,
     category: "devtools",
-    categoryLabel: "Security",
     features: ["Multiple algorithms", "File hashing", "Hash verification"],
     popular: true,
-    componentName: "HashGenerator",
+    load: () =>
+      import("@/components/tools/hash-generator").then((m) => ({ default: m.HashGenerator })),
     keywords: ["hash", "sha256", "sha512", "md5", "checksum"],
   },
   {
-    id: "password-generator",
+    slug: "password-generator",
     label: "Password Generator",
     title: "Password Generator",
     description: "Generate cryptographically secure random passwords",
     icon: Key,
     category: "devtools",
-    categoryLabel: "Security",
     features: ["Customizable", "Strength meter", "Secure random"],
     popular: true,
-    componentName: "PasswordGenerator",
+    load: () =>
+      import("@/components/tools/password-generator").then((m) => ({
+        default: m.PasswordGenerator,
+      })),
     keywords: ["password", "generator", "secure", "random", "strong"],
   },
   {
-    id: "base64-encoder",
+    slug: "base64-encoder",
     label: "Base64 Encoder",
     title: "Base64 Encoder/Decoder",
     description: "Encode and decode Base64 strings and files",
     icon: FileCode,
     category: "devtools",
-    categoryLabel: "Encoding",
     features: ["Text encoding", "File encoding", "URL-safe"],
-    componentName: "Base64Encoder",
+    load: () =>
+      import("@/components/tools/base64-encoder").then((m) => ({ default: m.Base64Encoder })),
     keywords: ["base64", "encode", "decode", "binary", "text"],
   },
   {
-    id: "url-encoder",
+    slug: "url-encoder",
     label: "URL Encoder",
     title: "URL Encoder/Decoder",
     description: "Encode, decode, and build URLs with query parameters",
     icon: Link2,
     category: "devtools",
-    categoryLabel: "Encoding",
     features: ["URL encoding", "Query builder", "Percent encoding"],
-    componentName: "URLEncoder",
+    load: () => import("@/components/tools/url-encoder").then((m) => ({ default: m.URLEncoder })),
     keywords: ["url", "encode", "decode", "query", "percent"],
   },
   {
-    id: "json-formatter",
+    slug: "json-formatter",
     label: "JSON Formatter",
     title: "JSON Formatter",
     description: "Format, validate, and minify JSON data",
     icon: Braces,
     category: "devtools",
-    categoryLabel: "Data",
     features: ["Pretty print", "Validation", "Minify"],
     popular: true,
-    componentName: "JSONFormatter",
+    load: () =>
+      import("@/components/tools/json-formatter").then((m) => ({ default: m.JSONFormatter })),
     keywords: ["json", "format", "validate", "minify", "pretty"],
   },
   {
-    id: "jwt-decoder",
+    slug: "jwt-decoder",
     label: "JWT Decoder",
     title: "JWT Decoder",
     description: "Decode and inspect JSON Web Tokens",
     icon: Key,
     category: "devtools",
-    categoryLabel: "Security",
     features: ["Decode payload", "Expiry check", "Claim inspection"],
-    componentName: "JWTDecoder",
+    load: () => import("@/components/tools/jwt-decoder").then((m) => ({ default: m.JWTDecoder })),
     keywords: ["jwt", "token", "decode", "auth", "bearer"],
   },
   {
-    id: "timestamp-converter",
+    slug: "timestamp-converter",
     label: "Timestamp Converter",
     title: "Unix Timestamp Converter",
     description: "Convert between Unix timestamps and human-readable dates",
     icon: Clock,
     category: "devtools",
-    categoryLabel: "Time",
     features: ["Unix to date", "Date to Unix", "Timezone support"],
-    componentName: "TimestampConverter",
+    load: () =>
+      import("@/components/tools/timestamp-converter").then((m) => ({
+        default: m.TimestampConverter,
+      })),
     keywords: ["timestamp", "unix", "epoch", "date", "time"],
   },
   {
-    id: "cron-parser",
+    slug: "cron-parser",
     label: "Cron Parser",
     title: "Cron Expression Parser",
     description: "Parse and understand cron expressions",
     icon: Timer,
     category: "devtools",
-    categoryLabel: "Time",
     features: ["Cron syntax", "Next runs", "Human readable"],
-    componentName: "CronParser",
+    load: () => import("@/components/tools/cron-parser").then((m) => ({ default: m.CronParser })),
     keywords: ["cron", "schedule", "job", "timer", "expression"],
   },
   {
-    id: "regex-tester",
+    slug: "regex-tester",
     label: "Regex Tester",
     title: "Regex Tester",
     description: "Test and debug regular expressions with live highlighting",
     icon: FileSearch,
     category: "devtools",
-    categoryLabel: "Text",
     features: ["Live matching", "Capture groups", "Common patterns"],
     popular: true,
-    componentName: "RegexTester",
+    load: () => import("@/components/tools/regex-tester").then((m) => ({ default: m.RegexTester })),
     keywords: ["regex", "regexp", "pattern", "match", "search"],
   },
   {
-    id: "color-converter",
+    slug: "color-converter",
     label: "Color Converter",
     title: "Color Converter",
     description: "Convert colors between HEX, RGB, HSL, and CMYK formats",
     icon: Palette,
     category: "devtools",
-    categoryLabel: "Design",
     features: ["HEX/RGB/HSL", "Color picker", "CMYK support"],
-    componentName: "ColorConverter",
+    load: () =>
+      import("@/components/tools/color-converter").then((m) => ({ default: m.ColorConverter })),
     keywords: ["color", "hex", "rgb", "hsl", "convert"],
   },
   {
-    id: "lorem-generator",
+    slug: "lorem-generator",
     label: "Lorem Generator",
     title: "Lorem Ipsum Generator",
     description: "Generate placeholder text for designs and mockups",
     icon: FileText,
     category: "devtools",
-    categoryLabel: "Text",
     features: ["Paragraphs", "Sentences", "Word count"],
-    componentName: "LoremGenerator",
+    load: () =>
+      import("@/components/tools/lorem-generator").then((m) => ({ default: m.LoremGenerator })),
     keywords: ["lorem", "ipsum", "placeholder", "text", "dummy"],
   },
 
   // === NETWORK CALCULATORS (New) ===
   {
-    id: "data-unit-converter",
+    slug: "data-unit-converter",
     label: "Data Unit Converter",
     title: "Data Unit Converter",
     description: "Convert between bits, bytes, and all data size units (SI and IEC)",
     icon: HardDrive,
     category: "calculators",
-    categoryLabel: "Converters",
     features: ["Bits/Bytes", "SI units", "IEC binary units"],
-    componentName: "DataUnitConverter",
+    load: () =>
+      import("@/components/tools/data-unit-converter").then((m) => ({
+        default: m.DataUnitConverter,
+      })),
     keywords: ["data", "unit", "convert", "bytes", "bits", "mb", "gb", "kb"],
   },
   {
-    id: "uptime-calculator",
+    slug: "uptime-calculator",
     label: "Uptime Calculator",
     title: "Uptime/SLA Calculator",
     description: "Calculate allowed downtime based on SLA uptime percentage",
     icon: Clock,
     category: "calculators",
-    categoryLabel: "SLA",
     features: ["Nines calculation", "Downtime per period", "SLA reference"],
-    componentName: "UptimeCalculator",
+    load: () =>
+      import("@/components/tools/uptime-calculator").then((m) => ({ default: m.UptimeCalculator })),
     keywords: ["uptime", "sla", "availability", "downtime", "nines"],
   },
   {
-    id: "network-calculator",
+    slug: "network-calculator",
     label: "Network Calculator",
     title: "Network Calculator",
     description: "Calculate latency, throughput (BDP), and perform IP math operations",
     icon: Calculator,
     category: "calculators",
-    categoryLabel: "Analysis",
     features: ["Latency calc", "BDP throughput", "IP math"],
-    componentName: "NetworkCalculator",
+    load: () =>
+      import("@/components/tools/network-calculator").then((m) => ({
+        default: m.NetworkCalculator,
+      })),
     keywords: ["latency", "throughput", "bdp", "rtt", "window", "ip math"],
   },
 
   // === IP TOOLS (New) ===
   {
-    id: "mac-formatter",
+    slug: "mac-formatter",
     label: "MAC Formatter",
     title: "MAC Address Formatter",
     description: "Convert MAC addresses between formats and analyze properties",
     icon: Cpu,
     category: "ip-tools",
-    categoryLabel: "Converters",
     features: ["All MAC formats", "EUI-64", "Address properties"],
-    componentName: "MACFormatter",
+    load: () =>
+      import("@/components/tools/mac-formatter").then((m) => ({ default: m.MACFormatter })),
     keywords: ["mac", "address", "format", "eui64", "cisco", "ieee"],
   },
   {
-    id: "subnet-mask-converter",
+    slug: "subnet-mask-converter",
     label: "Subnet Mask Converter",
     title: "Subnet Mask Converter",
     description: "Convert between CIDR notation, dotted decimal, and wildcard masks",
     icon: Binary,
     category: "ip-tools",
-    categoryLabel: "Converters",
     features: ["CIDR to mask", "Wildcard calc", "Quick reference"],
-    componentName: "SubnetMaskConverter",
+    load: () =>
+      import("@/components/tools/subnet-mask-converter").then((m) => ({
+        default: m.SubnetMaskConverter,
+      })),
     keywords: ["subnet", "mask", "cidr", "wildcard", "convert"],
   },
 
   // === REFERENCE (New) ===
   {
-    id: "port-reference",
+    slug: "port-reference",
     label: "Port Reference",
     title: "Port Reference",
     description: "Quick reference for common network ports and services",
     icon: Server,
     category: "reference",
-    categoryLabel: "Reference",
     features: ["Common ports", "Service lookup", "Categorized"],
-    componentName: "PortReference",
+    load: () =>
+      import("@/components/tools/port-reference").then((m) => ({ default: m.PortReference })),
     keywords: ["port", "reference", "service", "tcp", "udp"],
   },
   {
-    id: "cidr-reference",
+    slug: "cidr-reference",
     label: "CIDR Reference",
     title: "CIDR Reference",
     description: "Complete CIDR notation cheat sheet with subnet masks and host counts",
     icon: Network,
     category: "reference",
-    categoryLabel: "Reference",
     features: ["All CIDRs", "Private ranges", "Mask table"],
-    componentName: "CIDRReference",
+    load: () =>
+      import("@/components/tools/cidr-reference").then((m) => ({ default: m.CIDRReference })),
     keywords: ["cidr", "reference", "subnet", "mask", "cheatsheet"],
   },
   {
-    id: "protocol-reference",
+    slug: "protocol-reference",
     label: "Protocol Reference",
     title: "Protocol Reference",
     description: "IP protocol numbers and ICMP types reference",
     icon: FileText,
     category: "reference",
-    categoryLabel: "Reference",
     features: ["IP protocols", "ICMP types", "Error codes"],
-    componentName: "ProtocolReference",
+    load: () =>
+      import("@/components/tools/protocol-reference").then((m) => ({
+        default: m.ProtocolReference,
+      })),
     keywords: ["protocol", "icmp", "tcp", "udp", "reference"],
   },
   {
-    id: "ipv6-reference",
+    slug: "ipv6-reference",
     label: "IPv6 Reference",
     title: "IPv6 Reference",
     description: "IPv6 address types, prefixes, and format reference",
     icon: Globe2,
     category: "reference",
-    categoryLabel: "Reference",
     features: ["Address types", "Special addresses", "Format rules"],
-    componentName: "IPv6Reference",
+    load: () =>
+      import("@/components/tools/ipv6-reference").then((m) => ({ default: m.IPv6Reference })),
     keywords: ["ipv6", "reference", "address", "prefix", "multicast"],
   },
 ]
 
 // Standalone navigation items (not tools)
-export const standaloneItems = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "project-manager", label: "Projects", icon: FolderOpen },
-  { id: "about", label: "About", icon: Info },
-]
+// helpers: the small api the app actually consumes. everything renders from
+// this registry; there is no other list of tools anywhere.
 
-// === HELPER FUNCTIONS ===
-
-/**
- * Get all tools
- */
-export function getAllTools(): ToolDefinition[] {
-  return tools
+export function getToolBySlug(slug: string): ToolDefinition | undefined {
+  return tools.find((t) => t.slug === slug)
 }
 
-/**
- * Get tool by ID
- */
-export function getToolById(id: string): ToolDefinition | undefined {
-  return tools.find((t) => t.id === id)
-}
-
-/**
- * Get tools by category
- */
 export function getToolsByCategory(category: ToolCategory): ToolDefinition[] {
   return tools.filter((t) => t.category === category)
 }
 
-/**
- * Get popular tools
- */
 export function getPopularTools(): ToolDefinition[] {
   return tools.filter((t) => t.popular)
 }
 
-/**
- * Get all categories with their tools
- */
-export function getCategoriesWithTools(): Array<CategoryDefinition & { tools: ToolDefinition[] }> {
-  return categories.map((cat) => ({
-    ...cat,
-    tools: getToolsByCategory(cat.id),
-  }))
+export function categoryLabelOf(tool: ToolDefinition): string {
+  return categories.find((c) => c.id === tool.category)?.label ?? tool.category
 }
 
-/**
- * Search tools by keyword
- */
 export function searchTools(query: string): ToolDefinition[] {
-  const q = query.toLowerCase()
+  const q = query.trim().toLowerCase()
+  if (!q) return []
   return tools.filter(
     (t) =>
       t.label.toLowerCase().includes(q) ||
@@ -855,23 +819,6 @@ export function searchTools(query: string): ToolDefinition[] {
   )
 }
 
-/**
- * Get tool count
- */
-export function getToolCount(): number {
-  return tools.length
-}
-
-/**
- * Get category count
- */
-export function getCategoryCount(): number {
-  return categories.length
-}
-
-/**
- * Get project item type label for display
- */
 export function getProjectItemLabel(type: ProjectItemType): string {
   const labels: Record<ProjectItemType, string> = {
     subnet: "Subnet Calculation",
@@ -901,9 +848,6 @@ export function getProjectItemLabel(type: ProjectItemType): string {
   return labels[type] || "Unknown"
 }
 
-/**
- * Get icon for project item type
- */
 export function getProjectItemIcon(type: ProjectItemType): LucideIcon {
   const tool = tools.find((t) => t.projectItemType === type)
   return tool?.icon || Info

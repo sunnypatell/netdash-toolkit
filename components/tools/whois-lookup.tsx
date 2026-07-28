@@ -27,6 +27,7 @@ import {
   Hash,
 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { copyText } from "@/lib/clipboard"
 import { toast } from "sonner"
 
 interface RDAPEntity {
@@ -115,9 +116,12 @@ export function WhoisLookup() {
   const [ipResult, setIPResult] = useState<RDAPIPResponse | null>(null)
   const [asnResult, setASNResult] = useState<RDAPASNResponse | null>(null)
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard")
+  const copyToClipboard = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Copy failed")
+    }
   }
 
   // Detect query type automatically

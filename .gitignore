@@ -51,3 +51,6 @@ next-env.d.ts
 .vscode/*
 !.vscode/extensions.json
 .env*.local
+
+# browser automation artifacts (belong outside the repo)
+.playwright-mcp/

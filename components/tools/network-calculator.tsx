@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
@@ -17,6 +16,7 @@ import {
 import { Calculator } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { ipv4ToInt, intToIpv4 } from "@/lib/network-utils"
 
 export function NetworkCalculator() {
   // Latency Calculator
@@ -94,15 +94,11 @@ export function NetworkCalculator() {
 
   const ipMathResult = useMemo(() => {
     const parseIP = (ip: string): number | null => {
-      const parts = ip.trim().split(".")
-      if (parts.length !== 4) return null
-      const octets = parts.map((p) => parseInt(p, 10))
-      if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return null
-      return ((octets[0] << 24) >>> 0) + (octets[1] << 16) + (octets[2] << 8) + octets[3]
-    }
-
-    const intToIP = (num: number): string => {
-      return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255].join(".")
+      try {
+        return ipv4ToInt(ip.trim())
+      } catch {
+        return null
+      }
     }
 
     const n1 = parseIP(ip1)
@@ -120,11 +116,11 @@ export function NetworkCalculator() {
     return {
       difference: diff.toLocaleString(),
       hostsInRange: (diff + 1).toLocaleString(),
-      xor: intToIP(xor >>> 0),
-      and: intToIP(and >>> 0),
-      or: intToIP(or >>> 0),
-      min: intToIP(min >>> 0),
-      max: intToIP(max >>> 0),
+      xor: intToIpv4(xor >>> 0),
+      and: intToIpv4(and >>> 0),
+      or: intToIpv4(or >>> 0),
+      min: intToIpv4(min >>> 0),
+      max: intToIpv4(max >>> 0),
     }
   }, [ip1, ip2])
 

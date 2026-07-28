@@ -17,19 +17,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
+import { Router, Network, Settings, Info, Download, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
+import { toast } from "sonner"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
 import { ResultCard } from "@/components/ui/result-card"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import {
   calculateIPv4Subnet,
   intToIpv4,
   ipv4ToInt,
   isValidIPv4,
   netmaskToPrefix,
+  prefixToMaskInt,
   prefixToNetmask,
 } from "@/lib/network-utils"
 
@@ -152,9 +155,7 @@ const evaluateNetworkStatement = (
     }
   }
 
-  const normalizedMask = prefixToNetmask(prefix)
-
-  if (ipv4ToInt(normalizedMask) !== netmaskInt) {
+  if (prefixToMaskInt(prefix) !== netmaskInt) {
     return { isValid: false, warnings, error: "Wildcard must map to a contiguous subnet" }
   }
 
@@ -256,8 +257,10 @@ const evaluateStaticRoute = (route: StaticRoute): StaticRouteEvaluation => {
   }
 }
 
+type RoutingTab = "ospf" | "eigrp" | "static" | "admin-distance"
+
 export function RoutingTools() {
-  const { toast } = useToast()
+  const [activeTab, setActiveTab] = useState<RoutingTab>("ospf")
   const [ospfConfig, setOspfConfig] = useState<OSPFConfig>({
     processId: "1",
     routerId: "",
@@ -546,14 +549,6 @@ export function RoutingTools() {
     return !isNaN(distance) && distance > 1
   }).length
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast({
-      title: "Copied to clipboard",
-      description: "Configuration copied successfully",
-    })
-  }
-
   const addNetwork = (type: "ospf" | "eigrp") => {
     if (type === "ospf") {
       setOspfConfig((prev) => ({
@@ -584,15 +579,44 @@ export function RoutingTools() {
     ])
   }
 
-  const exportConfig = (config: string, filename: string) => {
-    const blob = new Blob([config], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+  const exportConfig = (config: string, basename: string) => {
+    downloadTextFile(config, `${basename}-${dateStamp()}.txt`)
+    toast.success("Configuration exported")
   }
+
+  // one save target per tab so the tool renders a single SaveToProject in the header
+  const saveTarget = useMemo(() => {
+    if (activeTab === "ospf") {
+      return {
+        name: `OSPF Process ${ospfConfig.processId}`,
+        source: "Routing Tools - OSPF",
+        data: { protocol: "ospf", config: ospfConfig, generatedConfig: ospfConfigText },
+      }
+    }
+    if (activeTab === "eigrp") {
+      return {
+        name: `EIGRP AS ${eigrpConfig.asNumber}`,
+        source: "Routing Tools - EIGRP",
+        data: { protocol: "eigrp", config: eigrpConfig, generatedConfig: eigrpConfigText },
+      }
+    }
+    if (activeTab === "static") {
+      return {
+        name: `Static Routes (${staticRoutes.length} routes)`,
+        source: "Routing Tools - Static",
+        data: { protocol: "static", routes: staticRoutes, generatedConfig: staticConfigText },
+      }
+    }
+    return null
+  }, [
+    activeTab,
+    ospfConfig,
+    ospfConfigText,
+    eigrpConfig,
+    eigrpConfigText,
+    staticRoutes,
+    staticConfigText,
+  ])
 
   const administrativeDistances = [
     {
@@ -684,10 +708,26 @@ export function RoutingTools() {
         icon={Router}
         title="Routing Tools"
         description="Configure and generate routing protocols, static routes, and understand administrative distances"
-        actions={<LoadFromProject itemType="routing" onLoad={handleLoadFromProject} />}
+        actions={
+          <>
+            <LoadFromProject itemType="routing" onLoad={handleLoadFromProject} />
+            {saveTarget && (
+              <SaveToProject
+                itemType="routing"
+                itemName={saveTarget.name}
+                itemData={saveTarget.data}
+                toolSource={saveTarget.source}
+              />
+            )}
+          </>
+        }
       />
 
-      <Tabs defaultValue="ospf" className="space-y-4">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as RoutingTab)}
+        className="space-y-4"
+      >
         <TabsList className="sm:bg-muted flex h-auto flex-wrap justify-start gap-1 bg-transparent p-0 sm:grid sm:w-full sm:grid-cols-4 sm:gap-0 sm:p-1">
           <TabsTrigger
             value="ospf"
@@ -867,35 +907,21 @@ export function RoutingTools() {
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
                     />
-                    <Button
-                      size="sm"
+                    <CopyButton
+                      value={ospfConfigText}
                       variant="outline"
                       className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(ospfConfigText)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                   <div className="mt-4 flex space-x-2">
                     <Button
-                      onClick={() => exportConfig(ospfConfigText, "ospf-config.txt")}
+                      onClick={() => exportConfig(ospfConfigText, "ospf-config")}
                       variant="outline"
                       className="flex-1"
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
-                    <SaveToProject
-                      itemType="routing"
-                      itemName={`OSPF Process ${ospfConfig.processId}`}
-                      itemData={{
-                        protocol: "ospf",
-                        config: ospfConfig,
-                        generatedConfig: ospfConfigText,
-                      }}
-                      toolSource="Routing Tools - OSPF"
-                      className="flex-1"
-                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1099,35 +1125,21 @@ export function RoutingTools() {
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
                     />
-                    <Button
-                      size="sm"
+                    <CopyButton
+                      value={eigrpConfigText}
                       variant="outline"
                       className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(eigrpConfigText)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                   <div className="mt-4 flex space-x-2">
                     <Button
-                      onClick={() => exportConfig(eigrpConfigText, "eigrp-config.txt")}
+                      onClick={() => exportConfig(eigrpConfigText, "eigrp-config")}
                       variant="outline"
                       className="flex-1"
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Export Config
                     </Button>
-                    <SaveToProject
-                      itemType="routing"
-                      itemName={`EIGRP AS ${eigrpConfig.asNumber}`}
-                      itemData={{
-                        protocol: "eigrp",
-                        config: eigrpConfig,
-                        generatedConfig: eigrpConfigText,
-                      }}
-                      toolSource="Routing Tools - EIGRP"
-                      className="flex-1"
-                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1332,35 +1344,21 @@ export function RoutingTools() {
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
                     />
-                    <Button
-                      size="sm"
+                    <CopyButton
+                      value={staticConfigText}
                       variant="outline"
                       className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(staticConfigText)}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                    />
                   </div>
                   <div className="mt-4 flex space-x-2">
                     <Button
-                      onClick={() => exportConfig(staticConfigText, "static-routes.txt")}
+                      onClick={() => exportConfig(staticConfigText, "static-routes")}
                       variant="outline"
                       className="flex-1"
                     >
                       <Download className="mr-2 h-4 w-4" />
                       Export Routes
                     </Button>
-                    <SaveToProject
-                      itemType="routing"
-                      itemName={`Static Routes (${staticRoutes.length} routes)`}
-                      itemData={{
-                        protocol: "static",
-                        routes: staticRoutes,
-                        generatedConfig: staticConfigText,
-                      }}
-                      toolSource="Routing Tools - Static"
-                      className="flex-1"
-                    />
                   </div>
                 </CardContent>
               </Card>

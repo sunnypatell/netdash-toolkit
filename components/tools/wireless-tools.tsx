@@ -30,7 +30,9 @@ import {
   Download,
   Calculator,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+import { toast } from "sonner"
 import { ResultCard } from "@/components/ui/result-card"
 import { ToolHeader } from "@/components/ui/tool-header"
 
@@ -58,7 +60,6 @@ interface WirelessConfig {
 }
 
 export function WirelessTools() {
-  const { toast } = useToast()
   const [wirelessConfig, setWirelessConfig] = useState<WirelessConfig>({
     ssid: "MyNetwork",
     security: "wpa2",
@@ -997,26 +998,19 @@ export function WirelessTools() {
   }
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({
-        title: "Copied to clipboard",
-        description: "Configuration copied successfully",
-      })
-    } catch (err) {
-      console.error("Failed to copy:", err)
+    const ok = await copyText(text)
+    if (ok) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Could not copy to clipboard")
     }
   }
 
   const exportConfig = () => {
-    const config = generateWirelessConfig()
-    const blob = new Blob([config], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `wireless-config-${wirelessConfig.ssid}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      generateWirelessConfig(),
+      `wireless-config-${wirelessConfig.ssid || "untitled"}-${dateStamp()}.txt`
+    )
   }
 
   const currentChannels =

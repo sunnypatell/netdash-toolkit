@@ -2,14 +2,16 @@
 
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
-import { Copy, Palette, Check } from "lucide-react"
+import { Palette } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
+
+// one hex matcher for both validation and channel extraction
+const HEX_COLOR_RE = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i
 
 interface ColorValues {
   hex: string
@@ -19,7 +21,7 @@ interface ColorValues {
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  const result = HEX_COLOR_RE.exec(hex)
   return result
     ? {
         r: parseInt(result[1], 16),
@@ -124,14 +126,12 @@ function rgbToCmyk(
 }
 
 export function ColorConverter() {
-  const { toast } = useToast()
   const [color, setColor] = useState<ColorValues>({
     hex: "#3b82f6",
     rgb: { r: 59, g: 130, b: 246 },
     hsl: { h: 217, s: 91, l: 60 },
     cmyk: { c: 76, m: 47, y: 0, k: 4 },
   })
-  const [copied, setCopied] = useState<string | null>(null)
   const [hexInput, setHexInput] = useState("#3b82f6")
 
   const updateFromRgb = (r: number, g: number, b: number) => {
@@ -156,31 +156,10 @@ export function ColorConverter() {
 
   const handleHexChange = (value: string) => {
     setHexInput(value)
-    if (/^#?[0-9A-Fa-f]{6}$/.test(value)) {
+    if (HEX_COLOR_RE.test(value)) {
       updateFromHex(value.startsWith("#") ? value : "#" + value)
     }
   }
-
-  const copyToClipboard = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(label)
-      setTimeout(() => setCopied(null), 2000)
-      toast({ title: "Copied", description: `${label} copied` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
-  const CopyButton = ({ value, label }: { value: string; label: string }) => (
-    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(value, label)}>
-      {copied === label ? (
-        <Check className="h-4 w-4 text-green-600" />
-      ) : (
-        <Copy className="h-4 w-4" />
-      )}
-    </Button>
-  )
 
   const presetColors = [
     "#ef4444",
@@ -251,7 +230,7 @@ export function ColorConverter() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>HEX</Label>
-                <CopyButton value={color.hex} label="HEX" />
+                <CopyButton value={color.hex} />
               </div>
               <Input
                 value={hexInput}
@@ -265,10 +244,7 @@ export function ColorConverter() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>RGB</Label>
-                <CopyButton
-                  value={`rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`}
-                  label="RGB"
-                />
+                <CopyButton value={`rgb(${color.rgb.r}, ${color.rgb.g}, ${color.rgb.b})`} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {(["r", "g", "b"] as const).map((channel) => (
@@ -303,10 +279,7 @@ export function ColorConverter() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>HSL</Label>
-                <CopyButton
-                  value={`hsl(${color.hsl.h}, ${color.hsl.s}%, ${color.hsl.l}%)`}
-                  label="HSL"
-                />
+                <CopyButton value={`hsl(${color.hsl.h}, ${color.hsl.s}%, ${color.hsl.l}%)`} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {(["h", "s", "l"] as const).map((channel) => (
@@ -346,7 +319,6 @@ export function ColorConverter() {
                 <Label>CMYK</Label>
                 <CopyButton
                   value={`cmyk(${color.cmyk.c}%, ${color.cmyk.m}%, ${color.cmyk.y}%, ${color.cmyk.k}%)`}
-                  label="CMYK"
                 />
               </div>
               <div className="grid grid-cols-4 gap-2">
@@ -380,7 +352,7 @@ export function ColorConverter() {
               <div key={item.label} className="rounded-lg border p-3">
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm font-medium">{item.label}</span>
-                  <CopyButton value={item.value} label={item.label} />
+                  <CopyButton value={item.value} />
                 </div>
                 <code className="text-muted-foreground text-xs break-all">{item.value}</code>
               </div>

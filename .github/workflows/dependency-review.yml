@@ -1,6 +1,6 @@
 # dependency review: blocks prs that introduce dependencies with known
 # vulnerabilities. does not email, does not open auto-prs, does not run on
-# push — it's just a pr status check.
+# push - it's just a pr status check.
 name: Dependency Review
 
 on:

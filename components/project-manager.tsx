@@ -73,7 +73,7 @@ import {
   Lock,
   Mail,
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import {
   useProjects,
   type ProjectItem,
@@ -155,7 +155,6 @@ const getItemTypeLabel = (type: ProjectItem["type"]) => {
 }
 
 export function ProjectManager() {
-  const { toast } = useToast()
   const {
     projects,
     sharedProjects,
@@ -212,11 +211,7 @@ export function ProjectManager() {
   // Create a new project
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter a project name",
-        variant: "destructive",
-      })
+      toast.error("Name required", { description: "Please enter a project name" })
       return
     }
 
@@ -236,8 +231,7 @@ export function ProjectManager() {
     setNewProjectTags("")
     setIsCreateDialogOpen(false)
 
-    toast({
-      title: "Project created",
+    toast.success("Project created", {
       description: `"${newProject.name}" has been created successfully`,
     })
   }
@@ -257,10 +251,7 @@ export function ProjectManager() {
 
     setIsEditDialogOpen(false)
 
-    toast({
-      title: "Project updated",
-      description: "Project details have been saved",
-    })
+    toast.success("Project updated", { description: "Project details have been saved" })
   }
 
   // Delete a project
@@ -271,15 +262,10 @@ export function ProjectManager() {
       if (selectedProject?.id === id) {
         setSelectedProject(null)
       }
-      toast({
-        title: "Project deleted",
-        description: "Project has been removed",
-      })
+      toast.success("Project deleted", { description: "Project has been removed" })
     } else {
-      toast({
-        title: "Delete failed",
+      toast.error("Delete failed", {
         description: result.error || "Failed to delete project. Please try again.",
-        variant: "destructive",
       })
     }
   }
@@ -287,11 +273,7 @@ export function ProjectManager() {
   // Add item to project
   const handleAddItem = async () => {
     if (!currentProject || !newItemName.trim()) {
-      toast({
-        title: "Name required",
-        description: "Please enter an item name",
-        variant: "destructive",
-      })
+      toast.error("Name required", { description: "Please enter an item name" })
       return
     }
 
@@ -317,10 +299,7 @@ export function ProjectManager() {
     setNewItemNotes("")
     setIsAddItemDialogOpen(false)
 
-    toast({
-      title: "Item added",
-      description: "Configuration has been saved to project",
-    })
+    toast.success("Item added", { description: "Configuration has been saved to project" })
   }
 
   // Remove item from project
@@ -329,10 +308,7 @@ export function ProjectManager() {
 
     await removeItemFromProject(currentProject.id, itemId)
 
-    toast({
-      title: "Item removed",
-      description: "Configuration has been removed from project",
-    })
+    toast.success("Item removed", { description: "Configuration has been removed from project" })
   }
 
   // Handle file import
@@ -344,15 +320,10 @@ export function ProjectManager() {
       const text = await file.text()
       const count = await importProjects(text)
 
-      toast({
-        title: "Import successful",
-        description: `Imported ${count} project(s)`,
-      })
+      toast.success("Import successful", { description: `Imported ${count} project(s)` })
     } catch (error) {
-      toast({
-        title: "Import failed",
+      toast.error("Import failed", {
         description: error instanceof Error ? error.message : "Invalid file format",
-        variant: "destructive",
       })
     }
 

@@ -20,19 +20,26 @@ import { ResultCard } from "@/components/ui/result-card"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
+import { formatBytes } from "@/lib/format"
 
-type SizeUnit = "B" | "KB" | "MB" | "GB" | "TB" | "PB"
+type SizeUnit = "B" | "kB" | "MB" | "GB" | "TB" | "PB"
 type SpeedUnit = "bps" | "Kbps" | "Mbps" | "Gbps" | "Bps" | "KBps" | "MBps" | "GBps"
 type TimeUnit = "seconds" | "minutes" | "hours" | "days"
 
+// decimal (SI) sizes, matching the decimal link speeds below and the SI ladder
+// in lib/format. this tool used to label 1024-based values "KB", which
+// disagreed with the data unit converter's KiB.
 const SIZE_MULTIPLIERS: Record<SizeUnit, number> = {
   B: 1,
-  KB: 1024,
-  MB: 1024 ** 2,
-  GB: 1024 ** 3,
-  TB: 1024 ** 4,
-  PB: 1024 ** 5,
+  kB: 1000,
+  MB: 1000 ** 2,
+  GB: 1000 ** 3,
+  TB: 1000 ** 4,
+  PB: 1000 ** 5,
 }
+
+// pre-SI-fix saves stored 1024-based "KB"
+const LEGACY_SIZE_UNITS: Record<string, SizeUnit> = { KB: "kB" }
 
 const SPEED_TO_BPS: Record<SpeedUnit, number> = {
   bps: 1,
@@ -113,32 +120,9 @@ export function BandwidthCalculator() {
     const totalBits = speedBps * timeSeconds
     const totalBytes = totalBits / 8
 
-    // Find best unit
-    let value = totalBytes
-    let unit: SizeUnit = "B"
-
-    if (totalBytes >= SIZE_MULTIPLIERS.PB) {
-      value = totalBytes / SIZE_MULTIPLIERS.PB
-      unit = "PB"
-    } else if (totalBytes >= SIZE_MULTIPLIERS.TB) {
-      value = totalBytes / SIZE_MULTIPLIERS.TB
-      unit = "TB"
-    } else if (totalBytes >= SIZE_MULTIPLIERS.GB) {
-      value = totalBytes / SIZE_MULTIPLIERS.GB
-      unit = "GB"
-    } else if (totalBytes >= SIZE_MULTIPLIERS.MB) {
-      value = totalBytes / SIZE_MULTIPLIERS.MB
-      unit = "MB"
-    } else if (totalBytes >= SIZE_MULTIPLIERS.KB) {
-      value = totalBytes / SIZE_MULTIPLIERS.KB
-      unit = "KB"
-    }
-
     return {
       bytes: totalBytes,
-      value: value.toFixed(2),
-      unit,
-      formatted: `${value.toFixed(2)} ${unit}`,
+      formatted: formatBytes(totalBytes, { binary: false, decimals: 2 }),
     }
   }, [downloadTime, downloadTimeUnit, downloadSpeed, downloadSpeedUnit])
 
@@ -187,7 +171,8 @@ export function BandwidthCalculator() {
       | undefined
     if (input) {
       if (input.fileSize) setFileSize(input.fileSize)
-      if (input.fileSizeUnit) setFileSizeUnit(input.fileSizeUnit)
+      if (input.fileSizeUnit)
+        setFileSizeUnit(LEGACY_SIZE_UNITS[input.fileSizeUnit] ?? input.fileSizeUnit)
       if (input.transferSpeed) setTransferSpeed(input.transferSpeed)
       if (input.transferSpeedUnit) setTransferSpeedUnit(input.transferSpeedUnit)
     }
@@ -257,7 +242,8 @@ export function BandwidthCalculator() {
                   Transfer Time Calculator
                 </CardTitle>
                 <CardDescription>
-                  Calculate how long it takes to transfer a file at a given speed
+                  Calculate how long it takes to transfer a file at a given speed. Sizes are decimal
+                  SI units (1 kB = 1,000 bytes).
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -284,7 +270,7 @@ export function BandwidthCalculator() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="B">Bytes</SelectItem>
-                        <SelectItem value="KB">KB</SelectItem>
+                        <SelectItem value="kB">kB</SelectItem>
                         <SelectItem value="MB">MB</SelectItem>
                         <SelectItem value="GB">GB</SelectItem>
                         <SelectItem value="TB">TB</SelectItem>
@@ -399,7 +385,8 @@ export function BandwidthCalculator() {
                   Download Size Calculator
                 </CardTitle>
                 <CardDescription>
-                  Calculate how much data you can download in a given time
+                  Calculate how much data you can download in a given time. Sizes are decimal SI
+                  units (1 kB = 1,000 bytes).
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

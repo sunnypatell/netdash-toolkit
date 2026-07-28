@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { FileText, AlertTriangle, CheckCircle2, XCircle, Loader2, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { downloadTextFile, dateStamp } from "@/lib/download"
 
 interface HeaderInfo {
   name: string
@@ -140,7 +141,7 @@ export function HTTPHeaders() {
         securityScore,
         recommendations,
       })
-    } catch (err) {
+    } catch {
       setError("Unable to fetch headers. The site may be blocking requests.")
     } finally {
       setLoading(false)
@@ -160,12 +161,11 @@ export function HTTPHeaders() {
         {} as Record<string, string>
       ),
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const a = document.createElement("a")
-    a.href = URL.createObjectURL(blob)
-    a.download = `headers-${new URL(result.url).hostname}.json`
-    a.click()
-    URL.revokeObjectURL(a.href)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `headers-${new URL(result.url).hostname}-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   const getCategoryColor = (category: HeaderInfo["category"]) => {

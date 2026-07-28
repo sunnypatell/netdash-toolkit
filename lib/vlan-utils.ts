@@ -1,6 +1,6 @@
 // VLAN management utilities and switch configuration generators
 
-import { cidrToRange, expandIPv6, isValidCIDR, isValidIPv4, isValidIPv6 } from "./network-utils"
+import { cidrToRange, expandIPv6, isValidCIDR, isValidIPv4, isValidIPv6 } from "@/lib/network-utils"
 
 export interface VLAN {
   id: number
@@ -68,6 +68,9 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
   // Validate VLAN name
   if (!vlan.name || vlan.name.trim().length === 0) {
     errors.push("VLAN name is required")
+  } else if (/\s/.test(vlan.name)) {
+    // ios "name" takes a single token; spaces generate an invalid config
+    errors.push(`VLAN name "${vlan.name}" must not contain spaces`)
   } else if (vlan.name.length > 32) {
     warnings.push("VLAN name should be 32 characters or less")
   }
@@ -201,6 +204,30 @@ export function parseVLANList(vlanString: string): number[] {
   return [...new Set(vlans)].sort((a, b) => a - b)
 }
 
+// re-emit a parsed vlan list as a compact, cli-safe string (e.g. "10,20,30-35")
+function normalizeVLANList(vlanString: string): string {
+  const ids = parseVLANList(vlanString)
+  if (ids.length === 0) {
+    throw new Error(`Invalid allowed VLAN list: ${vlanString}`)
+  }
+
+  const ranges: string[] = []
+  let start = ids[0]
+  let prev = ids[0]
+  for (const id of ids.slice(1)) {
+    if (id === prev + 1) {
+      prev = id
+      continue
+    }
+    ranges.push(start === prev ? `${start}` : `${start}-${prev}`)
+    start = id
+    prev = id
+  }
+  ranges.push(start === prev ? `${start}` : `${start}-${prev}`)
+
+  return ranges.join(",")
+}
+
 // Generate Cisco IOS access port configuration
 export function generateCiscoAccessConfig(port: SwitchPort): string {
   if (port.mode !== "access" || !port.accessVlan) {
@@ -229,7 +256,8 @@ export function generateCiscoTrunkConfig(port: SwitchPort): string {
   if (port.description) {
     config += ` description ${port.description}\n`
   }
-  config += ` switchport trunk encapsulation dot1q\n`
+  // no "encapsulation dot1q" line: dot1q-only platforms (3650/3850/cat9k, nexus)
+  // reject it, while platforms that still need it default to dot1q anyway
   config += ` switchport mode trunk\n`
 
   if (port.nativeVlan) {
@@ -237,7 +265,8 @@ export function generateCiscoTrunkConfig(port: SwitchPort): string {
   }
 
   if (port.allowedVlans) {
-    config += ` switchport trunk allowed vlan ${port.allowedVlans}\n`
+    // validate/normalize instead of interpolating user input raw into the config
+    config += ` switchport trunk allowed vlan ${normalizeVLANList(port.allowedVlans)}\n`
   }
 
   config += ` no shutdown\n`
@@ -256,6 +285,8 @@ export function generateArubaAccessConfig(port: SwitchPort): string {
     config += ` description ${port.description}\n`
   }
   config += ` no shutdown\n`
+  // aos-cx ports default to routed; vlan commands are rejected without this
+  config += ` no routing\n`
   config += ` vlan access ${port.accessVlan}\n`
 
   return config
@@ -272,13 +303,16 @@ export function generateArubaTrunkConfig(port: SwitchPort): string {
     config += ` description ${port.description}\n`
   }
   config += ` no shutdown\n`
+  // aos-cx ports default to routed; vlan commands are rejected without this
+  config += ` no routing\n`
 
   if (port.nativeVlan) {
     config += ` vlan trunk native ${port.nativeVlan}\n`
   }
 
   if (port.allowedVlans) {
-    config += ` vlan trunk allowed ${port.allowedVlans}\n`
+    // validate/normalize instead of interpolating user input raw into the config
+    config += ` vlan trunk allowed ${normalizeVLANList(port.allowedVlans)}\n`
   }
 
   return config
@@ -298,11 +332,12 @@ export function generateSwitchConfig(
     if (vendor === "cisco-ios") {
       config += "! VLAN Configuration\n"
       for (const vlan of vlans) {
+        // "description" is not a valid ios vlan sub-command; emit as comment
+        if (vlan.description) {
+          config += `! ${vlan.description}\n`
+        }
         config += `vlan ${vlan.id}\n`
         config += ` name ${vlan.name}\n`
-        if (vlan.description) {
-          config += ` description ${vlan.description}\n`
-        }
         config += "!\n"
       }
       config += "\n"
@@ -359,6 +394,19 @@ export function validateTrunkConfig(port: SwitchPort, vlans: VLAN[]): VLANValida
     const nativeVlanExists = vlans.some((v) => v.id === port.nativeVlan)
     if (!nativeVlanExists) {
       errors.push(`Native VLAN ${port.nativeVlan} does not exist`)
+    }
+
+    // vlan-hopping hygiene: native vlan 1 carries untagged traffic on every trunk
+    if (port.nativeVlan === 1) {
+      warnings.push("Native VLAN 1 is a VLAN-hopping risk; use a dedicated native VLAN")
+    }
+
+    // a native vlan pruned from the allowed list drops all untagged traffic
+    if (port.allowedVlans) {
+      const allowed = parseVLANList(port.allowedVlans)
+      if (allowed.length > 0 && !allowed.includes(port.nativeVlan)) {
+        errors.push(`Native VLAN ${port.nativeVlan} is not in the allowed VLAN list`)
+      }
     }
   }
 

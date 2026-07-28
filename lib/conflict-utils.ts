@@ -1,7 +1,7 @@
 // IP and MAC conflict detection utilities
 
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "./parsers"
-import { isValidIPv4 } from "./network-utils"
+import { ipv4ToInt, isValidIPv4 } from "@/lib/network-utils"
 
 export interface ConflictEntry {
   ip?: string
@@ -39,9 +39,13 @@ export interface SubnetConflict {
   remediation: string[]
 }
 
-export interface DHCPConflict {
-  type: "dhcp-static-overlap"
+// dhcp lease whose mac disagrees with the live arp entry for the same ip:
+// usually a stale lease, occasionally spoofing. arp entries are dynamically
+// learned, not static assignments, so this is not a "static overlap".
+export interface StaleLeaseConflict {
+  type: "stale-lease-or-spoof"
   ip: string
+  // field names kept for ui compat: staticEntry is the live arp observation
   staticEntry: ConflictEntry
   dhcpEntry: ConflictEntry
   severity: "high" | "medium" | "low"
@@ -49,7 +53,10 @@ export interface DHCPConflict {
   remediation: string[]
 }
 
-export type Conflict = IPConflict | MACConflict | SubnetConflict | DHCPConflict
+// deprecated alias for the old misnamed type
+export type DHCPConflict = StaleLeaseConflict
+
+export type Conflict = IPConflict | MACConflict | SubnetConflict | StaleLeaseConflict
 
 export interface ConflictAnalysisResult {
   conflicts: Conflict[]
@@ -81,14 +88,13 @@ function toConflictEntry(
 }
 
 // Check if two IPs are in the same subnet
-function sameSubnet(ip1: string, ip2: string, prefixLength = 24): boolean {
+export function sameSubnet(ip1: string, ip2: string, prefixLength = 24): boolean {
   if (!isValidIPv4(ip1) || !isValidIPv4(ip2)) return false
+  if (prefixLength < 0 || prefixLength > 32) return false
+  if (prefixLength === 0) return true
 
   const mask = (0xffffffff << (32 - prefixLength)) >>> 0
-  const ip1Int = ip1.split(".").reduce((acc, octet) => (acc << 8) + Number.parseInt(octet), 0)
-  const ip2Int = ip2.split(".").reduce((acc, octet) => (acc << 8) + Number.parseInt(octet), 0)
-
-  return (ip1Int & mask) === (ip2Int & mask)
+  return (ipv4ToInt(ip1) & mask) === (ipv4ToInt(ip2) & mask)
 }
 
 function collectUniqueValues(entries: ConflictEntry[], key: keyof ConflictEntry): string[] {
@@ -179,7 +185,7 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
 }
 
 // Detect MAC address conflicts (same MAC, different IPs in same subnet)
-function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
+function detectMACConflicts(entries: ConflictEntry[], prefixLength = 24): MACConflict[] {
   const conflicts: MACConflict[] = []
   const macMap = new Map<string, ConflictEntry[]>()
 
@@ -196,14 +202,17 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
   // Check for conflicts
   for (const [mac, macEntries] of macMap) {
     if (macEntries.length > 1) {
-      const uniqueIPs = macEntries.map((e) => e.ip).filter((ip): ip is string => !!ip)
+      // dedupe so the same host seen in multiple sources is not a conflict
+      const uniqueIPs = Array.from(
+        new Set(macEntries.map((e) => e.ip).filter((ip): ip is string => !!ip))
+      )
 
       if (uniqueIPs.length > 1) {
         // Check if IPs are in the same subnet (potential conflict)
         let hasConflict = false
         for (let i = 0; i < uniqueIPs.length; i++) {
           for (let j = i + 1; j < uniqueIPs.length; j++) {
-            if (sameSubnet(uniqueIPs[i], uniqueIPs[j])) {
+            if (sameSubnet(uniqueIPs[i], uniqueIPs[j], prefixLength)) {
               hasConflict = true
               break
             }
@@ -244,7 +253,7 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
             mac,
             entries: macEntries,
             severity: "medium",
-            description: `MAC address ${mac} is associated with multiple IP addresses in the same subnet`,
+            description: `MAC address ${mac} is associated with multiple IP addresses in the same subnet (assuming /${prefixLength})`,
             remediation: Array.from(remediation),
           })
         }
@@ -255,53 +264,60 @@ function detectMACConflicts(entries: ConflictEntry[]): MACConflict[] {
   return conflicts
 }
 
-// Detect DHCP scope conflicts with static assignments
-function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
-  const conflicts: DHCPConflict[] = []
-  const staticEntries = entries.filter((e) => e.source === "arp" || e.source === "mac-table")
+// Detect DHCP leases that disagree with the live ARP view of the same IP.
+// ARP entries are dynamically learned observations, so a mismatch usually
+// means the lease is stale (device moved/re-leased) or, rarely, spoofing.
+function detectStaleLeaseConflicts(entries: ConflictEntry[]): StaleLeaseConflict[] {
+  const conflicts: StaleLeaseConflict[] = []
+  const liveEntries = entries.filter((e) => e.source === "arp" || e.source === "mac-table")
   const dhcpEntries = entries.filter((e) => e.source === "dhcp")
 
-  for (const staticEntry of staticEntries) {
-    if (!staticEntry.ip) continue
+  // one conflict per ip, not one per matching entry
+  const reportedIPs = new Set<string>()
+
+  for (const liveEntry of liveEntries) {
+    if (!liveEntry.ip || reportedIPs.has(liveEntry.ip)) continue
 
     const conflictingDHCP = dhcpEntries.find(
-      (dhcp) => dhcp.ip === staticEntry.ip && dhcp.mac !== staticEntry.mac
+      (dhcp) => dhcp.ip === liveEntry.ip && dhcp.mac !== liveEntry.mac
     )
 
     if (conflictingDHCP) {
+      reportedIPs.add(liveEntry.ip)
+
       const remediation = new Set<string>([
-        "Move static IP outside DHCP scope range",
-        "Create DHCP reservation for static device",
-        "Update DHCP scope to exclude static IP range",
-        "Verify device MAC address is correct",
+        "Check the DHCP server for an expired or superseded lease on this IP",
+        "Release and renew the lease, or shorten lease times if this recurs",
+        "Verify which MAC address currently owns the IP on the network",
+        "If the ARP entry is unexpected, investigate possible ARP/IP spoofing",
       ])
 
-      const interfaces = collectUniqueValues([staticEntry], "interface")
+      const interfaces = collectUniqueValues([liveEntry], "interface")
       if (interfaces.length > 0) {
         remediation.add(
-          `Document and monitor the connected interface (${interfaces.join(", ")}) for unauthorized re-use.`
+          `Check the connected interface (${interfaces.join(", ")}) to identify the device currently using the IP.`
         )
       }
 
-      const scopeNames = collectUniqueValues([staticEntry, conflictingDHCP], "vlan")
+      const scopeNames = collectUniqueValues([liveEntry, conflictingDHCP], "vlan")
       if (scopeNames.length > 0) {
         remediation.add(
-          `Validate DHCP scopes or VLANs (${scopeNames.join(", ")}) to ensure reservation boundaries are correct.`
+          `Validate DHCP scopes or VLANs (${scopeNames.join(", ")}) to ensure lease records are current.`
         )
       }
 
       const hostnames = collectUniqueValues([conflictingDHCP], "hostname")
       if (hostnames.length > 0) {
-        remediation.add(`Confirm DHCP reservation details for ${hostnames.join(", ")}.`)
+        remediation.add(`Confirm the lease record for ${hostnames.join(", ")} is still valid.`)
       }
 
       conflicts.push({
-        type: "dhcp-static-overlap",
-        ip: staticEntry.ip,
-        staticEntry,
+        type: "stale-lease-or-spoof",
+        ip: liveEntry.ip,
+        staticEntry: liveEntry,
         dhcpEntry: conflictingDHCP,
-        severity: "high",
-        description: `Static IP ${staticEntry.ip} conflicts with DHCP lease for different MAC address`,
+        severity: "medium",
+        description: `DHCP lease for ${liveEntry.ip} does not match the live ARP entry (stale lease or possible spoofing)`,
         remediation: Array.from(remediation),
       })
     }
@@ -313,20 +329,20 @@ function detectDHCPConflicts(entries: ConflictEntry[]): DHCPConflict[] {
 // Main conflict analysis function
 export function analyzeConflicts(
   parsedData: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[],
-  sourceTexts: string[]
+  sourceTexts: string[],
+  subnetPrefixLength = 24
 ): ConflictAnalysisResult {
-  // Convert to conflict entries
-  const entries: ConflictEntry[] = parsedData.map((entry, index) => {
-    const sourceIndex = Math.min(index, sourceTexts.length - 1)
-    return toConflictEntry(entry, sourceTexts[sourceIndex] || "")
-  })
+  // entry-to-source-text attribution is only honest with a single source;
+  // entry.source already carries the real origin type (arp/dhcp/mac-table)
+  const sourceData = sourceTexts.length === 1 ? sourceTexts[0] : ""
+  const entries: ConflictEntry[] = parsedData.map((entry) => toConflictEntry(entry, sourceData))
 
   // Detect different types of conflicts
   const ipConflicts = detectIPConflicts(entries)
-  const macConflicts = detectMACConflicts(entries)
-  const dhcpConflicts = detectDHCPConflicts(entries)
+  const macConflicts = detectMACConflicts(entries, subnetPrefixLength)
+  const staleLeaseConflicts = detectStaleLeaseConflicts(entries)
 
-  const allConflicts: Conflict[] = [...ipConflicts, ...macConflicts, ...dhcpConflicts]
+  const allConflicts: Conflict[] = [...ipConflicts, ...macConflicts, ...staleLeaseConflicts]
 
   // Calculate statistics
   const uniqueIPs = new Set(entries.map((e) => e.ip).filter(Boolean)).size

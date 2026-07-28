@@ -9,7 +9,8 @@ import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, FileText, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { toast } from "sonner"
 
 const WORDS = [
   "lorem",
@@ -191,7 +192,6 @@ function generateParagraph(minSentences: number = 3, maxSentences: number = 7): 
 type GenerateMode = "paragraphs" | "sentences" | "words"
 
 export function LoremGenerator() {
-  const { toast } = useToast()
   const [mode, setMode] = useState<GenerateMode>("paragraphs")
   const [count, setCount] = useState(3)
   const [text, setText] = useState("")
@@ -220,11 +220,10 @@ export function LoremGenerator() {
   }, [mode, count, startWithLorem])
 
   const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Lorem ipsum text copied" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(text)) {
+      toast.success("Lorem ipsum text copied")
+    } else {
+      toast.error("Copy failed")
     }
   }
 

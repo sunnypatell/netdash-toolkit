@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Quality (format, lint, types)
+    name: Quality (format, lint, types, tests)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -55,6 +55,9 @@ jobs:
 
       - name: Typecheck (electron main/preload)
         run: pnpm electron:compile
+
+      - name: Run unit tests
+        run: pnpm test
 
   build:
     name: Build (web + electron pack)

@@ -100,7 +100,7 @@ We commit to:
 
 1. **Keep Updated**: Always use the latest version of NetDash Toolkit
 2. **Download from Official Sources**: Only download from GitHub releases or the official Homebrew tap
-3. **Verify Downloads**: See "Verifying Releases" below — every release ships checksums and build provenance
+3. **Verify Downloads**: See "Verifying Releases" below - every release ships checksums and build provenance
 4. **Network Permissions**: Be aware that network tools require certain system permissions
 5. **Sensitive Data**: Avoid scanning networks you don't have permission to scan
 
@@ -108,9 +108,9 @@ We commit to:
 
 Every release is built on GitHub-hosted runners and ships with:
 
-- `checksums.txt` — SHA-256 digests of every asset (`sha256sum -c checksums.txt --ignore-missing`)
-- `netdash-toolkit-<tag>.intoto.jsonl` — [SLSA Build Level 3](https://slsa.dev/spec/v1.0/levels) provenance, verifiable offline with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier)
-- [GitHub artifact attestations](https://github.com/sunnypatell/netdash-toolkit/attestations) — `gh attestation verify <file> --repo sunnypatell/netdash-toolkit`
+- `checksums.txt` - SHA-256 digests of every asset (`sha256sum -c checksums.txt --ignore-missing`)
+- `netdash-toolkit-<tag>.intoto.jsonl` - [SLSA Build Level 3](https://slsa.dev/spec/v1.0/levels) provenance, verifiable offline with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier)
+- [GitHub artifact attestations](https://github.com/sunnypatell/netdash-toolkit/attestations) - `gh attestation verify <file> --repo sunnypatell/netdash-toolkit`
 - a CycloneDX SBOM of the exact dependency graph the release was built from
 
 Each release's notes include copy-pasteable verification commands.

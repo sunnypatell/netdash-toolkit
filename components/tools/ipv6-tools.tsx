@@ -11,6 +11,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download, AlertTriangle, Globe, Network, Zap } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
+import { compressIPv6, expandIPv6, isValidIPv6 } from "@/lib/network-utils"
+import { normalizeMac } from "@/lib/parsers"
+import { downloadTextFile, dateStamp } from "@/lib/download"
+
+const EXPANDED_LOOPBACK = "0000:0000:0000:0000:0000:0000:0000:0001"
+const EXPANDED_UNSPECIFIED = "0000:0000:0000:0000:0000:0000:0000:0000"
+
+// the shared expand/compress helpers assume a well-formed address, so gate on
+// isValidIPv6 here to keep this tool's inline error UX
+const safeExpand = (address: string): { result: string; error?: string } => {
+  if (!isValidIPv6(address)) return { result: address, error: "Invalid IPv6 address" }
+  return { result: expandIPv6(address) }
+}
+
+const safeCompress = (address: string): { result: string; error?: string } => {
+  if (!isValidIPv6(address)) return { result: address, error: "Invalid IPv6 address" }
+  return { result: compressIPv6(address) }
+}
 
 export function IPv6Tools() {
   const [ipv6Address, setIpv6Address] = useState("2001:db8::1")
@@ -19,127 +37,28 @@ export function IPv6Tools() {
   const [error, setError] = useState("")
 
   const classifyIPv6Address = (address: string): string => {
-    const expanded = expandIPv6(address).result
-    if (expanded.startsWith("::1")) return "Loopback"
-    if (expanded.startsWith("fe80:")) return "Link-Local"
-    if (expanded.startsWith("ff")) return "Multicast"
-    if (expanded.startsWith("2001:db8:")) return "Documentation"
-    if (expanded.startsWith("::")) return "Unspecified"
-    if (expanded.startsWith("2001:")) return "Global Unicast"
-    if (expanded.startsWith("fc") || expanded.startsWith("fd")) return "Unique Local"
+    const expanded = safeExpand(address)
+    if (expanded.error) return "Unknown"
+
+    // classify against the EXPANDED form - the old prefix literals were
+    // compressed ("::1", "fe80:"), so they never matched and everything
+    // fell through to Global Unicast
+    if (expanded.result === EXPANDED_LOOPBACK) return "Loopback"
+    if (expanded.result === EXPANDED_UNSPECIFIED) return "Unspecified"
+
+    const firstGroup = Number.parseInt(expanded.result.slice(0, 4), 16)
+    if ((firstGroup & 0xff00) === 0xff00) return "Multicast"
+    // fe80::/10 spans fe80-febf, not just fe80::/16
+    if ((firstGroup & 0xffc0) === 0xfe80) return "Link-Local"
+    if ((firstGroup & 0xfe00) === 0xfc00) return "Unique Local"
+    if (expanded.result.startsWith("2001:0db8:")) return "Documentation"
     return "Global Unicast"
-  }
-
-  // IPv6 compression per RFC 5952
-  const compressIPv6 = (address: string): { result: string; error?: string } => {
-    try {
-      // Basic validation
-      if (!address || typeof address !== "string") {
-        return { result: address, error: "Invalid IPv6 address" }
-      }
-
-      // Remove leading zeros from each group
-      let compressed = address.toLowerCase().replace(/\b0+([0-9a-f]+)/g, "$1")
-
-      // Find the longest sequence of consecutive zero groups
-      const groups = compressed.split(":")
-      let maxZeroStart = -1
-      let maxZeroLength = 0
-      let currentZeroStart = -1
-      let currentZeroLength = 0
-
-      for (let i = 0; i < groups.length; i++) {
-        if (groups[i] === "0" || groups[i] === "") {
-          if (currentZeroStart === -1) {
-            currentZeroStart = i
-            currentZeroLength = 1
-          } else {
-            currentZeroLength++
-          }
-        } else {
-          if (currentZeroLength > maxZeroLength) {
-            maxZeroStart = currentZeroStart
-            maxZeroLength = currentZeroLength
-          }
-          currentZeroStart = -1
-          currentZeroLength = 0
-        }
-      }
-
-      // Check final sequence
-      if (currentZeroLength > maxZeroLength) {
-        maxZeroStart = currentZeroStart
-        maxZeroLength = currentZeroLength
-      }
-
-      // Replace longest zero sequence with ::
-      if (maxZeroLength > 1) {
-        const before = groups.slice(0, maxZeroStart).join(":")
-        const after = groups.slice(maxZeroStart + maxZeroLength).join(":")
-
-        if (before && after) {
-          compressed = `${before}::${after}`
-        } else if (before) {
-          compressed = `${before}::`
-        } else if (after) {
-          compressed = `::${after}`
-        } else {
-          compressed = "::"
-        }
-      }
-
-      return { result: compressed }
-    } catch (err) {
-      return { result: address, error: err instanceof Error ? err.message : "Compression failed" }
-    }
-  }
-
-  // IPv6 expansion
-  const expandIPv6 = (address: string): { result: string; error?: string } => {
-    try {
-      if (!address || typeof address !== "string") {
-        return { result: address, error: "Invalid IPv6 address" }
-      }
-
-      let expanded = address.toLowerCase()
-
-      // Handle :: compression
-      if (expanded.includes("::")) {
-        const parts = expanded.split("::")
-        const leftGroups = parts[0] ? parts[0].split(":") : []
-        const rightGroups = parts[1] ? parts[1].split(":") : []
-        const missingGroups = 8 - leftGroups.length - rightGroups.length
-
-        if (missingGroups < 0) {
-          return { result: address, error: "Invalid IPv6 format" }
-        }
-
-        const middleGroups = Array(missingGroups).fill("0000")
-        const allGroups = [...leftGroups, ...middleGroups, ...rightGroups]
-        expanded = allGroups.join(":")
-      }
-
-      // Pad each group to 4 characters
-      const result = expanded
-        .split(":")
-        .map((group) => group.padStart(4, "0"))
-        .join(":")
-
-      // Validate result has exactly 8 groups
-      if (result.split(":").length !== 8) {
-        return { result: address, error: "Invalid IPv6 format" }
-      }
-
-      return { result }
-    } catch (err) {
-      return { result: address, error: err instanceof Error ? err.message : "Expansion failed" }
-    }
   }
 
   // Calculate solicited-node multicast address
   const calculateSolicitedNode = (address: string): string => {
     try {
-      const expandResult = expandIPv6(address)
+      const expandResult = safeExpand(address)
       if (expandResult.error) return "Invalid IPv6 address"
 
       const lastGroups = expandResult.result.split(":").slice(-2).join("")
@@ -155,7 +74,7 @@ export function IPv6Tools() {
     address: string,
     prefixLength: number
   ): { network: string; error?: string } => {
-    const expanded = expandIPv6(address)
+    const expanded = safeExpand(address)
     if (expanded.error) {
       return { network: "", error: expanded.error }
     }
@@ -183,22 +102,13 @@ export function IPv6Tools() {
       throw new Error("Prefix length must be 64 or less for EUI-64 generation")
     }
 
-    // Clean MAC address
-    const cleanMac = mac.replace(/[:-]/g, "").toLowerCase()
-    if (cleanMac.length !== 12 || !/^[0-9a-f]{12}$/.test(cleanMac)) {
-      throw new Error("Invalid MAC address format")
-    }
-
-    const macBytes = cleanMac.match(/.{2}/g)
-    if (!macBytes || macBytes.length !== 6) {
-      throw new Error("Invalid MAC address")
-    }
+    const macBytes = normalizeMac(mac).split(":")
 
     const firstByte = Number.parseInt(macBytes[0], 16)
     const flippedByte = (firstByte ^ 0x02).toString(16).padStart(2, "0")
     const eui64 = `${flippedByte}${macBytes[1]}:${macBytes[2]}ff:fe${macBytes[3]}:${macBytes[4]}${macBytes[5]}`
 
-    const expandedPrefix = expandIPv6(networkPrefix)
+    const expandedPrefix = safeExpand(networkPrefix)
     if (expandedPrefix.error) {
       throw new Error(expandedPrefix.error)
     }
@@ -211,7 +121,7 @@ export function IPv6Tools() {
     }
 
     const combined = `${baseGroups.join(":")}:${eui64}`
-    const compressed = compressIPv6(combined)
+    const compressed = safeCompress(combined)
 
     if (compressed.error) {
       throw new Error(compressed.error)
@@ -229,8 +139,8 @@ export function IPv6Tools() {
   }
 
   const results = useMemo(() => {
-    const compressResult = compressIPv6(ipv6Address)
-    const expandResult = expandIPv6(ipv6Address)
+    const compressResult = safeCompress(ipv6Address)
+    const expandResult = safeExpand(ipv6Address)
 
     let currentError = compressResult.error || expandResult.error || ""
 
@@ -269,7 +179,7 @@ export function IPv6Tools() {
       compressed: compressResult.result,
       expanded: expandResult.result,
       solicitedNode: calculateSolicitedNode(ipv6Address),
-      eui64: eui64Address || "—",
+      eui64: eui64Address || "-",
       linkLocal: generateLinkLocal(macAddress),
       addressType: classifyIPv6Address(ipv6Address),
     }
@@ -286,13 +196,11 @@ export function IPv6Tools() {
       timestamp: new Date().toISOString(),
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "ipv6-tools-results.json"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `ipv6-tools-results-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   return (

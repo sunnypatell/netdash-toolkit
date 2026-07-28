@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { Analytics } from "@vercel/analytics/react"
+import { Toaster } from "sonner"
 import { Suspense } from "react"
 import "./globals.css"
 
@@ -45,6 +46,9 @@ export default function RootLayout({
             <AuthProvider>
               <ProjectProvider>{children}</ProjectProvider>
             </AuthProvider>
+            {/* the app had two toast systems and mounted neither, so every
+                "copied"/"saved"/"failed" message was silent. one system now. */}
+            <Toaster richColors closeButton position="bottom-right" />
           </ThemeProvider>
         </Suspense>
         <Analytics />

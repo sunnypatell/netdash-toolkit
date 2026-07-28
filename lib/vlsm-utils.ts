@@ -55,9 +55,25 @@ export function calculateVLSM(
     let totalAllocatedHosts = 0
 
     for (const req of sortedRequirements) {
+      // reject nonsense before searching: the old loop fell through to /32
+      // for zero, negative, or > 2^31-2 host requirements and reported success
+      if (!Number.isInteger(req.hostsRequired) || req.hostsRequired < 1) {
+        return {
+          baseNetwork: baseSubnet.network,
+          basePrefix,
+          totalHosts: totalAvailableHosts,
+          allocatedHosts: totalAllocatedHosts,
+          wastedHosts: 0,
+          utilizationPercent: 0,
+          allocations: [],
+          success: false,
+          errorMessage: `Requirement "${req.name}" needs a host count of at least 1`,
+        }
+      }
+
       // Calculate the smallest prefix that can accommodate the required hosts
-      let prefix = 32
-      let blockSize = 1
+      let prefix = -1
+      let blockSize = 0
 
       // Find the smallest block size that fits the required hosts. Include /32 and /31 networks
       // so that point-to-point and host-only allocations do not consume unnecessarily large ranges.
@@ -69,6 +85,20 @@ export function calculateVLSM(
           prefix = p
           blockSize = testBlockSize
           break
+        }
+      }
+
+      if (prefix === -1) {
+        return {
+          baseNetwork: baseSubnet.network,
+          basePrefix,
+          totalHosts: totalAvailableHosts,
+          allocatedHosts: totalAllocatedHosts,
+          wastedHosts: 0,
+          utilizationPercent: 0,
+          allocations: [],
+          success: false,
+          errorMessage: `Requirement "${req.name}" (${req.hostsRequired} hosts) exceeds the ipv4 address space`,
         }
       }
 
@@ -133,8 +163,13 @@ export function calculateVLSM(
       currentNetworkInt = alignedStart + blockSize
     }
 
+    // utilization is measured in address space (block sizes vs base block),
+    // not usable hosts: mixing the two under-reported consumption because
+    // per-subnet network/broadcast addresses looked "available"
+    const baseBlockSize = Math.pow(2, 32 - basePrefix)
+    const consumedAddresses = allocations.reduce((sum, a) => sum + Math.pow(2, 32 - a.prefix), 0)
     const wastedHosts = totalAvailableHosts - totalAllocatedHosts
-    const utilizationPercent = (totalAllocatedHosts / totalAvailableHosts) * 100
+    const utilizationPercent = (consumedAddresses / baseBlockSize) * 100
 
     return {
       baseNetwork: baseSubnet.network,

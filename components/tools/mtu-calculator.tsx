@@ -17,6 +17,8 @@ import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Download, Ruler } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
+import { PROTOCOL_OVERHEADS } from "@/lib/network-testing"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 
 interface ProtocolOverhead {
   name: string
@@ -28,14 +30,15 @@ export function MTUCalculator() {
   const [linkMTU, setLinkMTU] = useState("1500")
   const [ipVersion, setIpVersion] = useState("ipv4")
   const [transport, setTransport] = useState("tcp")
+  // link mtu is already the l3 payload limit (1500 excludes the 14-byte
+  // ethernet header), so only encapsulation that eats into it is listed here
   const [protocols, setProtocols] = useState<ProtocolOverhead[]>([
-    { name: "Ethernet II", overhead: 14, enabled: true },
-    { name: "802.1Q VLAN", overhead: 4, enabled: false },
-    { name: "QinQ (802.1ad)", overhead: 4, enabled: false },
-    { name: "PPPoE", overhead: 8, enabled: false },
-    { name: "GRE", overhead: 24, enabled: false },
-    { name: "VXLAN", overhead: 50, enabled: false },
-    { name: "IPsec ESP", overhead: 50, enabled: false },
+    { name: "802.1Q VLAN", overhead: PROTOCOL_OVERHEADS["802.1Q"], enabled: false },
+    { name: "QinQ (802.1ad)", overhead: PROTOCOL_OVERHEADS.QinQ, enabled: false },
+    { name: "PPPoE", overhead: PROTOCOL_OVERHEADS.PPPoE, enabled: false },
+    { name: "GRE", overhead: PROTOCOL_OVERHEADS.GRE, enabled: false },
+    { name: "VXLAN", overhead: PROTOCOL_OVERHEADS.VXLAN, enabled: false },
+    { name: "IPsec ESP", overhead: PROTOCOL_OVERHEADS["IPsec ESP"], enabled: false },
   ])
 
   const calculateMTU = () => {
@@ -65,7 +68,9 @@ export function MTUCalculator() {
       linkMTU: baseMTU,
       totalOverhead,
       payloadMTU,
-      fragmentationWarning: payloadMTU < 576, // IPv4 minimum
+      // rfc 8200 s5 for ipv6; 576 is ipv4's minimum reassembly buffer, which
+      // is the practical floor operators care about (rfc 791's mtu min is 68)
+      fragmentationWarning: ipVersion === "ipv6" ? payloadMTU < 1280 : payloadMTU < 576,
       breakdown: {
         protocols: protocols.filter((p) => p.enabled),
         ip: { version: ipVersion, overhead: ipOverhead },
@@ -93,13 +98,11 @@ export function MTUCalculator() {
       results: result,
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "mtu-calculation.json"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `mtu-calculation-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   return (
@@ -125,6 +128,9 @@ export function MTUCalculator() {
                 onChange={(e) => setLinkMTU(e.target.value)}
                 placeholder="1500"
               />
+              <p className="text-muted-foreground mt-1 text-xs">
+                Layer 3 MTU. Ethernet&apos;s 1500 already excludes the 14-byte frame header.
+              </p>
             </div>
 
             <div>

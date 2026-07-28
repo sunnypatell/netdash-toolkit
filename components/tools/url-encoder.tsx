@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, Link2, Trash2, Plus, X } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface URLComponent {
@@ -19,7 +20,6 @@ interface URLComponent {
 }
 
 export function URLEncoder() {
-  const { toast } = useToast()
   const [mode, setMode] = useState<"encode" | "decode" | "build">("encode")
   const [input, setInput] = useState("")
   const [output, setOutput] = useState("")
@@ -73,11 +73,10 @@ export function URLEncoder() {
   }, [baseUrl, params, mode])
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Content copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(text)) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Copy failed")
     }
   }
 
@@ -104,11 +103,7 @@ export function URLEncoder() {
       setParams(newParams.length > 0 ? newParams : [{ key: "", value: "" }])
       setMode("build")
     } catch {
-      toast({
-        title: "Invalid URL",
-        description: "Could not parse the URL",
-        variant: "destructive",
-      })
+      toast.error("Invalid URL", { description: "Could not parse the URL" })
     }
   }
 

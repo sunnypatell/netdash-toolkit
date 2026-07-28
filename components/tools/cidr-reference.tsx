@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { intToIpv4, prefixToMaskInt, prefixToNetmask } from "@/lib/network-utils"
+import { formatCompactNumber } from "@/lib/format"
 
 interface CIDREntry {
   cidr: number
@@ -21,22 +23,8 @@ const generateCIDRTable = (): CIDREntry[] => {
   const entries: CIDREntry[] = []
 
   for (let cidr = 0; cidr <= 32; cidr++) {
-    const maskInt = cidr === 0 ? 0 : (~0 << (32 - cidr)) >>> 0
-    const wildcardInt = ~maskInt >>> 0
-
-    const mask = [
-      (maskInt >>> 24) & 255,
-      (maskInt >>> 16) & 255,
-      (maskInt >>> 8) & 255,
-      maskInt & 255,
-    ].join(".")
-
-    const wildcard = [
-      (wildcardInt >>> 24) & 255,
-      (wildcardInt >>> 16) & 255,
-      (wildcardInt >>> 8) & 255,
-      wildcardInt & 255,
-    ].join(".")
+    const mask = prefixToNetmask(cidr)
+    const wildcard = intToIpv4(~prefixToMaskInt(cidr) >>> 0)
 
     const totalHosts = Math.pow(2, 32 - cidr)
     const usableHosts = cidr >= 31 ? totalHosts : Math.max(0, totalHosts - 2)
@@ -65,13 +53,6 @@ export function CIDRReference() {
   )
   const allCIDRs = CIDR_TABLE
 
-  const formatNumber = (n: number): string => {
-    if (n >= 1000000000) return (n / 1000000000).toFixed(1) + "B"
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"
-    if (n >= 1000) return (n / 1000).toFixed(1) + "K"
-    return n.toLocaleString()
-  }
-
   const CIDRRow = ({ entry }: { entry: CIDREntry }) => (
     <tr className="hover:bg-muted/50 border-b">
       <td className="p-2">
@@ -81,8 +62,8 @@ export function CIDRReference() {
       </td>
       <td className="p-2 font-mono text-sm">{entry.mask}</td>
       <td className="p-2 font-mono text-sm">{entry.wildcard}</td>
-      <td className="p-2 text-right">{formatNumber(entry.hosts)}</td>
-      <td className="p-2 text-right">{formatNumber(entry.usable)}</td>
+      <td className="p-2 text-right">{formatCompactNumber(entry.hosts)}</td>
+      <td className="p-2 text-right">{formatCompactNumber(entry.usable)}</td>
       <td className="p-2">
         <CopyButton value={entry.mask} size="sm" />
       </td>

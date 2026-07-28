@@ -157,7 +157,7 @@ pnpm start
 ## Tool Suite
 
 <details>
-<summary><b>Subnet Calculator</b> — Dual-stack IPv4/IPv6 calculations</summary>
+<summary><b>Subnet Calculator</b> - Dual-stack IPv4/IPv6 calculations</summary>
 
 <br />
 
@@ -171,7 +171,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>VLSM Planner</b> — Variable Length Subnet Masking optimization</summary>
+<summary><b>VLSM Planner</b> - Variable Length Subnet Masking optimization</summary>
 
 <br />
 
@@ -185,7 +185,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>VLAN Manager</b> — Enterprise VLAN design and configuration</summary>
+<summary><b>VLAN Manager</b> - Enterprise VLAN design and configuration</summary>
 
 <br />
 
@@ -201,7 +201,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>Routing Tools</b> — Configuration builders for routing protocols</summary>
+<summary><b>Routing Tools</b> - Configuration builders for routing protocols</summary>
 
 <br />
 
@@ -215,7 +215,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>Wireless Tools</b> — WiFi planning and configuration</summary>
+<summary><b>Wireless Tools</b> - WiFi planning and configuration</summary>
 
 <br />
 
@@ -229,7 +229,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>ACL Generator</b> — Access Control List builder</summary>
+<summary><b>ACL Generator</b> - Access Control List builder</summary>
 
 <br />
 
@@ -244,7 +244,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>IP Conflict Checker</b> — Network conflict detection</summary>
+<summary><b>IP Conflict Checker</b> - Network conflict detection</summary>
 
 <br />
 
@@ -261,7 +261,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>Network Tester</b> — Connectivity and performance testing</summary>
+<summary><b>Network Tester</b> - Connectivity and performance testing</summary>
 
 <br />
 
@@ -275,7 +275,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>DNS Tools</b> — DNS query and analysis</summary>
+<summary><b>DNS Tools</b> - DNS query and analysis</summary>
 
 <br />
 
@@ -288,7 +288,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>MTU Calculator</b> — Protocol overhead analysis</summary>
+<summary><b>MTU Calculator</b> - Protocol overhead analysis</summary>
 
 <br />
 
@@ -304,7 +304,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>Cable Calculator</b> — Fiber and copper signal loss analysis</summary>
+<summary><b>Cable Calculator</b> - Fiber and copper signal loss analysis</summary>
 
 <br />
 
@@ -324,7 +324,7 @@ pnpm start
 </details>
 
 <details>
-<summary><b>WiFi QR Generator</b> — Instant WiFi connection QR codes</summary>
+<summary><b>WiFi QR Generator</b> - Instant WiFi connection QR codes</summary>
 
 <br />
 
@@ -494,7 +494,7 @@ brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
 brew install --cask --no-quarantine netdash
 ```
 
-> **Note:** `--no-quarantine` skips Gatekeeper's quarantine flag — the app is ad-hoc signed, not notarized (notarization requires a paid Apple Developer ID). If you installed without the flag or downloaded the DMG directly, run `xattr -cr "/Applications/NetDash Toolkit.app"` instead. Every release ships SHA-256 checksums and [SLSA Build L3 provenance](https://github.com/sunnypatell/netdash-toolkit/attestations) so you can verify exactly what you're running — see the release notes for copy-paste verification commands.
+> **Note:** `--no-quarantine` skips Gatekeeper's quarantine flag - the app is ad-hoc signed, not notarized (notarization requires a paid Apple Developer ID). If you installed without the flag or downloaded the DMG directly, run `xattr -cr "/Applications/NetDash Toolkit.app"` instead. Every release ships SHA-256 checksums and [SLSA Build L3 provenance](https://github.com/sunnypatell/netdash-toolkit/attestations) so you can verify exactly what you're running - see the release notes for copy-paste verification commands.
 
 ### Building from Source
 

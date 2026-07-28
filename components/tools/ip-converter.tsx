@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { ipv4ToInt, intToIpv4 } from "@/lib/network-utils"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -30,113 +31,104 @@ interface ConversionResult {
   class: string
 }
 
+// Parse IP from different formats
+const parseIP = (input: string, format: string): number | null => {
+  try {
+    switch (format) {
+      case "dotted":
+        return ipv4ToInt(input.trim())
+      case "decimal": {
+        const num = parseInt(input.trim(), 10)
+        if (isNaN(num) || num < 0 || num > 4294967295) return null
+        return num
+      }
+      case "binary": {
+        const clean = input.replace(/[\s.]/g, "")
+        if (!/^[01]+$/.test(clean) || clean.length > 32) return null
+        const padded = clean.padStart(32, "0")
+        return parseInt(padded, 2)
+      }
+      case "hex": {
+        // strip the 0x prefix only: a character class here also ate every
+        // literal "0" and "x", so 0xC0A80101 parsed as 0.12.164.17
+        const clean = input.trim().replace(/^0x/i, "").replace(/[\s:]/g, "")
+        if (!/^[0-9a-fA-F]+$/.test(clean) || clean.length > 8) return null
+        return parseInt(clean, 16)
+      }
+      default:
+        return null
+    }
+  } catch {
+    return null
+  }
+}
+
+// Convert IP integer to various formats
+const convertIP = (ipInt: number): ConversionResult => {
+  // Ensure unsigned 32-bit
+  const unsigned = ipInt >>> 0
+
+  const dottedDecimal = intToIpv4(unsigned)
+  const octets = dottedDecimal.split(".").map(Number)
+
+  // Decimal
+  const decimal = unsigned.toString(10)
+
+  // Binary with dots
+  const binary = octets.map((o) => o.toString(2).padStart(8, "0")).join(".")
+
+  // Hex
+  const hex = "0x" + unsigned.toString(16).toUpperCase().padStart(8, "0")
+
+  // Octal
+  const octal = "0o" + unsigned.toString(8)
+
+  // IPv6 mapped (::ffff:x.x.x.x)
+  const ipv6Mapped = `::ffff:${dottedDecimal}`
+
+  // IPv6 compatible (deprecated but still useful) (::x.x.x.x)
+  const ipv6Compatible = `::${dottedDecimal}`
+
+  // Classification
+  const firstOctet = octets[0]
+  let ipClass = "Unknown"
+  if (firstOctet >= 1 && firstOctet <= 126) ipClass = "A"
+  else if (firstOctet >= 128 && firstOctet <= 191) ipClass = "B"
+  else if (firstOctet >= 192 && firstOctet <= 223) ipClass = "C"
+  else if (firstOctet >= 224 && firstOctet <= 239) ipClass = "D (Multicast)"
+  else if (firstOctet >= 240 && firstOctet <= 255) ipClass = "E (Reserved)"
+
+  // Private check (RFC 1918)
+  const isPrivate =
+    octets[0] === 10 ||
+    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+    (octets[0] === 192 && octets[1] === 168)
+
+  // Loopback (127.0.0.0/8)
+  const isLoopback = octets[0] === 127
+
+  // Multicast (224.0.0.0/4)
+  const isMulticast = octets[0] >= 224 && octets[0] <= 239
+
+  return {
+    dottedDecimal,
+    decimal,
+    binary,
+    hex,
+    octal,
+    ipv6Mapped,
+    ipv6Compatible,
+    isValid: true,
+    isPrivate,
+    isLoopback,
+    isMulticast,
+    class: ipClass,
+  }
+}
+
 export function IPConverter() {
   const [ipInput, setIpInput] = useState("192.168.1.1")
   const [inputFormat, setInputFormat] = useState<"dotted" | "decimal" | "binary" | "hex">("dotted")
-
-  // Parse IP from different formats
-  const parseIP = (input: string, format: string): number | null => {
-    try {
-      switch (format) {
-        case "dotted": {
-          const parts = input.trim().split(".")
-          if (parts.length !== 4) return null
-          const octets = parts.map((p) => parseInt(p, 10))
-          if (octets.some((o) => isNaN(o) || o < 0 || o > 255)) return null
-          return (octets[0] << 24) + (octets[1] << 16) + (octets[2] << 8) + octets[3]
-        }
-        case "decimal": {
-          const num = parseInt(input.trim(), 10)
-          if (isNaN(num) || num < 0 || num > 4294967295) return null
-          return num
-        }
-        case "binary": {
-          const clean = input.replace(/[\s.]/g, "")
-          if (!/^[01]+$/.test(clean) || clean.length > 32) return null
-          const padded = clean.padStart(32, "0")
-          return parseInt(padded, 2)
-        }
-        case "hex": {
-          const clean = input.replace(/[\s:0x]/gi, "")
-          if (!/^[0-9a-fA-F]+$/.test(clean) || clean.length > 8) return null
-          return parseInt(clean, 16)
-        }
-        default:
-          return null
-      }
-    } catch {
-      return null
-    }
-  }
-
-  // Convert IP integer to various formats
-  const convertIP = (ipInt: number): ConversionResult => {
-    // Ensure unsigned 32-bit
-    const unsigned = ipInt >>> 0
-
-    // Dotted decimal
-    const octets = [
-      (unsigned >>> 24) & 0xff,
-      (unsigned >>> 16) & 0xff,
-      (unsigned >>> 8) & 0xff,
-      unsigned & 0xff,
-    ]
-    const dottedDecimal = octets.join(".")
-
-    // Decimal
-    const decimal = unsigned.toString(10)
-
-    // Binary with dots
-    const binary = octets.map((o) => o.toString(2).padStart(8, "0")).join(".")
-
-    // Hex
-    const hex = "0x" + unsigned.toString(16).toUpperCase().padStart(8, "0")
-
-    // Octal
-    const octal = "0o" + unsigned.toString(8)
-
-    // IPv6 mapped (::ffff:x.x.x.x)
-    const ipv6Mapped = `::ffff:${dottedDecimal}`
-
-    // IPv6 compatible (deprecated but still useful) (::x.x.x.x)
-    const ipv6Compatible = `::${dottedDecimal}`
-
-    // Classification
-    const firstOctet = octets[0]
-    let ipClass = "Unknown"
-    if (firstOctet >= 1 && firstOctet <= 126) ipClass = "A"
-    else if (firstOctet >= 128 && firstOctet <= 191) ipClass = "B"
-    else if (firstOctet >= 192 && firstOctet <= 223) ipClass = "C"
-    else if (firstOctet >= 224 && firstOctet <= 239) ipClass = "D (Multicast)"
-    else if (firstOctet >= 240 && firstOctet <= 255) ipClass = "E (Reserved)"
-
-    // Private check (RFC 1918)
-    const isPrivate =
-      octets[0] === 10 ||
-      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
-      (octets[0] === 192 && octets[1] === 168)
-
-    // Loopback (127.0.0.0/8)
-    const isLoopback = octets[0] === 127
-
-    // Multicast (224.0.0.0/4)
-    const isMulticast = octets[0] >= 224 && octets[0] <= 239
-
-    return {
-      dottedDecimal,
-      decimal,
-      binary,
-      hex,
-      octal,
-      ipv6Mapped,
-      ipv6Compatible,
-      isValid: true,
-      isPrivate,
-      isLoopback,
-      isMulticast,
-      class: ipClass,
-    }
-  }
 
   const result = useMemo((): ConversionResult | null => {
     const ipInt = parseIP(ipInput, inputFormat)

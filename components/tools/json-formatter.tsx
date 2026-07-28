@@ -25,7 +25,9 @@ import {
   Maximize2,
 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { downloadTextFile, dateStamp } from "@/lib/download"
+import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface JSONStats {
@@ -98,7 +100,6 @@ function getJSONStats(obj: unknown, depth = 0): JSONStats {
 }
 
 export function JSONFormatter() {
-  const { toast } = useToast()
   const [input, setInput] = useState("")
   const [output, setOutput] = useState("")
   const [isValid, setIsValid] = useState<boolean | null>(null)
@@ -130,11 +131,10 @@ export function JSONFormatter() {
   }, [input, indentSize])
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "JSON copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(text)) {
+      toast.success("JSON copied to clipboard")
+    } else {
+      toast.error("Copy failed")
     }
   }
 
@@ -160,13 +160,7 @@ export function JSONFormatter() {
 
   const downloadJSON = () => {
     if (!output) return
-    const blob = new Blob([output], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "formatted.json"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(output, `formatted-${dateStamp()}.json`, "application/json")
   }
 
   const clear = () => {

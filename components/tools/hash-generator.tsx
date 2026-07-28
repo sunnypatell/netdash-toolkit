@@ -8,9 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, Check, Hash, Upload, FileText, Trash2 } from "lucide-react"
+import { Check, Hash, Upload, FileText, Trash2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
+import { formatBytes } from "@/lib/format"
+import { toast } from "sonner"
 
 interface HashResult {
   algorithm: string
@@ -37,11 +39,9 @@ async function computeHash(data: ArrayBuffer | string, algorithm: string): Promi
 }
 
 export function HashGenerator() {
-  const { toast } = useToast()
   const [inputText, setInputText] = useState("")
   const [inputFile, setInputFile] = useState<File | null>(null)
   const [hashes, setHashes] = useState<HashResult[]>([])
-  const [copied, setCopied] = useState<string | null>(null)
   const [verifyHash, setVerifyHash] = useState("")
   const [verifyResult, setVerifyResult] = useState<boolean | null>(null)
   const [, setLoading] = useState(false)
@@ -90,8 +90,8 @@ export function HashGenerator() {
         const match = results.some((r) => r.hash.toLowerCase() === normalizedVerify)
         setVerifyResult(match)
       }
-    } catch (error) {
-      toast({ title: "Hash generation failed", variant: "destructive" })
+    } catch {
+      toast.error("Hash generation failed")
     } finally {
       setLoading(false)
     }
@@ -115,28 +115,11 @@ export function HashGenerator() {
     }
   }, [verifyHash, hashes])
 
-  const copyToClipboard = async (hash: string, algorithm: string) => {
-    try {
-      await navigator.clipboard.writeText(hash)
-      setCopied(algorithm)
-      setTimeout(() => setCopied(null), 2000)
-      toast({ title: "Copied", description: `${algorithm} hash copied` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setInputFile(file)
     }
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   return (
@@ -194,9 +177,7 @@ export function HashGenerator() {
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div>
                       <p className="truncate text-sm font-medium">{inputFile.name}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {formatFileSize(inputFile.size)}
-                      </p>
+                      <p className="text-muted-foreground text-xs">{formatBytes(inputFile.size)}</p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setInputFile(null)}>
                       <Trash2 className="h-4 w-4" />
@@ -254,17 +235,7 @@ export function HashGenerator() {
                         <Badge variant="secondary">{result.algorithm}</Badge>
                         <span className="text-muted-foreground text-xs">{result.bits} bits</span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(result.hash, result.algorithm)}
-                      >
-                        {copied === result.algorithm ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <CopyButton value={result.hash} />
                     </div>
                     <div className="bg-muted/50 rounded-lg border p-3">
                       <p className="font-mono text-xs break-all select-all">{result.hash}</p>

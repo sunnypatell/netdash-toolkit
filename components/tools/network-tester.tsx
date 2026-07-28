@@ -51,6 +51,8 @@ import type {
   OUIResult,
 } from "@/lib/network-testing"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { formatBytes, formatDuration } from "@/lib/format"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 export function NetworkTester() {
   const [activeTest, setActiveTest] = useState<string | null>(null)
@@ -205,12 +207,6 @@ export function NetworkTester() {
     if (!macAddress) return
     const result = lookupOUI(macAddress)
     setOuiResult(result)
-  }
-
-  const formatDuration = (ms: number): string => {
-    if (ms < 1) return `${(ms * 1000).toFixed(1)}μs`
-    if (ms < 1000) return `${ms.toFixed(1)}ms`
-    return `${(ms / 1000).toFixed(2)}s`
   }
 
   const formatThroughput = (mbps: number): string => {
@@ -375,16 +371,12 @@ export function NetworkTester() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start space-x-3">
-        <Activity className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
-        <div>
-          <h1 className="text-xl font-bold sm:text-2xl">Network Testing Tools</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Test RTT, throughput, DNS resolution, and network utilities
-          </p>
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Activity}
+        title="Network Testing Tools"
+        description="Test RTT, throughput, DNS resolution, and network utilities"
+      />
 
       {isNative ? (
         <Alert className="border-green-500/50 bg-green-500/10">
@@ -613,7 +605,7 @@ export function NetworkTester() {
                           <div>
                             <span className="text-muted-foreground">Data Transferred:</span>
                             <div className="font-mono">
-                              {(result.bytesTransferred / 1024 / 1024).toFixed(2)} MB
+                              {formatBytes(result.bytesTransferred, { decimals: 2 })}
                             </div>
                           </div>
                           <div>

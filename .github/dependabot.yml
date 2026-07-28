@@ -3,7 +3,7 @@
 # per-dependency spam. security advisories still surface immediately via
 # github's own alerts regardless of this schedule.
 #
-# this also keeps the sha-pinned actions in .github/workflows fresh —
+# this also keeps the sha-pinned actions in .github/workflows fresh -
 # without it, pins rot silently.
 version: 2
 updates:
@@ -47,7 +47,7 @@ updates:
       - "dependencies"
     ignore:
       # majors are hands-on migrations (a single grouped major pr is
-      # unmergeable — see the 15-major #27). only minor + patch flow into the
+      # unmergeable - see the 15-major #27). only minor + patch flow into the
       # monthly grouped pr; do majors by hand. security fixes still surface as
       # dependabot alerts + security-update prs even when a version-major is
       # ignored here.

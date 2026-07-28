@@ -30,6 +30,8 @@ import {
 import { queryDNSOverHTTPS, dnsCache } from "@/lib/network-testing"
 import type { DNSResult } from "@/lib/network-testing"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { formatDuration } from "@/lib/format"
+import { ToolHeader } from "@/components/ui/tool-header"
 
 export function DNSTools() {
   const [activeQuery, setActiveQuery] = useState(false)
@@ -99,12 +101,6 @@ export function DNSTools() {
     } finally {
       setActiveQuery(false)
     }
-  }
-
-  const formatDuration = (ms: number): string => {
-    if (ms < 1) return `${(ms * 1000).toFixed(1)}μs`
-    if (ms < 1000) return `${ms.toFixed(1)}ms`
-    return `${(ms / 1000).toFixed(2)}s`
   }
 
   const renderDNSResults = () => {
@@ -194,15 +190,11 @@ export function DNSTools() {
 
   return (
     <div className="tool-container">
-      <div className="flex items-start space-x-3">
-        <Globe className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
-        <div>
-          <h1 className="text-responsive-xl font-bold">DNS Tools</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            DNS over HTTPS client with multiple provider support
-          </p>
-        </div>
-      </div>
+      <ToolHeader
+        icon={Globe}
+        title="DNS Tools"
+        description="DNS over HTTPS client with multiple provider support"
+      />
 
       {isNative ? (
         <Alert className="border-green-500/50 bg-green-500/10">

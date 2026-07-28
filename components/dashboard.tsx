@@ -1,19 +1,24 @@
 "use client"
 
+import { useMemo, useState } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Network, Layers, TrendingUp, Shield, ArrowRight } from "lucide-react"
-import { tools, categories, getPopularTools, type ToolDefinition } from "@/lib/tool-registry"
+import { Input } from "@/components/ui/input"
+import { Network, Layers, TrendingUp, Shield, ArrowRight, Search } from "lucide-react"
+import {
+  categories,
+  categoryLabelOf,
+  getPopularTools,
+  getToolsByCategory,
+  searchTools,
+  tools,
+  type ToolDefinition,
+} from "@/lib/tool-registry"
 
-interface DashboardProps {
-  onNavigate: (view: string) => void
-}
-
-// Get featured tools (popular ones) for the dashboard
 const featuredTools = getPopularTools()
 
-// Calculate stats from registry
 const stats = [
   {
     title: "Available Tools",
@@ -41,17 +46,11 @@ const stats = [
   },
 ]
 
-function ToolCard({
-  tool,
-  onNavigate,
-}: {
-  tool: ToolDefinition
-  onNavigate: (view: string) => void
-}) {
+function ToolCard({ tool }: { tool: ToolDefinition }) {
   const Icon = tool.icon
   return (
     <Card
-      className={`group border-border hover:border-primary/30 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+      className={`group border-border hover:border-primary/30 transition-all duration-200 hover:shadow-lg ${
         tool.popular ? "ring-primary/20 from-card to-primary/5 bg-gradient-to-br ring-2" : ""
       }`}
     >
@@ -79,7 +78,7 @@ function ToolCard({
                 )}
               </div>
               <Badge variant="secondary" className="mt-1 w-fit text-xs">
-                {tool.categoryLabel}
+                {categoryLabelOf(tool)}
               </Badge>
             </div>
           </div>
@@ -98,16 +97,17 @@ function ToolCard({
             ))}
           </div>
           <Button
-            onClick={() => onNavigate(tool.id)}
+            asChild
             className="hover:bg-primary hover:text-primary-foreground group-hover:bg-primary group-hover:text-primary-foreground w-full transition-colors"
             variant="outline"
-            aria-label={`Launch ${tool.title}`}
           >
-            Launch Tool
-            <ArrowRight
-              className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-              aria-hidden="true"
-            />
+            <Link href={`/tools/${tool.slug}`} aria-label={`Launch ${tool.title}`}>
+              Launch Tool
+              <ArrowRight
+                className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                aria-hidden="true"
+              />
+            </Link>
           </Button>
         </div>
       </CardContent>
@@ -115,7 +115,12 @@ function ToolCard({
   )
 }
 
-export function Dashboard({ onNavigate }: DashboardProps) {
+export function Dashboard() {
+  const [query, setQuery] = useState("")
+  // registry keywords finally drive something: live search over all tools
+  const results = useMemo(() => searchTools(query), [query])
+  const searching = query.trim().length > 0
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <div className="space-y-3 sm:space-y-4">
@@ -135,137 +140,125 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon
-          return (
-            <Card key={index} className="from-card to-muted/20 bg-gradient-to-br">
-              <CardContent className="p-4 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-muted-foreground text-xs font-medium sm:text-sm">
-                      {stat.title}
-                    </p>
-                    <p className="text-primary text-xl font-bold sm:text-2xl">{stat.value}</p>
-                    <p className="text-muted-foreground mt-1 hidden text-xs sm:block">
-                      {stat.description}
-                    </p>
-                  </div>
-                  <div
-                    className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10"
-                    aria-hidden="true"
-                  >
-                    <Icon className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <h2 className="text-xl font-semibold sm:text-2xl">Popular Tools</h2>
-          <Badge variant="secondary" className="w-fit text-sm">
-            {featuredTools.length} featured / {tools.length} total
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {featuredTools.map((tool) => (
-            <ToolCard key={tool.id} tool={tool} onNavigate={onNavigate} />
-          ))}
+        <div className="relative max-w-xl">
+          <Search
+            className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${tools.length} tools by name or keyword...`}
+            className="pl-9"
+            aria-label="Search tools"
+          />
         </div>
       </div>
 
-      {/* Category quick access */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Browse by Category</CardTitle>
-          <CardDescription>All {tools.length} tools organized by function</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {categories.map((category) => {
-              const Icon = category.icon
-              const categoryTools = tools.filter((t) => t.category === category.id)
+      {searching ? (
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold sm:text-2xl">Search Results</h2>
+            <Badge variant="secondary" className="w-fit text-sm">
+              {results.length} {results.length === 1 ? "match" : "matches"}
+            </Badge>
+          </div>
+          {results.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {results.map((tool) => (
+                <ToolCard key={tool.slug} tool={tool} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              No tools match &quot;{query}&quot;. Try a different keyword.
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {stats.map((stat, index) => {
+              const Icon = stat.icon
               return (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    // Navigate to first tool in category as a quick access
-                    if (categoryTools.length > 0) {
-                      onNavigate(categoryTools[0].id)
-                    }
-                  }}
-                  className="hover:bg-muted/50 hover:border-primary/30 flex items-center gap-3 rounded-lg border p-3 text-left transition-colors"
-                >
-                  <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-                    <Icon className="text-primary h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{category.label}</p>
-                    <p className="text-muted-foreground text-xs">{categoryTools.length} tools</p>
-                  </div>
-                </button>
+                <Card key={index} className="from-card to-muted/20 bg-gradient-to-br">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-muted-foreground text-xs font-medium sm:text-sm">
+                          {stat.title}
+                        </p>
+                        <p className="text-primary text-xl font-bold sm:text-2xl">{stat.value}</p>
+                        <p className="text-muted-foreground mt-1 hidden text-xs sm:block">
+                          {stat.description}
+                        </p>
+                      </div>
+                      <div
+                        className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg sm:h-10 sm:w-10"
+                        aria-hidden="true"
+                      >
+                        <Icon className="text-primary h-4 w-4 sm:h-5 sm:w-5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )
             })}
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="from-primary/10 via-secondary/5 to-accent/10 border-primary/30 bg-gradient-to-r">
-        <CardHeader>
-          <CardTitle className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
-            <div
-              className="bg-primary/20 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
-              aria-hidden="true"
-            >
-              <Shield className="text-primary h-5 w-5" />
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+              <h2 className="text-xl font-semibold sm:text-2xl">Popular Tools</h2>
+              <Badge variant="secondary" className="w-fit text-sm">
+                {featuredTools.length} featured / {tools.length} total
+              </Badge>
             </div>
-            <div>
-              <span className="text-lg sm:text-xl">Privacy & Security First</span>
-              <p className="text-muted-foreground mt-1 text-sm font-normal">
-                Built with privacy and security as core principles
-              </p>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-            <div className="flex items-start space-x-3">
-              <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full bg-emerald-500"></div>
-              <div>
-                <h4 className="text-sm font-medium">No Telemetry</h4>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Zero tracking or data collection
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full bg-emerald-500"></div>
-              <div>
-                <h4 className="text-sm font-medium">Offline First</h4>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Works completely offline by default
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full bg-emerald-500"></div>
-              <div>
-                <h4 className="text-sm font-medium">WCAG Compliant</h4>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Accessible to all users (AA standard)
-                </p>
-              </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+              {featuredTools.map((tool) => (
+                <ToolCard key={tool.slug} tool={tool} />
+              ))}
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* category quick access */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Browse by Category</CardTitle>
+              <CardDescription>All {tools.length} tools organized by function</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {categories.map((category) => {
+                  const Icon = category.icon
+                  const categoryTools = getToolsByCategory(category.id)
+                  const first = categoryTools[0]
+                  if (!first) return null
+                  return (
+                    <Link
+                      key={category.id}
+                      href={`/tools/${first.slug}`}
+                      className="hover:bg-muted/50 hover:border-primary/30 flex items-center gap-3 rounded-lg border p-3 text-left transition-colors"
+                    >
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+                        <Icon className="text-primary h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{category.label}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {categoryTools.length} tools
+                        </p>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

@@ -39,7 +39,7 @@ jobs:
       # key, and add it as the FIREBASE_SERVICE_ACCOUNT repo secret.
       - name: Skip notice (no service account configured)
         if: env.GCP_SA_KEY == ''
-        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT not set — skipping firestore rules deploy. add the secret to enable."
+        run: echo "::notice::FIREBASE_SERVICE_ACCOUNT not set - skipping firestore rules deploy. add the secret to enable."
 
       - name: Checkout repository
         if: env.GCP_SA_KEY != ''

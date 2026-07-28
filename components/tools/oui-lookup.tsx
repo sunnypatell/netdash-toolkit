@@ -12,14 +12,14 @@ import {
   Search,
   Download,
   Info,
-  Wifi,
   CheckCircle,
   AlertCircle,
-  Copy,
   ExternalLink,
   Network,
 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { CopyButton } from "@/components/ui/copy-button"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 
 interface OUIResult {
   mac: string
@@ -367,14 +367,6 @@ export function OUILookup() {
     }
   }
 
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch (err) {
-      console.error("Failed to copy to clipboard:", err)
-    }
-  }
-
   const exportResults = () => {
     const data = {
       timestamp: new Date().toISOString(),
@@ -383,13 +375,11 @@ export function OUILookup() {
       results: results,
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `oui-lookup-results-${new Date().toISOString().split("T")[0]}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `oui-lookup-results-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   const exportCSV = () => {
@@ -401,13 +391,7 @@ export function OUILookup() {
       ),
     ].join("\n")
 
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `oui-lookup-results-${new Date().toISOString().split("T")[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(csv, `oui-lookup-results-${dateStamp()}.csv`, "text/csv")
   }
 
   const vendorStats = useMemo(() => {
@@ -608,14 +592,7 @@ export function OUILookup() {
                         <div className="mb-2 flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <span className="font-mono text-sm">{result.mac}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => copyToClipboard(result.mac)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
+                            <CopyButton value={result.mac} className="h-6 w-6 p-0" />
                           </div>
                           <Badge
                             variant={

@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, ArrowRight, ArrowLeft, FileCode, Trash2, Upload, Download } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { downloadTextFile, dateStamp } from "@/lib/download"
+import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 
 export function Base64Encoder() {
-  const { toast } = useToast()
   const [input, setInput] = useState("")
   const [output, setOutput] = useState("")
   const [mode, setMode] = useState<"encode" | "decode">("encode")
@@ -66,11 +67,10 @@ export function Base64Encoder() {
   }
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "Content copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(text)) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Copy failed")
     }
   }
 
@@ -81,13 +81,10 @@ export function Base64Encoder() {
 
   const downloadOutput = () => {
     if (!output) return
-    const blob = new Blob([output], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = mode === "encode" ? "encoded.txt" : "decoded.txt"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      output,
+      `base64-${mode === "encode" ? "encoded" : "decoded"}-${dateStamp()}.txt`
+    )
   }
 
   const clear = () => {

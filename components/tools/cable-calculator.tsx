@@ -19,6 +19,7 @@ import { ResultCard } from "@/components/ui/result-card"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import type { ProjectItem } from "@/contexts/project-context"
 
 // Fiber specifications per TIA-568.3-D
@@ -369,13 +370,11 @@ export function CableCalculator() {
             result: copperResult,
           }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `cable-calculation-${activeTab}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `cable-calculation-${activeTab}-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   const getSaveData = () => ({
@@ -407,6 +406,22 @@ export function CableCalculator() {
         icon={Cable}
         title="Cable Length & Signal Loss Calculator"
         description="Calculate signal attenuation for fiber optic and copper network cables per TIA/IEEE standards."
+        actions={
+          <>
+            <LoadFromProject itemType="cable" onLoad={handleLoadFromProject} size="sm" />
+            <Button onClick={exportResults} variant="outline" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            <SaveToProject
+              itemType="cable"
+              itemName={getSaveName()}
+              itemData={getSaveData()}
+              toolSource="cable-calculator"
+              size="sm"
+            />
+          </>
+        }
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -622,25 +637,6 @@ export function CableCalculator() {
                   </CardContent>
                 </Card>
               )}
-
-              <div className="flex gap-2">
-                <LoadFromProject
-                  itemType="cable"
-                  onLoad={handleLoadFromProject}
-                  className="flex-1"
-                />
-                <Button onClick={exportResults} variant="outline" className="flex-1">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-                <SaveToProject
-                  itemType="cable"
-                  itemName={getSaveName()}
-                  itemData={getSaveData()}
-                  toolSource="cable-calculator"
-                  className="flex-1"
-                />
-              </div>
             </div>
           </div>
         </TabsContent>
@@ -793,25 +789,6 @@ export function CableCalculator() {
                   </CardContent>
                 </Card>
               )}
-
-              <div className="flex gap-2">
-                <LoadFromProject
-                  itemType="cable"
-                  onLoad={handleLoadFromProject}
-                  className="flex-1"
-                />
-                <Button onClick={exportResults} variant="outline" className="flex-1">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-                <SaveToProject
-                  itemType="cable"
-                  itemName={getSaveName()}
-                  itemData={getSaveData()}
-                  toolSource="cable-calculator"
-                  className="flex-1"
-                />
-              </div>
             </div>
           </div>
         </TabsContent>

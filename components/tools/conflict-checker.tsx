@@ -17,7 +17,6 @@ import {
   Network,
   Shield,
   Activity,
-  Copy,
   Zap,
   Scan,
 } from "lucide-react"
@@ -31,6 +30,8 @@ import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/pars
 import type { ConflictAnalysisResult } from "@/lib/conflict-utils"
 import { isElectron, electronNetwork } from "@/lib/electron"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { CopyButton } from "@/components/ui/copy-button"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 
 export function ConflictChecker() {
   const [parsedData, setParsedData] = useState<
@@ -131,34 +132,17 @@ export function ConflictChecker() {
   const exportConflicts = (format: "csv" | "report") => {
     if (!analysis || analysis.conflicts.length === 0) return
 
-    let content = ""
-    let filename = ""
-    let mimeType = ""
-
     if (format === "csv") {
-      content = exportConflictsToCSV(analysis.conflicts)
-      filename = "network-conflicts.csv"
-      mimeType = "text/csv"
+      downloadTextFile(
+        exportConflictsToCSV(analysis.conflicts),
+        `network-conflicts-${dateStamp()}.csv`,
+        "text/csv"
+      )
     } else {
-      content = generateRemediationReport(analysis.conflicts)
-      filename = "remediation-report.txt"
-      mimeType = "text/plain"
-    }
-
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch (err) {
-      console.error("Failed to copy to clipboard:", err)
+      downloadTextFile(
+        generateRemediationReport(analysis.conflicts),
+        `remediation-report-${dateStamp()}.txt`
+      )
     }
   }
 
@@ -194,12 +178,10 @@ export function ConflictChecker() {
         return <Network className="h-4 w-4" />
       case "mac-duplicate":
         return <Shield className="h-4 w-4" />
-      case "dhcp-static-overlap":
+      case "stale-lease-or-spoof":
         return <Activity className="h-4 w-4" />
-      case "rogue-dhcp":
-        return <AlertCircle className="h-4 w-4" />
-      case "vlan-hopping":
-        return <AlertTriangle className="h-4 w-4" />
+      case "subnet-overlap":
+        return <Network className="h-4 w-4" />
       default:
         return <AlertTriangle className="h-4 w-4" />
     }
@@ -385,28 +367,14 @@ export function ConflictChecker() {
                                     <div className="flex items-center space-x-1">
                                       <span className="text-muted-foreground">IP:</span>
                                       <span className="font-mono">{entry.ip}</span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-4 w-4 p-0"
-                                        onClick={() => copyToClipboard(entry.ip!)}
-                                      >
-                                        <Copy className="h-3 w-3" />
-                                      </Button>
+                                      <CopyButton value={entry.ip!} className="h-4 w-4 p-0" />
                                     </div>
                                   )}
                                   {entry.mac && (
                                     <div className="flex items-center space-x-1">
                                       <span className="text-muted-foreground">MAC:</span>
                                       <span className="font-mono">{entry.mac}</span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-4 w-4 p-0"
-                                        onClick={() => copyToClipboard(entry.mac)}
-                                      >
-                                        <Copy className="h-3 w-3" />
-                                      </Button>
+                                      <CopyButton value={entry.mac} className="h-4 w-4 p-0" />
                                     </div>
                                   )}
                                   {entry.hostname && (
@@ -430,18 +398,11 @@ export function ConflictChecker() {
                                     <div className="flex items-center space-x-1">
                                       <span className="text-muted-foreground">IP:</span>
                                       <span className="font-mono">{conflict.ip}</span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-4 w-4 p-0"
-                                        onClick={() => copyToClipboard(conflict.ip)}
-                                      >
-                                        <Copy className="h-3 w-3" />
-                                      </Button>
+                                      <CopyButton value={conflict.ip} className="h-4 w-4 p-0" />
                                     </div>
                                   )}
                                   <div>
-                                    <span className="text-muted-foreground">Static Source:</span>{" "}
+                                    <span className="text-muted-foreground">Observed Source:</span>{" "}
                                     {conflict.staticEntry.source}
                                   </div>
                                   <div>

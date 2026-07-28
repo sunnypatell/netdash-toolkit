@@ -1,5 +1,7 @@
 // Network testing utilities for RTT, throughput, and connectivity
 
+import { compressIPv6, expandIPv6 } from "@/lib/network-utils"
+
 // DNS Cache implementation with TTL support
 interface DNSCacheEntry {
   result: DNSResult
@@ -148,8 +150,25 @@ export interface DNSResult {
   dnssec: boolean
   responseTime: number
   success: boolean
+  truncated?: boolean
   error?: string
   timestamp: number
+}
+
+export function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  // even counts average the two middle samples
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
+}
+
+// nearest-rank method: sorted[ceil(p/100 * n) - 1]
+export function calculatePercentile(values: number[], percentile: number): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const rank = Math.ceil((percentile / 100) * sorted.length)
+  return sorted[Math.min(Math.max(rank, 1), sorted.length) - 1]
 }
 
 // Enhanced RTT Testing with better reliability
@@ -227,9 +246,8 @@ export async function testRTT(
     warnings.add(`Detected ${packetLoss.toFixed(1)}% packet loss across ${samples} attempts`)
   }
 
-  const sorted = [...results].sort((a, b) => a - b)
-  const median = sorted[Math.floor(sorted.length / 2)]
-  const p95 = sorted[Math.floor(sorted.length * 0.95)] || sorted[sorted.length - 1]
+  const median = calculateMedian(results)
+  const p95 = calculatePercentile(results, 95)
   const average = results.reduce((sum, val) => sum + val, 0) / results.length
   const min = Math.min(...results)
   const max = Math.max(...results)
@@ -650,7 +668,6 @@ export async function queryDNSOverHTTPS(
         const urlObject = new URL(providerConfig.url)
         urlObject.searchParams.set("name", domain)
         urlObject.searchParams.set("type", recordType.toUpperCase())
-        urlObject.searchParams.set("do", "1")
 
         response = await fetch(urlObject.toString(), {
           headers: {
@@ -672,7 +689,6 @@ export async function queryDNSOverHTTPS(
         const encodedQuery = encodeDnsQuery(wireQuery)
         const urlObject = new URL(providerConfig.url)
         urlObject.searchParams.set("dns", encodedQuery)
-        urlObject.searchParams.set("do", "1")
 
         response = await fetch(urlObject.toString(), {
           headers: {
@@ -722,6 +738,7 @@ export async function queryDNSOverHTTPS(
         dnssec: normalized.AD,
         responseTime,
         success: true,
+        truncated: normalized.truncated,
         timestamp: Date.now(),
       }
 
@@ -768,6 +785,7 @@ interface NormalizedDNSAnswer {
 interface NormalizedDNSResponse {
   Status: number
   AD: boolean
+  truncated: boolean
   Answer: NormalizedDNSAnswer[]
 }
 
@@ -779,6 +797,7 @@ function normalizeJsonDnsResponse(data: any, fallbackDomain: string): Normalized
         ? data.status
         : -1
   const adFlag = Boolean(data?.AD ?? data?.Ad ?? data?.ad)
+  const tcFlag = Boolean(data?.TC ?? data?.Tc ?? data?.tc)
 
   const answers: NormalizedDNSAnswer[] = Array.isArray(data?.Answer)
     ? data.Answer.map((record: any) => {
@@ -802,6 +821,7 @@ function normalizeJsonDnsResponse(data: any, fallbackDomain: string): Normalized
   return {
     Status: status,
     AD: adFlag,
+    truncated: tcFlag,
     Answer: answers,
   }
 }
@@ -822,14 +842,15 @@ function getRecordTypeCode(type: string): number | undefined {
   return codes[type.toUpperCase()]
 }
 
-function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
+export function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
   const labels = trimTrailingDot(domain)
     .split(".")
     .map((label) => label.trim())
     .filter(Boolean)
 
   const questionLength = labels.reduce((sum, label) => sum + 1 + label.length, 0) + 1 + 4
-  const message = new Uint8Array(12 + questionLength)
+  const optLength = 11 // root name + type + udp size + extended ttl + rdlen
+  const message = new Uint8Array(12 + questionLength + optLength)
   const view = new DataView(message.buffer)
 
   const id = Math.floor(Math.random() * 0xffff)
@@ -838,7 +859,7 @@ function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
   view.setUint16(4, 1) // QDCOUNT
   view.setUint16(6, 0) // ANCOUNT
   view.setUint16(8, 0) // NSCOUNT
-  view.setUint16(10, 0) // ARCOUNT
+  view.setUint16(10, 1) // ARCOUNT (edns0 opt rr)
 
   let offset = 12
   for (const label of labels) {
@@ -852,6 +873,14 @@ function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
   message[offset++] = 0
   view.setUint16(offset, recordType)
   view.setUint16(offset + 2, 1) // Class IN
+  offset += 4
+
+  // edns0 opt rr (rfc 6891): 4096-byte payload size, do bit requests dnssec records
+  message[offset++] = 0 // root name
+  view.setUint16(offset, 41) // TYPE OPT
+  view.setUint16(offset + 2, 4096) // requested udp payload size
+  view.setUint32(offset + 4, 0x00008000) // extended rcode 0, version 0, do bit
+  view.setUint16(offset + 8, 0) // rdlen
 
   return message
 }
@@ -878,7 +907,7 @@ function encodeDnsQuery(bytes: Uint8Array): string {
   throw new Error("Base64 encoding not available in this environment")
 }
 
-function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
+export function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
   if (message.length < 12) {
     throw new Error("DNS response too short")
   }
@@ -931,6 +960,8 @@ function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
   return {
     Status: flags & 0x000f,
     AD: (flags & 0x0020) === 0x0020,
+    // tc bit: answer section was cut off, callers should flag incomplete results
+    truncated: (flags & 0x0200) === 0x0200,
     Answer: answers,
   }
 }
@@ -1174,15 +1205,15 @@ export function calculateMTU(
     headers: protocols,
     totalOverhead,
     payloadMTU,
-    fragmentationWarning: payloadMTU < 1200, // IPv6 minimum MTU
+    fragmentationWarning: payloadMTU < 1280, // IPv6 minimum MTU (RFC 8200 section 5)
   }
 }
 
-// Common protocol overhead sizes
-export const protocolOverheads = {
+// common protocol overhead sizes in bytes, single source shared across tools
+export const PROTOCOL_OVERHEADS = {
   "Ethernet II": 14,
   "802.1Q": 4,
-  QinQ: 8,
+  QinQ: 8, // full 802.1ad double-tag figure (2x 4-byte tags)
   IPv4: 20,
   IPv6: 40,
   TCP: 20,
@@ -1193,6 +1224,9 @@ export const protocolOverheads = {
   "IPsec ESP": 50,
   MPLS: 4,
 }
+
+// legacy alias kept for existing importers
+export const protocolOverheads = PROTOCOL_OVERHEADS
 
 // Enhanced OUI database with more vendors
 const ouiDatabase: Record<string, string> = {
@@ -1402,23 +1436,6 @@ export function generateSolicitedNodeMulticast(ipv6: string): string {
   return `ff02::1:ff${last24Bits.slice(-6, -4)}:${last24Bits.slice(-4)}`
 }
 
-function expandIPv6(ip: string): string {
-  if (ip.includes("::")) {
-    const parts = ip.split("::")
-    const left = parts[0] ? parts[0].split(":") : []
-    const right = parts[1] ? parts[1].split(":") : []
-    const missing = 8 - left.length - right.length
-
-    const expanded = [...left, ...Array(missing).fill("0000"), ...right]
-    return expanded.map((part) => part.padStart(4, "0")).join(":")
-  }
-
-  return ip
-    .split(":")
-    .map((part) => part.padStart(4, "0"))
-    .join(":")
-}
-
 export function generateEUI64FromMAC(mac: string, prefix: string): string {
   // Remove separators and convert to uppercase
   const cleanMac = mac.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()
@@ -1432,15 +1449,12 @@ export function generateEUI64FromMAC(mac: string, prefix: string): string {
 
   // Flip the universal/local bit (7th bit of first octet)
   const firstOctet = Number.parseInt(firstHalf.slice(0, 2), 16)
-  const flippedOctet = (firstOctet ^ 0x02).toString(16).padStart(2, "0").toUpperCase()
+  const flippedOctet = (firstOctet ^ 0x02).toString(16).padStart(2, "0")
 
-  const eui64 = flippedOctet + firstHalf.slice(2) + "FFFE" + secondHalf
+  const eui64 = (flippedOctet + firstHalf.slice(2) + "FFFE" + secondHalf).toLowerCase()
+  const iidGroups = [eui64.slice(0, 4), eui64.slice(4, 8), eui64.slice(8, 12), eui64.slice(12, 16)]
 
-  // Format as IPv6 interface identifier
-  const iid =
-    `${eui64.slice(0, 4)}:${eui64.slice(4, 8)}:${eui64.slice(8, 12)}:${eui64.slice(12, 16)}`.toLowerCase()
-
-  // Combine with prefix
-  const prefixPart = prefix.split("::")[0] || prefix.split("/")[0]
-  return `${prefixPart}${iid}`
+  // expand so compressed prefixes like "2001:db8::" contribute proper zero groups
+  const prefixGroups = expandIPv6(prefix.split("/")[0]).split(":").slice(0, 4)
+  return compressIPv6([...prefixGroups, ...iidGroups].join(":"))
 }

@@ -23,34 +23,14 @@ import { db, isFirebaseConfigured } from "@/lib/firebase"
 import { useAuth } from "./auth-context"
 import { updateUserIndex, subscribeToSharedProjects } from "@/lib/sharing"
 import type { ShareEntry, ProjectShare, Permission } from "@/types/sharing"
+import type { ProjectItemType } from "@/lib/tool-registry"
 
 // Types for project items
 export interface ProjectItem {
   id: string
-  type:
-    | "subnet"
-    | "vlsm"
-    | "vlan"
-    | "acl"
-    | "dns"
-    | "route"
-    | "routing"
-    | "mtu"
-    | "ipv6"
-    | "conflict"
-    | "oui"
-    | "port-scan"
-    | "wireless"
-    | "cable"
-    | "wifi-qr"
-    | "ip-converter"
-    | "ip-range"
-    | "random-gen"
-    | "bandwidth"
-    | "ssl-check"
-    | "whois"
-    | "email-diag"
-    | "other"
+  // one union, owned by the registry: this was a second hand-maintained copy
+  // of the same 23 members, kept in sync by luck
+  type: ProjectItemType
   name: string
   data: Record<string, unknown>
   createdAt: number
