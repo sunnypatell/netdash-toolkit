@@ -92,11 +92,15 @@ export function PingTraceroute() {
     if (!trimmed) return null
 
     const hasScheme = /^[a-zA-Z][a-zA-Z\d+-.]*:\/\//.test(trimmed)
+    // default a bare host to the page's own scheme. defaulting to http meant
+    // every ping on the deployed https site was blocked as mixed content
+    // before it left the browser, while localhost (http) worked fine.
+    const pageIsHttps = typeof window !== "undefined" && window.location.protocol === "https:"
     const addSchemeIfMissing = () => {
       const looksLikeIPv6 = trimmed.includes(":") && !trimmed.includes("//")
       const needsBrackets = looksLikeIPv6 && !trimmed.startsWith("[") && !trimmed.endsWith("]")
       const hostPort = needsBrackets ? `[${trimmed}]` : trimmed
-      return `http://${hostPort}`
+      return `${pageIsHttps ? "https" : "http"}://${hostPort}`
     }
 
     const candidate = hasScheme ? trimmed : addSchemeIfMissing()
@@ -125,7 +129,11 @@ export function PingTraceroute() {
       urls.push(alternateUrl)
     }
 
-    const uniqueUrls = Array.from(new Set(urls))
+    // an http fallback can never resolve from an https page, so drop it
+    // rather than burning the timeout budget on a guaranteed failure
+    const uniqueUrls = Array.from(new Set(urls)).filter(
+      (u) => !(pageIsHttps && u.startsWith("http://"))
+    )
 
     return {
       displayHost: hostLabel,
@@ -240,6 +248,13 @@ export function PingTraceroute() {
       const target = parseTargetInput(pingHost)
       if (!target) {
         setPingValidationError("Enter a valid hostname or IP address.")
+        return
+      }
+
+      if (target.urls.length === 0) {
+        setPingValidationError(
+          "This page is served over HTTPS, so the browser blocks plain http:// targets. Use an https:// target, or the desktop app for real ICMP."
+        )
         return
       }
 

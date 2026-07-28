@@ -127,12 +127,17 @@ export function PortScanner() {
           console.error("[NetDash] Native port scan returned no results")
         }
       } else {
+        // an https page cannot probe http:// at all, so probe over the page's
+        // own scheme instead of firing requests the browser blocks outright
+        const scheme =
+          typeof window !== "undefined" && window.location.protocol === "https:" ? "https" : "http"
+
         for (let i = 0; i < ports.length; i++) {
           const port = ports[i]
           const startTime = performance.now()
 
           try {
-            await fetch(`http://${target}:${port}`, {
+            await fetch(`${scheme}://${target}:${port}`, {
               method: "HEAD",
               mode: "no-cors",
               signal: AbortSignal.timeout(2000),
