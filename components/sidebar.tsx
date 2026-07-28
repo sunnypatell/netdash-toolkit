@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -13,24 +15,22 @@ import {
   FolderOpen,
   Info,
 } from "lucide-react"
-import { categories, tools, type ToolCategory } from "@/lib/tool-registry"
+import { categories, getToolsByCategory, tools, type ToolCategory } from "@/lib/tool-registry"
 
 interface SidebarProps {
-  activeView: string
-  onNavigate: (view: string) => void
   isOpen: boolean
   onToggle: () => void
 }
 
-const standaloneItems = [
-  { id: "dashboard", label: "Dashboard", icon: Home },
-  { id: "project-manager", label: "Projects", icon: FolderOpen },
-  { id: "about", label: "About", icon: Info },
+const standalonePages = [
+  { href: "/projects", label: "Projects", icon: FolderOpen },
+  { href: "/about", label: "About", icon: Info },
 ]
 
-export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+  const pathname = usePathname()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.map((c) => c.id)) // All expanded by default
+    new Set(categories.map((c) => c.id)) // all expanded by default
   )
 
   const toggleCategory = (categoryId: string) => {
@@ -45,21 +45,30 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
     })
   }
 
-  // Check if current view is in a category
-  const isViewInCategory = (categoryId: ToolCategory) => {
-    return tools.some((tool) => tool.category === categoryId && tool.id === activeView)
+  // trailingSlash:true means exported pages navigate with a trailing slash;
+  // compare with it stripped so active detection works in dev and export
+  const isActive = (href: string) => {
+    const clean = pathname?.replace(/\/$/, "") || "/"
+    return clean === href || (href === "/" && clean === "")
   }
 
-  const handleNavigate = (id: string) => {
-    onNavigate(id)
+  const isViewInCategory = (categoryId: ToolCategory) => {
+    return tools.some((tool) => tool.category === categoryId && isActive(`/tools/${tool.slug}`))
+  }
+
+  // close the drawer after navigating on mobile
+  const handleNavigate = () => {
     if (window.innerWidth < 1024) {
       onToggle()
     }
   }
 
-  const getToolsByCategory = (categoryId: ToolCategory) => {
-    return tools.filter((t) => t.category === categoryId)
-  }
+  const navButtonClass = (active: boolean, extra?: string) =>
+    cn(
+      "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-start",
+      extra,
+      active && "bg-sidebar-accent text-sidebar-accent-foreground"
+    )
 
   return (
     <div
@@ -72,12 +81,12 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
       <div className="flex h-full flex-col">
         <div className="border-sidebar-border flex items-center justify-between border-b p-4">
           {isOpen && (
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2" onClick={handleNavigate}>
               <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
                 <Network className="text-primary-foreground h-5 w-5" />
               </div>
               <span className="text-sidebar-foreground font-semibold">NetDash</span>
-            </div>
+            </Link>
           )}
           <Button
             variant="ghost"
@@ -94,22 +103,26 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full px-2 py-4">
             <nav className="space-y-1" aria-label="Main navigation">
-              {/* Dashboard */}
+              {/* dashboard */}
               <Button
-                variant={activeView === "dashboard" ? "secondary" : "ghost"}
-                className={cn(
-                  "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-start",
-                  !isOpen && "justify-center px-2",
-                  activeView === "dashboard" && "bg-sidebar-accent text-sidebar-accent-foreground"
+                asChild
+                variant={isActive("/") ? "secondary" : "ghost"}
+                className={navButtonClass(
+                  isActive("/"),
+                  !isOpen ? "justify-center px-2" : undefined
                 )}
-                onClick={() => handleNavigate("dashboard")}
-                aria-current={activeView === "dashboard" ? "page" : undefined}
               >
-                <Home className={cn("h-4 w-4", isOpen && "mr-2")} aria-hidden="true" />
-                {isOpen && <span className="text-sm">Dashboard</span>}
+                <Link
+                  href="/"
+                  onClick={handleNavigate}
+                  aria-current={isActive("/") ? "page" : undefined}
+                >
+                  <Home className={cn("h-4 w-4", isOpen && "mr-2")} aria-hidden="true" />
+                  {isOpen && <span className="text-sm">Dashboard</span>}
+                </Link>
               </Button>
 
-              {/* Categorized navigation */}
+              {/* categorized navigation */}
               {categories.map((category) => {
                 const CategoryIcon = category.icon
                 const isExpanded = expandedCategories.has(category.id)
@@ -142,20 +155,23 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                           <div className="space-y-1">
                             {categoryTools.map((tool) => {
                               const ToolIcon = tool.icon
+                              const href = `/tools/${tool.slug}`
+                              const active = isActive(href)
                               return (
                                 <Button
-                                  key={tool.id}
-                                  variant={activeView === tool.id ? "secondary" : "ghost"}
-                                  className={cn(
-                                    "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-start pl-8",
-                                    activeView === tool.id &&
-                                      "bg-sidebar-accent text-sidebar-accent-foreground"
-                                  )}
-                                  onClick={() => handleNavigate(tool.id)}
-                                  aria-current={activeView === tool.id ? "page" : undefined}
+                                  key={tool.slug}
+                                  asChild
+                                  variant={active ? "secondary" : "ghost"}
+                                  className={navButtonClass(active, "pl-8")}
                                 >
-                                  <ToolIcon className="mr-2 h-4 w-4" aria-hidden="true" />
-                                  <span className="text-sm">{tool.label}</span>
+                                  <Link
+                                    href={href}
+                                    onClick={handleNavigate}
+                                    aria-current={active ? "page" : undefined}
+                                  >
+                                    <ToolIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                                    <span className="text-sm">{tool.label}</span>
+                                  </Link>
                                 </Button>
                               )
                             })}
@@ -163,24 +179,30 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                         )}
                       </>
                     ) : (
-                      // Collapsed view - show tool icons directly
+                      // collapsed view: tool icons directly
                       <div className="space-y-1">
                         {categoryTools.map((tool) => {
                           const ToolIcon = tool.icon
+                          const href = `/tools/${tool.slug}`
+                          const active = isActive(href)
                           return (
                             <Button
-                              key={tool.id}
-                              variant={activeView === tool.id ? "secondary" : "ghost"}
+                              key={tool.slug}
+                              asChild
+                              variant={active ? "secondary" : "ghost"}
                               className={cn(
                                 "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-center px-2",
-                                activeView === tool.id &&
-                                  "bg-sidebar-accent text-sidebar-accent-foreground"
+                                active && "bg-sidebar-accent text-sidebar-accent-foreground"
                               )}
-                              onClick={() => handleNavigate(tool.id)}
-                              aria-label={tool.label}
-                              aria-current={activeView === tool.id ? "page" : undefined}
                             >
-                              <ToolIcon className="h-4 w-4" aria-hidden="true" />
+                              <Link
+                                href={href}
+                                onClick={handleNavigate}
+                                aria-label={tool.label}
+                                aria-current={active ? "page" : undefined}
+                              >
+                                <ToolIcon className="h-4 w-4" aria-hidden="true" />
+                              </Link>
                             </Button>
                           )
                         })}
@@ -190,25 +212,30 @@ export function Sidebar({ activeView, onNavigate, isOpen, onToggle }: SidebarPro
                 )
               })}
 
-              {/* Projects and About */}
+              {/* projects and about */}
               <div className="border-sidebar-border mt-4 border-t pt-4">
-                {standaloneItems.slice(1).map((item) => {
+                {standalonePages.map((item) => {
                   const Icon = item.icon
+                  const active = isActive(item.href)
                   return (
                     <Button
-                      key={item.id}
-                      variant={activeView === item.id ? "secondary" : "ghost"}
-                      className={cn(
-                        "text-sidebar-foreground hover:bg-sidebar-accent w-full justify-start",
-                        !isOpen && "justify-center px-2",
-                        activeView === item.id && "bg-sidebar-accent text-sidebar-accent-foreground"
+                      key={item.href}
+                      asChild
+                      variant={active ? "secondary" : "ghost"}
+                      className={navButtonClass(
+                        active,
+                        !isOpen ? "justify-center px-2" : undefined
                       )}
-                      onClick={() => handleNavigate(item.id)}
-                      aria-label={!isOpen ? item.label : undefined}
-                      aria-current={activeView === item.id ? "page" : undefined}
                     >
-                      <Icon className={cn("h-4 w-4", isOpen && "mr-2")} aria-hidden="true" />
-                      {isOpen && <span className="text-sm">{item.label}</span>}
+                      <Link
+                        href={item.href}
+                        onClick={handleNavigate}
+                        aria-label={!isOpen ? item.label : undefined}
+                        aria-current={active ? "page" : undefined}
+                      >
+                        <Icon className={cn("h-4 w-4", isOpen && "mr-2")} aria-hidden="true" />
+                        {isOpen && <span className="text-sm">{item.label}</span>}
+                      </Link>
                     </Button>
                   )
                 })}

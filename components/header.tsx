@@ -13,7 +13,6 @@ const latestVersion = changelog.releases[0]?.version ?? "0.0.0"
 interface HeaderProps {
   onToggleSidebar: () => void
   sidebarOpen: boolean
-  onNavigate?: (view: string) => void
 }
 
 export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
