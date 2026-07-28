@@ -2,7 +2,7 @@
 # api.scorecard.dev (powers the readme badge) + sarif into the security tab.
 #
 # publish_results forbids top-level env, workflow-level write permissions,
-# and unapproved actions in this job — keep it minimal.
+# and unapproved actions in this job - keep it minimal.
 name: Scorecard
 
 on:

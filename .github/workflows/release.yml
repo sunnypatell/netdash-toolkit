@@ -73,7 +73,7 @@ jobs:
         run: pnpm electron:compile
 
       # artifact filenames embed package.json's version while notes/cask
-      # urls derive from the tag — a mismatch would publish a release whose
+      # urls derive from the tag - a mismatch would publish a release whose
       # verification commands reference files that don't exist.
       - name: Verify tag matches package.json version
         env:
@@ -82,7 +82,7 @@ jobs:
           set -euo pipefail
           pkg_version=$(node -p "require('./package.json').version")
           if [ "${TAG#v}" != "$pkg_version" ]; then
-            echo "::error::tag $TAG does not match package.json version $pkg_version — bump package.json before tagging"
+            echo "::error::tag $TAG does not match package.json version $pkg_version - bump package.json before tagging"
             exit 1
           fi
 
@@ -364,53 +364,54 @@ jobs:
           ---
 
           <!-- release-verification -->
-          ## 📦 checksums (sha-256)
+          ### verifying this release
+
+          every asset was built from `@TAG@` on github-hosted runners with [slsa build l3](https://slsa.dev/spec/v1.0/levels) provenance (`netdash-toolkit-@TAG@.intoto.jsonl`) and [github artifact attestations](https://github.com/@REPO@/attestations). the sbom (`netdash-toolkit-@TAG@-sbom.cdx.json`) is the exact dependency graph it was built from.
+
+          ```bash
+          # checksums (macos: shasum -a 256 -c checksums.txt --ignore-missing)
+          sha256sum -c checksums.txt --ignore-missing
+
+          # provenance, offline, no github account needed
+          slsa-verifier verify-artifact NetDash-Toolkit-@VERSION@-mac-arm64.dmg \
+            --provenance-path netdash-toolkit-@TAG@.intoto.jsonl \
+            --source-uri github.com/@REPO@ --source-tag @TAG@
+
+          # or with the github cli
+          gh attestation verify NetDash-Toolkit-@VERSION@-mac-arm64.dmg --repo @REPO@
+          ```
+
+          <details>
+          <summary>sha-256 checksums</summary>
 
           ```
           @CHECKSUMS@
           ```
 
-          verify any download: `sha256sum -c checksums.txt --ignore-missing` (macos: `shasum -a 256 -c checksums.txt --ignore-missing`)
+          </details>
 
-          ## 🔏 provenance — proof these binaries came from this repo's ci
+          ### install
 
-          every asset above was built from `@TAG@` on github-hosted runners, with [slsa build level 3](https://slsa.dev/spec/v1.0/levels) provenance (`netdash-toolkit-@TAG@.intoto.jsonl`) and [github artifact attestations](https://github.com/@REPO@/attestations).
+          **macos (homebrew):**
 
-          verify with [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) — works offline, no github account needed:
-
-          ```
-          slsa-verifier verify-artifact NetDash-Toolkit-@VERSION@-mac-arm64.dmg \
-            --provenance-path netdash-toolkit-@TAG@.intoto.jsonl \
-            --source-uri github.com/@REPO@ \
-            --source-tag @TAG@
-          ```
-
-          or with the github cli:
-
-          ```
-          gh attestation verify NetDash-Toolkit-@VERSION@-mac-arm64.dmg --repo @REPO@
-          ```
-
-          dependency sbom: `netdash-toolkit-@TAG@-sbom.cdx.json` (cyclonedx)
-
-          ## 💻 install notes
-
-          **macos — homebrew (recommended):**
-
-          ```
+          ```bash
           brew tap sunnypatell/netdash https://github.com/sunnypatell/netdash-toolkit
           brew install --cask --no-quarantine netdash
           ```
 
-          **macos — direct download:** the app is ad-hoc signed (notarization requires a paid apple developer id), so gatekeeper calls it "damaged" on first launch. clear the quarantine flag after copying to /applications:
+          **macos (direct download).** the app is ad-hoc signed - notarization needs a paid apple developer id, and this project stays free - so gatekeeper calls it "damaged" on first launch. clear the quarantine flag after copying to /applications:
 
-          ```
+          ```bash
           xattr -cr "/Applications/NetDash Toolkit.app"
           ```
 
-          **windows:** binaries are unsigned; smartscreen warns on first run. verify the checksum/provenance above, then "more info" → "run anyway".
+          **windows.** binaries are unsigned; smartscreen warns on first run. verify the checksum or provenance above, then "more info" -> "run anyway".
 
-          **linux:** `chmod +x NetDash-Toolkit-@VERSION@-linux-x86_64.AppImage`, or `sudo dpkg -i NetDash-Toolkit-@VERSION@-linux-amd64.deb`
+          **linux.** `chmod +x NetDash-Toolkit-@VERSION@-linux-x86_64.AppImage`, or `sudo dpkg -i NetDash-Toolkit-@VERSION@-linux-amd64.deb`
+
+          ---
+
+          ⭐ if netdash saved you time, [star the repo](https://github.com/@REPO@) - stars are how people find it.
           <!-- /release-verification -->
           EOF
 
@@ -478,7 +479,7 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Re-validate tag format (defense in depth — this job pushes to main)
+      - name: Re-validate tag format (defense in depth - this job pushes to main)
         env:
           TAG: ${{ github.ref_name }}
         run: |
