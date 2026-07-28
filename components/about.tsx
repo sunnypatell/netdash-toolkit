@@ -9,10 +9,6 @@ import { Github, Linkedin } from "@/components/icons/brand-icons"
 import {
   ExternalLink,
   Globe,
-  Network,
-  Zap,
-  Shield,
-  Calculator,
   GitCommit,
   Plus,
   Bug,
@@ -20,203 +16,21 @@ import {
   Star,
   Heart,
   Coffee,
-  Cable,
-  QrCode,
 } from "lucide-react"
 import changelogData from "@/data/changelog.json"
+import { getPopularTools } from "@/lib/tool-registry"
 
 // Extract changelog from JSON data
 const changelog = changelogData.releases
 
-const features = [
-  {
-    title: "Subnet Calculator",
-    description:
-      "Pure IPv4/IPv6 subnet calculations with deterministic algorithms. Handles /31 RFC 3021 point-to-point links and /32 host routes. Implements bit-level masking operations with unsigned 32-bit arithmetic to avoid floating-point precision issues.",
-    icon: Calculator,
-    capabilities: [
-      "RFC 3021 /31 support",
-      "Wildcard mask calculation",
-      "Private range detection",
-      "CIDR validation",
-    ],
-  },
-  {
-    title: "VLSM Planner",
-    description:
-      "Variable Length Subnet Masking with optimal binary boundary allocation. Sorts requirements by host count descending, calculates minimal prefix lengths using 2^(32-p)-2 formula, and validates against base network capacity with fragmentation analysis.",
-    icon: Network,
-    capabilities: [
-      "Binary boundary alignment",
-      "Capacity validation",
-      "Fragmentation detection",
-      "Utilization heatmaps",
-    ],
-  },
-  {
-    title: "VLAN Manager",
-    description:
-      "IEEE 802.1Q VLAN database with multi-vendor switch configuration generation. Supports Cisco IOS (switchport commands) and Aruba CX (vlan access/trunk) with native VLAN validation and trunk consistency checking.",
-    icon: Shield,
-    capabilities: [
-      "IEEE 802.1Q compliance",
-      "Multi-vendor configs",
-      "Trunk validation",
-      "Native VLAN checks",
-    ],
-  },
-  {
-    title: "IP Conflict Checker",
-    description:
-      "Multi-source network data correlation engine with enhanced regex parsers for Windows ARP, Linux ip neigh, Cisco show arp, DHCP leases, and switch MAC tables. Detects duplicate IP/MAC conflicts, static-DHCP overlaps, and provides detailed remediation guidance.",
-    icon: Zap,
-    capabilities: [
-      "Enhanced multi-format parsing",
-      "Real-time conflict detection",
-      "Evidence tracking",
-      "Remediation workflows",
-    ],
-  },
-  {
-    title: "Ping & Traceroute",
-    description:
-      "Browser-based network connectivity testing with animated real-time results. Implements HTTP-based RTT measurement using performance.now() timing with CORS-aware requests and configurable timeout handling for reliable network diagnostics.",
-    icon: Network,
-    capabilities: [
-      "Real-time animations",
-      "HTTP RTT measurement",
-      "CORS handling",
-      "Performance metrics",
-    ],
-  },
-  {
-    title: "DNS Tools",
-    description:
-      "RFC 8484 compliant DNS over HTTPS client with multiple provider support. Implements TTL-based caching, DNSSEC AD flag validation, and supports A/AAAA/CNAME/MX/NS/TXT record types with comprehensive JSON response parsing.",
-    icon: Globe,
-    capabilities: [
-      "RFC 8484 compliance",
-      "TTL caching",
-      "DNSSEC validation",
-      "Multi-provider support",
-    ],
-  },
-  {
-    title: "MTU Calculator",
-    description:
-      "Protocol stack overhead analysis with configurable encapsulation layers. Calculates payload MTU using link MTU minus sum of protocol overheads (Ethernet, 802.1Q, IPv4/IPv6, TCP/UDP, tunneling protocols) with fragmentation warnings.",
-    icon: Calculator,
-    capabilities: [
-      "Protocol stack analysis",
-      "Encapsulation overhead",
-      "Fragmentation detection",
-      "Path MTU calculation",
-    ],
-  },
-  {
-    title: "ACL Generator",
-    description:
-      "Multi-platform Access Control List generation with wildcard mask calculation (~netmask). Supports Cisco IOS extended ACLs, Palo Alto security rules, and Juniper SRX policies with comprehensive protocol/port validation and rule documentation.",
-    icon: Shield,
-    capabilities: [
-      "Multi-platform output",
-      "Wildcard mask math",
-      "Protocol validation",
-      "Rule documentation",
-    ],
-  },
-  {
-    title: "IPv6 Tools",
-    description:
-      "RFC 5952 compliant IPv6 address compression with longest zero sequence replacement. Implements EUI-64 generation from MAC (U/L bit flip, FF:FE insertion) and solicited-node multicast calculation (ff02::1:ffXX:XXXX).",
-    icon: Network,
-    capabilities: [
-      "RFC 5952 compression",
-      "EUI-64 generation",
-      "Solicited-node multicast",
-      "Link-local addresses",
-    ],
-  },
-  {
-    title: "OUI Lookup",
-    description:
-      "Live IEEE OUI database integration using macvendors.com API for real-time vendor identification. Implements rate-limited bulk processing with local fallback database, comprehensive MAC address format support, and detailed error handling.",
-    icon: Zap,
-    capabilities: [
-      "Live API integration",
-      "Vendor identification",
-      "Bulk processing",
-      "Rate limiting",
-    ],
-  },
-  {
-    title: "Port Scanner",
-    description:
-      "Network port connectivity testing using TCP socket connections (desktop) and HTTP probes (browser). Implements concurrent scanning with configurable timeouts, service detection, and comprehensive port status reporting for network security assessment.",
-    icon: Shield,
-    capabilities: [
-      "TCP socket scanning",
-      "Service detection",
-      "Timeout handling",
-      "Security assessment",
-    ],
-  },
-  {
-    title: "Network Analyzer",
-    description:
-      "Comprehensive network interface analysis with real-time statistics, traffic monitoring, and protocol breakdown. Provides detailed metrics on network performance, interface status, and connection health for troubleshooting.",
-    icon: Shield,
-    capabilities: [
-      "Interface analysis",
-      "Traffic monitoring",
-      "Protocol breakdown",
-      "Performance metrics",
-    ],
-  },
-  {
-    title: "Routing Tools",
-    description:
-      "Complete suite of routing protocol configuration generators including OSPF, EIGRP, static routes, and administrative distance reference.",
-    icon: Network,
-    capabilities: [
-      "OSPF configuration",
-      "EIGRP configuration",
-      "Static routes",
-      "Administrative distance",
-    ],
-  },
-  {
-    title: "Wireless Tools",
-    description:
-      "Channel planning, interference analysis, and WiFi configuration tools for wireless network management.",
-    icon: Network,
-    capabilities: ["Channel planning", "Interference analysis", "WiFi configuration"],
-  },
-  {
-    title: "Cable Calculator",
-    description:
-      "TIA-568.3-D and TIA-568-D compliant signal loss calculator for fiber optic and copper cables. Calculates cable attenuation, connector loss, splice loss with power budget analysis for fiber, and validates channel distances for copper Ethernet from Cat5e through Cat8.",
-    icon: Cable,
-    capabilities: [
-      "Fiber attenuation (OS1/OS2, OM1-OM5)",
-      "Copper distance limits",
-      "Power budget analysis",
-      "TIA standards compliant",
-    ],
-  },
-  {
-    title: "WiFi QR Generator",
-    description:
-      "Generate standard WIFI:// QR codes for instant network connection on any smartphone. Supports WPA2, WPA3 (SAE), WEP, and open networks with proper special character escaping and hidden network support. Export as PNG or SVG.",
-    icon: QrCode,
-    capabilities: [
-      "WPA2/WPA3/WEP/Open support",
-      "Special character escaping",
-      "PNG/SVG export",
-      "Project saving",
-    ],
-  },
-]
+// derived from the registry: this was 16 hand-written entries duplicating
+// tool titles, descriptions and feature lists that had already drifted
+const features = getPopularTools().map((tool) => ({
+  title: tool.title,
+  description: tool.description,
+  icon: tool.icon,
+  capabilities: tool.features,
+}))
 
 const technicalHighlights = [
   "Frontend-only SPA with zero backend dependencies - all calculations client-side",
