@@ -21,6 +21,8 @@ import {
 } from "lucide-react"
 import { isElectron, electronNetwork } from "@/lib/electron"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+import { toast } from "sonner"
 
 interface NetworkInterface {
   name: string
@@ -60,6 +62,7 @@ export function PingTraceroute() {
 
   const [pingValidationError, setPingValidationError] = useState<string | null>(null)
   const [tracerouteValidationError, setTracerouteValidationError] = useState<string | null>(null)
+  const [tracerouteUnsupported, setTracerouteUnsupported] = useState(false)
   const [activeTracerouteTarget, setActiveTracerouteTarget] = useState<string | null>(null)
   const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterface[]>([])
 
@@ -299,6 +302,7 @@ export function PingTraceroute() {
     }
 
     setTracerouteValidationError(null)
+    setTracerouteUnsupported(false)
     setIsTracing(true)
     setTracerouteResults([])
     setActiveTracerouteTarget(host)
@@ -329,30 +333,12 @@ export function PingTraceroute() {
         return
       }
 
-      // Fallback to simulated traceroute for browser
-      const target = parseTargetInput(tracerouteHost)
-      const displayHost = target?.displayHost || host
-
-      const simulatedHops: TracerouteHop[] = [
-        { hop: 1, host: "192.168.1.1", responseTime: 1.2, timeout: false },
-        { hop: 2, host: "10.0.0.1", responseTime: 5.8, timeout: false },
-        { hop: 3, host: "203.0.113.1", responseTime: 12.4, timeout: false },
-        { hop: 4, host: "198.51.100.1", responseTime: 25.6, timeout: false },
-        { hop: 5, host: displayHost, responseTime: 45.2, timeout: false },
-      ]
-
-      for (let i = 0; i < simulatedHops.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        const hop = simulatedHops[i]
-        const jitter = hop.timeout ? 0 : (Math.random() - 0.5) * 4
-        setTracerouteResults((prev) => [
-          ...prev,
-          {
-            ...hop,
-            responseTime: hop.timeout ? undefined : Math.max(0.5, (hop.responseTime || 0) + jitter),
-          },
-        ])
-      }
+      // a browser cannot set per-packet ttl, so there is no way to discover
+      // hops. this used to return 5 hardcoded hops with random jitter.
+      setTracerouteUnsupported(true)
+      toast.error("Traceroute needs the desktop app", {
+        description: "Browsers cannot set packet TTL, so intermediate hops cannot be discovered.",
+      })
     } finally {
       setIsTracing(false)
     }
@@ -362,16 +348,16 @@ export function PingTraceroute() {
     const data = {
       type,
       timestamp: new Date().toISOString(),
+      // ping over http measures request round-trip, not icmp rtt; say so in the file
+      method: isNative ? (type === "ping" ? "icmp" : "system-traceroute") : "http-timing",
       results: type === "ping" ? pingResults : tracerouteResults,
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${type}-results.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `${type}-results-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   return (
@@ -583,6 +569,18 @@ export function PingTraceroute() {
                   </Button>
                 </div>
               </div>
+
+              {tracerouteUnsupported && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Not available in the browser.</strong> Traceroute works by sending
+                    packets with an increasing TTL and reading the ICMP replies. Browsers expose no
+                    way to set TTL, so hops cannot be discovered. The desktop app runs the real
+                    system traceroute.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {(tracerouteResults.length > 0 || isTracing) && (
                 <div className="space-y-4">

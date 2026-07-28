@@ -9,14 +9,31 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Shield, Search, AlertCircle, CheckCircle, X, Download, Zap } from "lucide-react"
+import {
+  Shield,
+  Search,
+  AlertCircle,
+  CheckCircle,
+  HelpCircle,
+  X,
+  Download,
+  Zap,
+} from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+
+// "unknown": a failed browser fetch can't distinguish closed from filtered from browser-blocked
+type PortState = "open" | "closed" | "filtered" | "unknown"
+
+// recorded per result so an exported scan is self-describing
+type ScanMethod = "tcp-connect" | "http-probe"
 
 interface PortScanResult {
   port: number
   service: string
-  status: "open" | "closed" | "filtered"
+  status: PortState
+  method: ScanMethod
   responseTime?: number
 }
 
@@ -25,6 +42,7 @@ interface ScanSession {
   timestamp: number
   results: PortScanResult[]
   completed: boolean
+  method: ScanMethod
 }
 
 const commonPorts = [
@@ -65,7 +83,7 @@ export function PortScanner() {
     return service?.service || "Unknown"
   }
 
-  // Perform real port scanning in Electron, simulated in browser
+  // real tcp connect in the desktop app; browser can only confirm "something answered"
   const performPortScan = async (ports: number[]) => {
     if (!target.trim()) return
 
@@ -77,6 +95,7 @@ export function PortScanner() {
       timestamp: Date.now(),
       results: [],
       completed: false,
+      method: isNative ? "tcp-connect" : "http-probe",
     }
 
     setCurrentScan(session)
@@ -97,6 +116,7 @@ export function PortScanner() {
               port: nativeResult.port,
               service: nativeResult.service || getServiceName(nativeResult.port),
               status: nativeResult.state,
+              method: "tcp-connect",
               responseTime: (nativeResult as any).responseTime, // Include response time from native scan
             }
             session.results.push(result)
@@ -107,7 +127,6 @@ export function PortScanner() {
           console.error("[NetDash] Native port scan returned no results")
         }
       } else {
-        // Fallback to simulated scanning for browser
         for (let i = 0; i < ports.length; i++) {
           const port = ports[i]
           const startTime = performance.now()
@@ -119,33 +138,26 @@ export function PortScanner() {
               signal: AbortSignal.timeout(2000),
             })
 
-            const endTime = performance.now()
-            const responseTime = endTime - startTime
-
-            const result: PortScanResult = {
+            // an opaque response still proves something accepted the connection
+            session.results.push({
               port,
               service: getServiceName(port),
               status: "open",
-              responseTime,
-            }
-
-            session.results.push(result)
-          } catch (error) {
-            // Most ports will appear closed due to browser limitations
-            const result: PortScanResult = {
+              method: "http-probe",
+              responseTime: performance.now() - startTime,
+            })
+          } catch {
+            // never guess here: this branch used to report Math.random() > 0.8 as "open"
+            session.results.push({
               port,
               service: getServiceName(port),
-              status: Math.random() > 0.8 ? "open" : "closed", // Simulate some open ports
-            }
-
-            session.results.push(result)
+              status: "unknown",
+              method: "http-probe",
+            })
           }
 
           setScanProgress(((i + 1) / ports.length) * 100)
           setCurrentScan({ ...session })
-
-          // Small delay to show progress
-          await new Promise((resolve) => setTimeout(resolve, 100))
         }
       }
     } finally {
@@ -175,18 +187,23 @@ export function PortScanner() {
     const data = {
       target: session.target,
       timestamp: new Date(session.timestamp).toISOString(),
+      method: session.method,
+      // stated in the file so nobody mistakes a browser probe for a real scan
+      methodNote:
+        session.method === "tcp-connect"
+          ? "real tcp connect scan (desktop app)"
+          : "browser http probe: only 'open' is meaningful, 'unknown' means undeterminable",
       totalPorts: session.results.length,
       openPorts: session.results.filter((r) => r.status === "open").length,
+      unknownPorts: session.results.filter((r) => r.status === "unknown").length,
       results: session.results,
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `port-scan-${session.target}-${new Date(session.timestamp).toISOString().split("T")[0]}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `port-scan-${session.target}-${dateStamp(new Date(session.timestamp))}.json`,
+      "application/json"
+    )
   }
 
   return (
@@ -209,8 +226,11 @@ export function PortScanner() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Browser Limitations:</strong> Due to CORS and browser security policies, this
-            tool provides simulated results. Use the desktop app for real port scanning.
+            <strong>Browser mode:</strong> the browser cannot open raw TCP sockets, so this falls
+            back to an HTTP probe. A port shown as <strong>open</strong> genuinely answered;
+            everything else is reported as <strong>unknown</strong>, not closed, because a failed
+            probe cannot tell a closed port from a filtered one. Use the desktop app for real TCP
+            connect scanning.
           </AlertDescription>
         </Alert>
       )}
@@ -332,6 +352,8 @@ export function PortScanner() {
                   <div className="flex items-center space-x-3">
                     {result.status === "open" ? (
                       <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : result.status === "unknown" ? (
+                      <HelpCircle className="text-muted-foreground h-4 w-4" />
                     ) : (
                       <X className="h-4 w-4 text-red-600" />
                     )}
