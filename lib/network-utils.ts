@@ -30,23 +30,32 @@ export interface IPv6Result {
 
 // IPv4 utility functions
 export function ipv4ToInt(ip: string): number {
-  const parts = ip.split(".").map(Number)
-  if (parts.length !== 4 || parts.some((p) => p < 0 || p > 255)) {
+  // digits-only per octet: Number("") is 0 and NaN compares false to
+  // everything, so "1.2.3." and "a.b.c.d" both slipped through the old check
+  const parts = ip.split(".")
+  const nums = parts.map((p) => (/^\d{1,3}$/.test(p) ? Number(p) : NaN))
+  if (parts.length !== 4 || nums.some((n) => !Number.isInteger(n) || n > 255)) {
     throw new Error("Invalid IPv4 address")
   }
-  return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0
+  return ((nums[0] << 24) | (nums[1] << 16) | (nums[2] << 8) | nums[3]) >>> 0
 }
 
 export function intToIpv4(int: number): string {
   return [(int >>> 24) & 0xff, (int >>> 16) & 0xff, (int >>> 8) & 0xff, int & 0xff].join(".")
 }
 
-export function prefixToNetmask(prefix: number): string {
+// js shift counts are mod 32, so `0xffffffff << 32` is `<< 0`; without the
+// guard a /0 produced mask 255.255.255.255 and default routes came out as
+// host routes in every config generator
+export function prefixToMaskInt(prefix: number): number {
   if (prefix < 0 || prefix > 32) {
     throw new Error("Invalid prefix length")
   }
-  const mask = (0xffffffff << (32 - prefix)) >>> 0
-  return intToIpv4(mask)
+  return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0
+}
+
+export function prefixToNetmask(prefix: number): string {
+  return intToIpv4(prefixToMaskInt(prefix))
 }
 
 export function netmaskToPrefix(netmask: string): number {
@@ -76,7 +85,7 @@ export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
   }
 
   const ipInt = ipv4ToInt(ip)
-  const maskInt = (0xffffffff << (32 - prefix)) >>> 0
+  const maskInt = prefixToMaskInt(prefix)
   const networkInt = (ipInt & maskInt) >>> 0
   const broadcastInt = (networkInt | (~maskInt >>> 0)) >>> 0
 
@@ -106,9 +115,10 @@ export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
     hostCount = Math.pow(2, 32 - prefix) - 2
   }
 
-  // Determine address type
-  const firstOctet = (networkInt >>> 24) & 0xff
-  const secondOctet = (networkInt >>> 16) & 0xff
+  // classify from the host address, not the network: 192.168.1.5/8 lives in
+  // network 192.0.0.0 but the address itself is still rfc1918 private
+  const firstOctet = (ipInt >>> 24) & 0xff
+  const secondOctet = (ipInt >>> 16) & 0xff
 
   const isPrivate =
     firstOctet === 10 ||
@@ -140,6 +150,17 @@ export function expandIPv6(ip: string): string {
   // Remove any existing brackets
   ip = ip.replace(/^\[|\]$/g, "")
 
+  // rfc 4291 2.5.5 ipv4-embedded form ("::ffff:192.168.1.1"): convert the
+  // trailing dotted quad into two hex groups so the rest of the pipeline
+  // only ever sees 8 hex groups
+  const v4Match = ip.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  if (v4Match) {
+    const v4Int = ipv4ToInt(v4Match[2])
+    const high = ((v4Int >>> 16) & 0xffff).toString(16)
+    const low = (v4Int & 0xffff).toString(16)
+    ip = `${v4Match[1]}${high}:${low}`
+  }
+
   // Handle :: expansion
   if (ip.includes("::")) {
     const parts = ip.split("::")
@@ -161,7 +182,6 @@ export function expandIPv6(ip: string): string {
 
 export function compressIPv6(ip: string): string {
   const expanded = expandIPv6(ip)
-  const compressed = expanded.replace(/\b0+/g, "").replace(/:{2,}/g, "::")
 
   // Find the longest sequence of consecutive zero groups
   const groups = expanded.split(":")
@@ -282,9 +302,12 @@ export interface CIDRRange {
 
 export function cidrToRange(cidr: string): CIDRRange {
   const [ip, prefixStr] = cidr.split("/")
-  const prefix = Number.parseInt(prefixStr)
+  const prefix = Number.parseInt(prefixStr, 10)
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+    throw new Error("Invalid CIDR prefix")
+  }
   const ipInt = ipv4ToInt(ip)
-  const maskInt = (0xffffffff << (32 - prefix)) >>> 0
+  const maskInt = prefixToMaskInt(prefix)
   const networkInt = (ipInt & maskInt) >>> 0
   const broadcastInt = (networkInt | (~maskInt >>> 0)) >>> 0
 
@@ -296,56 +319,49 @@ export function cidrToRange(cidr: string): CIDRRange {
   }
 }
 
+// merge input blocks into the minimal set of aligned cidrs covering the same
+// addresses. the old implementation emitted prefixes one bit too specific
+// (including an impossible /33) and silently dropped half of merged ranges.
 export function summarizeCIDRs(cidrs: string[]): string[] {
   if (cidrs.length === 0) return []
 
-  // Convert to ranges and sort
   const ranges = cidrs.map(cidrToRange).sort((a, b) => a.start - b.start)
 
-  // Merge overlapping ranges
-  const merged: CIDRRange[] = []
-  let current = ranges[0]
-
+  // merge overlapping or adjacent ranges
+  const merged: Array<{ start: number; end: number }> = []
+  let current = { start: ranges[0].start, end: ranges[0].end }
   for (let i = 1; i < ranges.length; i++) {
     const next = ranges[i]
-
-    if (current.end >= next.start - 1) {
-      // Overlapping or adjacent, merge
+    // "adjacent" means next.start === current.end + 1; written without the
+    // subtraction so next.start === 0 can't underflow the comparison
+    if (next.start <= current.end + 1) {
       current.end = Math.max(current.end, next.end)
     } else {
       merged.push(current)
-      current = next
+      current = { start: next.start, end: next.end }
     }
   }
   merged.push(current)
 
-  // Convert back to optimal CIDRs
+  // greedy largest-aligned-block cover; 2**k arithmetic instead of shifts
+  // because 1 << 31 is negative in js
   const result: string[] = []
-
   for (const range of merged) {
     let start = range.start
-    const end = range.end
-
-    while (start <= end) {
-      // Find the largest CIDR block that fits
+    while (start <= range.end) {
       let prefix = 32
-      let blockSize = 1
-
-      // Find the largest power of 2 that fits and aligns
+      // grow while the doubled block stays aligned at start and inside range
       while (prefix > 0) {
-        const testSize = 1 << (32 - prefix + 1)
-        const aligned = start % testSize === 0
-
-        if (aligned && start + testSize - 1 <= end) {
-          blockSize = testSize
+        const doubled = 2 ** (32 - prefix + 1)
+        if (start % doubled === 0 && start + doubled - 1 <= range.end) {
           prefix--
         } else {
           break
         }
       }
-
-      result.push(`${intToIpv4(start)}/${prefix + 1}`)
-      start += blockSize
+      result.push(`${intToIpv4(start)}/${prefix}`)
+      start += 2 ** (32 - prefix)
+      if (prefix === 0) break // /0 covers everything; avoid wrap-around loop
     }
   }
 

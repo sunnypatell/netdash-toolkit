@@ -38,18 +38,24 @@ export interface ParsedDevice {
 
 // Normalize MAC address to xx:xx:xx:xx:xx:xx format
 export function normalizeMac(mac: string): string {
-  // Remove all non-hex characters
-  const cleaned = mac.replace(/[^0-9a-fA-F]/g, "")
+  const trimmed = mac.trim().toLowerCase()
+
+  let cleaned: string
+  const groups = trimmed.split(/[:-]/)
+  if (groups.length === 6 && groups.every((g) => /^[0-9a-f]{1,2}$/.test(g))) {
+    // bsd/macos style can drop leading zeros (8:0:27:1a:2b:3c), so pad per octet
+    cleaned = groups.map((g) => g.padStart(2, "0")).join("")
+  } else {
+    // covers plain, cisco dotted (0011.2233.4455) and hp 6-6 (001122-334455) forms
+    cleaned = trimmed.replace(/[^0-9a-f]/g, "")
+  }
 
   if (cleaned.length !== 12) {
     throw new Error("Invalid MAC address length")
   }
 
   // Insert colons every 2 characters
-  return cleaned
-    .toLowerCase()
-    .replace(/(.{2})/g, "$1:")
-    .slice(0, -1)
+  return cleaned.replace(/(.{2})/g, "$1:").slice(0, -1)
 }
 
 // Windows ARP table parser
@@ -122,6 +128,11 @@ export function parseLinuxLegacyARP(text: string): ParsedARPEntry[] {
       continue
     }
 
+    // arp -n hwtype is alphabetic (ether); rejects fortigate's numeric age in the same slot
+    if (!/^[a-z]/i.test(parts[1])) {
+      continue
+    }
+
     const ip = parts[0]
     const hwAddress = parts[2]
     const iface = parts[parts.length - 1]
@@ -182,8 +193,9 @@ export function parseCiscoMAC(text: string): ParsedMACEntry[] {
   const entries: ParsedMACEntry[] = []
   const lines = text.split("\n")
 
+  // type column is constrained to real cisco values so mac-first arp lines (juniper) can't match
   const macRegex =
-    /^\s*(?:(\d+)\s+)?([0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}|[0-9a-f:]{17}|[0-9a-f-]{17})\s+(\S+)\s+(.+)$/i
+    /^\s*(?:(\d+)\s+)?([0-9a-f]{4}\.[0-9a-f]{4}\.[0-9a-f]{4}|[0-9a-f:]{17}|[0-9a-f-]{17})\s+(dynamic|static|secure|sticky|system)\s+(.+)$/i
 
   for (const line of lines) {
     const match = line.match(macRegex)
@@ -223,18 +235,18 @@ export function parseArubaMAC(text: string): ParsedMACEntry[] {
   const entries: ParsedMACEntry[] = []
   const lines = text.split("\n")
 
-  // Regex for Aruba CX MAC table format
-  const macRegex = /^(\d+)\s+([0-9a-f:]{17})\s+dynamic\s+(\S+)/i
+  // aruba cx lists mac first: MAC Address | VLAN | Type | Port
+  const macRegex = /^\s*([0-9a-f:]{17})\s+(\d+)\s+(dynamic|static|port-security)\s+(\S+)/i
 
   for (const line of lines) {
     const match = line.match(macRegex)
     if (match) {
       try {
         entries.push({
-          vlan: match[1],
-          mac: normalizeMac(match[2]),
-          interface: match[3],
-          type: "dynamic",
+          mac: normalizeMac(match[1]),
+          vlan: match[2],
+          type: match[3].toLowerCase(),
+          interface: match[4],
           source: "mac-table",
         })
       } catch (e) {
@@ -251,18 +263,17 @@ export function parseJuniperARP(text: string): ParsedARPEntry[] {
   const entries: ParsedARPEntry[] = []
   const lines = text.split("\n")
 
-  // Regex for Juniper ARP format: show arp
-  const arpRegex = /^(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f:]{17})\s+(\S+)\s+(\S+)/i
+  // juniper show arp lists mac first: MAC Address | Address | Name | Interface | Flags
+  const arpRegex = /^([0-9a-f:]{17})\s+(\d+\.\d+\.\d+\.\d+)\s+(\S+)\s+(\S+)/i
 
   for (const line of lines) {
     const match = line.match(arpRegex)
     if (match) {
       try {
         entries.push({
-          ip: match[1],
-          mac: normalizeMac(match[2]),
+          ip: match[2],
+          mac: normalizeMac(match[1]),
           interface: match[4],
-          type: match[3],
           source: "arp",
         })
       } catch (e) {
@@ -279,8 +290,8 @@ export function parseHPARP(text: string): ParsedARPEntry[] {
   const entries: ParsedARPEntry[] = []
   const lines = text.split("\n")
 
-  // Regex for HP ARP format
-  const arpRegex = /^(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f-]{17})\s+(\S+)\s+(\d+)/i
+  // procurve macs are 6-6 hyphen form; columns: IP Address | MAC Address | Type | Port
+  const arpRegex = /^\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f]{6}-[0-9a-f]{6})\s+(\S+)(?:\s+(\S+))?/i
 
   for (const line of lines) {
     const match = line.match(arpRegex)
@@ -289,7 +300,8 @@ export function parseHPARP(text: string): ParsedARPEntry[] {
         entries.push({
           ip: match[1],
           mac: normalizeMac(match[2]),
-          interface: match[3],
+          type: match[3].toLowerCase(),
+          interface: match[4],
           source: "arp",
         })
       } catch (e) {
@@ -306,8 +318,8 @@ export function parseFortiGateARP(text: string): ParsedARPEntry[] {
   const entries: ParsedARPEntry[] = []
   const lines = text.split("\n")
 
-  // Regex for FortiGate ARP format
-  const arpRegex = /^(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f:]{17})\s+(\S+)\s+(\S+)/i
+  // fortigate: Address | Age(min) | Hardware Addr | Interface; numeric age keeps juniper lines out
+  const arpRegex = /^(\d+\.\d+\.\d+\.\d+)\s+(\d+)\s+([0-9a-f:]{17})\s+(\S+)/i
 
   for (const line of lines) {
     const match = line.match(arpRegex)
@@ -315,8 +327,8 @@ export function parseFortiGateARP(text: string): ParsedARPEntry[] {
       try {
         entries.push({
           ip: match[1],
-          mac: normalizeMac(match[2]),
-          interface: match[3],
+          mac: normalizeMac(match[3]),
+          interface: match[4],
           source: "arp",
         })
       } catch (e) {
@@ -333,8 +345,8 @@ export function parseMikrotikARP(text: string): ParsedARPEntry[] {
   const entries: ParsedARPEntry[] = []
   const lines = text.split("\n")
 
-  // Regex for Mikrotik ARP format
-  const arpRegex = /^\s*\d+\s+(\d+\.\d+\.\d+\.\d+)\s+([0-9A-F:]{17})\s+(\S+)\s+(\S+)/i
+  // index, optional flag letters (D, C, ...), then ip mac and a single interface token
+  const arpRegex = /^\s*\d+\s+(?:[A-Z]{1,4}\s+)?(\d+\.\d+\.\d+\.\d+)\s+([0-9A-F:]{17})\s+(\S+)\s*$/i
 
   for (const line of lines) {
     const match = line.match(arpRegex)
@@ -396,7 +408,8 @@ export function parseDHCPLeases(text: string): ParsedDHCPLease[] {
     const rows = parseCSV(text, true)
 
     for (const row of rows) {
-      if (row.length >= 3) {
+      // ip and mac live in columns 2 and 3; anything past that is optional
+      if (row.length >= 4) {
         const lease: ParsedDHCPLease = {
           ip: row[2] || "",
           mac: row[3] ? normalizeMac(row[3]) : "",
@@ -418,7 +431,7 @@ export function parseDHCPLeases(text: string): ParsedDHCPLease[] {
     const lines = text.split("\n")
     for (const line of lines) {
       const parts = line.split(",").map((p) => p.trim())
-      if (parts.length >= 3 && parts[2] && parts[3]) {
+      if (parts.length >= 4 && parts[2] && parts[3]) {
         try {
           entries.push({
             ip: parts[2],
@@ -459,14 +472,20 @@ export function parseEnhancedDHCPLeases(text: string): ParsedDHCPLease[] {
   }
 
   // Try ISC DHCP format
-  const iscDHCPRegex =
-    /lease\s+(\d+\.\d+\.\d+\.\d+)\s*{[^}]*hardware\s+ethernet\s+([0-9a-f:]{17});[^}]*client-hostname\s+"([^"]+)"/gi
-  while ((match = iscDHCPRegex.exec(text)) !== null) {
+  // client-hostname is optional, so parse each lease block and probe fields separately
+  const iscLeaseRegex = /lease\s+(\d+\.\d+\.\d+\.\d+)\s*{([^}]*)}/gi
+  while ((match = iscLeaseRegex.exec(text)) !== null) {
+    const body = match[2]
+    const hardware = body.match(/hardware\s+ethernet\s+([0-9a-f:]{17})/i)
+    if (!hardware) {
+      continue
+    }
+    const hostname = body.match(/client-hostname\s+"([^"]+)"/i)
     try {
       entries.push({
         ip: match[1],
-        mac: normalizeMac(match[2]),
-        hostname: match[3],
+        mac: normalizeMac(hardware[1]),
+        hostname: hostname ? hostname[1] : undefined,
         source: "dhcp",
       })
     } catch (e) {
@@ -485,27 +504,38 @@ export function parseEnhancedDHCPLeases(text: string): ParsedDHCPLease[] {
 // Network device discovery parser (LLDP, CDP)
 export function parseNetworkDiscovery(text: string): ParsedDevice[] {
   const devices: ParsedDevice[] = []
-  const lines = text.split("\n")
 
-  // CDP neighbor parsing
-  const cdpRegex =
-    /Device ID:\s*(\S+).*?IP address:\s*(\d+\.\d+\.\d+\.\d+).*?Platform:\s*([^,]+)/gis
-  let match
-  while ((match = cdpRegex.exec(text)) !== null) {
-    devices.push({
-      hostname: match[1],
-      ip: match[2],
-      role: match[3],
-    })
-  }
+  // split per neighbor so a block missing a field can never borrow one from the next block
+  const blocks = text.split(/^-{4,}\s*$/m)
 
-  // LLDP neighbor parsing
-  const lldpRegex = /System Name:\s*(\S+).*?Management Address:\s*(\d+\.\d+\.\d+\.\d+)/gis
-  while ((match = lldpRegex.exec(text)) !== null) {
-    devices.push({
-      hostname: match[1],
-      ip: match[2],
-    })
+  for (const block of blocks) {
+    // CDP neighbor parsing
+    for (const neighbor of block.split(/(?=Device ID:)/i)) {
+      const hostname = neighbor.match(/Device ID:\s*(\S+)/i)
+      if (!hostname) {
+        continue
+      }
+      const ip = neighbor.match(/IP address:\s*(\d+\.\d+\.\d+\.\d+)/i)
+      const platform = neighbor.match(/Platform:\s*([^,\n]+)/i)
+      devices.push({
+        hostname: hostname[1],
+        ip: ip ? ip[1] : undefined,
+        role: platform ? platform[1].trim() : undefined,
+      })
+    }
+
+    // LLDP neighbor parsing
+    for (const neighbor of block.split(/(?=System Name:)/i)) {
+      const hostname = neighbor.match(/System Name:\s*(\S+)/i)
+      if (!hostname) {
+        continue
+      }
+      const ip = neighbor.match(/Management Address:\s*(\d+\.\d+\.\d+\.\d+)/i)
+      devices.push({
+        hostname: hostname[1],
+        ip: ip ? ip[1] : undefined,
+      })
+    }
   }
 
   return devices

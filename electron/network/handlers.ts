@@ -189,7 +189,8 @@ export function registerNetworkHandlers() {
 
         const times = parsePingOutput(result.stdout, platform)
         const alive = times.length > 0
-        const packetLoss = ((count - times.length) / count) * 100
+        // clamp: dup! replies can produce more replies than probes sent
+        const packetLoss = Math.max(0, ((count - times.length) / count) * 100)
 
         log("info", "Ping completed", {
           host: sanitizedHost,
@@ -393,44 +394,28 @@ export function registerNetworkHandlers() {
       const startTime = Date.now()
 
       try {
-        // Store original servers to restore later
-        const originalServers = dns.getServers()
-
-        // Set custom DNS server if provided
+        // per-request resolver: dns.setServers is process-global and concurrent
+        // lookups would race and could permanently clobber resolver config
+        const resolver = new dns.promises.Resolver()
         if (serverToUse !== "system") {
-          dns.setServers([serverToUse])
+          resolver.setServers([serverToUse])
         }
 
         const records: Array<{ type: string; value: string; ttl?: number }> = []
+        const addresses = await resolver.resolve(sanitizedHostname, recordType as any)
 
-        await new Promise<void>((resolve, reject) => {
-          dns.resolve(sanitizedHostname, recordType as any, (err, addresses) => {
-            // Restore original servers
-            if (serverToUse !== "system") {
-              try {
-                dns.setServers(originalServers)
-              } catch {
-                // Ignore errors restoring servers
-              }
+        if (Array.isArray(addresses)) {
+          addresses.forEach((addr) => {
+            if (typeof addr === "string") {
+              records.push({ type: recordType, value: addr })
+            } else if (typeof addr === "object" && addr !== null) {
+              records.push({ type: recordType, value: JSON.stringify(addr) })
             }
-
-            if (err) {
-              reject(err)
-              return
-            }
-
-            if (Array.isArray(addresses)) {
-              addresses.forEach((addr) => {
-                if (typeof addr === "string") {
-                  records.push({ type: recordType, value: addr })
-                } else if (typeof addr === "object") {
-                  records.push({ type: recordType, value: JSON.stringify(addr) })
-                }
-              })
-            }
-            resolve()
           })
-        })
+        } else if (addresses && typeof addresses === "object") {
+          // soa queries resolve to a single record object
+          records.push({ type: recordType, value: JSON.stringify(addresses) })
+        }
 
         log("info", "DNS lookup completed", {
           hostname: sanitizedHostname,
@@ -701,7 +686,12 @@ async function executeCommand(
 /**
  * Build ping command arguments based on platform
  */
-function buildPingArgs(platform: string, host: string, count: number, timeout: number): string[] {
+export function buildPingArgs(
+  platform: string,
+  host: string,
+  count: number,
+  timeout: number
+): string[] {
   if (platform === "win32") {
     // Windows: -n count, -w timeout (milliseconds)
     return ["-n", String(count), "-w", String(timeout), host]
@@ -755,7 +745,7 @@ function buildTracerouteArgs(
  * Scan a single port using TCP socket - REAL socket-level scanning
  * This creates actual TCP connections to determine port state
  */
-async function scanPort(
+export async function scanPort(
   host: string,
   port: number,
   timeout: number
@@ -840,9 +830,10 @@ async function scanPort(
 /**
  * Parse ping output based on platform
  */
-function parsePingOutput(output: string, platform: string): number[] {
+export function parsePingOutput(output: string, platform: string): number[] {
   const times: number[] = []
   const lines = output.split("\n")
+  const seenSequences = new Set<string>()
 
   for (const line of lines) {
     let match: RegExpMatchArray | null = null
@@ -854,6 +845,14 @@ function parsePingOutput(output: string, platform: string): number[] {
     }
 
     if (match) {
+      // count each icmp sequence once so dup! replies don't inflate the reply count
+      const seqMatch = line.match(/icmp_seq[=\s](\d+)/i)
+      if (seqMatch) {
+        if (seenSequences.has(seqMatch[1])) {
+          continue
+        }
+        seenSequences.add(seqMatch[1])
+      }
       times.push(parseFloat(match[1]))
     }
   }
@@ -864,7 +863,7 @@ function parsePingOutput(output: string, platform: string): number[] {
 /**
  * Parse traceroute output based on platform
  */
-function parseTracerouteOutput(
+export function parseTracerouteOutput(
   output: string,
   platform: string
 ): Array<{ hop: number; ip: string; hostname?: string; rtt: number[]; timeout: boolean }> {
@@ -908,9 +907,13 @@ function parseTracerouteOutput(
           ip = winMatch[5]
         }
 
-        if (winMatch[2] && winMatch[2] !== "*") rtt.push(parseFloat(winMatch[2].replace("<", "0.")))
-        if (winMatch[3] && winMatch[3] !== "*") rtt.push(parseFloat(winMatch[3].replace("<", "0.")))
-        if (winMatch[4] && winMatch[4] !== "*") rtt.push(parseFloat(winMatch[4].replace("<", "0.")))
+        // tracert reports sub-ms hops as "<1 ms"; record the ceiling of the bound (1)
+        const parseWinRtt = (value: string): number =>
+          value.startsWith("<") ? Math.ceil(parseFloat(value.slice(1))) : parseFloat(value)
+
+        if (winMatch[2] && winMatch[2] !== "*") rtt.push(parseWinRtt(winMatch[2]))
+        if (winMatch[3] && winMatch[3] !== "*") rtt.push(parseWinRtt(winMatch[3]))
+        if (winMatch[4] && winMatch[4] !== "*") rtt.push(parseWinRtt(winMatch[4]))
 
         hops.push({
           hop,
@@ -921,53 +924,47 @@ function parseTracerouteOutput(
         })
       }
     } else {
-      // macOS/Linux with -n flag: " 1  192.168.1.1  1.234 ms"
-      // or " 1  *"
-      // Format: hop_number  ip_or_*  [rtt ms] [rtt ms] [rtt ms]
-
-      // Try simple format first (with -n -q 1): "  1  192.168.1.1  1.234 ms"
-      const simpleMatch = line.match(/^\s*(\d+)\s+([\d.]+|\*)\s+(?:([\d.]+)\s*ms)?/)
-
-      if (simpleMatch) {
-        const hop = parseInt(simpleMatch[1])
-        const ip = simpleMatch[2] || "*"
-        const rtt: number[] = []
-
-        if (simpleMatch[3]) {
-          rtt.push(parseFloat(simpleMatch[3]))
-        }
-
-        hops.push({
-          hop,
-          ip,
-          hostname: undefined,
-          rtt,
-          timeout: ip === "*" || rtt.length === 0,
-        })
+      // macOS/Linux formats:
+      //   " 1  192.168.1.1  1.234 ms"
+      //   " 2  *"
+      //   " 3  router.example.com (10.0.0.1)  5.1 ms"
+      const hopMatch = trimmed.match(/^(\d+)\s+(.+)$/)
+      if (!hopMatch) {
         continue
       }
 
-      // Try full format with hostname: " 1  router.local (192.168.1.1)  1.234 ms"
-      const fullMatch = line.match(
-        /^\s*(\d+)\s+(?:([^\s(]+)\s+)?\(?([\d.]+|\*)\)?\s+(?:([\d.]+)\s*ms)?/
-      )
+      const hop = parseInt(hopMatch[1])
+      const rest = hopMatch[2].trim()
 
-      if (fullMatch) {
-        const hop = parseInt(fullMatch[1])
-        const hostname = fullMatch[2]
-        const ip = fullMatch[3] || "*"
-        const rtt: number[] = []
+      const rtt = Array.from(rest.matchAll(/(\d+(?:\.\d+)?)\s*ms/g), (m) => parseFloat(m[1]))
+      const hasStar = /(?:^|\s)\*(?:\s|$)/.test(rest)
 
-        if (fullMatch[4]) rtt.push(parseFloat(fullMatch[4]))
-
-        hops.push({
-          hop,
-          ip,
-          hostname,
-          rtt,
-          timeout: ip === "*" || rtt.length === 0,
-        })
+      // require an rtt or a "*" so unrelated numbered lines never parse as hops
+      if (rtt.length === 0 && !hasStar) {
+        continue
       }
+
+      let ip = "*"
+      let hostname: string | undefined
+
+      const namedMatch = rest.match(/^([^\s()]+)\s+\(([0-9a-fA-F.:]+)\)/)
+      if (namedMatch) {
+        hostname = namedMatch[1]
+        ip = namedMatch[2]
+      } else {
+        const ipMatch = rest.match(/^([0-9a-fA-F.:]+)(?:\s|$)/)
+        if (ipMatch) {
+          ip = ipMatch[1]
+        }
+      }
+
+      hops.push({
+        hop,
+        ip,
+        hostname,
+        rtt,
+        timeout: ip === "*" || rtt.length === 0,
+      })
     }
   }
 
@@ -977,7 +974,22 @@ function parseTracerouteOutput(
 /**
  * Parse ARP output
  */
-function parseArpOutput(
+// bsd/macos arp prints unpadded octets (8:0:27:1a:2b:3c); normalize to aa:bb:cc:dd:ee:ff
+// bsd arp prints unpadded octets ("8:0:27:1a:2b:3c"); pad every form to
+// lowercase colon-separated so downstream comparisons match
+export function normalizeMac(raw: string): string {
+  const hex = raw.replace(/[^0-9a-fA-F]/g, "")
+  if (hex.length === 12) {
+    return (hex.match(/.{2}/g) ?? []).join(":").toLowerCase()
+  }
+  return raw
+    .split(/[:-]/)
+    .map((octet) => octet.padStart(2, "0"))
+    .join(":")
+    .toLowerCase()
+}
+
+export function parseArpOutput(
   output: string,
   platform: string
 ): Array<{ ip: string; mac: string; interface?: string }> {
@@ -991,14 +1003,17 @@ function parseArpOutput(
       // Windows: "  192.168.1.1           00-11-22-33-44-55     dynamic"
       match = line.match(/\s*([\d.]+)\s+([0-9A-Fa-f-]{17})\s+(?:dynamic|static)/i)
     } else {
-      // macOS/Linux: "? (192.168.1.1) at 00:11:22:33:44:55 on en0"
-      match = line.match(/\(?([\d.]+)\)?\s+at\s+([0-9A-Fa-f:]{17})\s+(?:on\s+(\w+))?/i)
+      // macOS/BSD: "? (192.168.1.1) at 8:0:27:1a:2b:3c on en0"
+      // Linux:     "? (192.168.1.1) at 00:11:22:33:44:55 [ether] on eth0"
+      match = line.match(
+        /\(?([\d.]+)\)?\s+at\s+((?:[0-9A-Fa-f]{1,2}:){5}[0-9A-Fa-f]{1,2})(?:\s+\[\w+\])?(?:\s+on\s+([\w.]+))?/i
+      )
     }
 
     if (match) {
       entries.push({
         ip: match[1],
-        mac: match[2].replace(/-/g, ":").toLowerCase(),
+        mac: normalizeMac(match[2]),
         interface: match[3],
       })
     }
