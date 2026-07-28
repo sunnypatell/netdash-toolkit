@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **networking math that returned confident wrong answers.** `/0` produced netmask `255.255.255.255` (js shift counts are mod 32), so every default route generated as a host route and the classic `network 0.0.0.0 255.255.255.255` ospf statement was rejected. `summarizeCIDRs` emitted an impossible `/33` and dropped merged ranges. `ipv4ToInt` accepted `a.b.c.d`. addresses were classified from the network address, so `192.168.1.5/8` read as public.
+- **five vendor parsers matched zero lines of real cli output.** aruba, juniper, fortigate, hp and mikrotik all had the wrong column order or mac format; juniper and fortigate shared a byte-identical regex that produced duplicate entries with conflicting interfaces.
+- **ping and port scan were dead on the deployed site.** a bare hostname defaulted to `http://`, which an https page blocks as mixed content before the request leaves the browser. it worked on localhost (http), which is why it survived. bare hosts now adopt the page's scheme.
+- **three tools invented their results.** the port scanner reported `Math.random() > 0.8` as "open"; traceroute returned five hardcoded hops with random jitter added to look measured; the mtu calculator subtracted the ethernet header from the link mtu and reported 1446 where the answer is 1460.
+- **every toast in the app was silent.** two toast systems shipped, neither was mounted, so 51 "copied"/"saved"/"failed" messages rendered nothing.
+- **conflict detection fabricated conflicts** when one host appeared in two sources, and **generated switch configs did not paste** (`description` is not valid in ios vlan context; aos-cx ports need `no routing`).
+
+### Added
+
+- **a route per tool** at `/tools/<slug>`, so tools are deep-linkable and the back button works
+- **115 unit tests** over the math, the vendor parsers, and the electron handlers, with fixtures captured from real `ping`/`traceroute`/`arp` output
+- **registry invariant tests** that fail when the registry and the code disagree
+- **dashboard search** over the tool keywords that were already in the registry and unused
+- `RELEASING.md`
+
+### Changed
+
+- **the registry is the single source of truth.** the 51-case switch, the sidebar's duplicated lists, about.tsx's 16 hand-written tool entries, and a second copy of the `ProjectItemType` union are gone.
+- **dashboard first load js: 530 kB -> 131 kB**, since tools are per-route chunks instead of 49 eager imports
+- shared `lib/clipboard`, `lib/download` and `lib/format` replace 21 hand-rolled clipboard handlers, 19 blob-download blocks, and two conflicting byte-unit ladders
+- next 15.5.21 plus patched transitives; **dependencies 48 -> 28**
+
+### Removed
+
+- the unreachable `network-analyzer` tool (809 lines, metrics were `Math.random()`) and the unused `responsive-tabs` component
+
 ## [3.0.1] - 2026-06-11
 
 ### Added

@@ -31,10 +31,16 @@ pnpm dev
 | `pnpm build`        | production build           |
 | `pnpm lint`         | run eslint                 |
 | `pnpm typecheck`    | run typescript compiler    |
+| `pnpm test`         | run the unit test suite    |
+| `pnpm validate`     | the full ci chain, locally |
 | `pnpm electron:dev` | start electron dev mode    |
 | `pnpm dist:mac`     | build macos electron app   |
 | `pnpm dist:win`     | build windows electron app |
 | `pnpm dist:linux`   | build linux electron app   |
+
+Before opening a PR, run `pnpm validate`. It is the exact chain CI runs (typecheck, lint, format:check, test, build), so if it passes locally it passes there.
+
+Write tests for any new logic in `lib/`. The networking math and the vendor-output parsers are the load-bearing parts of this app, and they are all pure functions, so they are cheap to test. Tests live in `tests/unit/`.
 
 ## Project Structure
 
