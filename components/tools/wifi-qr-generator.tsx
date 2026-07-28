@@ -18,7 +18,8 @@ import { Download, Copy, Check, Eye, EyeOff, QrCode, Info, Wifi } from "lucide-r
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { LoadFromProject } from "@/components/ui/load-from-project"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { toast } from "sonner"
 import type { ProjectItem } from "@/contexts/project-context"
 import QRCode from "qrcode"
 
@@ -73,8 +74,6 @@ const generateWifiString = (config: WifiConfig): string => {
 }
 
 export function WifiQRGenerator() {
-  const { toast } = useToast()
-
   const [config, setConfig] = useState<WifiConfig>({
     ssid: "",
     password: "",
@@ -149,24 +148,17 @@ export function WifiQRGenerator() {
   }, [generateQR])
 
   const copyToClipboard = async (type: "string" | "config") => {
-    try {
-      const text = type === "string" ? qrString : JSON.stringify(config, null, 2)
+    const text = type === "string" ? qrString : JSON.stringify(config, null, 2)
+    const ok = await copyText(text)
 
-      await navigator.clipboard.writeText(text)
-      setCopied(type)
-      setTimeout(() => setCopied(null), 2000)
-
-      toast({
-        title: "Copied",
-        description: type === "string" ? "QR string copied" : "Config copied",
-      })
-    } catch {
-      toast({
-        title: "Copy failed",
-        description: "Could not copy to clipboard",
-        variant: "destructive",
-      })
+    if (!ok) {
+      toast.error("Could not copy to clipboard")
+      return
     }
+
+    setCopied(type)
+    setTimeout(() => setCopied(null), 2000)
+    toast.success(type === "string" ? "QR string copied" : "Config copied")
   }
 
   const downloadQR = async (format: "png" | "svg") => {
@@ -193,21 +185,16 @@ export function WifiQRGenerator() {
         filename = `wifi-qr-${config.ssid.replace(/[^a-zA-Z0-9]/g, "_")}.png`
       }
 
+      // binary/svg payloads stay on the data-url anchor path; downloadTextFile
+      // only models utf-8 text blobs
       const link = document.createElement("a")
       link.href = dataUrl
       link.download = filename
       link.click()
 
-      toast({
-        title: "Downloaded",
-        description: `QR code saved as ${format.toUpperCase()}`,
-      })
+      toast.success(`QR code saved as ${format.toUpperCase()}`)
     } catch {
-      toast({
-        title: "Download failed",
-        description: "Could not download QR code",
-        variant: "destructive",
-      })
+      toast.error("Could not download QR code")
     }
   }
 

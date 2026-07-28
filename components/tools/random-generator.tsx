@@ -16,8 +16,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Copy, Download, RefreshCw, Shuffle, Trash2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
 import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
+import { copyText } from "@/lib/clipboard"
+import { downloadTextFile, dateStamp } from "@/lib/download"
+import { toast } from "sonner"
 
 type IPType = "any" | "private-a" | "private-b" | "private-c" | "public" | "loopback" | "link-local"
 type MACType = "unicast" | "multicast" | "local" | "universal"
@@ -29,8 +32,6 @@ interface GeneratedItem {
 }
 
 export function RandomGenerator() {
-  const { toast } = useToast()
-
   // IP Generator state
   const [ipCount, setIpCount] = useState("10")
   const [ipType, setIpType] = useState<IPType>("any")
@@ -204,23 +205,31 @@ export function RandomGenerator() {
 
   // Copy and export helpers
   const copyToClipboard = async (items: GeneratedItem[]) => {
-    try {
-      await navigator.clipboard.writeText(items.map((i) => i.value).join("\n"))
-      toast({ title: "Copied", description: `${items.length} items copied` })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(items.map((i) => i.value).join("\n"))) {
+      toast.success(`${items.length} items copied`)
+    } else {
+      toast.error("Copy failed")
     }
   }
 
-  const exportItems = (items: GeneratedItem[], filename: string) => {
-    const csv = items.map((i) => i.value).join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+  const exportItems = (items: GeneratedItem[], kind: string) => {
+    downloadTextFile(
+      items.map((i) => i.value).join("\n"),
+      `random-${kind}-${dateStamp()}.csv`,
+      "text/csv"
+    )
+  }
+
+  const handleLoadFromProject = (data: Record<string, unknown>) => {
+    const timestamp = Date.now()
+    const toItems = (values: unknown, type: string): GeneratedItem[] =>
+      Array.isArray(values)
+        ? values.map((value) => ({ value: String(value), type, timestamp }))
+        : []
+
+    setGeneratedIPs(toItems(data.ipv4, "ipv4"))
+    setGeneratedIPv6s(toItems(data.ipv6, "ipv6"))
+    setGeneratedMACs(toItems(data.mac, "mac"))
   }
 
   const ResultList = ({
@@ -228,13 +237,11 @@ export function RandomGenerator() {
     onCopy,
     onExport,
     onClear,
-    filename,
   }: {
     items: GeneratedItem[]
     onCopy: () => void
     onExport: () => void
     onClear: () => void
-    filename: string
   }) => (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
@@ -284,19 +291,22 @@ export function RandomGenerator() {
         title="Random Generator"
         description="Generate random IPv4, IPv6, and MAC addresses for testing and development"
         actions={
-          allItems.length > 0 ? (
-            <SaveToProject
-              itemType="random-gen"
-              itemName={`${allItems.length} generated addresses`}
-              itemData={{
-                ipv4: generatedIPs.map((i) => i.value),
-                ipv6: generatedIPv6s.map((i) => i.value),
-                mac: generatedMACs.map((i) => i.value),
-              }}
-              toolSource="Random Generator"
-              size="sm"
-            />
-          ) : undefined
+          <>
+            <LoadFromProject itemType="random-gen" onLoad={handleLoadFromProject} size="sm" />
+            {allItems.length > 0 && (
+              <SaveToProject
+                itemType="random-gen"
+                itemName={`${allItems.length} generated addresses`}
+                itemData={{
+                  ipv4: generatedIPs.map((i) => i.value),
+                  ipv6: generatedIPv6s.map((i) => i.value),
+                  mac: generatedMACs.map((i) => i.value),
+                }}
+                toolSource="Random Generator"
+                size="sm"
+              />
+            )}
+          </>
         }
       />
 
@@ -349,9 +359,8 @@ export function RandomGenerator() {
             <ResultList
               items={generatedIPs}
               onCopy={() => copyToClipboard(generatedIPs)}
-              onExport={() => exportItems(generatedIPs, "random-ipv4.csv")}
+              onExport={() => exportItems(generatedIPs, "ipv4")}
               onClear={() => setGeneratedIPs([])}
-              filename="random-ipv4.csv"
             />
           </CardContent>
         </Card>
@@ -426,9 +435,8 @@ export function RandomGenerator() {
             <ResultList
               items={generatedMACs}
               onCopy={() => copyToClipboard(generatedMACs)}
-              onExport={() => exportItems(generatedMACs, "random-mac.csv")}
+              onExport={() => exportItems(generatedMACs, "mac")}
               onClear={() => setGeneratedMACs([])}
-              filename="random-mac.csv"
             />
           </CardContent>
         </Card>
@@ -477,9 +485,8 @@ export function RandomGenerator() {
             <ResultList
               items={generatedIPv6s}
               onCopy={() => copyToClipboard(generatedIPv6s)}
-              onExport={() => exportItems(generatedIPv6s, "random-ipv6.csv")}
+              onExport={() => exportItems(generatedIPv6s, "ipv6")}
               onClear={() => setGeneratedIPv6s([])}
-              filename="random-ipv6.csv"
             />
           </CardContent>
         </Card>

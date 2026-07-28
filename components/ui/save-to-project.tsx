@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { FolderPlus, Save, Plus } from "lucide-react"
 import { useProjects, type ProjectItem } from "@/contexts/project-context"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface SaveToProjectProps {
   itemType: ProjectItem["type"]
@@ -45,7 +45,6 @@ export function SaveToProject({
   className,
 }: SaveToProjectProps) {
   const { projects, addProject, addItemToProject } = useProjects()
-  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [createNew, setCreateNew] = useState(false)
@@ -68,10 +67,8 @@ export function SaveToProject({
       }
 
       if (!projectId) {
-        toast({
-          title: "No project selected",
+        toast.error("No project selected", {
           description: "Please select a project or create a new one",
-          variant: "destructive",
         })
         return
       }
@@ -85,10 +82,7 @@ export function SaveToProject({
         notes: itemNotes || undefined,
       })
 
-      toast({
-        title: "Saved to project",
-        description: `${itemName} has been saved successfully`,
-      })
+      toast.success("Saved to project", { description: `${itemName} has been saved successfully` })
 
       // Reset and close
       setOpen(false)
@@ -97,10 +91,8 @@ export function SaveToProject({
       setNewProjectName("")
       setItemNotes("")
     } catch (error) {
-      toast({
-        title: "Failed to save",
+      toast.error("Failed to save", {
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
       })
     }
   }

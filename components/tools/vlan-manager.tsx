@@ -25,12 +25,15 @@ import {
   Settings,
   AlertTriangle,
   CheckCircle,
-  Copy,
   Network,
   Router,
 } from "lucide-react"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
+import { CopyButton } from "@/components/ui/copy-button"
+import { ToolHeader } from "@/components/ui/tool-header"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+import { toast } from "sonner"
 import type { ProjectItem } from "@/contexts/project-context"
 import {
   validateVLAN,
@@ -116,7 +119,7 @@ export function VLANManager() {
 
     const validation = validateVLAN(vlan, vlans)
     if (!validation.isValid) {
-      alert(`VLAN validation failed: ${validation.errors.join(", ")}`)
+      toast.error("VLAN validation failed", { description: validation.errors.join(", ") })
       return
     }
 
@@ -154,7 +157,7 @@ export function VLANManager() {
 
     const validation = validateTrunkConfig(port, vlans)
     if (!validation.isValid) {
-      alert(`Port validation failed: ${validation.errors.join(", ")}`)
+      toast.error("Port validation failed", { description: validation.errors.join(", ") })
       return
     }
 
@@ -178,23 +181,8 @@ export function VLANManager() {
     setGeneratedConfig(config)
   }
 
-  const copyConfig = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedConfig)
-    } catch (err) {
-      console.error("Failed to copy config:", err)
-    }
-  }
-
   const exportVLANs = () => {
-    const csv = exportVLANsToCSV(vlans)
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "vlans.csv"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(exportVLANsToCSV(vlans), `vlans-${dateStamp()}.csv`, "text/csv")
   }
 
   const loadSampleConfig = () => {
@@ -308,41 +296,37 @@ export function VLANManager() {
   const overlaps = checkSubnetOverlaps(vlans)
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div className="flex items-start space-x-3">
-          <Layers className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
-          <div>
-            <h1 className="text-xl font-bold sm:text-2xl">VLAN Manager</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Design and manage VLANs with switch configuration templates
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <LoadFromProject itemType="vlan" onLoad={handleLoadFromProject} size="sm" />
-          <Button variant="outline" size="sm" onClick={loadSampleConfig}>
-            <span className="hidden sm:inline">Load </span>Sample
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportVLANs}>
-            <Download className="mr-1 h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Export </span>CSV
-          </Button>
-          {vlans.length > 0 && (
-            <SaveToProject
-              itemType="vlan"
-              itemName={`VLAN Config (${vlans.length} VLANs)`}
-              itemData={{
-                vlans,
-                ports,
-                vendor: selectedVendor,
-              }}
-              toolSource="VLAN Manager"
-              size="sm"
-            />
-          )}
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Layers}
+        title="VLAN Manager"
+        description="Design and manage VLANs with switch configuration templates"
+        actions={
+          <>
+            <LoadFromProject itemType="vlan" onLoad={handleLoadFromProject} size="sm" />
+            <Button variant="outline" size="sm" onClick={loadSampleConfig}>
+              <span className="hidden sm:inline">Load </span>Sample
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportVLANs}>
+              <Download className="mr-1 h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Export </span>CSV
+            </Button>
+            {vlans.length > 0 && (
+              <SaveToProject
+                itemType="vlan"
+                itemName={`VLAN Config (${vlans.length} VLANs)`}
+                itemData={{
+                  vlans,
+                  ports,
+                  vendor: selectedVendor,
+                }}
+                toolSource="VLAN Manager"
+                size="sm"
+              />
+            )}
+          </>
+        }
+      />
 
       {overlaps.length > 0 && (
         <Alert variant="destructive">
@@ -647,10 +631,7 @@ export function VLANManager() {
                 </Select>
                 <Button onClick={generateConfig}>Generate Configuration</Button>
                 {generatedConfig && (
-                  <Button variant="outline" onClick={copyConfig}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
+                  <CopyButton value={generatedConfig} variant="outline" size="default" />
                 )}
               </div>
 

@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Copy, Monitor, Smartphone, Tablet, Globe, Bot, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { copyText } from "@/lib/clipboard"
+import { toast } from "sonner"
 import { ResultCard } from "@/components/ui/result-card"
 
 interface ParsedUserAgent {
@@ -126,7 +127,6 @@ function parseUserAgent(ua: string): ParsedUserAgent {
 }
 
 export function UserAgentParser() {
-  const { toast } = useToast()
   const [userAgent, setUserAgent] = useState("")
   const [parsed, setParsed] = useState<ParsedUserAgent | null>(null)
 
@@ -145,11 +145,10 @@ export function UserAgentParser() {
   }, [userAgent])
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "User agent copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    if (await copyText(text)) {
+      toast.success("User agent copied to clipboard")
+    } else {
+      toast.error("Copy failed")
     }
   }
 

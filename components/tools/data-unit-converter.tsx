@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -16,100 +15,76 @@ import {
 import { HardDrive } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-
-type DataUnit = "b" | "B" | "Kb" | "KB" | "Mb" | "MB" | "Gb" | "GB" | "Tb" | "TB" | "Pb" | "PB"
-type Base = "binary" | "decimal"
+import { SI_BYTE_UNITS, IEC_BYTE_UNITS } from "@/lib/format"
 
 interface UnitInfo {
   label: string
   fullName: string
   bits: number
-  base: Base
 }
 
-const UNITS: Record<DataUnit, UnitInfo> = {
-  b: { label: "b", fullName: "Bits", bits: 1, base: "binary" },
-  B: { label: "B", fullName: "Bytes", bits: 8, base: "binary" },
-  Kb: { label: "Kb", fullName: "Kilobits", bits: 1000, base: "decimal" },
-  KB: { label: "KB", fullName: "Kilobytes", bits: 8000, base: "decimal" },
-  Mb: { label: "Mb", fullName: "Megabits", bits: 1000000, base: "decimal" },
-  MB: { label: "MB", fullName: "Megabytes", bits: 8000000, base: "decimal" },
-  Gb: { label: "Gb", fullName: "Gigabits", bits: 1000000000, base: "decimal" },
-  GB: { label: "GB", fullName: "Gigabytes", bits: 8000000000, base: "decimal" },
-  Tb: { label: "Tb", fullName: "Terabits", bits: 1000000000000, base: "decimal" },
-  TB: { label: "TB", fullName: "Terabytes", bits: 8000000000000, base: "decimal" },
-  Pb: { label: "Pb", fullName: "Petabits", bits: 1000000000000000, base: "decimal" },
-  PB: { label: "PB", fullName: "Petabytes", bits: 8000000000000000, base: "decimal" },
-}
+const BIT_LABELS = ["b", "kb", "Mb", "Gb", "Tb", "Pb"]
+const BIT_NAMES = ["Bits", "Kilobits", "Megabits", "Gigabits", "Terabits", "Petabits"]
+const SI_BYTE_NAMES = ["Bytes", "Kilobytes", "Megabytes", "Gigabytes", "Terabytes", "Petabytes"]
+const IEC_BYTE_NAMES = ["Bytes", "Kibibytes", "Mebibytes", "Gibibytes", "Tebibytes", "Pebibytes"]
 
-// Binary (IEC) units
-const BINARY_UNITS = {
-  KiB: { label: "KiB", fullName: "Kibibytes", bits: 8 * 1024 },
-  MiB: { label: "MiB", fullName: "Mebibytes", bits: 8 * 1024 * 1024 },
-  GiB: { label: "GiB", fullName: "Gibibytes", bits: 8 * 1024 * 1024 * 1024 },
-  TiB: { label: "TiB", fullName: "Tebibytes", bits: 8 * 1024 * 1024 * 1024 * 1024 },
-  PiB: { label: "PiB", fullName: "Pebibytes", bits: 8 * 1024 * 1024 * 1024 * 1024 * 1024 },
-}
+// labels come from lib/format so the SI/IEC split stays identical everywhere.
+// decimal: bit and byte rungs interleaved so kb/kB sit next to each other.
+const DECIMAL_UNITS: UnitInfo[] = SI_BYTE_UNITS.flatMap((byteLabel, i) => [
+  { label: BIT_LABELS[i], fullName: BIT_NAMES[i], bits: 1000 ** i },
+  { label: byteLabel, fullName: SI_BYTE_NAMES[i], bits: 8 * 1000 ** i },
+])
+
+const BINARY_UNITS: UnitInfo[] = IEC_BYTE_UNITS.slice(1).map((label, i) => ({
+  label,
+  fullName: IEC_BYTE_NAMES[i + 1],
+  bits: 8 * 1024 ** (i + 1),
+}))
+
+const ALL_UNITS = [...DECIMAL_UNITS, ...BINARY_UNITS]
 
 export function DataUnitConverter() {
   const [value, setValue] = useState("100")
-  const [unit, setUnit] = useState<DataUnit>("MB")
+  const [unit, setUnit] = useState("MB")
 
   const conversions = useMemo(() => {
     const num = parseFloat(value)
-    if (isNaN(num) || num < 0) return null
+    const selected = ALL_UNITS.find((u) => u.label === unit)
+    if (isNaN(num) || num < 0 || !selected) return null
 
-    const bits = num * UNITS[unit].bits
+    const bits = num * selected.bits
 
-    const results: Record<string, { value: number; display: string }> = {}
-
-    // Decimal units
-    Object.entries(UNITS).forEach(([key, info]) => {
-      const converted = bits / info.bits
-      results[key] = {
-        value: converted,
-        display:
-          converted >= 0.01
-            ? converted.toLocaleString(undefined, { maximumFractionDigits: 4 })
-            : converted.toExponential(2),
-      }
-    })
-
-    // Binary (IEC) units
-    Object.entries(BINARY_UNITS).forEach(([key, info]) => {
-      const converted = bits / info.bits
-      results[key] = {
-        value: converted,
-        display:
-          converted >= 0.01
-            ? converted.toLocaleString(undefined, { maximumFractionDigits: 4 })
-            : converted.toExponential(2),
-      }
-    })
-
-    return results
+    return new Map(
+      ALL_UNITS.map((info) => {
+        const converted = bits / info.bits
+        return [
+          info.label,
+          {
+            value: converted,
+            display:
+              converted >= 0.01
+                ? converted.toLocaleString(undefined, { maximumFractionDigits: 4 })
+                : converted.toExponential(2),
+          },
+        ]
+      })
+    )
   }, [value, unit])
 
-  const ResultRow = ({
-    label,
-    fullName,
-    value,
-    display,
-  }: {
-    label: string
-    fullName: string
-    value: number
-    display: string
-  }) => (
-    <div className="flex items-center justify-between rounded-lg border p-3">
-      <div>
-        <span className="font-mono font-medium">{display}</span>
-        <span className="text-muted-foreground ml-2 text-sm">{label}</span>
-        <p className="text-muted-foreground text-xs">{fullName}</p>
+  const ResultRow = ({ info }: { info: UnitInfo }) => {
+    const result = conversions?.get(info.label)
+    if (!result) return null
+    return (
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <span className="font-mono font-medium">{result.display}</span>
+          <span className="text-muted-foreground ml-2 text-sm">{info.label}</span>
+          <p className="text-muted-foreground text-xs">{info.fullName}</p>
+        </div>
+        <CopyButton value={result.value.toString()} size="sm" />
       </div>
-      <CopyButton value={value.toString()} size="sm" />
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="tool-container">
@@ -139,23 +114,16 @@ export function DataUnitConverter() {
             </div>
             <div>
               <Label>Unit</Label>
-              <Select value={unit} onValueChange={(v) => setUnit(v as DataUnit)}>
+              <Select value={unit} onValueChange={setUnit}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="b">Bits (b)</SelectItem>
-                  <SelectItem value="B">Bytes (B)</SelectItem>
-                  <SelectItem value="Kb">Kilobits (Kb)</SelectItem>
-                  <SelectItem value="KB">Kilobytes (KB)</SelectItem>
-                  <SelectItem value="Mb">Megabits (Mb)</SelectItem>
-                  <SelectItem value="MB">Megabytes (MB)</SelectItem>
-                  <SelectItem value="Gb">Gigabits (Gb)</SelectItem>
-                  <SelectItem value="GB">Gigabytes (GB)</SelectItem>
-                  <SelectItem value="Tb">Terabits (Tb)</SelectItem>
-                  <SelectItem value="TB">Terabytes (TB)</SelectItem>
-                  <SelectItem value="Pb">Petabits (Pb)</SelectItem>
-                  <SelectItem value="PB">Petabytes (PB)</SelectItem>
+                  {ALL_UNITS.map((info) => (
+                    <SelectItem key={info.label} value={info.label}>
+                      {info.fullName} ({info.label})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -164,10 +132,10 @@ export function DataUnitConverter() {
               <p className="text-muted-foreground text-xs">Quick Values</p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { v: "100", u: "MB" as DataUnit },
-                  { v: "1", u: "GB" as DataUnit },
-                  { v: "4.7", u: "GB" as DataUnit },
-                  { v: "100", u: "Mb" as DataUnit },
+                  { v: "100", u: "MB" },
+                  { v: "1", u: "GB" },
+                  { v: "4.7", u: "GB" },
+                  { v: "100", u: "Mb" },
                 ].map((preset, i) => (
                   <Badge
                     key={i}
@@ -189,71 +157,14 @@ export function DataUnitConverter() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Decimal Units (SI)</CardTitle>
-            <CardDescription>Base 10 units (1 KB = 1000 bytes)</CardDescription>
+            <CardDescription>Base 10 units (1 kB = 1000 bytes)</CardDescription>
           </CardHeader>
           <CardContent>
             {conversions ? (
               <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <ResultRow
-                  label="b"
-                  fullName="Bits"
-                  value={conversions.b.value}
-                  display={conversions.b.display}
-                />
-                <ResultRow
-                  label="B"
-                  fullName="Bytes"
-                  value={conversions.B.value}
-                  display={conversions.B.display}
-                />
-                <ResultRow
-                  label="Kb"
-                  fullName="Kilobits"
-                  value={conversions.Kb.value}
-                  display={conversions.Kb.display}
-                />
-                <ResultRow
-                  label="KB"
-                  fullName="Kilobytes"
-                  value={conversions.KB.value}
-                  display={conversions.KB.display}
-                />
-                <ResultRow
-                  label="Mb"
-                  fullName="Megabits"
-                  value={conversions.Mb.value}
-                  display={conversions.Mb.display}
-                />
-                <ResultRow
-                  label="MB"
-                  fullName="Megabytes"
-                  value={conversions.MB.value}
-                  display={conversions.MB.display}
-                />
-                <ResultRow
-                  label="Gb"
-                  fullName="Gigabits"
-                  value={conversions.Gb.value}
-                  display={conversions.Gb.display}
-                />
-                <ResultRow
-                  label="GB"
-                  fullName="Gigabytes"
-                  value={conversions.GB.value}
-                  display={conversions.GB.display}
-                />
-                <ResultRow
-                  label="Tb"
-                  fullName="Terabits"
-                  value={conversions.Tb.value}
-                  display={conversions.Tb.display}
-                />
-                <ResultRow
-                  label="TB"
-                  fullName="Terabytes"
-                  value={conversions.TB.value}
-                  display={conversions.TB.display}
-                />
+                {DECIMAL_UNITS.map((info) => (
+                  <ResultRow key={info.label} info={info} />
+                ))}
               </div>
             ) : (
               <p className="text-muted-foreground py-8 text-center">Enter a valid value</p>
@@ -270,14 +181,8 @@ export function DataUnitConverter() {
         <CardContent>
           {conversions ? (
             <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-5">
-              {Object.entries(BINARY_UNITS).map(([key, info]) => (
-                <ResultRow
-                  key={key}
-                  label={info.label}
-                  fullName={info.fullName}
-                  value={conversions[key].value}
-                  display={conversions[key].display}
-                />
+              {BINARY_UNITS.map((info) => (
+                <ResultRow key={info.label} info={info} />
               ))}
             </div>
           ) : null}
@@ -293,7 +198,7 @@ export function DataUnitConverter() {
             <div className="space-y-2">
               <h4 className="font-semibold">Decimal (SI)</h4>
               <p className="text-muted-foreground text-sm">
-                Used by network speeds and storage manufacturers. 1 KB = 1,000 bytes, 1 MB =
+                Used by network speeds and storage manufacturers. 1 kB = 1,000 bytes, 1 MB =
                 1,000,000 bytes.
               </p>
             </div>

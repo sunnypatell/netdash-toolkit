@@ -22,7 +22,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { FolderOpen, FileDown, Users } from "lucide-react"
 import { useProjects, type ProjectItem } from "@/contexts/project-context"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 // Combined project type for unified handling
 interface CombinedProject {
@@ -51,7 +51,6 @@ export function LoadFromProject({
   disabled = false,
 }: LoadFromProjectProps) {
   const { projects, sharedProjects } = useProjects()
-  const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [selectedItemId, setSelectedItemId] = useState<string>("")
@@ -94,11 +93,7 @@ export function LoadFromProject({
 
   const handleLoad = () => {
     if (!selectedProjectId || !selectedItemId) {
-      toast({
-        title: "No item selected",
-        description: "Please select a project and item to load",
-        variant: "destructive",
-      })
+      toast.error("No item selected", { description: "Please select a project and item to load" })
       return
     }
 
@@ -106,28 +101,21 @@ export function LoadFromProject({
     const item = project?.items.find((i) => i.id === selectedItemId)
 
     if (!item) {
-      toast({
-        title: "Item not found",
-        description: "The selected item could not be found",
-        variant: "destructive",
-      })
+      toast.error("Item not found", { description: "The selected item could not be found" })
       return
     }
 
     try {
       onLoad(item.data, item)
-      toast({
-        title: "Configuration loaded",
+      toast.success("Configuration loaded", {
         description: `Loaded "${item.name}" from ${project?.name}`,
       })
       setOpen(false)
       setSelectedProjectId("")
       setSelectedItemId("")
     } catch (error) {
-      toast({
-        title: "Failed to load",
+      toast.error("Failed to load", {
         description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
       })
     }
   }

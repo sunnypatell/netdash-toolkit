@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Binary, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { intToIpv4, netmaskToPrefix, prefixToMaskInt, prefixToNetmask } from "@/lib/network-utils"
 
 interface MaskResult {
   cidr: number
@@ -54,22 +54,12 @@ export function SubnetMaskConverter() {
       if (!isNaN(cidr) && cidr >= 0 && cidr <= 32) return cidr
     }
 
-    // Check if it is dotted decimal
-    const parts = trimmed.split(".")
-    if (parts.length === 4) {
-      const octets = parts.map((p) => parseInt(p, 10))
-      if (octets.every((o) => !isNaN(o) && o >= 0 && o <= 255)) {
-        // Convert to 32-bit number
-        const maskInt = ((octets[0] << 24) >>> 0) + (octets[1] << 16) + (octets[2] << 8) + octets[3]
-        // Check if it is a valid mask (contiguous 1s)
-        const binary = maskInt.toString(2).padStart(32, "0")
-        if (/^1*0*$/.test(binary)) {
-          return binary.indexOf("0") === -1 ? 32 : binary.indexOf("0")
-        }
-      }
+    // dotted decimal; netmaskToPrefix rejects non-contiguous masks
+    try {
+      return netmaskToPrefix(trimmed)
+    } catch {
+      return null
     }
-
-    return null
   }
 
   const result = useMemo<MaskResult | null>(() => {
@@ -85,31 +75,13 @@ export function SubnetMaskConverter() {
       return null
     }
 
-    // Create mask integer
-    const maskInt = cidr === 0 ? 0 : (~0 << (32 - cidr)) >>> 0
-    const wildcardInt = ~maskInt >>> 0
-
-    // Convert to dotted decimal
-    const dotted = [
-      (maskInt >>> 24) & 255,
-      (maskInt >>> 16) & 255,
-      (maskInt >>> 8) & 255,
-      maskInt & 255,
-    ].join(".")
-
-    const wildcard = [
-      (wildcardInt >>> 24) & 255,
-      (wildcardInt >>> 16) & 255,
-      (wildcardInt >>> 8) & 255,
-      wildcardInt & 255,
-    ].join(".")
-
-    const binary = [
-      ((maskInt >>> 24) & 255).toString(2).padStart(8, "0"),
-      ((maskInt >>> 16) & 255).toString(2).padStart(8, "0"),
-      ((maskInt >>> 8) & 255).toString(2).padStart(8, "0"),
-      (maskInt & 255).toString(2).padStart(8, "0"),
-    ].join(".")
+    const maskInt = prefixToMaskInt(cidr)
+    const dotted = intToIpv4(maskInt)
+    const wildcard = intToIpv4(~maskInt >>> 0)
+    const binary = dotted
+      .split(".")
+      .map((o) => Number(o).toString(2).padStart(8, "0"))
+      .join(".")
 
     const hostBits = 32 - cidr
     const hosts = cidr >= 31 ? Math.pow(2, hostBits) : Math.pow(2, hostBits) - 2
@@ -255,20 +227,8 @@ export function SubnetMaskConverter() {
                   { cidr: 31, hosts: "2", use: "P2P link (RFC 3021)" },
                   { cidr: 32, hosts: "1", use: "Host route/Loopback" },
                 ].map((row) => {
-                  const maskInt = row.cidr === 0 ? 0 : (~0 << (32 - row.cidr)) >>> 0
-                  const wildcardInt = ~maskInt >>> 0
-                  const mask = [
-                    (maskInt >>> 24) & 255,
-                    (maskInt >>> 16) & 255,
-                    (maskInt >>> 8) & 255,
-                    maskInt & 255,
-                  ].join(".")
-                  const wildcard = [
-                    (wildcardInt >>> 24) & 255,
-                    (wildcardInt >>> 16) & 255,
-                    (wildcardInt >>> 8) & 255,
-                    wildcardInt & 255,
-                  ].join(".")
+                  const mask = prefixToNetmask(row.cidr)
+                  const wildcard = intToIpv4(~prefixToMaskInt(row.cidr) >>> 0)
                   return (
                     <tr key={row.cidr} className="hover:bg-muted/50 border-b">
                       <td className="p-2">

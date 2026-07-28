@@ -32,6 +32,7 @@ import {
   Info,
 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { copyText } from "@/lib/clipboard"
 import { toast } from "sonner"
 
 interface DNSRecord {
@@ -122,9 +123,12 @@ export function EmailDiagnostics() {
   const [result, setResult] = useState<DiagnosticResult | null>(null)
   const [progress, setProgress] = useState("")
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    toast.success("Copied to clipboard")
+  const copyToClipboard = async (text: string) => {
+    if (await copyText(text)) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Copy failed")
+    }
   }
 
   const cleanDomain = (input: string): string => {

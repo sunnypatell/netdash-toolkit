@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network, Plus, Trash2, Download, BarChart3, AlertCircle, CheckCircle } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
+import { ToolHeader } from "@/components/ui/tool-header"
+import { downloadTextFile, dateStamp } from "@/lib/download"
+import type { DownloadMime } from "@/lib/download"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -70,19 +73,13 @@ export function VLSMPlanner() {
     if (!plan) return
 
     const content = exportVLSMPlan(plan, format)
-    const mimeTypes = {
+    const mimeTypes: Record<typeof format, DownloadMime> = {
       csv: "text/csv",
       json: "application/json",
       text: "text/plain",
     }
 
-    const blob = new Blob([content], { type: mimeTypes[format] })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `vlsm-plan.${format}`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(content, `vlsm-plan-${dateStamp()}.${format}`, mimeTypes[format])
   }
 
   const loadSamplePlan = () => {
@@ -130,50 +127,46 @@ export function VLSMPlanner() {
   const heatmapData = plan ? generateVLSMHeatmap(plan) : []
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div className="flex items-start space-x-3">
-          <Network className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
-          <div>
-            <h1 className="text-xl font-bold sm:text-2xl">VLSM Planner</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Plan Variable Length Subnet Masking with optimal allocation
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <LoadFromProject itemType="vlsm" onLoad={handleLoadFromProject} size="sm" />
-          <Button variant="outline" size="sm" onClick={loadSamplePlan}>
-            <span className="hidden sm:inline">Load </span>Sample
-          </Button>
-          {plan && (
-            <>
-              <Button variant="outline" size="sm" onClick={() => exportPlan("csv")}>
-                <Download className="mr-1 h-4 w-4 sm:mr-2" />
-                CSV
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => exportPlan("text")}>
-                <Download className="mr-1 h-4 w-4 sm:mr-2" />
-                Text
-              </Button>
-              {plan.success && (
-                <SaveToProject
-                  itemType="vlsm"
-                  itemName={`VLSM ${baseNetwork}/${basePrefix}`}
-                  itemData={{
-                    baseNetwork,
-                    basePrefix: Number.parseInt(basePrefix),
-                    requirements,
-                    plan,
-                  }}
-                  toolSource="VLSM Planner"
-                  size="sm"
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
+    <div className="tool-container">
+      <ToolHeader
+        icon={Network}
+        title="VLSM Planner"
+        description="Plan Variable Length Subnet Masking with optimal allocation"
+        actions={
+          <>
+            <LoadFromProject itemType="vlsm" onLoad={handleLoadFromProject} size="sm" />
+            <Button variant="outline" size="sm" onClick={loadSamplePlan}>
+              <span className="hidden sm:inline">Load </span>Sample
+            </Button>
+            {plan && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => exportPlan("csv")}>
+                  <Download className="mr-1 h-4 w-4 sm:mr-2" />
+                  CSV
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => exportPlan("text")}>
+                  <Download className="mr-1 h-4 w-4 sm:mr-2" />
+                  Text
+                </Button>
+                {plan.success && (
+                  <SaveToProject
+                    itemType="vlsm"
+                    itemName={`VLSM ${baseNetwork}/${basePrefix}`}
+                    itemData={{
+                      baseNetwork,
+                      basePrefix: Number.parseInt(basePrefix),
+                      requirements,
+                      plan,
+                    }}
+                    toolSource="VLSM Planner"
+                    size="sm"
+                  />
+                )}
+              </>
+            )}
+          </>
+        }
+      />
 
       <Tabs defaultValue="planning" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">

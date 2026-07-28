@@ -33,9 +33,29 @@ import {
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
-import { calculateIPv4Subnet, isValidIPv4 } from "@/lib/network-utils"
-import { useToast } from "@/hooks/use-toast"
+import {
+  calculateIPv4Subnet,
+  intToIpv4,
+  ipv4ToInt,
+  isValidIPv4,
+  netmaskToPrefix,
+} from "@/lib/network-utils"
+import { copyText } from "@/lib/clipboard"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+import { toast } from "sonner"
 import { ToolHeader } from "@/components/ui/tool-header"
+
+const MIN_PORT = 1
+const MAX_PORT = 65535
+const PORT_RANGE_LABEL = `${MIN_PORT}-${MAX_PORT}`
+
+const isValidPort = (value: number): boolean =>
+  Number.isInteger(value) && value >= MIN_PORT && value <= MAX_PORT
+
+// a wildcard is the bitwise inverse of a netmask; going through netmaskToPrefix
+// also rejects the non-contiguous masks a raw popcount would silently accept
+const wildcardToPrefix = (wildcard: string): number =>
+  netmaskToPrefix(intToIpv4(~ipv4ToInt(wildcard) >>> 0))
 
 interface StandardACLRule {
   id: string
@@ -141,7 +161,6 @@ const parseACLNetwork = (input: string): ParsedACLNetwork => {
 }
 
 export function ACLGenerator() {
-  const { toast } = useToast()
   const [aclType, setAclType] = useState<"standard" | "extended">("extended")
   const [standardRules, setStandardRules] = useState<StandardACLRule[]>([
     {
@@ -218,29 +237,27 @@ export function ACLGenerator() {
     // Validate ports based on protocol
     if (rule.protocol === "tcp" || rule.protocol === "udp") {
       if (rule.sourcePort && rule.sourcePortOperator !== "range") {
-        const port = Number.parseInt(rule.sourcePort)
-        if (isNaN(port) || port < 1 || port > 65535) {
-          errors.push("Invalid source port (1-65535)")
+        if (!isValidPort(Number.parseInt(rule.sourcePort))) {
+          errors.push(`Invalid source port (${PORT_RANGE_LABEL})`)
         }
       }
 
       if (rule.destPort && rule.destPortOperator !== "range") {
-        const port = Number.parseInt(rule.destPort)
-        if (isNaN(port) || port < 1 || port > 65535) {
-          errors.push("Invalid destination port (1-65535)")
+        if (!isValidPort(Number.parseInt(rule.destPort))) {
+          errors.push(`Invalid destination port (${PORT_RANGE_LABEL})`)
         }
       }
 
       if (rule.sourcePortOperator === "range" && rule.sourcePortRange) {
         const [start, end] = rule.sourcePortRange.split("-").map((p) => Number.parseInt(p.trim()))
-        if (isNaN(start) || isNaN(end) || start < 1 || end > 65535 || start >= end) {
+        if (!isValidPort(start) || !isValidPort(end) || start >= end) {
           errors.push("Invalid source port range")
         }
       }
 
       if (rule.destPortOperator === "range" && rule.destPortRange) {
         const [start, end] = rule.destPortRange.split("-").map((p) => Number.parseInt(p.trim()))
-        if (isNaN(start) || isNaN(end) || start < 1 || end > 65535 || start >= end) {
+        if (!isValidPort(start) || !isValidPort(end) || start >= end) {
           errors.push("Invalid destination port range")
         }
       }
@@ -648,20 +665,6 @@ export function ACLGenerator() {
     return output
   }
 
-  // Helper function to convert wildcard mask to CIDR prefix
-  const wildcardToPrefix = (wildcard: string): number => {
-    const octets = wildcard.split(".").map((o) => Number.parseInt(o))
-    let hostBits = 0
-    for (const octet of octets) {
-      for (let i = 0; i < 8; i++) {
-        if (octet & (1 << i)) {
-          hostBits++
-        }
-      }
-    }
-    return 32 - hostBits
-  }
-
   const generateACL = (): string => {
     // Dispatch to platform-specific generator
     if (platform === "juniper-junos") {
@@ -764,26 +767,16 @@ export function ACLGenerator() {
   }
 
   const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(generateACL())
-      toast({
-        title: "Copied to clipboard",
-        description: "ACL configuration copied successfully",
-      })
-    } catch (err) {
-      console.error("Failed to copy:", err)
+    const ok = await copyText(generateACL())
+    if (ok) {
+      toast.success("Copied to clipboard")
+    } else {
+      toast.error("Could not copy to clipboard")
     }
   }
 
   const exportACL = () => {
-    const config = generateACL()
-    const blob = new Blob([config], { type: "text/plain" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `acl-${aclName}-${aclType}-${platform}.txt`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(generateACL(), `acl-${aclName}-${aclType}-${platform}-${dateStamp()}.txt`)
   }
 
   const loadSampleRules = () => {

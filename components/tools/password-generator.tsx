@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Progress } from "@/components/ui/progress"
-import { Copy, RefreshCw, Key, Check, Eye, EyeOff, Shield } from "lucide-react"
+import { RefreshCw, Key, Eye, EyeOff, Shield } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { CopyButton } from "@/components/ui/copy-button"
 
 interface PasswordOptions {
   length: number
@@ -113,10 +113,8 @@ function calculateStrength(password: string, options: PasswordOptions): Password
 }
 
 export function PasswordGenerator() {
-  const { toast } = useToast()
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(true)
-  const [copied, setCopied] = useState(false)
   const [options, setOptions] = useState<PasswordOptions>({
     length: 16,
     uppercase: true,
@@ -134,19 +132,7 @@ export function PasswordGenerator() {
     const newPassword = generatePassword(options)
     setPassword(newPassword)
     setHistory((prev) => [newPassword, ...prev.slice(0, 9)])
-    setCopied(false)
   }, [options])
-
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(password)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toast({ title: "Copied", description: "Password copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
-    }
-  }
 
   const updateOption = <K extends keyof PasswordOptions>(key: K, value: PasswordOptions[K]) => {
     setOptions((prev) => ({ ...prev, [key]: value }))
@@ -184,19 +170,7 @@ export function PasswordGenerator() {
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyToClipboard}
-                  disabled={!password}
-                  className="h-8 w-8 p-0"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
+                {password && <CopyButton value={password} className="h-8 w-8 p-0" />}
               </div>
             </div>
 
@@ -310,16 +284,7 @@ export function PasswordGenerator() {
                   className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-2"
                 >
                   <code className="flex-1 truncate font-mono text-sm">{pw}</code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(pw)
-                      toast({ title: "Copied" })
-                    }}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <CopyButton value={pw} />
                 </div>
               ))}
             </div>

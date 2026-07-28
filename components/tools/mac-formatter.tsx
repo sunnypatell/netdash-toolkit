@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Cpu, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { normalizeMac } from "@/lib/parsers"
 
 interface MACInfo {
   raw: string
@@ -36,15 +36,11 @@ export function MACFormatter() {
   const [error, setError] = useState<string | null>(null)
 
   const parseMAC = (mac: string): string | null => {
-    // Remove all common separators and convert to uppercase
-    const clean = mac.replace(/[:\-.\s]/g, "").toUpperCase()
-
-    // Validate hex characters and length
-    if (!/^[0-9A-F]{12}$/.test(clean)) {
+    try {
+      return normalizeMac(mac).replace(/:/g, "").toUpperCase()
+    } catch {
       return null
     }
-
-    return clean
   }
 
   const result = useMemo<MACInfo | null>(() => {

@@ -11,6 +11,8 @@ import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
 import { ResultCard } from "@/components/ui/result-card"
+import { ToolHeader } from "@/components/ui/tool-header"
+import { downloadTextFile, dateStamp } from "@/lib/download"
 import {
   calculateIPv4Subnet,
   calculateIPv6Subnet,
@@ -72,25 +74,16 @@ export function SubnetCalculator() {
     const results = ipv4Results || ipv6Results
     if (!results) return
 
-    let content = ""
-    let filename = ""
+    const filename = `subnet-calculation-${dateStamp()}.${format}`
 
     if (format === "json") {
-      content = JSON.stringify(results, null, 2)
-      filename = "subnet-calculation.json"
-    } else {
-      const entries = Object.entries(results)
-      content = "Property,Value\n" + entries.map(([key, value]) => `${key},${value}`).join("\n")
-      filename = "subnet-calculation.csv"
+      downloadTextFile(JSON.stringify(results, null, 2), filename, "application/json")
+      return
     }
 
-    const blob = new Blob([content], { type: format === "json" ? "application/json" : "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+    const entries = Object.entries(results)
+    const csv = "Property,Value\n" + entries.map(([key, value]) => `${key},${value}`).join("\n")
+    downloadTextFile(csv, filename, "text/csv")
   }
 
   const getIPv4Badges = (result: IPv4Result) => {
@@ -133,58 +126,54 @@ export function SubnetCalculator() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div className="flex items-start space-x-3">
-          <Calculator className="text-primary mt-0.5 h-6 w-6 flex-shrink-0" />
-          <div>
-            <h1 className="text-xl font-bold sm:text-2xl">Subnet Calculator</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Calculate network parameters for IPv4 and IPv6 subnets
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-          <LoadFromProject itemType="subnet" onLoad={handleLoadFromProject} size="sm" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportResults("csv")}
-            disabled={!ipv4Results && !ipv6Results}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Export </span>CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => exportResults("json")}
-            disabled={!ipv4Results && !ipv6Results}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Export </span>JSON
-          </Button>
-          {(ipv4Results || ipv6Results) && (
-            <SaveToProject
-              itemType="subnet"
-              itemName={
-                ipv4Results
-                  ? `${ipv4Results.cidr}`
-                  : `${ipv6Results?.compressed}/${ipv6Results?.prefix}`
-              }
-              itemData={{
-                version: ipv4Results ? "ipv4" : "ipv6",
-                input: ipv4Results
-                  ? { address: ipv4Address, prefix: ipv4Prefix }
-                  : { address: ipv6Address, prefix: ipv6Prefix },
-                results: ipv4Results || ipv6Results,
-              }}
-              toolSource="Subnet Calculator"
+    <div className="tool-container">
+      <ToolHeader
+        icon={Calculator}
+        title="Subnet Calculator"
+        description="Calculate network parameters for IPv4 and IPv6 subnets"
+        actions={
+          <>
+            <LoadFromProject itemType="subnet" onLoad={handleLoadFromProject} size="sm" />
+            <Button
+              variant="outline"
               size="sm"
-            />
-          )}
-        </div>
-      </div>
+              onClick={() => exportResults("csv")}
+              disabled={!ipv4Results && !ipv6Results}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Export </span>CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportResults("json")}
+              disabled={!ipv4Results && !ipv6Results}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Export </span>JSON
+            </Button>
+            {(ipv4Results || ipv6Results) && (
+              <SaveToProject
+                itemType="subnet"
+                itemName={
+                  ipv4Results
+                    ? `${ipv4Results.cidr}`
+                    : `${ipv6Results?.compressed}/${ipv6Results?.prefix}`
+                }
+                itemData={{
+                  version: ipv4Results ? "ipv4" : "ipv6",
+                  input: ipv4Results
+                    ? { address: ipv4Address, prefix: ipv4Prefix }
+                    : { address: ipv6Address, prefix: ipv6Prefix },
+                  results: ipv4Results || ipv6Results,
+                }}
+                toolSource="Subnet Calculator"
+                size="sm"
+              />
+            )}
+          </>
+        }
+      />
 
       {error && (
         <Alert variant="destructive">

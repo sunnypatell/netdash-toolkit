@@ -10,8 +10,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Copy, Download, AlertTriangle, List, ArrowDown, ArrowUp } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { ResultCard } from "@/components/ui/result-card"
+import { cidrToRange, intToIpv4, prefixToNetmask } from "@/lib/network-utils"
+import { copyText } from "@/lib/clipboard"
+import { downloadTextFile, dateStamp } from "@/lib/download"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
@@ -31,7 +34,6 @@ interface EnumerationResult {
 }
 
 export function IPEnumerator() {
-  const { toast } = useToast()
   const [cidrInput, setCidrInput] = useState("192.168.1.0/28")
   const [includeNetwork, setIncludeNetwork] = useState(false)
   const [includeBroadcast, setIncludeBroadcast] = useState(false)
@@ -40,47 +42,25 @@ export function IPEnumerator() {
 
   const parseAndEnumerate = (cidr: string): EnumerationResult | null => {
     try {
-      const [ipPart, prefixPart] = cidr.trim().split("/")
-      if (!ipPart || !prefixPart) return null
+      // cidrToRange validates the address and prefix and throws on bad input
+      const { start: networkInt, end: broadcastInt, prefix } = cidrToRange(cidr.trim())
 
-      const prefix = parseInt(prefixPart, 10)
-      if (isNaN(prefix) || prefix < 0 || prefix > 32) return null
-
-      const octets = ipPart.split(".").map((o) => parseInt(o, 10))
-      if (octets.length !== 4 || octets.some((o) => isNaN(o) || o < 0 || o > 255)) return null
-
-      // Convert to 32-bit integer
-      const ipInt = ((octets[0] << 24) + (octets[1] << 16) + (octets[2] << 8) + octets[3]) >>> 0
-
-      // Calculate network and broadcast
-      const hostBits = 32 - prefix
-      const mask = prefix === 0 ? 0 : (0xffffffff << hostBits) >>> 0
-      const networkInt = (ipInt & mask) >>> 0
-      const broadcastInt = (networkInt | (~mask >>> 0)) >>> 0
-
-      // Convert integers to dotted decimal
-      const intToIP = (num: number): string => {
-        return [(num >>> 24) & 0xff, (num >>> 16) & 0xff, (num >>> 8) & 0xff, num & 0xff].join(".")
-      }
-
-      const networkAddress = intToIP(networkInt)
-      const broadcastAddress = intToIP(broadcastInt)
+      const networkAddress = intToIpv4(networkInt)
+      const broadcastAddress = intToIpv4(broadcastInt)
 
       // Calculate totals
-      const totalHosts = Math.pow(2, hostBits)
+      const totalHosts = Math.pow(2, 32 - prefix)
       const usableHosts = prefix >= 31 ? totalHosts : Math.max(0, totalHosts - 2)
 
       // First and last usable
-      const firstUsableInt = prefix >= 31 ? networkInt : networkInt + 1
-      const lastUsableInt = prefix >= 31 ? broadcastInt : broadcastInt - 1
-      const firstUsable = intToIP(firstUsableInt)
-      const lastUsable = intToIP(lastUsableInt)
+      const firstUsable = intToIpv4(prefix >= 31 ? networkInt : networkInt + 1)
+      const lastUsable = intToIpv4(prefix >= 31 ? broadcastInt : broadcastInt - 1)
 
       // Gateway (typically first usable)
       const gateway = firstUsable
 
       // Subnet mask
-      const subnetMask = intToIP(mask)
+      const subnetMask = prefixToNetmask(prefix)
 
       // Generate all IPs (with safety limit)
       const allIPs: string[] = []
@@ -88,7 +68,7 @@ export function IPEnumerator() {
       const maxEnumerate = Math.min(totalHosts, 65536) // Safety limit for /16
 
       for (let i = 0; i < maxEnumerate; i++) {
-        const currentIP = intToIP(networkInt + i)
+        const currentIP = intToIpv4(networkInt + i)
         allIPs.push(currentIP)
 
         // Add to usable if not network or broadcast (for /30 and smaller)
@@ -144,11 +124,11 @@ export function IPEnumerator() {
   }, [result, includeNetwork, includeBroadcast, sortOrder, displayLimit])
 
   const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      toast({ title: "Copied", description: "IP list copied to clipboard" })
-    } catch {
-      toast({ title: "Copy failed", variant: "destructive" })
+    const ok = await copyText(text)
+    if (ok) {
+      toast.success("IP list copied to clipboard")
+    } else {
+      toast.error("Copy failed")
     }
   }
 
@@ -156,13 +136,7 @@ export function IPEnumerator() {
     if (!result) return
 
     const csv = ["IP Address", ...displayIPs].join("\n")
-    const blob = new Blob([csv], { type: "text/csv" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `ip-range-${cidrInput.replace("/", "-")}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(csv, `ip-range-${cidrInput.replace("/", "-")}-${dateStamp()}.csv`, "text/csv")
   }
 
   const exportToJSON = () => {
@@ -181,13 +155,11 @@ export function IPEnumerator() {
       ips: displayIPs,
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `ip-range-${cidrInput.replace("/", "-")}.json`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadTextFile(
+      JSON.stringify(data, null, 2),
+      `ip-range-${cidrInput.replace("/", "-")}-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   const handleLoadFromProject = (data: Record<string, unknown>, _item: ProjectItem) => {
