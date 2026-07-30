@@ -18,6 +18,7 @@ import { LoadFromProject } from "@/components/ui/load-from-project"
 import type { ProjectItem } from "@/contexts/project-context"
 import { calculateVLSM, generateVLSMHeatmap, exportVLSMPlan } from "@/lib/vlsm-utils"
 import type { VLSMRequirement, VLSMPlan } from "@/lib/vlsm-utils"
+import { nextId } from "@/lib/id"
 
 export function VLSMPlanner() {
   const [baseNetwork, setBaseNetwork] = useState("10.0.0.0")
@@ -39,7 +40,7 @@ export function VLSMPlanner() {
     if (isNaN(hosts) || hosts <= 0) return
 
     const newReq: VLSMRequirement = {
-      id: Date.now().toString(),
+      id: nextId("vlsm"),
       name: newReqName,
       hostsRequired: hosts,
       description: newReqDesc || undefined,

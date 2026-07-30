@@ -42,6 +42,7 @@ import {
 } from "@/lib/network-utils"
 import { copyText } from "@/lib/clipboard"
 import { dateStamp, downloadTextFile } from "@/lib/download"
+import { nextId } from "@/lib/id"
 import { toast } from "sonner"
 import { ToolHeader } from "@/components/ui/tool-header"
 
@@ -720,7 +721,7 @@ export function ACLGenerator() {
 
   const addStandardRule = () => {
     const newRule: StandardACLRule = {
-      id: Date.now().toString(),
+      id: nextId("acl"),
       action: "permit",
       sourceNetwork: "any",
       description: "",
@@ -740,7 +741,7 @@ export function ACLGenerator() {
 
   const addExtendedRule = () => {
     const newRule: ExtendedACLRule = {
-      id: Date.now().toString(),
+      id: nextId("acl"),
       action: "permit",
       protocol: "tcp",
       sourceNetwork: "any",
