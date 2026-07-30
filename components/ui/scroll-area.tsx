@@ -23,6 +23,8 @@ function ScrollArea({
         {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar />
+      {/* horizontal too: the radix viewport sets overflow-x hidden without it, so wide tables clip */}
+      <ScrollBar orientation="horizontal" />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   )

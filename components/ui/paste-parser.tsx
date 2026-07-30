@@ -187,7 +187,7 @@ Vlan    Mac Address       Type        Ports
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="windows-arp" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="h-auto w-full flex-wrap justify-start sm:grid sm:grid-cols-4">
               <TabsTrigger value="windows-arp">Windows ARP</TabsTrigger>
               <TabsTrigger value="linux-arp">Linux ARP</TabsTrigger>
               <TabsTrigger value="cisco-arp">Cisco ARP</TabsTrigger>

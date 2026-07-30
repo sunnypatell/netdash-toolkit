@@ -17,7 +17,14 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Track className="bg-secondary relative h-2 w-full grow overflow-hidden rounded-full">
       <SliderPrimitive.Range className="bg-primary absolute h-full" />
     </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="border-primary bg-background ring-offset-background focus-visible:ring-ring block h-5 w-5 rounded-full border-2 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50" />
+    {/* the thumb, not the root, is the element with role="slider", so the name
+        has to land here or axe reports aria-input-field-name and screen readers
+        announce an unnamed slider. callers label the Slider, so forward it. */}
+    <SliderPrimitive.Thumb
+      aria-label={props["aria-label"]}
+      aria-labelledby={props["aria-labelledby"]}
+      className="border-primary bg-background ring-offset-background focus-visible:ring-ring block h-5 w-5 rounded-full border-2 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+    />
   </SliderPrimitive.Root>
 ))
 Slider.displayName = SliderPrimitive.Root.displayName

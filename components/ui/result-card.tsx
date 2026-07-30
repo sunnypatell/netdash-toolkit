@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Copy, Check } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { copyText } from "@/lib/clipboard"
 
 interface ResultData {
   label: string
@@ -35,13 +36,9 @@ export function ResultCard({
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
   const copyToClipboard = async (text: string, field: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopiedField(field)
-      setTimeout(() => setCopiedField(null), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
-    }
+    if (!(await copyText(text))) return
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(null), 2000)
   }
 
   const formatLabel = (key: string): string => {
@@ -74,13 +71,13 @@ export function ResultCard({
   return (
     <Card className={cn("", className)} role="region" aria-label={title}>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <CardTitle className="text-lg">{title}</CardTitle>
             {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
           </div>
           {badges && (
-            <div className="flex gap-1" aria-label="Result tags">
+            <div className="flex shrink-0 flex-wrap justify-end gap-1" aria-label="Result tags">
               {badges.map((badge, index) => (
                 <Badge key={index} variant={badge.variant || "secondary"}>
                   {badge.label}
@@ -100,11 +97,11 @@ export function ResultCard({
                 item.highlight ? "bg-primary/10 border-primary/20 border" : "bg-muted/50"
               )}
             >
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
                 <div
                   className={cn(
-                    "mt-1 font-mono text-sm",
+                    "mt-1 font-mono text-sm break-all",
                     item.highlight && "text-primary font-semibold"
                   )}
                 >
@@ -119,7 +116,7 @@ export function ResultCard({
                   variant="ghost"
                   size="sm"
                   onClick={() => copyToClipboard(formatValue(item.value), item.label)}
-                  className="ml-2"
+                  className="ml-2 shrink-0"
                   aria-label={
                     copiedField === item.label
                       ? `${item.label} copied to clipboard`

@@ -14,12 +14,15 @@ import {
   Home,
   FolderOpen,
   Info,
+  X,
 } from "lucide-react"
 import { categories, getToolsByCategory, tools, type ToolCategory } from "@/lib/tool-registry"
 
 interface SidebarProps {
   isOpen: boolean
   onToggle: () => void
+  // "drawer" renders inside the mobile radix dialog, which owns positioning
+  variant?: "desktop" | "drawer"
 }
 
 const standalonePages = [
@@ -27,7 +30,8 @@ const standalonePages = [
   { href: "/about", label: "About", icon: Info },
 ]
 
-export function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps) {
+  const isDrawer = variant === "drawer"
   const pathname = usePathname()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(categories.map((c) => c.id)) // all expanded by default
@@ -58,7 +62,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
 
   // close the drawer after navigating on mobile
   const handleNavigate = () => {
-    if (window.innerWidth < 1024) {
+    if (isDrawer || window.innerWidth < 1024) {
       onToggle()
     }
   }
@@ -73,9 +77,14 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   return (
     <div
       className={cn(
-        "bg-sidebar border-sidebar-border border-r transition-all duration-300 ease-in-out",
-        "fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto",
-        isOpen ? "w-64 translate-x-0" : "w-16 -translate-x-full lg:translate-x-0"
+        "bg-sidebar border-sidebar-border border-r",
+        isDrawer
+          ? "h-full w-64"
+          : cn(
+              // desktop rail only; the mobile drawer is a separate radix dialog
+              "hidden transition-all duration-300 ease-in-out lg:relative lg:z-auto lg:block",
+              isOpen ? "w-64" : "w-16"
+            )
       )}
     >
       <div className="flex h-full flex-col">
@@ -83,7 +92,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           {isOpen && (
             <Link href="/" className="flex items-center space-x-2" onClick={handleNavigate}>
               <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-lg">
-                <Network className="text-primary-foreground h-5 w-5" />
+                <Network className="text-primary-foreground h-5 w-5" aria-hidden="true" />
               </div>
               <span className="text-sidebar-foreground font-semibold">NetDash</span>
             </Link>
@@ -93,10 +102,19 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             size="sm"
             onClick={onToggle}
             className="text-sidebar-foreground hover:bg-sidebar-accent"
-            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
-            aria-expanded={isOpen}
+            aria-label={
+              isDrawer ? "Close navigation menu" : isOpen ? "Collapse sidebar" : "Expand sidebar"
+            }
+            aria-expanded={isDrawer ? undefined : isOpen}
           >
-            <ChevronLeft className={cn("h-4 w-4 transition-transform", !isOpen && "rotate-180")} />
+            {isDrawer ? (
+              <X className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronLeft
+                className={cn("h-4 w-4 transition-transform", !isOpen && "rotate-180")}
+                aria-hidden="true"
+              />
+            )}
           </Button>
         </div>
 
@@ -146,9 +164,9 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                             <span className="text-sm">{category.label}</span>
                           </div>
                           {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
+                            <ChevronDown className="h-4 w-4" aria-hidden="true" />
                           ) : (
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
                           )}
                         </Button>
                         {isExpanded && (

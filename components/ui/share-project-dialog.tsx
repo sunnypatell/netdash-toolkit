@@ -178,9 +178,11 @@ export function ShareProjectDialog({
         <div className="space-y-4 py-4">
           {/* Add new user */}
           <div className="space-y-2">
-            <Label>Invite by email</Label>
-            <div className="flex gap-2">
+            <Label htmlFor="share-invite-email">Invite by email</Label>
+            {/* stacks on mobile: side by side the fixed-width select squeezed the email field to ~123px */}
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Input
+                id="share-invite-email"
                 type="email"
                 placeholder="user@example.com"
                 value={email}
@@ -193,25 +195,36 @@ export function ShareProjectDialog({
                     handleShare()
                   }
                 }}
-                className="flex-1"
+                className="min-w-0 flex-1"
               />
-              <Select value={permission} onValueChange={(v) => setPermission(v as Permission)}>
-                <SelectTrigger className="w-[120px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="view">Can view</SelectItem>
-                  <SelectItem value="edit">Can edit</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleShare} disabled={loading || !email.trim()} size="icon">
-                {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <UserPlus className="h-4 w-4" />
-                )}
-              </Button>
+              <div className="flex gap-2">
+                <Select value={permission} onValueChange={(v) => setPermission(v as Permission)}>
+                  <SelectTrigger
+                    className="flex-1 sm:w-30 sm:flex-none"
+                    aria-label="Permission for the invited user"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="view">Can view</SelectItem>
+                    <SelectItem value="edit">Can edit</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleShare}
+                  disabled={loading || !email.trim()}
+                  size="icon"
+                  className="shrink-0"
+                  aria-label="Share project with this email"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </Button>
+              </div>
             </div>
 
             {error && (
@@ -234,21 +247,21 @@ export function ShareProjectDialog({
             <ScrollArea className="h-[220px] rounded-md border">
               <div className="space-y-1 p-2">
                 {/* Owner */}
-                <div className="hover:bg-muted/50 flex items-center justify-between rounded-md p-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
+                <div className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md p-2">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={user?.photoURL || undefined} />
                       <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
                         {user?.displayName || user?.email?.split("@")[0]}
                       </p>
-                      <p className="text-muted-foreground text-xs">{user?.email}</p>
+                      <p className="text-muted-foreground truncate text-xs">{user?.email}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="gap-1">
-                    <Crown className="h-3 w-3" />
+                  <Badge variant="secondary" className="shrink-0 gap-1">
+                    <Crown className="h-3 w-3" aria-hidden="true" />
                     Owner
                   </Badge>
                 </div>
@@ -259,26 +272,32 @@ export function ShareProjectDialog({
                   return (
                     <div
                       key={userId}
-                      className="hover:bg-muted/50 flex items-center justify-between rounded-md p-2"
+                      className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md p-2"
                     >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
+                      {/* min-w-0 or a long email pushes the permission select off the dialog edge */}
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar className="h-8 w-8 shrink-0">
                           <AvatarFallback className="text-xs">
                             {share.email[0].toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{share.email.split("@")[0]}</p>
-                          <p className="text-muted-foreground text-xs">{share.email}</p>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {share.email.split("@")[0]}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">{share.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex shrink-0 items-center gap-2">
                         <Select
                           value={share.permission}
                           onValueChange={(v) => handleUpdatePermission(userId, v as Permission)}
                         >
-                          <SelectTrigger className="h-8 w-[110px] text-xs">
-                            <PermIcon className="mr-1 h-3 w-3" />
+                          <SelectTrigger
+                            className="h-8 w-[110px] text-xs"
+                            aria-label={`Permission for ${share.email}`}
+                          >
+                            <PermIcon className="mr-1 h-3 w-3" aria-hidden="true" />
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -308,8 +327,9 @@ export function ShareProjectDialog({
                           onClick={() => handleRemoveShare(userId)}
                           className="text-destructive hover:text-destructive h-8 w-8 p-0"
                           disabled={loading}
+                          aria-label={`Remove access for ${share.email}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </Button>
                       </div>
                     </div>

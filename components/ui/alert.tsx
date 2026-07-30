@@ -27,7 +27,8 @@ function Alert({
   return (
     <div
       data-slot="alert"
-      role="alert"
+      // only errors interrupt the screen reader; informational alerts stay passive
+      role={variant === "destructive" ? "alert" : undefined}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />
