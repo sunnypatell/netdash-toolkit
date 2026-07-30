@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Label } from "@/components/ui/label"
 import { Upload, FileText, AlertCircle } from "lucide-react"
 import { autoParseNetworkData } from "@/lib/parsers"
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/parsers"
@@ -112,11 +113,15 @@ Vlan    Mac Address       Type        Ports
             </TabsList>
 
             <TabsContent value="paste" className="space-y-4">
+              {/* a placeholder is not an accessible name: it disappears on first
+                  keystroke and is not exposed as one */}
+              <Label htmlFor="paste-parser-input">Network data to parse</Label>
               <Textarea
+                id="paste-parser-input"
                 placeholder="Paste your network data here (ARP tables, DHCP leases, MAC tables, etc.)"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-50 font-mono text-sm"
               />
             </TabsContent>
 

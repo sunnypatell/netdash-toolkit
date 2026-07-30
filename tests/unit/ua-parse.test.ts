@@ -261,6 +261,117 @@ describe("os version precision", () => {
   })
 })
 
+// real UAs, all of which were previously misclassified
+describe("bot detection against real strings", () => {
+  const HUMANS = {
+    // these four share a token with their company's link-preview fetcher
+    pinterestInApp:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/21E236 [Pinterest/iOS]",
+    whatsappInApp:
+      "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36 WhatsApp/2.24.5.78",
+    naverInApp:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 NAVER(inapp; search; 2000; 12.9.4)",
+    sogouMobile:
+      "Mozilla/5.0 (Linux; Android 13; V2166A) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/114.0.0.0 Mobile Safari/537.36 SogouMSE,SogouMobileBrowser/5.30.4",
+    yahooClient:
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 YahooMobileClient/1.0",
+  }
+
+  it.each(Object.entries(HUMANS))("does not call %s a bot", (_name, ua) => {
+    const report = parseUa(ua)
+    expect(report.isBot).toBe(false)
+    expect(report.device.type).not.toBe("bot")
+    expect(deviceLabel(report)).not.toMatch(/bot/i)
+  })
+
+  const FETCHERS = {
+    pinterestFetcher: "Pinterest/0.2 (+https://www.pinterest.com/bot.html)",
+    whatsappFetcher: "WhatsApp/2.19.81 A",
+    sogouSpider: "Sogou web spider/4.0(+http://www.sogou.com/docs/help/webmasters.htm#07)",
+    iaArchiver: "ia_archiver (+http://www.alexa.com/site/help/webmasters)",
+    // contains Chrome and Mobile and Googlebot all at once
+    googlebotSmartphone:
+      "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.76 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    bingbot: "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+  }
+
+  it.each(Object.entries(FETCHERS))("still calls %s a bot", (_name, ua) => {
+    const report = parseUa(ua)
+    expect(report.isBot).toBe(true)
+    expect(report.device.type).toBe("bot")
+    expect(report.isDesktop).toBe(false)
+    expect(report.isMobile).toBe(false)
+  })
+
+  it("names the crawler rather than the browser it is disguised as", () => {
+    // applebot wears a full safari UA
+    const report = parseUa(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15 (Applebot/0.1; +http://www.apple.com/go/applebot)"
+    )
+    expect(report.isBot).toBe(true)
+    expect(report.browser.name).toMatch(/applebot/i)
+    expect(report.notes.join(" ")).toMatch(/Renders as Safari/)
+  })
+
+  it("does not emit a note that a UA identifies as Mozilla", () => {
+    for (const ua of Object.values(HUMANS)) {
+      expect(parseUa(ua).notes.join(" ")).not.toMatch(/Mozilla/)
+    }
+  })
+
+  // the old \bcrawler?\b read as "crawle" plus an optional r, so a bare "crawl"
+  // token never matched
+  it("detects a bare crawl token as well as crawler", () => {
+    expect(isBotUserAgent("Mozilla/5.0 (compatible; Acme crawl 1.0; +http://acme.test)")).toBe(true)
+    expect(isBotUserAgent("Y!J-BRW/1.0 crawler (http://help.yahoo.co.jp/)")).toBe(true)
+  })
+
+  it("does not sweep in a device model that merely contains bot", () => {
+    expect(
+      isBotUserAgent(
+        "Mozilla/5.0 (Linux; Android 11; CUBOT NOTE 20) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36"
+      )
+    ).toBe(false)
+  })
+})
+
+describe("client hints brand resolution", () => {
+  // the brand list chrome actually sends: "Google Chrome", never "Chrome"
+  const REAL_CHROME_HINTS = {
+    fullVersionList: [
+      { brand: "Not/A)Brand", version: "8.0.0.0" },
+      { brand: "Chromium", version: "125.0.6422.60" },
+      { brand: "Google Chrome", version: "125.0.6422.60" },
+    ],
+  }
+
+  it("keeps calling Chrome Chrome when given the real brand list", () => {
+    const report = parseUa(UA.chromeWin, REAL_CHROME_HINTS)
+    expect(report.browser.name).toBe("Chrome")
+    expect(report.browser.version).toBe("125.0.6422.60")
+  })
+
+  it("does not relabel Chrome as Chromium via applyClientHints either", () => {
+    const report = applyClientHints(parseUa(UA.chromeWin), REAL_CHROME_HINTS)
+    expect(report.browser.name).toBe("Chrome")
+    expect(report.browser.version).toBe("125.0.6422.60")
+  })
+
+  it("keeps Microsoft Edge on its own brand string", () => {
+    const edge =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.2535.51"
+    const report = parseUa(edge, {
+      fullVersionList: [
+        { brand: "Not/A)Brand", version: "8.0.0.0" },
+        { brand: "Chromium", version: "125.0.6422.60" },
+        { brand: "Microsoft Edge", version: "125.0.2535.51" },
+      ],
+    })
+    expect(report.browser.name).toBe("Microsoft Edge")
+    expect(report.browser.version).toBe("125.0.2535.51")
+  })
+})
+
 describe("degenerate input", () => {
   it("empty string does not throw", () => {
     const report = parseUa("")

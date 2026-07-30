@@ -152,6 +152,62 @@ export function expandWrapRanges(expression: string): string {
     .join(" ")
 }
 
+/** the index of a role in whichever field layout this expression uses */
+function roleIndex(parts: string[], role: CronFieldRole): number {
+  const layout = LAYOUTS[parts.length]
+  return layout ? layout.indexOf(role) : -1
+}
+
+const unrestricted = (field: string | undefined) => field === undefined || field === "*"
+
+/**
+ * quartz defines `?` as "no specific value", used in day-of-month or
+ * day-of-week when the restriction lives in the other one. that is exactly what
+ * `*` means to a posix parser, and croner reads a `?` in either day field as
+ * cancelling BOTH of them, so `0 0 ? * 5` fired every day instead of every
+ * friday. rewrite it before the expression reaches the engine.
+ */
+export function normalizeQuestionMarks(expression: string): string {
+  const trimmed = expression.trim().replace(/\s+/g, " ")
+  if (!trimmed || trimmed.startsWith("@")) return trimmed
+  const parts = trimmed.split(" ")
+  if (!LAYOUTS[parts.length]) return trimmed
+  for (const role of ["dayOfMonth", "dayOfWeek"] as const) {
+    const i = roleIndex(parts, role)
+    if (i !== -1 && parts[i] === "?") parts[i] = "*"
+  }
+  return parts.join(" ")
+}
+
+/** wrap-around ranges expanded and `?` resolved, ready for croner */
+export function normalizeCron(expression: string): string {
+  return expandWrapRanges(normalizeQuestionMarks(expression))
+}
+
+/**
+ * posix.1-2017 crontab: when day-of-month and day-of-week are both restricted,
+ * the job runs when EITHER matches. croner mostly does this, but drops the
+ * day-of-month match on 1 March when february had 28 days and the 1st lands on
+ * a weekend (verified for 2025, 2026 and 2031). splitting the expression into
+ * its two halves and merging is the OR the standard describes, and it does not
+ * depend on the engine getting the combined walk right.
+ */
+function splitDayOr(normalized: string): [string, string] | null {
+  if (normalized.startsWith("@")) return null
+  const parts = normalized.split(" ")
+  if (!LAYOUTS[parts.length]) return null
+  const domIndex = roleIndex(parts, "dayOfMonth")
+  const dowIndex = roleIndex(parts, "dayOfWeek")
+  if (domIndex === -1 || dowIndex === -1) return null
+  if (unrestricted(parts[domIndex]) || unrestricted(parts[dowIndex])) return null
+
+  const domOnly = [...parts]
+  domOnly[dowIndex] = "*"
+  const dowOnly = [...parts]
+  dowOnly[domIndex] = "*"
+  return [domOnly.join(" "), dowOnly.join(" ")]
+}
+
 export function cronFields(expression: string): CronField[] {
   const trimmed = expression.trim().replace(/\s+/g, " ")
   if (!trimmed || trimmed.startsWith("@")) return []
@@ -210,8 +266,29 @@ export function nextCronRuns(
     }
   }
   try {
-    const job = new Cron(expandWrapRanges(trimmed), timeZone ? { timezone: timeZone } : {})
-    const dates = job.nextRuns(count, from)
+    const normalized = normalizeCron(trimmed)
+    const options = timeZone ? { timezone: timeZone } : {}
+    const project = (expression: string) => new Cron(expression, options).nextRuns(count, from)
+
+    const halves = splitDayOr(normalized)
+    let dates: Date[]
+    if (halves === null) {
+      dates = project(normalized)
+    } else {
+      // union of the two halves, then the first `count`. taking `count` from
+      // each half guarantees the merged head is the true head of the union.
+      const seen = new Set<number>()
+      dates = [...project(halves[0]), ...project(halves[1])]
+        .filter((date) => {
+          const key = date.getTime()
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        .sort((a, b) => a.getTime() - b.getTime())
+        .slice(0, count)
+    }
+
     if (dates.length === 0) {
       return { runs: [], error: "This expression matches no future date" }
     }
@@ -243,7 +320,7 @@ export function analyzeCron(
     runs,
     runsError: valid ? runsError : null,
     timeZone: options.timeZone ?? "UTC",
-    normalized: expandWrapRanges(trimmed),
+    normalized: normalizeCron(trimmed),
   }
 }
 

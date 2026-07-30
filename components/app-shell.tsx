@@ -44,7 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* skip link for keyboard navigation (wcag 2.4.1) */}
       <a
         href="#main-content"
-        className="bg-primary text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+        className="bg-primary text-primary-foreground focus:ring-ring focus:ring-offset-background sr-only text-sm font-medium focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:ring-2 focus:ring-offset-2 focus:outline-none"
       >
         Skip to main content
       </a>
@@ -74,12 +74,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </DialogPrimitive.Root>
       )}
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
-        <main id="main-content" className="flex-1 overflow-auto" tabIndex={-1}>
-          <div className="p-3 sm:p-4 lg:p-6">{children}</div>
+        {/* the scroll container is the wrapper, not <main>: a <footer> nested in
+            <main> gets no contentinfo landmark, so the site footer was invisible
+            to landmark navigation */}
+        <div className="scrollbar-slim flex-1 overflow-auto">
+          <main
+            id="main-content"
+            className="mx-auto w-full max-w-350 px-3 py-4 sm:px-6 sm:py-6 lg:px-8"
+            tabIndex={-1}
+          >
+            {children}
+          </main>
           <Footer />
-        </main>
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,18 +41,41 @@ const PRESETS = [
 ]
 
 export function CronParser() {
-  const [expression, setExpression] = useState("0 9 * * 1-5")
-  const [timeZone, setTimeZone] = useState("UTC")
+  // the expression and the zone are the whole input, so they live in the query
+  // string: a projected schedule is then a link someone else can open
+  const [query, setQuery] = useQueryStates(
+    {
+      cron: parseAsString.withDefault("0 9 * * 1-5"),
+      tz: parseAsString.withDefault(""),
+    },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
+
+  const expression = query.cron
+  const setExpression = (value: string) => void setQuery({ cron: value })
+
+  // an unset tz means "this browser", resolved on the client only: reading it
+  // during ssr render would bake one visitor's zone into the static html
+  const [browserZone, setBrowserZone] = useState("UTC")
   // next-run projection depends on "now", so it must not run during ssr render
   const [from, setFrom] = useState<Date | null>(null)
 
+  // sc 2.2.2: the projection re-bases itself every 30s, so it needs a stop
+  const [paused, setPaused] = useState(false)
+
   useEffect(() => {
-    setTimeZone(localTimeZone())
+    setBrowserZone(localTimeZone())
     setFrom(new Date())
-    const interval = setInterval(() => setFrom(new Date()), 30000)
-    return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    if (paused) return
+    const interval = setInterval(() => setFrom(new Date()), 30000)
+    return () => clearInterval(interval)
+  }, [paused])
+
+  const timeZone = query.tz || browserZone
   const zones = useMemo(() => listTimeZones(), [])
 
   const result = useMemo(
@@ -106,7 +130,7 @@ export function CronParser() {
                 <Globe className="h-4 w-4" />
                 Timezone
               </Label>
-              <Select value={timeZone} onValueChange={setTimeZone}>
+              <Select value={timeZone} onValueChange={(v) => setQuery({ tz: v })}>
                 <SelectTrigger id="cron-tz" className="w-full font-mono">
                   <SelectValue />
                 </SelectTrigger>
@@ -199,8 +223,8 @@ export function CronParser() {
 
             {result.normalized !== trimmed && result.valid && (
               <p className="text-muted-foreground text-xs">
-                Wrap-around range expanded for scheduling:{" "}
-                <code className="font-mono">{result.normalized}</code>
+                Normalized for scheduling (wrap-around ranges expanded, <code>?</code> resolved to{" "}
+                <code>*</code>): <code className="font-mono">{result.normalized}</code>
               </p>
             )}
           </CardContent>

@@ -74,6 +74,50 @@ describe("runRegexMatch", () => {
     expect(result.total).toBe(0)
   })
 
+  // the empty-pattern case above returns before the loop, so it never proved the
+  // advance works. these do, by agreeing with String.prototype.matchAll, which
+  // uses the spec's own AdvanceStringIndex.
+  it.each([
+    ["(?:)", "g", "abc"],
+    ["(?:)", "gu", "abc"],
+    ["a*", "g", "bbb"],
+    ["x*", "gu", "abc"],
+  ])("matches /%s/%s on %s exactly where matchAll does", (pattern, flags, input) => {
+    const result = run(pattern, flags, input)
+    expect(result.deadlineHit).toBe(false)
+    expect(result.matches.map((m) => m.index)).toEqual(
+      [...input.matchAll(new RegExp(pattern, flags))].map((m) => m.index)
+    )
+  })
+
+  // under u/v, exec snaps lastIndex back to the start of the code point, so the
+  // old bare +1 landed inside a surrogate pair, was undone, and looped forever
+  // on any astral character until the 1s deadline saved the tab.
+  it.each([
+    ["(?:)", "gu", "😀😀"],
+    ["(?:)", "gv", "😀😀"],
+    ["(?:)", "gu", "a😀b🎉c"],
+    ["x*", "gu", "😀x😀"],
+    ["a*", "gu", "b😀b"],
+  ])("terminates on a zero-length /%s/%s over %s", (pattern, flags, input) => {
+    const result = run(pattern, flags, input)
+    expect(result.deadlineHit).toBe(false)
+    expect(result.error).toBeNull()
+    expect(result.matches.map((m) => m.index)).toEqual(
+      [...input.matchAll(new RegExp(pattern, flags))].map((m) => m.index)
+    )
+  })
+
+  it("never reports a match index inside a surrogate pair under the u flag", () => {
+    const input = "😀😀"
+    const result = run("(?:)", "gu", input)
+    for (const match of result.matches) {
+      const code = input.charCodeAt(match.index)
+      const isTrailSurrogate = code >= 0xdc00 && code <= 0xdfff
+      expect(isTrailSurrogate, `index ${match.index} splits a surrogate pair`).toBe(false)
+    }
+  })
+
   it("does not throw on an invalid pattern", () => {
     const result = run("(unclosed", "g", "x")
     expect(result.error).toBeTruthy()

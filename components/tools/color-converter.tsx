@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -55,6 +56,9 @@ const EXAMPLES = [
   "color(display-p3 0.3 0.5 0.93)",
 ]
 
+const INVALID_COLOR_MESSAGE =
+  "Not a colour this parser recognises. Try #fff, #rrggbbaa, a CSS name, or rgb()/hsl()/hwb()/lab()/lch()/oklab()/oklch()."
+
 function PassFail({ label, pass, threshold }: { label: string; pass: boolean; threshold: string }) {
   return (
     <div className="flex items-center justify-between rounded border px-2 py-1.5 text-xs">
@@ -102,16 +106,31 @@ function ContrastPanel({
   )
 }
 
+const FALLBACK: Color = { mode: "rgb", r: 0, g: 0, b: 0 }
+
 export function ColorConverter() {
-  // the authoritative colour keeps whatever mode the user last edited in. deriving
-  // hsl from rounded rgb on every change is what snapped hue back to 0 whenever
-  // saturation or lightness sat at an extreme.
-  const [source, setSource] = useState<Color>(
-    () => parseColor("#3b82f6") ?? { mode: "rgb", r: 0, g: 0, b: 0 }
+  // a colour and a background are short and never sensitive, so both live in the
+  // query string and any result here is a shareable link
+  const [{ c: text, bg: bgText }, setQuery] = useQueryStates(
+    {
+      c: parseAsString.withDefault("#3b82f6"),
+      bg: parseAsString.withDefault("#0f172a"),
+    },
+    { history: "replace" }
   )
-  const [text, setText] = useState("#3b82f6")
-  const [textError, setTextError] = useState<string | null>(null)
-  const [bgText, setBgText] = useState("#0f172a")
+
+  const parsedText = useMemo(() => parseColor(text), [text])
+  // the last colour that parsed, so a half-typed "rgb(" does not blank the swatch
+  const [lastValid, setLastValid] = useState<Color>(() => parseColor("#3b82f6") ?? FALLBACK)
+  useEffect(() => {
+    if (parsedText) setLastValid(parsedText)
+  }, [parsedText])
+
+  // the authoritative colour keeps whatever space the user last edited in: every
+  // slider writes its own notation back to the url, so hue survives s=0 and
+  // l=0/100 instead of snapping to 0 through a round trip via rgb
+  const source = parsedText ?? lastValid
+  const textError = text.trim() && !parsedText ? INVALID_COLOR_MESSAGE : null
 
   const alpha = alphaOf(source)
   const strings = useMemo(() => toStrings(source), [source])
@@ -124,65 +143,52 @@ export function ColorConverter() {
   const preview = useMemo(() => cssPreview(source), [source])
 
   const customBg = useMemo(() => parseColor(bgText), [bgText])
+  // the colour itself, not strings.hex: the hex drops alpha, so a 50% swatch was
+  // being measured as if it were opaque and reported 21:1 against white
   const contrast = useMemo(
     () => ({
-      white: contrastCheck(strings.hex, "#ffffff"),
-      black: contrastCheck(strings.hex, "#000000"),
-      custom: customBg ? contrastCheck(strings.hex, customBg) : null,
+      white: contrastCheck(source, "#ffffff"),
+      black: contrastCheck(source, "#000000"),
+      custom: customBg ? contrastCheck(source, customBg) : null,
     }),
-    [strings.hex, customBg]
+    [source, customBg]
   )
 
-  const commit = (next: Color, syncText = true) => {
-    setSource(next)
-    if (syncText) {
-      setText(toStrings(next).hex)
-      setTextError(null)
-    }
+  // each space writes back in its own notation, which is what keeps a hue of 210
+  // from collapsing to 0 the moment saturation hits zero
+  const commit = (next: Color, notation: keyof typeof strings = "hex") => {
+    void setQuery({ c: toStrings(next)[notation] })
   }
 
-  const handleText = (value: string) => {
-    setText(value)
-    if (!value.trim()) {
-      setTextError(null)
-      return
-    }
-    const parsed = parseColor(value)
-    if (parsed) {
-      setSource(parsed)
-      setTextError(null)
-    } else {
-      setTextError(
-        "Not a colour this parser recognises. Try #fff, #rrggbbaa, a CSS name, or rgb()/hsl()/hwb()/lab()/lch()/oklab()/oklch()."
-      )
-    }
-  }
+  const handleText = (value: string) => void setQuery({ c: value })
 
   const withAlpha = (color: Color): Color => (alpha < 1 ? { ...color, alpha } : color)
 
   const setRgb = (channel: "r" | "g" | "b", value: number) => {
     const next = { ...rgb, [channel]: value }
-    commit(withAlpha({ mode: "rgb", r: next.r / 255, g: next.g / 255, b: next.b / 255 }))
+    commit(
+      withAlpha({ mode: "rgb", r: next.r / 255, g: next.g / 255, b: next.b / 255 }),
+      alpha < 1 ? "rgb" : "hex"
+    )
   }
 
   const setHsl = (channel: "h" | "s" | "l", value: number) => {
     const next = { ...hsl, [channel]: value }
-    // written straight into state as hsl, so hue survives s=0 and l=0/100
-    commit(withAlpha({ mode: "hsl", h: next.h, s: next.s / 100, l: next.l / 100 }))
+    commit(withAlpha({ mode: "hsl", h: next.h, s: next.s / 100, l: next.l / 100 }), "hsl")
   }
 
   const setOklch = (channel: "l" | "c" | "h", value: number) => {
     const next = { ...oklch, [channel]: value }
-    commit(withAlpha({ mode: "oklch", l: next.l, c: next.c, h: next.h }))
+    commit(withAlpha({ mode: "oklch", l: next.l, c: next.c, h: next.h }), "oklch")
   }
 
   const setCmyk = (channel: keyof Cmyk, value: number) => {
     const next: Cmyk = { ...cmyk, [channel]: Math.min(100, Math.max(0, value)) }
-    commit(cmykToRgb(next, alpha))
+    commit(cmykToRgb(next, alpha), alpha < 1 ? "rgb" : "hex")
   }
 
   const setAlpha = (value: number) => {
-    commit({ ...source, alpha: value / 100 }, false)
+    commit({ ...source, alpha: value / 100 }, value >= 100 ? "hex" : "rgb")
   }
 
   return (
@@ -288,7 +294,7 @@ export function ColorConverter() {
                   <button
                     key={e}
                     onClick={() => handleText(e)}
-                    className="hover:bg-muted/50 rounded border px-1.5 py-0.5 font-mono text-[10px]"
+                    className="hover:bg-muted/50 rounded border px-1.5 py-0.5 font-mono text-[0.625rem]"
                   >
                     {e}
                   </button>
@@ -442,6 +448,12 @@ export function ColorConverter() {
           <CardDescription>
             This color as text on a background. Large text means 18.66px bold or 24px regular.
           </CardDescription>
+          {contrast.white.composited && (
+            <p className="text-muted-foreground text-xs">
+              Alpha is {Math.round(alpha * 100)}%, so each ratio is measured on the composite that
+              actually gets painted. WCAG 2.2 1.4.3 rates the rendered text, not the source color.
+            </p>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -454,7 +466,7 @@ export function ColorConverter() {
               <Input
                 id="bg-input"
                 value={bgText}
-                onChange={(e) => setBgText(e.target.value)}
+                onChange={(e) => setQuery({ bg: e.target.value })}
                 placeholder="#0f172a"
                 className="font-mono"
                 aria-invalid={customBg === null}

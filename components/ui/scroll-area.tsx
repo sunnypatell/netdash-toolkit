@@ -16,8 +16,12 @@ function ScrollArea({
       className={cn("relative", className)}
       {...props}
     >
+      {/* tabIndex: a scroll region that is not focusable cannot be scrolled by
+          keyboard at all, so any content past the fold is unreachable (2.1.1).
+          it also gives the focus-visible ring below something to paint on. */}
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
+        tabIndex={0}
         className="focus-visible:ring-ring size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
       >
         {children}

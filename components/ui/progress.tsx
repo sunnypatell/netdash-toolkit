@@ -9,8 +9,12 @@ const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
 >(({ className, value, ...props }, ref) => (
+  // value has to reach Root, not just the indicator transform: radix derives
+  // aria-valuenow and data-state from it, so withholding it left every progress
+  // bar permanently indeterminate
   <ProgressPrimitive.Root
     ref={ref}
+    value={value}
     className={cn("bg-primary/20 relative h-2 w-full overflow-hidden rounded-full", className)}
     {...props}
   >

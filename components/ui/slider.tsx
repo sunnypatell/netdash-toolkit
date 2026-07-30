@@ -11,7 +11,9 @@ const Slider = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
-    className={cn("relative flex w-full touch-none items-center select-none", className)}
+    // min-h-6: radix binds pointerdown on the root, so the root is the target
+    // 2.5.8 measures. a 20px thumb would otherwise make it 20px tall.
+    className={cn("relative flex min-h-6 w-full touch-none items-center select-none", className)}
     {...props}
   >
     <SliderPrimitive.Track className="bg-secondary relative h-2 w-full grow overflow-hidden rounded-full">
@@ -23,7 +25,7 @@ const Slider = React.forwardRef<
     <SliderPrimitive.Thumb
       aria-label={props["aria-label"]}
       aria-labelledby={props["aria-labelledby"]}
-      className="border-primary bg-background ring-offset-background focus-visible:ring-ring block h-5 w-5 rounded-full border-2 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+      className="border-primary bg-background ring-offset-background focus-visible:ring-ring relative block h-5 w-5 rounded-full border-2 transition-colors before:absolute before:-inset-0.5 before:rounded-full focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
     />
   </SliderPrimitive.Root>
 ))

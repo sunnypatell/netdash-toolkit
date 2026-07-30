@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -81,14 +82,24 @@ const SAMPLES = [
 ]
 
 export function UserAgentParser() {
-  const [userAgent, setUserAgent] = useState("")
+  // a UA string is ~150 characters and is not a secret, so it goes in the url:
+  // "here is what this crawler sends" is the whole point of sharing this tool
+  const [{ ua: queryUa }, setQuery] = useQueryStates(
+    { ua: parseAsString.withDefault("") },
+    { history: "replace" }
+  )
+
+  // the live UA is only a fallback for an empty url, so it is never written back
+  const [liveUa, setLiveUa] = useState("")
   const [hints, setHints] = useState<UaClientHints | null>(null)
   const [hintsChecked, setHintsChecked] = useState(false)
-  const [isLiveUa, setIsLiveUa] = useState(true)
+
+  const userAgent = queryUa || liveUa
+  const isLiveUa = queryUa === ""
 
   useEffect(() => {
     if (typeof navigator === "undefined") return
-    setUserAgent(navigator.userAgent)
+    setLiveUa(navigator.userAgent)
     void readClientHints().then((value) => {
       setHints(value)
       setHintsChecked(true)
@@ -103,10 +114,7 @@ export function UserAgentParser() {
   )
   const hasInput = userAgent.trim().length > 0
 
-  const setUa = (value: string, live = false) => {
-    setUserAgent(value)
-    setIsLiveUa(live)
-  }
+  const setUa = (value: string) => void setQuery({ ua: value })
 
   const copyToClipboard = useCallback(async (text: string) => {
     if (await copyText(text)) {
@@ -116,9 +124,8 @@ export function UserAgentParser() {
     }
   }, [])
 
-  const loadCurrentUA = () => {
-    if (typeof navigator !== "undefined") setUa(navigator.userAgent, true)
-  }
+  // clearing the param is what selects the live UA, so hints apply again
+  const loadCurrentUA = () => void setQuery({ ua: null })
 
   const DeviceIcon =
     parsed.device.type === "bot"

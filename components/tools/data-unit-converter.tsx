@@ -1,153 +1,187 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { HardDrive } from "lucide-react"
+import { HardDrive, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-import { SI_BYTE_UNITS, IEC_BYTE_UNITS } from "@/lib/format"
+import {
+  BINARY_UNITS,
+  DATA_UNITS,
+  DECIMAL_UNITS,
+  DEFAULT_UNIT_ID,
+  convertAll,
+  exactString,
+  findUnit,
+  type Conversion,
+  type DataUnit,
+} from "@/lib/data-units"
 
-interface UnitInfo {
-  label: string
-  fullName: string
-  bits: number
+const PRESETS = [
+  { value: "100", unit: "MB" },
+  { value: "1", unit: "GB" },
+  { value: "4.7", unit: "GB" },
+  { value: "1", unit: "GiB" },
+  { value: "100", unit: "Mbit" },
+  { value: "1", unit: "Gbit" },
+]
+
+function ResultRow({ result }: { result: Conversion }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
+      <div className="min-w-0">
+        <span className="font-mono font-medium break-all">{result.display}</span>
+        <span className="text-muted-foreground ml-2 font-mono text-sm">{result.unit.symbol}</span>
+        <p className="text-muted-foreground text-xs">{result.unit.name}</p>
+      </div>
+      <CopyButton value={exactString(result.value)} size="sm" />
+    </div>
+  )
 }
 
-const BIT_LABELS = ["b", "kb", "Mb", "Gb", "Tb", "Pb"]
-const BIT_NAMES = ["Bits", "Kilobits", "Megabits", "Gigabits", "Terabits", "Petabits"]
-const SI_BYTE_NAMES = ["Bytes", "Kilobytes", "Megabytes", "Gigabytes", "Terabytes", "Petabytes"]
-const IEC_BYTE_NAMES = ["Bytes", "Kibibytes", "Mebibytes", "Gibibytes", "Tebibytes", "Pebibytes"]
-
-// labels come from lib/format so the SI/IEC split stays identical everywhere.
-// decimal: bit and byte rungs interleaved so kb/kB sit next to each other.
-const DECIMAL_UNITS: UnitInfo[] = SI_BYTE_UNITS.flatMap((byteLabel, i) => [
-  { label: BIT_LABELS[i], fullName: BIT_NAMES[i], bits: 1000 ** i },
-  { label: byteLabel, fullName: SI_BYTE_NAMES[i], bits: 8 * 1000 ** i },
-])
-
-const BINARY_UNITS: UnitInfo[] = IEC_BYTE_UNITS.slice(1).map((label, i) => ({
-  label,
-  fullName: IEC_BYTE_NAMES[i + 1],
-  bits: 8 * 1024 ** (i + 1),
-}))
-
-const ALL_UNITS = [...DECIMAL_UNITS, ...BINARY_UNITS]
+function ResultGrid({
+  units,
+  results,
+  className,
+}: {
+  units: DataUnit[]
+  results: Map<string, Conversion>
+  className: string
+}) {
+  return (
+    <div className={className}>
+      {units.map((unit) => {
+        const result = results.get(unit.id)
+        return result ? <ResultRow key={unit.id} result={result} /> : null
+      })}
+    </div>
+  )
+}
 
 export function DataUnitConverter() {
-  const [value, setValue] = useState("100")
-  const [unit, setUnit] = useState("MB")
+  const [query, setQuery] = useQueryStates(
+    {
+      value: parseAsString.withDefault("100"),
+      unit: parseAsString.withDefault(DEFAULT_UNIT_ID),
+    },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
 
+  const { value, unit } = query
+  const selected = findUnit(unit)
+
+  // a unit conversion is a pure function of a value and a unit, so there is
+  // nothing for a Convert button to do that typing has not already done
   const conversions = useMemo(() => {
-    const num = parseFloat(value)
-    const selected = ALL_UNITS.find((u) => u.label === unit)
-    if (isNaN(num) || num < 0 || !selected) return null
-
-    const bits = num * selected.bits
-
-    return new Map(
-      ALL_UNITS.map((info) => {
-        const converted = bits / info.bits
-        return [
-          info.label,
-          {
-            value: converted,
-            display:
-              converted >= 0.01
-                ? converted.toLocaleString(undefined, { maximumFractionDigits: 4 })
-                : converted.toExponential(2),
-          },
-        ]
-      })
-    )
+    const results = convertAll(Number.parseFloat(value), unit)
+    return results === null ? null : new Map(results.map((r) => [r.unit.id, r]))
   }, [value, unit])
 
-  const ResultRow = ({ info }: { info: UnitInfo }) => {
-    const result = conversions?.get(info.label)
-    if (!result) return null
-    return (
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <span className="font-mono font-medium">{result.display}</span>
-          <span className="text-muted-foreground ml-2 text-sm">{info.label}</span>
-          <p className="text-muted-foreground text-xs">{info.fullName}</p>
-        </div>
-        <CopyButton value={result.value.toString()} size="sm" />
-      </div>
-    )
-  }
+  const error =
+    value.trim() === ""
+      ? ""
+      : selected === null
+        ? `"${unit}" is not a unit this converter knows`
+        : conversions === null
+          ? "Enter a value of zero or more"
+          : ""
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={HardDrive}
         title="Data Unit Converter"
-        description="Convert between bits, bytes, and all data size units"
+        description="Convert between bits and bytes across decimal (SI) and binary (IEC) multiples"
       />
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Input</CardTitle>
-            <CardDescription>Enter a value to convert</CardDescription>
+            <CardDescription>Every other unit follows as you type</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="value">Value</Label>
+            <div className="space-y-2">
+              <Label htmlFor="data-value">Value</Label>
               <Input
-                id="value"
+                id="data-value"
                 type="number"
+                inputMode="decimal"
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={(e) => setQuery({ value: e.target.value })}
                 min={0}
+                step="any"
                 className="font-mono"
+                aria-invalid={error !== ""}
               />
             </div>
-            <div>
-              <Label htmlFor="unit">Unit</Label>
-              <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger id="unit">
+            <div className="space-y-2">
+              <Label htmlFor="data-unit">Unit</Label>
+              <Select value={unit} onValueChange={(v) => setQuery({ unit: v })}>
+                <SelectTrigger id="data-unit" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  {ALL_UNITS.map((info) => (
-                    <SelectItem key={info.label} value={info.label}>
-                      {info.fullName} ({info.label})
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-80">
+                  <SelectGroup>
+                    <SelectLabel>Decimal (SI, powers of 1000)</SelectLabel>
+                    {DECIMAL_UNITS.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Binary (IEC, powers of 1024)</SelectLabel>
+                    {BINARY_UNITS.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.symbol})
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
+              {selected && (
+                <p className="text-muted-foreground text-xs">
+                  1 {selected.symbol} ={" "}
+                  {selected.bits.toLocaleString("en-US", { maximumFractionDigits: 0 })} bit
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 pt-2">
-              <p className="text-muted-foreground text-xs">Quick Values</p>
+              <p className="text-muted-foreground text-xs">Quick values</p>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { v: "100", u: "MB" },
-                  { v: "1", u: "GB" },
-                  { v: "4.7", u: "GB" },
-                  { v: "100", u: "Mb" },
-                ].map((preset, i) => (
-                  <Badge
-                    key={i}
+                {PRESETS.map((preset) => (
+                  <Button
+                    key={`${preset.value}-${preset.unit}`}
                     variant="outline"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      setValue(preset.v)
-                      setUnit(preset.u)
-                    }}
+                    size="sm"
+                    className="font-mono"
+                    onClick={() => setQuery({ value: preset.value, unit: preset.unit })}
                   >
-                    {preset.v} {preset.u}
-                  </Badge>
+                    {preset.value} {preset.unit}
+                  </Button>
                 ))}
               </div>
             </div>
@@ -156,16 +190,19 @@ export function DataUnitConverter() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Decimal Units (SI)</CardTitle>
-            <CardDescription>Base 10 units (1 kB = 1000 bytes)</CardDescription>
+            <CardTitle>Decimal multiples (SI)</CardTitle>
+            <CardDescription>
+              Powers of 1000, per IEC 80000-13. 1 kB = 1000 B, 1 kbit = 1000 bit. Network rates and
+              drive capacities are quoted this way.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {conversions ? (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {DECIMAL_UNITS.map((info) => (
-                  <ResultRow key={info.label} info={info} />
-                ))}
-              </div>
+              <ResultGrid
+                units={DECIMAL_UNITS}
+                results={conversions}
+                className="grid grid-cols-1 gap-2 md:grid-cols-2"
+              />
             ) : (
               <p className="text-muted-foreground py-8 text-center">Enter a valid value</p>
             )}
@@ -175,16 +212,19 @@ export function DataUnitConverter() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Binary Units (IEC)</CardTitle>
-          <CardDescription>Base 2 units (1 KiB = 1024 bytes)</CardDescription>
+          <CardTitle>Binary multiples (IEC)</CardTitle>
+          <CardDescription>
+            Powers of 1024. 1 KiB = 1024 B, 1 Kibit = 1024 bit. RAM sizes and most operating system
+            file managers report these.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {conversions ? (
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-3 lg:grid-cols-5">
-              {BINARY_UNITS.map((info) => (
-                <ResultRow key={info.label} info={info} />
-              ))}
-            </div>
+            <ResultGrid
+              units={BINARY_UNITS}
+              results={conversions}
+              className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5"
+            />
           ) : (
             <p className="text-muted-foreground py-8 text-center">
               Enter a valid value to see binary units
@@ -195,24 +235,64 @@ export function DataUnitConverter() {
 
       <Card>
         <CardHeader>
-          <CardTitle>SI vs IEC Units</CardTitle>
+          <CardTitle>Why MB and MiB are different numbers</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <h4 className="font-semibold">Decimal (SI)</h4>
-              <p className="text-muted-foreground text-sm">
-                Used by network speeds and storage manufacturers. 1 kB = 1,000 bytes, 1 MB =
-                1,000,000 bytes.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold">Binary (IEC)</h4>
-              <p className="text-muted-foreground text-sm">
-                Used by operating systems and RAM. 1 KiB = 1,024 bytes, 1 MiB = 1,048,576 bytes.
-              </p>
-            </div>
+        <CardContent className="space-y-4">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              A megabyte is 1,000,000 bytes and a mebibyte is 1,048,576 bytes: a 4.9% gap that
+              becomes 12.6% at the tebi scale. The bit units are spelled <code>kbit</code> and{" "}
+              <code>Kibit</code> rather than <code>kb</code>, because <code>kb</code> and{" "}
+              <code>kB</code> differ only by case and an eight-fold error is easy to miss.
+            </AlertDescription>
+          </Alert>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th scope="col" className="p-2 text-left font-medium">
+                    Prefix
+                  </th>
+                  <th scope="col" className="p-2 text-left font-medium">
+                    Decimal (SI)
+                  </th>
+                  <th scope="col" className="p-2 text-left font-medium">
+                    Binary (IEC)
+                  </th>
+                  <th scope="col" className="p-2 text-left font-medium">
+                    Difference
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5].map((exp) => {
+                  const dec = 1000 ** exp
+                  const bin = 1024 ** exp
+                  const symbols = ["k", "M", "G", "T", "P"]
+                  const iec = ["Ki", "Mi", "Gi", "Ti", "Pi"]
+                  return (
+                    <tr key={exp} className="border-b">
+                      <td className="p-2 font-medium">
+                        {symbols[exp - 1]} / {iec[exp - 1]}
+                      </td>
+                      <td className="p-2 font-mono">
+                        1 {symbols[exp - 1]}B = {dec.toLocaleString("en-US")} B
+                      </td>
+                      <td className="p-2 font-mono">
+                        1 {iec[exp - 1]}B = {bin.toLocaleString("en-US")} B
+                      </td>
+                      <td className="p-2 font-mono">+{(((bin - dec) / dec) * 100).toFixed(1)}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
+          <p className="text-muted-foreground text-xs">
+            {DATA_UNITS.length} units, every factor exact: the largest, PiB, is 2^53 bits, which is
+            the last integer a double represents without rounding.
+          </p>
         </CardContent>
       </Card>
     </div>

@@ -6,6 +6,7 @@ import {
   expandWrapRanges,
   formatRelativeMs,
   nextCronRuns,
+  normalizeQuestionMarks,
 } from "@/lib/cron"
 
 // the old hand-rolled parser stepped one minute at a time for 1000 iterations,
@@ -232,5 +233,81 @@ describe("formatRelativeMs", () => {
     expect(formatRelativeMs(90000)).toBe("in 1m 30s")
     expect(formatRelativeMs(90061000)).toBe("in 1d 1h")
     expect(formatRelativeMs(-3600000)).toBe("1h 0m ago")
+  })
+})
+
+// two engine-level defects found by brute-forcing real time against the posix
+// rules rather than by reading croner's answer back. both produced a silently
+// wrong schedule: no error, no warning, just a job that never runs.
+
+describe("? means no specific value in one day field, not both", () => {
+  const from = new Date("2026-02-01T00:00:00Z")
+  const days = (expression: string, count: number) =>
+    nextCronRuns(expression, { timeZone: "UTC", count, from }).runs.map((r) =>
+      r.date.toISOString().slice(0, 10)
+    )
+
+  it("rewrites ? to * so the other day field still restricts", () => {
+    // quartz defines ? as "no specific value" for exactly this pairing. croner
+    // read a ? in either day field as cancelling both, so a friday-only job
+    // fired every day of the week.
+    expect(normalizeQuestionMarks("0 0 ? * 5")).toBe("0 0 * * 5")
+    expect(normalizeQuestionMarks("0 0 13 * ?")).toBe("0 0 13 * *")
+    expect(normalizeQuestionMarks("0 0 0 ? * 5")).toBe("0 0 0 * * 5")
+    expect(normalizeQuestionMarks("@daily")).toBe("@daily")
+  })
+
+  it("fires only on fridays for 0 0 ? * 5", () => {
+    expect(days("0 0 ? * 5", 4)).toEqual(["2026-02-06", "2026-02-13", "2026-02-20", "2026-02-27"])
+  })
+
+  it("fires only on the 13th for 0 0 13 * ?", () => {
+    expect(days("0 0 13 * ?", 3)).toEqual(["2026-02-13", "2026-03-13", "2026-04-13"])
+  })
+})
+
+describe("the dom/dow OR does not drop a day", () => {
+  const firstOfMonth = (expression: string, year: number, month: number) => {
+    const first = new Date(Date.UTC(year, month, 1))
+    const from = new Date(first.getTime() - 3 * 86400000)
+    return nextCronRuns(expression, { timeZone: "UTC", count: 6, from }).runs.map((r) =>
+      r.date.toISOString().slice(0, 10)
+    )
+  }
+
+  it("still fires on 1 March when february had 28 days and the 1st is a weekend", () => {
+    // croner omitted this run outright for 2025, 2026 and 2031. the expression
+    // means "the 1st of the month, or any monday", so 1 march must be in it.
+    for (const year of [2025, 2026, 2031]) {
+      expect(firstOfMonth("0 0 1 * 1", year, 2), `${year}-03-01`).toContain(`${year}-03-01`)
+    }
+  })
+
+  it("never drops a first-of-month across nine years", () => {
+    for (let year = 2024; year <= 2032; year++) {
+      for (let month = 0; month < 12; month++) {
+        const iso = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10)
+        expect(firstOfMonth("0 0 1 * 1", year, month), iso).toContain(iso)
+      }
+    }
+  })
+
+  it("keeps the OR when one half is a quartz extension", () => {
+    const days = nextCronRuns("0 0 L * 1", {
+      timeZone: "UTC",
+      count: 8,
+      from: new Date("2026-02-01T12:00:00Z"),
+    }).runs.map((r) => r.date.toISOString().slice(0, 10))
+    expect(days).toContain("2026-02-28") // last day of february
+    expect(days).toContain("2026-02-02") // a monday
+  })
+
+  it("leaves a single-restriction expression on the plain engine path", () => {
+    const only13th = nextCronRuns("0 0 13 * *", {
+      timeZone: "UTC",
+      count: 3,
+      from: new Date("2026-02-01T00:00:00Z"),
+    }).runs.map((r) => r.date.toISOString().slice(0, 10))
+    expect(only13th).toEqual(["2026-02-13", "2026-03-13", "2026-04-13"])
   })
 })

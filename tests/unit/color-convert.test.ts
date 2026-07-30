@@ -126,7 +126,8 @@ describe("output strings", () => {
     expect(strings.hex).toBe("#3b82f6")
     expect(strings.hex8).toBe("#3b82f6ff")
     expect(strings.rgb).toBe("rgb(59 130 246)")
-    expect(strings.hsl).toMatch(/^hsl\(217 91% 60%\)$/)
+    // 2dp, not integers: see the round-trip fidelity test below
+    expect(strings.hsl).toBe("hsl(217.22 91.22% 59.8%)")
     expect(strings.hwb).toMatch(/^hwb\(/)
     expect(strings.lab).toMatch(/^lab\(/)
     expect(strings.lch).toMatch(/^lch\(/)
@@ -214,6 +215,79 @@ describe("wcag contrast", () => {
       contrastCheck("#fedcba", "#123456").ratio,
       10
     )
+  })
+
+  // 1.4.3 measures the text as rendered, so alpha has to be composited first.
+  // ignoring it reported 50% black on white as 21:1, a wrong pass.
+  it("composites a translucent foreground instead of reading it as opaque", () => {
+    const half = contrastCheck("rgb(0 0 0 / 0.5)", "#ffffff")
+    expect(half.composited).toBe(true)
+    // 50% black over white is #808080, which is a little under 4:1
+    expect(half.ratio).toBeCloseTo(contrastCheck("#808080", "#ffffff").ratio, 1)
+    expect(half.ratio).toBeLessThan(5)
+    expect(half.aaNormal).toBe(false)
+  })
+
+  it("treats a fully transparent foreground as the background, not as black", () => {
+    expect(contrastCheck("#00000000", "#ffffff").ratio).toBeCloseTo(1, 5)
+  })
+
+  it("flattens a translucent background over white rather than ignoring its alpha", () => {
+    const check = contrastCheck("#000000", "rgb(255 255 255 / 0.5)")
+    expect(check.composited).toBe(true)
+    expect(check.ratio).toBeCloseTo(21, 5)
+  })
+
+  it("marks an opaque pair as not composited", () => {
+    expect(contrastCheck("#000000", "#ffffff").composited).toBe(false)
+  })
+
+  // it used to throw a TypeError out of culori on anything unparsable
+  it("returns NaN and fails every threshold for input it cannot parse", () => {
+    for (const bad of ["notacolour", "", "#ff", "rgb(", "oklch(nope)"]) {
+      const check = contrastCheck(bad, "#ffffff")
+      expect(Number.isNaN(check.ratio)).toBe(true)
+      expect(check.aaNormal).toBe(false)
+      expect(check.aaLarge).toBe(false)
+      expect(check.uiComponent).toBe(false)
+    }
+  })
+
+  // the ratio has to describe the swatch that gets painted, and a wide-gamut
+  // colour is painted gamut-mapped
+  it("gamut-maps a wide-gamut colour before measuring it", () => {
+    const check = contrastCheck("oklch(0.7 0.35 150)", "#ffffff")
+    expect(Number.isFinite(check.ratio)).toBe(true)
+    expect(check.ratio).toBeGreaterThan(1)
+  })
+})
+
+describe("hsl output fidelity", () => {
+  // integer hsl() addresses ~4.9e5 states against 16.7M sRGB colours, so a
+  // copied hsl(217 91% 60%) used to re-parse up to 5/255 away from its source
+  it("round-trips a copied hsl string to within one 8-bit step", () => {
+    let worst = 0
+    let worstCase = ""
+    for (let r = 0; r < 256; r += 7) {
+      for (let g = 0; g < 256; g += 7) {
+        for (let b = 0; b < 256; b += 7) {
+          const hex = `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`
+          const back = parsed(toStrings(parsed(hex)).hsl)
+          const backHex = toStrings(back).hex
+          const channels = [1, 3, 5].map((i) => Number.parseInt(backHex.slice(i, i + 2), 16))
+          const error = Math.max(
+            Math.abs(channels[0] - r),
+            Math.abs(channels[1] - g),
+            Math.abs(channels[2] - b)
+          )
+          if (error > worst) {
+            worst = error
+            worstCase = `${hex} -> ${toStrings(parsed(hex)).hsl} -> ${backHex}`
+          }
+        }
+      }
+    }
+    expect(worst, worstCase).toBeLessThanOrEqual(1)
   })
 })
 

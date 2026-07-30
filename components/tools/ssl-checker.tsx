@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,116 +25,36 @@ import {
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { downloadTextFile, dateStamp } from "@/lib/download"
+import {
+  CT_SOURCE_HOST,
+  cleanHostname,
+  coversHost,
+  daysUntil,
+  fetchIssuances,
+  formatCertDate,
+  probeBrowserTrust,
+  type CtIssuance,
+  type TrustProbe,
+} from "@/lib/cert-transparency"
 import { toast } from "sonner"
-
-// api.certspotter.com sends "access-control-allow-origin: *", verified by curl,
-// so it is the one cert data source reachable from a browser. it serves
-// certificate transparency log entries - what was ISSUED for a domain, which is
-// not the same thing as what the server is serving right now.
-const CERTSPOTTER_ENDPOINT = "https://api.certspotter.com/v1/issuances"
-
-interface CtIssuance {
-  id: string
-  cert_sha256?: string
-  dns_names?: string[]
-  issuer?: { name?: string; friendly_name?: string }
-  not_before?: string
-  not_after?: string
-  revoked?: boolean
-}
-
-interface TrustProbe {
-  ok: boolean
-  ms: number
-}
 
 type CheckStatus = "idle" | "checking" | "complete" | "error"
 
-function cleanHostname(input: string): string {
-  let clean = input.trim().toLowerCase()
-  clean = clean.replace(/^[a-z]+:\/\//, "")
-  clean = clean.split("/")[0]
-  clean = clean.split("?")[0]
-  clean = clean.split(":")[0]
-  return clean
-}
-
-// a wildcard entry only covers one label, so *.a.com covers b.a.com but not c.b.a.com
-function coversHost(names: string[] | undefined, host: string): boolean {
-  if (!names) return false
-  return names.some((raw) => {
-    const name = raw.trim().toLowerCase()
-    if (name === host) return true
-    if (name.startsWith("*.")) {
-      const suffix = name.slice(1)
-      if (!host.endsWith(suffix)) return false
-      return !host.slice(0, host.length - suffix.length).includes(".")
-    }
-    return false
-  })
-}
-
-function daysUntil(iso: string | undefined): number | null {
-  if (!iso) return null
-  const ts = Date.parse(iso)
-  if (Number.isNaN(ts)) return null
-  return Math.floor((ts - Date.now()) / 86400000)
-}
-
-function formatDate(iso: string | undefined): string {
-  if (!iso) return "unknown"
-  const ts = Date.parse(iso)
-  if (Number.isNaN(ts)) return iso
-  return new Date(ts).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-}
-
 export function SSLChecker() {
-  const [hostname, setHostname] = useState("")
+  // the hostname lives in the query string so a check is a shareable link, but a
+  // request still only happens when the user asks: arriving with ?host= set does
+  // not fetch anything
+  const [query, setQuery] = useQueryStates(
+    { host: parseAsString.withDefault("") },
+    { history: "replace" }
+  )
+  const hostname = query.host
+
   const [status, setStatus] = useState<CheckStatus>("idle")
   const [error, setError] = useState<string | null>(null)
   const [checkedHost, setCheckedHost] = useState("")
   const [trust, setTrust] = useState<TrustProbe | null>(null)
   const [issuances, setIssuances] = useState<CtIssuance[]>([])
-
-  // a no-cors fetch is opaque, but the browser still refuses to complete it when
-  // the certificate chain is not trusted. that is the only real tls signal a page
-  // can get, and it cannot be told apart from dns/network failure.
-  const probeBrowserTrust = async (host: string): Promise<TrustProbe> => {
-    const start = Date.now()
-    try {
-      await fetch(`https://${host}/`, { mode: "no-cors", cache: "no-store" })
-      return { ok: true, ms: Date.now() - start }
-    } catch {
-      return { ok: false, ms: Date.now() - start }
-    }
-  }
-
-  const fetchIssuances = async (host: string): Promise<CtIssuance[]> => {
-    const params = new URLSearchParams({ domain: host, include_subdomains: "false" })
-    for (const field of ["dns_names", "issuer", "cert_sha256", "not_before", "not_after"]) {
-      params.append("expand", field)
-    }
-    const res = await fetch(`${CERTSPOTTER_ENDPOINT}?${params.toString()}`)
-    if (!res.ok) {
-      let detail = `HTTP ${res.status}`
-      try {
-        const body = await res.json()
-        if (body?.message) detail = String(body.message)
-      } catch {
-        // non-json error body, keep the status
-      }
-      throw new Error(`Certificate transparency lookup failed: ${detail}`)
-    }
-    const data = await res.json()
-    if (!Array.isArray(data)) throw new Error("Certificate transparency lookup returned no list")
-    return (data as CtIssuance[]).sort(
-      (a, b) => Date.parse(b.not_after ?? "") - Date.parse(a.not_after ?? "")
-    )
-  }
 
   const runCheck = useCallback(async () => {
     const host = cleanHostname(hostname)
@@ -150,10 +71,10 @@ export function SSLChecker() {
     setIssuances([])
     setCheckedHost(host)
 
-    const probe = await probeBrowserTrust(host)
-    setTrust(probe)
-
     try {
+      // this await used to sit outside the try, so a rejection here left status
+      // on "checking" forever and stranded aria-busy with it
+      setTrust(await probeBrowserTrust(host))
       setIssuances(await fetchIssuances(host))
       setStatus("complete")
     } catch (err) {
@@ -175,7 +96,7 @@ export function SSLChecker() {
     if (!issuances.length) return
     downloadTextFile(
       JSON.stringify(
-        { host: checkedHost, source: "certificate transparency (api.certspotter.com)", issuances },
+        { host: checkedHost, source: `certificate transparency (${CT_SOURCE_HOST})`, issuances },
         null,
         2
       ),
@@ -184,7 +105,7 @@ export function SSLChecker() {
     )
   }
 
-  const commonSites = ["google.com", "github.com", "cloudflare.com", "expired.badssl.com"]
+  const commonSites = ["example.com", "github.com", "cloudflare.com", "expired.badssl.com"]
 
   return (
     <div className="tool-container">
@@ -210,6 +131,11 @@ export function SSLChecker() {
             header, so it is unreachable from a browser, and its scans are published on a public
             results page. Nothing you type here is submitted to it.
           </p>
+          <p>
+            Where your input goes when you press Check: one HTTPS request from your browser to{" "}
+            <strong>the hostname you entered</strong>, and one to <strong>{CT_SOURCE_HOST}</strong>{" "}
+            carrying that hostname. Nowhere else.
+          </p>
         </AlertDescription>
       </Alert>
 
@@ -234,9 +160,11 @@ export function SSLChecker() {
                 id="ssl-hostname"
                 placeholder="example.com"
                 value={hostname}
-                onChange={(e) => setHostname(e.target.value)}
+                onChange={(e) => void setQuery({ host: e.target.value })}
                 onKeyDown={(e) => e.key === "Enter" && runCheck()}
                 className="font-mono"
+                aria-invalid={status === "error"}
+                aria-describedby={error ? "ssl-checker-error" : undefined}
               />
             </div>
             <Button onClick={runCheck} disabled={status === "checking"}>
@@ -256,7 +184,12 @@ export function SSLChecker() {
 
           <div className="flex flex-wrap gap-2">
             {commonSites.map((site) => (
-              <Button key={site} variant="outline" size="sm" onClick={() => setHostname(site)}>
+              <Button
+                key={site}
+                variant="outline"
+                size="sm"
+                onClick={() => void setQuery({ host: site })}
+              >
                 {site}
               </Button>
             ))}
@@ -265,198 +198,203 @@ export function SSLChecker() {
           {error && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription id="ssl-checker-error">{error}</AlertDescription>
             </Alert>
           )}
         </CardContent>
       </Card>
 
-      {trust && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {trust.ok ? (
-                <ShieldCheck className="h-5 w-5 text-green-500" />
-              ) : (
-                <ShieldAlert className="h-5 w-5 text-yellow-500" />
-              )}
-              Browser trust probe
-            </CardTitle>
-            <CardDescription>
-              Result of one opaque <code className="font-mono text-xs">no-cors</code> request from
-              this browser to {checkedHost}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant={trust.ok ? "default" : "secondary"}>
-                {trust.ok ? "Handshake completed" : "Request did not complete"}
-              </Badge>
-              <Badge variant="outline">{trust.ms}ms round trip</Badge>
-            </div>
-            {trust.ok ? (
-              <p className="text-muted-foreground">
-                Your browser completed a TLS handshake with{" "}
-                <span className="font-mono">{checkedHost}</span> over HTTPS and accepted its
-                certificate chain against this machine&apos;s trust store. The response itself is
-                opaque, so no status code or headers can be read from it.
-              </p>
-            ) : (
-              <p className="text-muted-foreground">
-                The request failed. That is consistent with an expired, mismatched, or untrusted
-                certificate - but it is equally consistent with DNS failure, a blocked port, a
-                content blocker, or the host simply refusing the connection. An opaque response
-                cannot tell these apart, so this is not proof of a certificate problem. Use the
-                OpenSSL command below to find out which it is.
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {status === "complete" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <ScrollText className="h-5 w-5" />
-                Certificate transparency log entries
-              </span>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{matching.length} covering this host</Badge>
-                {issuances.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={exportIssuances}>
-                    Export JSON
-                  </Button>
+      {/* live region so the async result is announced when it lands */}
+      <div aria-live="polite" aria-busy={status === "checking"} className="space-y-4 sm:space-y-6">
+        {trust && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                {trust.ok ? (
+                  <ShieldCheck className="h-5 w-5 text-green-500" />
+                ) : (
+                  <ShieldAlert className="h-5 w-5 text-yellow-500" />
                 )}
+                Browser trust probe
+              </CardTitle>
+              <CardDescription>
+                Result of one opaque <code className="font-mono text-xs">no-cors</code> request from
+                this browser to {checkedHost}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant={trust.ok ? "default" : "secondary"}>
+                  {trust.ok ? "Handshake completed" : "Request did not complete"}
+                </Badge>
+                <Badge variant="outline">{trust.ms}ms round trip</Badge>
               </div>
-            </CardTitle>
-            <CardDescription>
-              From{" "}
-              <a
-                href="https://sslmate.com/ct_search_api/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                SSLMate Cert Spotter <ExternalLink className="inline h-3 w-3" />
-              </a>{" "}
-              - public CT log data, fetched directly by your browser
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                These are certificates that certificate authorities <strong>issued</strong> for this
-                domain and logged publicly. They are not necessarily the certificate the server is
-                serving right now - a host can hold several valid certificates, or serve an older
-                one. Treat the dates below as &quot;the newest certificate issued for this
-                name&quot; rather than &quot;the live certificate&quot;.
-              </AlertDescription>
-            </Alert>
-
-            {newest && newestDays !== null && (
-              <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-sm">
-                  Newest logged certificate covering{" "}
-                  <span className="font-mono">{checkedHost}</span>
+              {trust.ok ? (
+                <p className="text-muted-foreground">
+                  Your browser completed a TLS handshake with{" "}
+                  <span className="font-mono">{checkedHost}</span> over HTTPS and accepted its
+                  certificate chain against this machine&apos;s trust store. The response itself is
+                  opaque, so no status code or headers can be read from it.
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge
-                    variant={
-                      newestDays < 0 ? "destructive" : newestDays < 30 ? "secondary" : "default"
-                    }
-                  >
-                    {newestDays < 0
-                      ? `expired ${Math.abs(newestDays)} days ago`
-                      : `${newestDays} days until it expires`}
-                  </Badge>
-                  <Badge variant="outline">issued {formatDate(newest.not_before)}</Badge>
-                  <Badge variant="outline">
-                    {newest.issuer?.friendly_name || newest.issuer?.name || "unknown issuer"}
-                  </Badge>
+              ) : (
+                <p className="text-muted-foreground">
+                  The request failed. That is consistent with an expired, mismatched, or untrusted
+                  certificate - but it is equally consistent with DNS failure, a blocked port, a
+                  content blocker, or the host simply refusing the connection. An opaque response
+                  cannot tell these apart, so this is not proof of a certificate problem. Use the
+                  OpenSSL command below to find out which it is.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {status === "complete" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <ScrollText className="h-5 w-5" />
+                  Certificate transparency log entries
+                </span>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{matching.length} covering this host</Badge>
+                  {issuances.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={exportIssuances}>
+                      Export JSON
+                    </Button>
+                  )}
                 </div>
-              </div>
-            )}
+              </CardTitle>
+              <CardDescription>
+                From{" "}
+                <a
+                  href="https://sslmate.com/ct_search_api/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  SSLMate Cert Spotter <ExternalLink className="inline h-3 w-3" />
+                </a>{" "}
+                - public CT log data, fetched directly by your browser
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  These are certificates that certificate authorities <strong>issued</strong> for
+                  this domain and logged publicly. They are not necessarily the certificate the
+                  server is serving right now - a host can hold several valid certificates, or serve
+                  an older one. Treat the dates below as &quot;the newest certificate issued for
+                  this name&quot; rather than &quot;the live certificate&quot;.
+                </AlertDescription>
+              </Alert>
 
-            {matching.length === 0 && (
-              <p className="text-muted-foreground text-sm">
-                No CT log entry covers <span className="font-mono">{checkedHost}</span> exactly.
-                {issuances.length > 0
-                  ? " Entries for the domain exist but list other names - they are shown below."
-                  : " The domain may be new, may use a private CA, or may not be in the logs this API indexes."}
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {issuances.map((cert) => {
-                const days = daysUntil(cert.not_after)
-                const covers = coversHost(cert.dns_names, checkedHost)
-                return (
-                  <div key={cert.id} className="rounded-lg border p-4">
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      {covers ? (
-                        <Badge variant="default">covers {checkedHost}</Badge>
-                      ) : (
-                        <Badge variant="outline">other names</Badge>
-                      )}
-                      {cert.revoked && <Badge variant="destructive">revoked</Badge>}
-                      {days !== null && (
-                        <Badge variant={days < 0 ? "destructive" : "secondary"}>
-                          {days < 0 ? "expired" : `${days}d left`}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="grid gap-3 text-sm sm:grid-cols-2">
-                      <div>
-                        <p className="text-muted-foreground">Issuer</p>
-                        <p className="break-words">
-                          {cert.issuer?.friendly_name || cert.issuer?.name || "unknown"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Validity</p>
-                        <p>
-                          {formatDate(cert.not_before)} to {formatDate(cert.not_after)}
-                        </p>
-                      </div>
-                      <div className="sm:col-span-2">
-                        <p className="text-muted-foreground">SHA-256 fingerprint</p>
-                        <div className="flex items-center gap-1">
-                          <p className="truncate font-mono text-xs">{cert.cert_sha256 || "n/a"}</p>
-                          {cert.cert_sha256 && (
-                            <CopyButton value={cert.cert_sha256} className="h-6 w-6 p-0" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {cert.dns_names && cert.dns_names.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-muted-foreground mb-2 text-sm">
-                          Names ({cert.dns_names.length})
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {cert.dns_names.slice(0, 12).map((name) => (
-                            <Badge key={name} variant="outline" className="font-mono text-xs">
-                              {name}
-                            </Badge>
-                          ))}
-                          {cert.dns_names.length > 12 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{cert.dns_names.length - 12} more
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )}
+              {newest && newestDays !== null && (
+                <div className="rounded-lg border p-4">
+                  <p className="text-muted-foreground text-sm">
+                    Newest logged certificate covering{" "}
+                    <span className="font-mono">{checkedHost}</span>
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant={
+                        newestDays < 0 ? "destructive" : newestDays < 30 ? "secondary" : "default"
+                      }
+                    >
+                      {newestDays < 0
+                        ? `expired ${Math.abs(newestDays)} days ago`
+                        : `${newestDays} days until it expires`}
+                    </Badge>
+                    <Badge variant="outline">issued {formatCertDate(newest.not_before)}</Badge>
+                    <Badge variant="outline">
+                      {newest.issuer?.friendly_name || newest.issuer?.name || "unknown issuer"}
+                    </Badge>
                   </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                </div>
+              )}
+
+              {matching.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  No CT log entry covers <span className="font-mono">{checkedHost}</span> exactly.
+                  {issuances.length > 0
+                    ? " Entries for the domain exist but list other names - they are shown below."
+                    : " The domain may be new, may use a private CA, or may not be in the logs this API indexes."}
+                </p>
+              )}
+
+              <div className="space-y-3">
+                {issuances.map((cert) => {
+                  const days = daysUntil(cert.not_after)
+                  const covers = coversHost(cert.dns_names, checkedHost)
+                  return (
+                    <div key={cert.id} className="rounded-lg border p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        {covers ? (
+                          <Badge variant="default">covers {checkedHost}</Badge>
+                        ) : (
+                          <Badge variant="outline">other names</Badge>
+                        )}
+                        {cert.revoked && <Badge variant="destructive">revoked</Badge>}
+                        {days !== null && (
+                          <Badge variant={days < 0 ? "destructive" : "secondary"}>
+                            {days < 0 ? "expired" : `${days}d left`}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="grid gap-3 text-sm sm:grid-cols-2">
+                        <div>
+                          <p className="text-muted-foreground">Issuer</p>
+                          <p className="wrap-break-word">
+                            {cert.issuer?.friendly_name || cert.issuer?.name || "unknown"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Validity</p>
+                          <p>
+                            {formatCertDate(cert.not_before)} to {formatCertDate(cert.not_after)}
+                          </p>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <p className="text-muted-foreground">SHA-256 fingerprint</p>
+                          <div className="flex items-center gap-1">
+                            <p className="truncate font-mono text-xs">
+                              {cert.cert_sha256 || "n/a"}
+                            </p>
+                            {cert.cert_sha256 && (
+                              <CopyButton value={cert.cert_sha256} className="h-6 w-6 p-0" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {cert.dns_names && cert.dns_names.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-muted-foreground mb-2 text-sm">
+                            Names ({cert.dns_names.length})
+                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {cert.dns_names.slice(0, 12).map((name) => (
+                              <Badge key={name} variant="outline" className="font-mono text-xs">
+                                {name}
+                              </Badge>
+                            ))}
+                            {cert.dns_names.length > 12 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{cert.dns_names.length - 12} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       <Card>
         <CardHeader>
@@ -510,7 +448,7 @@ export function SSLChecker() {
         </CardHeader>
         <CardContent className="text-muted-foreground space-y-3 text-sm">
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
             <p>
               <span className="text-foreground font-medium">Trustworthy here:</span> the browser
               trust probe (your own browser made the connection) and the CT log entries (fetched
@@ -518,7 +456,7 @@ export function SSLChecker() {
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <XCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
             <p>
               <span className="text-foreground font-medium">Not available here:</span> negotiated
               TLS version, cipher suites, chain order and completeness, OCSP/CRL status, HSTS

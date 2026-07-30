@@ -1,211 +1,131 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, lazy, useEffect, useState } from "react"
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Shield,
-  Search,
-  AlertCircle,
-  CheckCircle,
-  HelpCircle,
-  X,
-  Download,
-  Zap,
-} from "lucide-react"
+import { AlertCircle, Shield, Zap } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
+import { getToolBySlug } from "@/lib/tool-registry"
 import { isElectron, electronNetwork } from "@/lib/electron"
+import { pageIsHttps } from "@/lib/browser-limits"
+import { probePortOverHttp, serviceNameFor, summarizeStates } from "@/lib/port-probe"
 import { dateStamp, downloadTextFile } from "@/lib/download"
+import { ScanHistory, ScanResults, type ScanSession } from "./port-scanner/scan-results"
 
-// "unknown": a failed browser fetch can't distinguish closed from filtered from browser-blocked
-type PortState = "open" | "closed" | "filtered" | "unknown"
+// one chunk per port-selection mode
+const CommonPortsPanel = lazy(() => import("./port-scanner/common"))
+const CustomPortsPanel = lazy(() => import("./port-scanner/custom"))
 
-// recorded per result so an exported scan is self-describing
-type ScanMethod = "tcp-connect" | "http-probe"
+const TABS = ["common", "custom"] as const
 
-interface PortScanResult {
-  port: number
-  service: string
-  status: PortState
-  method: ScanMethod
-  responseTime?: number
+function PanelFallback() {
+  return (
+    <p role="status" className="text-muted-foreground p-4 text-sm">
+      Loading...
+    </p>
+  )
 }
-
-interface ScanSession {
-  target: string
-  timestamp: number
-  results: PortScanResult[]
-  completed: boolean
-  method: ScanMethod
-}
-
-const commonPorts = [
-  { port: 21, service: "FTP" },
-  { port: 22, service: "SSH" },
-  { port: 23, service: "Telnet" },
-  { port: 25, service: "SMTP" },
-  { port: 53, service: "DNS" },
-  { port: 80, service: "HTTP" },
-  { port: 110, service: "POP3" },
-  { port: 143, service: "IMAP" },
-  { port: 443, service: "HTTPS" },
-  { port: 993, service: "IMAPS" },
-  { port: 995, service: "POP3S" },
-  { port: 3389, service: "RDP" },
-  { port: 5432, service: "PostgreSQL" },
-  { port: 3306, service: "MySQL" },
-  { port: 1433, service: "MSSQL" },
-  { port: 27017, service: "MongoDB" },
-]
 
 export function PortScanner() {
-  const [target, setTarget] = useState("scanme.nmap.org")
-  const [customPorts, setCustomPorts] = useState("80,443,22,21,25")
+  // inputs live in the query string so a scan setup is a shareable link. no scan
+  // ever starts from a url parameter: it takes a button press.
+  const [query, setQuery] = useQueryStates(
+    {
+      tab: parseAsStringLiteral(TABS).withDefault("common"),
+      host: parseAsString.withDefault("example.com"),
+      ports: parseAsString.withDefault("80,443,8080"),
+    },
+    { history: "replace" }
+  )
+  const { tab, host, ports: customPorts } = query
+
   const [isScanning, setIsScanning] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
   const [currentScan, setCurrentScan] = useState<ScanSession | null>(null)
   const [scanHistory, setScanHistory] = useState<ScanSession[]>([])
   const [isNative, setIsNative] = useState(false)
 
-  // Check if running in Electron for native networking
   useEffect(() => {
     setIsNative(isElectron())
   }, [])
 
-  const getServiceName = (port: number): string => {
-    const service = commonPorts.find((p) => p.port === port)
-    return service?.service || "Unknown"
-  }
+  const tool = getToolBySlug("port-scanner")
 
-  // real tcp connect in the desktop app; browser can only confirm "something answered"
-  const performPortScan = async (ports: number[]) => {
-    if (!target.trim()) return
+  const runScan = async (portList: number[]) => {
+    if (!host.trim() || portList.length === 0) return
 
     setIsScanning(true)
     setScanProgress(0)
 
     const session: ScanSession = {
-      target: target.trim(),
+      target: host.trim(),
       timestamp: Date.now(),
       results: [],
       completed: false,
       method: isNative ? "tcp-connect" : "http-probe",
     }
-
     setCurrentScan(session)
 
     try {
-      // Use native TCP socket port scanning in Electron
       if (isNative) {
-        console.log("[NetDash] Using NATIVE TCP socket port scanning")
-        const nativeResults = await electronNetwork.portScan(target.trim(), ports, {
+        const nativeResults = await electronNetwork.portScan(host.trim(), portList, {
           timeout: 3000,
-          concurrent: 100, // More concurrent connections for faster scanning
+          concurrent: 100,
         })
-
-        if (nativeResults && nativeResults.length > 0) {
-          for (let i = 0; i < nativeResults.length; i++) {
-            const nativeResult = nativeResults[i]
-            const result: PortScanResult = {
-              port: nativeResult.port,
-              service: nativeResult.service || getServiceName(nativeResult.port),
-              status: nativeResult.state,
-              method: "tcp-connect",
-              responseTime: (nativeResult as any).responseTime, // Include response time from native scan
-            }
-            session.results.push(result)
-            setScanProgress(((i + 1) / nativeResults.length) * 100)
-            setCurrentScan({ ...session })
-          }
-        } else {
-          console.error("[NetDash] Native port scan returned no results")
+        for (const [i, native] of (nativeResults ?? []).entries()) {
+          session.results.push({
+            port: native.port,
+            service: native.service || serviceNameFor(native.port),
+            state: native.state,
+            method: "tcp-connect",
+            responseTime: native.responseTime,
+          })
+          setScanProgress(((i + 1) / (nativeResults?.length || 1)) * 100)
+          setCurrentScan({ ...session })
         }
       } else {
-        // an https page cannot probe http:// at all, so probe over the page's
-        // own scheme instead of firing requests the browser blocks outright
-        const scheme =
-          typeof window !== "undefined" && window.location.protocol === "https:" ? "https" : "http"
-
-        for (let i = 0; i < ports.length; i++) {
-          const port = ports[i]
-          const startTime = performance.now()
-
-          try {
-            await fetch(`${scheme}://${target}:${port}`, {
-              method: "HEAD",
-              mode: "no-cors",
-              signal: AbortSignal.timeout(2000),
-            })
-
-            // an opaque response still proves something accepted the connection
-            session.results.push({
-              port,
-              service: getServiceName(port),
-              status: "open",
-              method: "http-probe",
-              responseTime: performance.now() - startTime,
-            })
-          } catch {
-            // never guess here: this branch used to report Math.random() > 0.8 as "open"
-            session.results.push({
-              port,
-              service: getServiceName(port),
-              status: "unknown",
-              method: "http-probe",
-            })
-          }
-
-          setScanProgress(((i + 1) / ports.length) * 100)
+        const scheme = pageIsHttps() ? "https" : "http"
+        for (const [i, port] of portList.entries()) {
+          session.results.push(await probePortOverHttp(host.trim(), port, { scheme }))
+          setScanProgress(((i + 1) / portList.length) * 100)
           setCurrentScan({ ...session })
         }
       }
     } finally {
       session.completed = true
-      setCurrentScan(session)
-      setScanHistory([session, ...scanHistory.slice(0, 4)])
+      setCurrentScan({ ...session })
+      setScanHistory((prev) => [session, ...prev.slice(0, 4)])
       setIsScanning(false)
     }
   }
 
-  const scanCommonPorts = () => {
-    const ports = commonPorts.map((p) => p.port)
-    performPortScan(ports)
-  }
-
-  const scanCustomPorts = () => {
-    const ports = customPorts
-      .split(",")
-      .map((p) => Number.parseInt(p.trim()))
-      .filter((p) => !isNaN(p) && p > 0 && p <= 65535)
-
-    if (ports.length === 0) return
-    performPortScan(ports)
-  }
-
   const exportResults = (session: ScanSession) => {
-    const data = {
-      target: session.target,
-      timestamp: new Date(session.timestamp).toISOString(),
-      method: session.method,
-      // stated in the file so nobody mistakes a browser probe for a real scan
-      methodNote:
-        session.method === "tcp-connect"
-          ? "real tcp connect scan (desktop app)"
-          : "browser http probe: only 'open' is meaningful, 'unknown' means undeterminable",
-      totalPorts: session.results.length,
-      openPorts: session.results.filter((r) => r.status === "open").length,
-      unknownPorts: session.results.filter((r) => r.status === "unknown").length,
-      results: session.results,
-    }
-
+    const counts = summarizeStates(session.results)
     downloadTextFile(
-      JSON.stringify(data, null, 2),
+      JSON.stringify(
+        {
+          target: session.target,
+          timestamp: new Date(session.timestamp).toISOString(),
+          method: session.method,
+          // stated in the file so nobody mistakes a browser probe for a real scan
+          methodNote:
+            session.method === "tcp-connect"
+              ? "real tcp connect scan (desktop app)"
+              : "browser http probe: only 'open' is meaningful. 'unknown' means undeterminable, 'browser-blocked' means the fetch standard refused to send anything to that port.",
+          totalPorts: session.results.length,
+          counts,
+          results: session.results,
+        },
+        null,
+        2
+      ),
       `port-scan-${session.target}-${dateStamp(new Date(session.timestamp))}.json`,
       "application/json"
     )
@@ -223,19 +143,21 @@ export function PortScanner() {
         <Alert className="border-green-500/50 bg-green-500/10">
           <Zap className="h-4 w-4 text-green-600" />
           <AlertDescription>
-            <strong>Native Mode:</strong> Running in desktop app with real TCP port scanning
-            capabilities.
+            <strong>Desktop app:</strong> real TCP connect scanning, so closed and filtered are
+            distinguishable and no port is off limits.
           </AlertDescription>
         </Alert>
       ) : (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Browser mode:</strong> the browser cannot open raw TCP sockets, so this falls
-            back to an HTTP probe. A port shown as <strong>open</strong> genuinely answered;
-            everything else is reported as <strong>unknown</strong>, not closed, because a failed
-            probe cannot tell a closed port from a filtered one. Use the desktop app for real TCP
-            connect scanning.
+            <strong>Browser mode:</strong> a browser cannot open a raw TCP socket, so this falls
+            back to an HTTP probe with three possible outcomes. <strong>open</strong> means
+            something genuinely answered an HTTP request there. <strong>unknown</strong> means the
+            probe failed and closed, filtered, non-HTTP and content-blocked are indistinguishable.{" "}
+            <strong>blocked by browser</strong> means the Fetch Standard&apos;s port blocking list
+            refused to send anything at all, so the port&apos;s real state was never tested. Only
+            the desktop app does a real TCP connect scan.
           </AlertDescription>
         </Alert>
       )}
@@ -246,72 +168,59 @@ export function PortScanner() {
           <CardDescription>Configure target host and ports to scan</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {tool && <RuntimeDisclosure tool={tool} />}
+
           <div>
             <Label htmlFor="target-host">Target Host</Label>
             <Input
               id="target-host"
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder="scanme.nmap.org or 192.168.1.1"
+              value={host}
+              onChange={(e) => void setQuery({ host: e.target.value })}
+              placeholder="example.com or 192.168.1.1"
               disabled={isScanning}
             />
+            <p className="text-muted-foreground mt-1 text-xs">
+              Only scan hosts you own or have written permission to test.
+            </p>
           </div>
 
-          <Tabs defaultValue="common" className="space-y-4">
+          <Tabs
+            value={tab}
+            onValueChange={(value) => void setQuery({ tab: value as (typeof TABS)[number] })}
+            className="space-y-4"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="common">Common Ports</TabsTrigger>
               <TabsTrigger value="custom">Custom Ports</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="common" className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-                {commonPorts.slice(0, 16).map(({ port, service }) => (
-                  <div key={port} className="bg-muted/50 flex justify-between rounded p-2">
-                    <span className="font-mono">{port}</span>
-                    <span className="text-muted-foreground">{service}</span>
-                  </div>
-                ))}
-              </div>
-              <Button
-                onClick={scanCommonPorts}
-                disabled={!target.trim() || isScanning}
-                className="w-full"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Scan Common Ports ({commonPorts.length} ports)
-              </Button>
+            <TabsContent value="common">
+              <Suspense fallback={<PanelFallback />}>
+                <CommonPortsPanel
+                  disabled={!host.trim() || isScanning}
+                  browserMode={!isNative}
+                  onScan={runScan}
+                />
+              </Suspense>
             </TabsContent>
 
-            <TabsContent value="custom" className="space-y-4">
-              <div>
-                <Label htmlFor="custom-ports">Port List (comma-separated)</Label>
-                <Input
-                  id="custom-ports"
+            <TabsContent value="custom">
+              <Suspense fallback={<PanelFallback />}>
+                <CustomPortsPanel
                   value={customPorts}
-                  onChange={(e) => setCustomPorts(e.target.value)}
-                  placeholder="80,443,22,21,25,53,110,143"
-                  disabled={isScanning}
+                  onValueChange={(value) => void setQuery({ ports: value })}
+                  disabled={!host.trim() || isScanning}
+                  browserMode={!isNative}
+                  onScan={runScan}
                 />
-                <div className="text-muted-foreground mt-1 text-xs">
-                  {customPorts.split(",").filter((p) => !isNaN(Number.parseInt(p.trim()))).length}{" "}
-                  ports specified
-                </div>
-              </div>
-              <Button
-                onClick={scanCustomPorts}
-                disabled={!target.trim() || !customPorts.trim() || isScanning}
-                className="w-full"
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Scan Custom Ports
-              </Button>
+              </Suspense>
             </TabsContent>
           </Tabs>
 
           {isScanning && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Scanning {target}...</span>
+                <span>Scanning {host}...</span>
                 <span>{scanProgress.toFixed(0)}%</span>
               </div>
               <Progress value={scanProgress} className="w-full" />
@@ -320,107 +229,12 @@ export function PortScanner() {
         </CardContent>
       </Card>
 
-      {currentScan && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Scan Results - {currentScan.target}</span>
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline">
-                  {currentScan.results.filter((r) => r.status === "open").length} open
-                </Badge>
-                <Badge variant="secondary">{currentScan.results.length} total</Badge>
-                {currentScan.completed && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => exportResults(currentScan)}
-                    className="bg-transparent"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                )}
-              </div>
-            </CardTitle>
-            <CardDescription>
-              Scanned on {new Date(currentScan.timestamp).toLocaleString()}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-96 space-y-2 overflow-y-auto">
-              {currentScan.results.map((result, index) => (
-                <div
-                  key={index}
-                  className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
-                >
-                  <div className="flex items-center space-x-3">
-                    {result.status === "open" ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : result.status === "unknown" ? (
-                      <HelpCircle className="text-muted-foreground h-4 w-4" />
-                    ) : (
-                      <X className="h-4 w-4 text-red-600" />
-                    )}
-                    <div>
-                      <div className="font-mono text-sm">Port {result.port}</div>
-                      <div className="text-muted-foreground text-xs">{result.service}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge
-                      variant={result.status === "open" ? "default" : "secondary"}
-                      className={result.status === "open" ? "bg-green-100 text-green-800" : ""}
-                    >
-                      {result.status}
-                    </Badge>
-                    {result.responseTime && (
-                      <span className="text-muted-foreground text-xs">
-                        {result.responseTime.toFixed(1)}ms
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* live region: probes land one at a time */}
+      <div aria-live="polite" aria-busy={isScanning} className="space-y-4 sm:space-y-6">
+        {currentScan && <ScanResults session={currentScan} onExport={exportResults} />}
+      </div>
 
-      {scanHistory.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Scan History</CardTitle>
-            <CardDescription>Previous port scan results</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {scanHistory.map((session, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
-                  <div>
-                    <div className="font-medium">{session.target}</div>
-                    <div className="text-muted-foreground text-sm">
-                      {new Date(session.timestamp).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">
-                      {session.results.filter((r) => r.status === "open").length} open
-                    </Badge>
-                    <Badge variant="secondary">{session.results.length} scanned</Badge>
-                    <Button variant="ghost" size="sm" onClick={() => exportResults(session)}>
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {scanHistory.length > 0 && <ScanHistory sessions={scanHistory} onExport={exportResults} />}
 
       <Card>
         <CardHeader>
@@ -444,18 +258,18 @@ export function PortScanner() {
                   • <strong>TCP:</strong> Connection-oriented (most services)
                 </li>
                 <li>
-                  • <strong>UDP:</strong> Connectionless (DNS, DHCP)
+                  • <strong>UDP:</strong> Connectionless (DNS, DHCP) - not probeable here at all
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="mb-2 font-semibold">Security Considerations</h4>
+              <h4 className="mb-2 font-semibold">What the service column is</h4>
               <ul className="text-muted-foreground space-y-1">
-                <li>• Only scan systems you own or have permission</li>
-                <li>• Unauthorized scanning may violate policies</li>
-                <li>• Use firewalls to block unnecessary ports</li>
-                <li>• Regular scans help identify security gaps</li>
-                <li>• Consider rate limiting and stealth options</li>
+                <li>• A name looked up from a static port table, not a banner read off the wire</li>
+                <li>• No service detection or version fingerprinting happens anywhere here</li>
+                <li>• An open port may be running something entirely different</li>
+                <li>• Only scan systems you own or have permission to test</li>
+                <li>• Unauthorized scanning may violate policy or law</li>
               </ul>
             </div>
           </div>

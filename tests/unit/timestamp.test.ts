@@ -10,7 +10,7 @@ import {
   toLocalTimeInputValue,
   unitToEpochMs,
 } from "@/lib/timestamp"
-import { zonedTimeToEpochMs, zoneOffsetMs } from "@/lib/timezones"
+import { formatInZone, zonedTimeToEpochMs, zoneOffsetMs } from "@/lib/timezones"
 
 describe("detectInputKind", () => {
   it("separates numbers, iso strings and loose date strings", () => {
@@ -209,5 +209,47 @@ describe("formatRelativeToNow", () => {
     expect(formatRelativeToNow(now - 3600000, now)).toBe("1 hour ago")
     expect(formatRelativeToNow(now + 7200000, now)).toBe("in 2 hours")
     expect(formatRelativeToNow(now + 31536000000, now)).toBe("in 1 year")
+  })
+})
+
+describe("a wall clock inside a spring-forward gap resolves forward", () => {
+  it("returns 03:30 EDT, not 01:30 EST, for a 02:30 that never happens", () => {
+    // 2026-03-08 02:00-03:00 does not exist in new york. the two-pass zone
+    // solver settled on 06:30Z, which reads back as 01:30 EST: an hour BEFORE
+    // the wall clock that was asked for. java.time's ZonedDateTime.of and
+    // Temporal's "compatible" disambiguation both push forward instead.
+    const parsed = parseTimestampInput("2026-03-08T02:30:00", { timeZone: "America/New_York" })
+    expect(parsed.ok).toBe(true)
+    if (!parsed.ok) return
+    expect(parsed.date.toISOString()).toBe("2026-03-08T07:30:00.000Z")
+    expect(formatInZone(parsed.date, "America/New_York")).toContain("03:30")
+  })
+
+  it("picks the first of the two occurrences when fall-back repeats an hour", () => {
+    // 2026-11-01 01:30 happens twice in new york; the earlier one is EDT
+    const epochMs = zonedTimeToEpochMs(
+      { year: 2026, month: 11, day: 1, hour: 1, minute: 30 },
+      "America/New_York"
+    )
+    expect(new Date(epochMs).toISOString()).toBe("2026-11-01T05:30:00.000Z")
+  })
+
+  it("still round trips every ordinary wall clock, all year, in four zones", () => {
+    for (const zone of ["America/New_York", "Europe/London", "Australia/Sydney", "Asia/Kolkata"]) {
+      for (let day = 1; day <= 365; day++) {
+        const probe = new Date(Date.UTC(2026, 0, day, 12))
+        const fields = {
+          year: probe.getUTCFullYear(),
+          month: probe.getUTCMonth() + 1,
+          day: probe.getUTCDate(),
+          hour: 12,
+          minute: 0,
+          second: 0,
+        }
+        const instant = zonedTimeToEpochMs(fields, zone)
+        const label = `${zone} ${fields.year}-${fields.month}-${fields.day}`
+        expect(formatInZone(new Date(instant), zone), label).toContain("12:00:00")
+      }
+    }
   })
 })

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,167 +10,128 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Cpu, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-import { normalizeMac } from "@/lib/parsers"
+import { parseMac } from "@/lib/mac-format"
 
-interface MACInfo {
-  raw: string
-  colon: string
-  dash: string
-  cisco: string
-  none: string
-  colonLower: string
-  dashLower: string
-  ciscoLower: string
-  noneLower: string
-  oui: string
-  nic: string
-  isMulticast: boolean
-  isUnicast: boolean
-  isLocallyAdministered: boolean
-  isUniversallyAdministered: boolean
-  binary: string
-  eui64: string
-}
+const EXAMPLES = [
+  { label: "IEEE colon", value: "00:1A:2B:3C:4D:5E", note: "Colons, used across Unix and Linux" },
+  { label: "Windows hyphen", value: "00-1A-2B-3C-4D-5E", note: "Hyphens, Windows and ProCurve" },
+  { label: "Cisco dotted", value: "001a.2b3c.4d5e", note: "Three dotted quads, Cisco IOS" },
+  { label: "Bare", value: "001A2B3C4D5E", note: "No separators" },
+]
 
-export function MACFormatter() {
-  const [input, setInput] = useState("00:1A:2B:3C:4D:5E")
-  const [error, setError] = useState<string | null>(null)
-
-  const parseMAC = (mac: string): string | null => {
-    try {
-      return normalizeMac(mac).replace(/:/g, "").toUpperCase()
-    } catch {
-      return null
-    }
-  }
-
-  const result = useMemo<MACInfo | null>(() => {
-    setError(null)
-    const clean = parseMAC(input)
-
-    if (!clean) {
-      if (input.trim()) {
-        setError("Invalid MAC address. Enter 12 hex characters in any format.")
-      }
-      return null
-    }
-
-    const bytes = []
-    for (let i = 0; i < 12; i += 2) {
-      bytes.push(clean.slice(i, i + 2))
-    }
-
-    const firstByte = parseInt(bytes[0], 16)
-    const isMulticast = (firstByte & 0x01) === 1
-    const isLocallyAdministered = (firstByte & 0x02) === 2
-
-    // Generate EUI-64 from MAC (insert FFFE in the middle and flip the 7th bit)
-    const eui64FirstByte = (firstByte ^ 0x02).toString(16).padStart(2, "0").toUpperCase()
-    const eui64 = `${eui64FirstByte}${bytes[1]}:${bytes[2]}FF:FE${bytes[3]}:${bytes[4]}${bytes[5]}`
-
-    return {
-      raw: clean,
-      colon: bytes.join(":"),
-      dash: bytes.join("-"),
-      cisco: `${bytes[0]}${bytes[1]}.${bytes[2]}${bytes[3]}.${bytes[4]}${bytes[5]}`,
-      none: clean,
-      colonLower: bytes.join(":").toLowerCase(),
-      dashLower: bytes.join("-").toLowerCase(),
-      ciscoLower:
-        `${bytes[0]}${bytes[1]}.${bytes[2]}${bytes[3]}.${bytes[4]}${bytes[5]}`.toLowerCase(),
-      noneLower: clean.toLowerCase(),
-      oui: bytes.slice(0, 3).join(":"),
-      nic: bytes.slice(3).join(":"),
-      isMulticast,
-      isUnicast: !isMulticast,
-      isLocallyAdministered,
-      isUniversallyAdministered: !isLocallyAdministered,
-      binary: bytes.map((b) => parseInt(b, 16).toString(2).padStart(8, "0")).join(" "),
-      eui64,
-    }
-  }, [input])
-
-  const FormatRow = ({ label, value }: { label: string; value: string }) => (
+function FormatRow({ label, value }: { label: string; value: string }) {
+  return (
     <div className="flex items-center justify-between rounded-lg border p-3">
-      <div>
+      <div className="min-w-0">
         <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="font-mono text-sm">{value}</p>
+        <p className="font-mono text-sm break-all">{value}</p>
       </div>
       <CopyButton value={value} size="sm" />
     </div>
   )
+}
+
+export function MACFormatter() {
+  const [query, setQuery] = useQueryStates(
+    { mac: parseAsString.withDefault("00:1A:2B:3C:4D:5E") },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
+
+  const { mac } = query
+
+  // derived, so a half-typed address cannot leave the previous answer on screen
+  const result = useMemo(() => parseMac(mac), [mac])
+  const showError = !result && mac.trim().length > 0
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Cpu}
         title="MAC Address Formatter"
-        description="Convert MAC addresses between formats and analyze properties"
+        description="Convert MAC addresses between formats and read the IEEE 802 address bits"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Input</CardTitle>
-            <CardDescription>Enter a MAC address in any format</CardDescription>
+            <CardDescription>Enter a MAC address in any of the four formats</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="mac">MAC Address</Label>
               <Input
                 id="mac"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={mac}
+                onChange={(e) => setQuery({ mac: e.target.value })}
                 placeholder="00:1A:2B:3C:4D:5E"
                 className="font-mono"
               />
               <p className="text-muted-foreground mt-1 text-xs">
-                Accepts: colon, dash, Cisco, or no separator
+                Accepts colon, hyphen, Cisco dotted, ProCurve 6-6 and bare
               </p>
             </div>
 
-            {error && (
+            {showError && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                  Not a MAC address. Expected 12 hex digits as 00:1A:2B:3C:4D:5E, 00-1A-2B-3C-4D-5E,
+                  001a.2b3c.4d5e or 001A2B3C4D5E.
+                </AlertDescription>
               </Alert>
             )}
 
             {result && (
               <div className="space-y-3 border-t pt-4">
-                <h4 className="text-sm font-medium">Address Properties</h4>
+                <h4 className="text-sm font-medium">Address Bits</h4>
 
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {result.isUnicast ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <div className="flex items-start gap-2">
+                    {result.isMulticast ? (
+                      <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-600" />
                     ) : (
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    )}
-                    <span className="text-sm">{result.isUnicast ? "Unicast" : "Multicast"}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {result.isUniversallyAdministered ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-600" />
                     )}
                     <span className="text-sm">
-                      {result.isUniversallyAdministered
-                        ? "Universally Administered (UAA)"
-                        : "Locally Administered (LAA)"}
+                      {result.isMulticast ? "Group (multicast)" : "Individual (unicast)"}
+                      <span className="text-muted-foreground block text-xs">
+                        I/G bit, bit 0 of the first octet
+                      </span>
                     </span>
                   </div>
+
+                  <div className="flex items-start gap-2">
+                    {result.isLocallyAdministered ? (
+                      <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-600" />
+                    ) : (
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-600" />
+                    )}
+                    <span className="text-sm">
+                      {result.isLocallyAdministered
+                        ? "Locally administered (LAA)"
+                        : "Universally administered (UAA)"}
+                      <span className="text-muted-foreground block text-xs">
+                        U/L bit, bit 1 of the first octet
+                      </span>
+                    </span>
+                  </div>
+
+                  {result.isBroadcast && <Badge variant="destructive">Broadcast address</Badge>}
                 </div>
 
                 <div className="space-y-2 border-t pt-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">OUI (Vendor)</span>
+                    <span className="text-muted-foreground">Detected input format</span>
+                    <span className="font-mono">{result.detectedFormat}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">OUI (first 24 bits)</span>
                     <span className="font-mono">{result.oui}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">NIC Specific</span>
+                    <span className="text-muted-foreground">NIC specific</span>
                     <span className="font-mono">{result.nic}</span>
                   </div>
                 </div>
@@ -182,20 +144,20 @@ export function MACFormatter() {
           <CardHeader>
             <CardTitle>Formatted Output</CardTitle>
             <CardDescription>
-              {result ? "All common MAC address formats" : "Enter a MAC address to see formats"}
+              {result ? "Every common notation, upper and lower case" : "Enter a MAC address"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {result ? (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <FormatRow label="Colon (uppercase)" value={result.colon} />
-                <FormatRow label="Colon (lowercase)" value={result.colonLower} />
-                <FormatRow label="Dash (uppercase)" value={result.dash} />
-                <FormatRow label="Dash (lowercase)" value={result.dashLower} />
-                <FormatRow label="Cisco (uppercase)" value={result.cisco} />
-                <FormatRow label="Cisco (lowercase)" value={result.ciscoLower} />
-                <FormatRow label="No separator (uppercase)" value={result.none} />
-                <FormatRow label="No separator (lowercase)" value={result.noneLower} />
+                <FormatRow label="Colon (lowercase)" value={result.colon.toLowerCase()} />
+                <FormatRow label="Hyphen (uppercase)" value={result.hyphen} />
+                <FormatRow label="Hyphen (lowercase)" value={result.hyphen.toLowerCase()} />
+                <FormatRow label="Cisco dotted (lowercase)" value={result.cisco} />
+                <FormatRow label="Cisco dotted (uppercase)" value={result.cisco.toUpperCase()} />
+                <FormatRow label="Bare (uppercase)" value={result.bare} />
+                <FormatRow label="Bare (lowercase)" value={result.bare.toLowerCase()} />
               </div>
             ) : (
               <div className="flex h-48 items-center justify-center">
@@ -209,20 +171,26 @@ export function MACFormatter() {
       {result && (
         <Card>
           <CardHeader>
-            <CardTitle>Additional Formats</CardTitle>
+            <CardTitle>Derived Values</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-sm">Binary Representation</p>
+                <p className="text-muted-foreground text-sm">Binary</p>
                 <p className="mt-1 font-mono text-sm break-all">{result.binary}</p>
               </div>
               <div className="rounded-lg border p-4">
-                <p className="text-muted-foreground text-sm">EUI-64 (for IPv6 SLAAC)</p>
+                <p className="text-muted-foreground text-sm">
+                  Modified EUI-64 interface identifier
+                </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <p className="font-mono text-sm">{result.eui64}</p>
-                  <CopyButton value={result.eui64} size="sm" />
+                  <p className="font-mono text-sm break-all">{result.modifiedEui64}</p>
+                  <CopyButton value={result.modifiedEui64} size="sm" />
                 </div>
+                <p className="text-muted-foreground mt-2 text-xs">
+                  FFFE inserted and the U/L bit inverted per RFC 4291 appendix A. RFC 8064 now
+                  prefers stable opaque identifiers for SLAAC instead.
+                </p>
               </div>
             </div>
           </CardContent>
@@ -231,30 +199,17 @@ export function MACFormatter() {
 
       <Card>
         <CardHeader>
-          <CardTitle>MAC Address Formats</CardTitle>
+          <CardTitle>Accepted Formats</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1">
-              <Badge variant="secondary">IEEE Standard</Badge>
-              <p className="font-mono text-sm">00:1A:2B:3C:4D:5E</p>
-              <p className="text-muted-foreground text-xs">Colons, used in Unix/Linux</p>
-            </div>
-            <div className="space-y-1">
-              <Badge variant="secondary">Windows</Badge>
-              <p className="font-mono text-sm">00-1A-2B-3C-4D-5E</p>
-              <p className="text-muted-foreground text-xs">Dashes, Windows standard</p>
-            </div>
-            <div className="space-y-1">
-              <Badge variant="secondary">Cisco</Badge>
-              <p className="font-mono text-sm">001a.2b3c.4d5e</p>
-              <p className="text-muted-foreground text-xs">Dots, Cisco IOS</p>
-            </div>
-            <div className="space-y-1">
-              <Badge variant="secondary">Bare</Badge>
-              <p className="font-mono text-sm">001A2B3C4D5E</p>
-              <p className="text-muted-foreground text-xs">No separators</p>
-            </div>
+            {EXAMPLES.map((example) => (
+              <div key={example.label} className="space-y-1">
+                <Badge variant="secondary">{example.label}</Badge>
+                <p className="font-mono text-sm break-all">{example.value}</p>
+                <p className="text-muted-foreground text-xs">{example.note}</p>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

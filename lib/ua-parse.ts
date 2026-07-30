@@ -58,10 +58,8 @@ const BOT_NAMES = [
   "baiduspider",
   "duckduckbot",
   "duckduckgo-favicons-bot",
-  "sogou",
   "exabot",
   "seznambot",
-  "naver",
   "yeti/",
   "petalbot",
   "applebot",
@@ -75,9 +73,7 @@ const BOT_NAMES = [
   "slack-imgproxy",
   "discordbot",
   "telegrambot",
-  "whatsapp/",
   "skypeuripreview",
-  "pinterest",
   "redditbot",
   "embedly",
   "quora link preview",
@@ -163,14 +159,29 @@ const BOT_NAMES = [
 ]
 
 // "bot" must be followed by a delimiter, not whitespace: phone models like
-// "CUBOT NOTE 20" would otherwise classify as crawlers
+// "CUBOT NOTE 20" would otherwise classify as crawlers.
+// "archiver" has no leading \b because ia_archiver's underscore is a word char.
 const GENERIC_BOT_RE =
-  /bot(?:[/;)\]]|$)|compatible;\s*[a-z][\w.-]*bot\b|\bcrawler?\b|\bspider\b|\bscraper\b|\bslurp\b|\barchiver\b|\bfetcher\b|\bmonitoring\b/i
+  /bot(?:[/;)\]]|$)|compatible;\s*[a-z][\w.-]*bot\b|\bcrawl(?:er)?\b|\bspider\b|\bscraper\b|\bslurp\b|archiver\b|\bfetcher\b|\bmonitoring\b/i
+
+// tokens a company uses for BOTH its link-preview fetcher and its in-app browser.
+// treating them as unconditional bots reported every Pinterest, WhatsApp, NAVER
+// and Sogou user as a crawler.
+const AMBIGUOUS_BOT_NAMES = ["pinterest", "whatsapp/", "naver", "sogou", "yahoo"]
+
+// a fetcher does not carry a rendering engine token; an in-app browser does
+const BROWSER_SHAPE = /AppleWebKit\/|\bGecko\/|\bTrident\/|\bPresto\//i
+
+function looksLikeBrowser(ua: string): boolean {
+  return BROWSER_SHAPE.test(ua)
+}
 
 export function isBotUserAgent(ua: string): boolean {
   const lower = ua.toLowerCase()
   if (BOT_NAMES.some((name) => lower.includes(name))) return true
-  return GENERIC_BOT_RE.test(ua)
+  if (GENERIC_BOT_RE.test(ua)) return true
+  if (AMBIGUOUS_BOT_NAMES.some((name) => lower.includes(name))) return !looksLikeBrowser(ua)
+  return false
 }
 
 /** the token a bot/tool UA identifies itself by, e.g. GPTBot 1.2, curl 8.4.0 */
@@ -179,9 +190,23 @@ function botIdentity(ua: string): { name: string; version: string } | null {
     /([A-Za-z][A-Za-z0-9._-]*(?:bot|crawler|spider|fetch|hit|preview|agent))[/ ]?v?([\d.]+)?/i
   )
   if (named) return { name: named[1], version: named[2] ?? "" }
-  const tool = ua.match(/^([A-Za-z][A-Za-z0-9._-]*)\/([\d.]+)/)
+  // not Mozilla: every browser-shaped UA starts "Mozilla/5.0", and reporting
+  // "Identifies as Mozilla 5.0" told the user nothing
+  const tool = ua.match(/^(?!Mozilla\/)([A-Za-z][A-Za-z0-9._-]*)\/([\d.]+)/)
   if (tool) return { name: tool[1], version: tool[2] }
   return null
+}
+
+// "Google Chrome" and "Chrome" are the same brand; "Chromium" is not
+function sameBrand(brand: string, name: string): boolean {
+  const norm = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/^(google|microsoft)\s+/, "")
+      .replace(/\s+/g, "")
+  const a = norm(brand)
+  const b = norm(name)
+  return a === b || a.includes(b) || b.includes(a)
 }
 
 // brand tokens bowser reports as plain Chrome/Safari
@@ -343,6 +368,14 @@ export function parseUa(ua: string, hints?: UaClientHints): UaReport {
     report.notes.push("Reduced UA - Chrome freezes the minor version; use Client Hints for detail")
   }
 
+  // bowser's own bot rules include bare vendor names like /yahoo/i, which flags
+  // YahooMobileClient on a real iPhone. only trust them when nothing else says
+  // this is a browser.
+  const bowserBot = report.device.type === "bot"
+  if (bowserBot && !bot && looksLikeBrowser(trimmed)) {
+    report.device.type = /\bMobi/i.test(trimmed) ? "mobile" : "desktop"
+  }
+
   // bots last: it overrides the device classification, never the other way round
   if (bot || report.device.type === "bot") {
     report.isBot = true
@@ -351,6 +384,10 @@ export function parseUa(ua: string, hints?: UaClientHints): UaReport {
     if (identity && (report.browser.name === "Unknown" || !report.browser.name)) {
       report.browser = identity
     } else if (identity && parsed?.platform.type === "bot") {
+      report.browser = identity
+    } else if (identity && isBotUserAgent(identity.name)) {
+      // a crawler wearing a browser UA: name the crawler, keep the disguise as a note
+      report.notes.push(`Renders as ${report.browser.name} ${report.browser.version}`.trimEnd())
       report.browser = identity
     } else if (identity) {
       report.notes.push(
@@ -412,12 +449,19 @@ export function applyClientHints(report: UaReport, hints: UaClientHints): UaRepo
   }
 
   // fullVersionList carries the real build; the UA only has xxx.0.0.0
-  const list = hints.fullVersionList ?? []
-  const brand = list.find((b) => !/not.a.brand/i.test(b.brand) && b.brand === next.browser.name)
-  const fallbackBrand = list.find((b) => !/not.a.brand/i.test(b.brand))
-  const chosen = brand ?? fallbackBrand
+  const real = (hints.fullVersionList ?? []).filter((b) => !/not.a.brand/i.test(b.brand))
+  // UA-CH uses marketing names, so real Chrome sends "Google Chrome" and never
+  // "Chrome". requiring an exact match against bowser's name meant no brand ever
+  // matched, the Chromium fallback won, and every Chrome user was relabelled.
+  const brand = real.find((b) => sameBrand(b.brand, next.browser.name))
+  const chosen = brand ?? real.find((b) => !/^chromium$/i.test(b.brand)) ?? real[0]
   if (chosen) {
-    next.browser = { name: brand ? next.browser.name : chosen.brand, version: chosen.version }
+    next.browser = {
+      // only adopt a brand name when there was nothing to keep; guessing one off
+      // this list is what produced "Chromium" for Chrome
+      name: next.browser.name === "Unknown" ? chosen.brand : next.browser.name,
+      version: chosen.version,
+    }
     next.notes = next.notes.filter((n) => !n.startsWith("Reduced UA"))
   }
 

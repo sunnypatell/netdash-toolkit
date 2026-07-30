@@ -239,6 +239,7 @@ export function UserMenu() {
                   <Input
                     id="email"
                     type="email"
+                    autoComplete="username"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -247,9 +248,12 @@ export function UserMenu() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
+                  {/* autoComplete is what lets a password manager fill these, which
+                      is how 3.3.8 is met without a cognitive function test */}
                   <Input
                     id="password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -336,6 +340,7 @@ export function UserMenu() {
                   <Input
                     id="signup-email"
                     type="email"
+                    autoComplete="username"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -347,6 +352,7 @@ export function UserMenu() {
                   <Input
                     id="signup-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="At least 6 characters"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -359,6 +365,7 @@ export function UserMenu() {
                   <Input
                     id="confirm-password"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -411,6 +418,7 @@ export function UserMenu() {
                     <Input
                       id="reset-email"
                       type="email"
+                      autoComplete="username"
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}

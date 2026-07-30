@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,150 +9,80 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
+import { AlertTriangle, ArrowRightLeft, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-import { ipv4ToInt, intToIpv4 } from "@/lib/network-utils"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
-import type { ProjectItem } from "@/contexts/project-context"
+import {
+  IPV4_INPUT_FORMATS,
+  convertIPv4,
+  parseIPv4Input,
+  type IPv4InputFormat,
+} from "@/lib/ip-formats"
 
-interface ConversionResult {
-  dottedDecimal: string
-  decimal: string
-  binary: string
-  hex: string
-  octal: string
-  ipv6Mapped: string
-  ipv6Compatible: string
-  isValid: boolean
-  isPrivate: boolean
-  isLoopback: boolean
-  isMulticast: boolean
-  class: string
-}
-
-// Parse IP from different formats
-const parseIP = (input: string, format: string): number | null => {
-  try {
-    switch (format) {
-      case "dotted":
-        return ipv4ToInt(input.trim())
-      case "decimal": {
-        const num = parseInt(input.trim(), 10)
-        if (isNaN(num) || num < 0 || num > 4294967295) return null
-        return num
-      }
-      case "binary": {
-        const clean = input.replace(/[\s.]/g, "")
-        if (!/^[01]+$/.test(clean) || clean.length > 32) return null
-        const padded = clean.padStart(32, "0")
-        return parseInt(padded, 2)
-      }
-      case "hex": {
-        // strip the 0x prefix only: a character class here also ate every
-        // literal "0" and "x", so 0xC0A80101 parsed as 0.12.164.17
-        const clean = input.trim().replace(/^0x/i, "").replace(/[\s:]/g, "")
-        if (!/^[0-9a-fA-F]+$/.test(clean) || clean.length > 8) return null
-        return parseInt(clean, 16)
-      }
-      default:
-        return null
-    }
-  } catch {
-    return null
-  }
-}
-
-// Convert IP integer to various formats
-const convertIP = (ipInt: number): ConversionResult => {
-  // Ensure unsigned 32-bit
-  const unsigned = ipInt >>> 0
-
-  const dottedDecimal = intToIpv4(unsigned)
-  const octets = dottedDecimal.split(".").map(Number)
-
-  // Decimal
-  const decimal = unsigned.toString(10)
-
-  // Binary with dots
-  const binary = octets.map((o) => o.toString(2).padStart(8, "0")).join(".")
-
-  // Hex
-  const hex = "0x" + unsigned.toString(16).toUpperCase().padStart(8, "0")
-
-  // Octal
-  const octal = "0o" + unsigned.toString(8)
-
-  // IPv6 mapped (::ffff:x.x.x.x)
-  const ipv6Mapped = `::ffff:${dottedDecimal}`
-
-  // IPv6 compatible (deprecated but still useful) (::x.x.x.x)
-  const ipv6Compatible = `::${dottedDecimal}`
-
-  // Classification
-  const firstOctet = octets[0]
-  let ipClass = "Unknown"
-  if (firstOctet >= 1 && firstOctet <= 126) ipClass = "A"
-  else if (firstOctet >= 128 && firstOctet <= 191) ipClass = "B"
-  else if (firstOctet >= 192 && firstOctet <= 223) ipClass = "C"
-  else if (firstOctet >= 224 && firstOctet <= 239) ipClass = "D (Multicast)"
-  else if (firstOctet >= 240 && firstOctet <= 255) ipClass = "E (Reserved)"
-
-  // Private check (RFC 1918)
-  const isPrivate =
-    octets[0] === 10 ||
-    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
-    (octets[0] === 192 && octets[1] === 168)
-
-  // Loopback (127.0.0.0/8)
-  const isLoopback = octets[0] === 127
-
-  // Multicast (224.0.0.0/4)
-  const isMulticast = octets[0] >= 224 && octets[0] <= 239
-
-  return {
-    dottedDecimal,
-    decimal,
-    binary,
-    hex,
-    octal,
-    ipv6Mapped,
-    ipv6Compatible,
-    isValid: true,
-    isPrivate,
-    isLoopback,
-    isMulticast,
-    class: ipClass,
-  }
+const FORMAT_META: Record<
+  IPv4InputFormat,
+  { tab: string; label: string; placeholder: string; hint: string }
+> = {
+  dotted: {
+    tab: "Dotted",
+    label: "Dotted Decimal",
+    placeholder: "192.168.1.1",
+    hint: "Four octets, 0 to 255, no leading zeros",
+  },
+  decimal: {
+    tab: "Decimal",
+    label: "Decimal Integer",
+    placeholder: "3232235777",
+    hint: "Unsigned 32-bit integer, 0 to 4294967295",
+  },
+  binary: {
+    tab: "Binary",
+    label: "Binary",
+    placeholder: "11000000.10101000.00000001.00000001",
+    hint: "Up to 32 binary digits; dots and spaces are ignored",
+  },
+  hex: {
+    tab: "Hex",
+    label: "Hexadecimal",
+    placeholder: "0xC0A80101",
+    hint: "Up to 8 hex digits, with or without an 0x prefix",
+  },
+  octal: {
+    tab: "Octal",
+    label: "Octal",
+    placeholder: "0o30052000401",
+    hint: "Octal digits, with or without an 0o prefix",
+  },
 }
 
 export function IPConverter() {
-  const [ipInput, setIpInput] = useState("192.168.1.1")
-  const [inputFormat, setInputFormat] = useState<"dotted" | "decimal" | "binary" | "hex">("dotted")
-
-  const result = useMemo((): ConversionResult | null => {
-    const ipInt = parseIP(ipInput, inputFormat)
-    if (ipInt === null) return null
-    return convertIP(ipInt)
-  }, [ipInput, inputFormat])
-
-  const ResultRow = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex items-center justify-between rounded-lg border p-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="truncate font-mono text-sm">{value}</p>
-      </div>
-      <CopyButton value={value} size="sm" />
-    </div>
+  const [query, setQuery] = useQueryStates(
+    {
+      format: parseAsStringLiteral(IPV4_INPUT_FORMATS).withDefault("dotted"),
+      value: parseAsString.withDefault("192.168.1.1"),
+    },
+    { history: "replace" }
   )
 
-  const handleLoadFromProject = (data: Record<string, unknown>, _item: ProjectItem) => {
-    const input = data.input as { value: string; format: string } | undefined
-    if (input) {
-      setIpInput(input.value)
-      setInputFormat(input.format as typeof inputFormat)
-    }
+  const { format, value } = query
+  const result = useMemo(() => {
+    const ipInt = parseIPv4Input(value, format)
+    return ipInt === null ? null : convertIPv4(ipInt)
+  }, [value, format])
+
+  const meta = FORMAT_META[format]
+
+  const handleLoadFromProject = (data: Record<string, unknown>) => {
+    const input = data.input as { value?: string; format?: string } | undefined
+    if (!input?.value) return
+    void setQuery({
+      value: input.value,
+      ...(IPV4_INPUT_FORMATS.includes(input.format as IPv4InputFormat)
+        ? { format: input.format as IPv4InputFormat }
+        : {}),
+    })
   }
 
   return (
@@ -159,7 +90,7 @@ export function IPConverter() {
       <ToolHeader
         icon={ArrowRightLeft}
         title="IP Address Converter"
-        description="Convert IPv4 addresses between binary, decimal, hexadecimal, and dotted-decimal formats"
+        description="Convert an IPv4 address between dotted decimal, integer, binary, hex and octal"
         actions={
           <>
             <LoadFromProject itemType="ip-converter" onLoad={handleLoadFromProject} size="sm" />
@@ -167,10 +98,7 @@ export function IPConverter() {
               <SaveToProject
                 itemType="ip-converter"
                 itemName={result.dottedDecimal}
-                itemData={{
-                  input: { value: ipInput, format: inputFormat },
-                  result: result,
-                }}
+                itemData={{ input: { value, format }, result }}
                 toolSource="IP Converter"
                 size="sm"
               />
@@ -183,126 +111,152 @@ export function IPConverter() {
         <Card>
           <CardHeader>
             <CardTitle>Input</CardTitle>
-            <CardDescription>Enter an IP address in any supported format</CardDescription>
+            <CardDescription>
+              Every format converts as you type. The address and format live in the query string.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Tabs
-              value={inputFormat}
-              onValueChange={(v) => setInputFormat(v as typeof inputFormat)}
+              value={format}
+              onValueChange={(next) => void setQuery({ format: next as IPv4InputFormat })}
               className="gap-4"
             >
               <div>
                 <Label id="input-format-label">Input Format</Label>
                 <TabsList
                   aria-labelledby="input-format-label"
-                  className="mt-2 grid w-full grid-cols-4"
+                  className="mt-2 grid w-full grid-cols-5"
                 >
-                  <TabsTrigger value="dotted">Dotted</TabsTrigger>
-                  <TabsTrigger value="decimal">Decimal</TabsTrigger>
-                  <TabsTrigger value="binary">Binary</TabsTrigger>
-                  <TabsTrigger value="hex">Hex</TabsTrigger>
+                  {IPV4_INPUT_FORMATS.map((each) => (
+                    <TabsTrigger key={each} value={each}>
+                      {FORMAT_META[each].tab}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </div>
 
               {/* the field each format tab controls, so the tab's aria-controls resolves */}
-              <TabsContent value={inputFormat}>
+              <TabsContent value={format}>
                 <Label htmlFor="ip-input">
-                  {inputFormat === "dotted" && "Dotted Decimal (e.g., 192.168.1.1)"}
-                  {inputFormat === "decimal" && "Decimal Integer (e.g., 3232235777)"}
-                  {inputFormat === "binary" && "Binary (e.g., 11000000.10101000.00000001.00000001)"}
-                  {inputFormat === "hex" && "Hexadecimal (e.g., 0xC0A80101)"}
+                  {meta.label} (e.g. {meta.placeholder})
                 </Label>
                 <Input
                   id="ip-input"
-                  value={ipInput}
-                  onChange={(e) => setIpInput(e.target.value)}
-                  placeholder={
-                    inputFormat === "dotted"
-                      ? "192.168.1.1"
-                      : inputFormat === "decimal"
-                        ? "3232235777"
-                        : inputFormat === "binary"
-                          ? "11000000.10101000.00000001.00000001"
-                          : "0xC0A80101"
-                  }
+                  value={value}
+                  onChange={(event) => void setQuery({ value: event.target.value })}
+                  placeholder={meta.placeholder}
                   className="font-mono"
+                  aria-describedby="ip-input-hint"
                 />
+                <p id="ip-input-hint" className="text-muted-foreground mt-1 text-xs">
+                  {meta.hint}
+                </p>
               </TabsContent>
             </Tabs>
 
-            {!result && ipInput.trim() && (
+            {!result && value.trim() && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>Invalid IP address format</AlertDescription>
+                <AlertDescription>
+                  Not a valid {meta.label.toLowerCase()} IPv4 address
+                </AlertDescription>
               </Alert>
             )}
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIpInput("192.168.1.1")
-                  setInputFormat("dotted")
-                }}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Reset
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void setQuery({ value: "192.168.1.1", format: "dotted" })}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+              Reset
+            </Button>
 
             {result && (
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">Class {result.class}</Badge>
-                  {result.isPrivate && <Badge variant="secondary">Private</Badge>}
-                  {result.isLoopback && <Badge variant="secondary">Loopback</Badge>}
-                  {result.isMulticast && <Badge variant="secondary">Multicast</Badge>}
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">Class {result.ipClass}</Badge>
+                <Badge variant={result.scope.routable ? "secondary" : "destructive"}>
+                  {result.scope.name}
+                </Badge>
+                <span className="text-muted-foreground text-xs">{result.scope.source}</span>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-4" aria-live="polite">
           {result ? (
             <>
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Standard Formats</CardTitle>
+                  <CardTitle className="text-lg">Numeric Formats</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <ResultRow label="Dotted Decimal" value={result.dottedDecimal} />
-                  <ResultRow label="Decimal (32-bit integer)" value={result.decimal} />
-                  <ResultRow label="Hexadecimal" value={result.hex} />
-                  <ResultRow label="Octal" value={result.octal} />
+                  {[
+                    { label: "Dotted Decimal", value: result.dottedDecimal },
+                    { label: "Decimal (unsigned 32-bit)", value: result.decimal },
+                    { label: "Hexadecimal", value: result.hex },
+                    { label: "Octal", value: result.octal },
+                  ].map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between gap-2 rounded-lg border p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-muted-foreground text-xs">{row.label}</p>
+                        <p className="truncate font-mono text-sm">{row.value}</p>
+                      </div>
+                      <CopyButton value={row.value} size="sm" />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Binary Representation</CardTitle>
+                  <CardTitle className="text-lg">Binary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-lg border p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-muted-foreground text-xs">Binary (with dots)</p>
-                        <p className="font-mono text-sm break-all">{result.binary}</p>
-                      </div>
-                      <CopyButton value={result.binary} size="sm" />
+                  <div className="flex items-center justify-between gap-2 rounded-lg border p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-muted-foreground text-xs">Binary, one octet per group</p>
+                      <p className="font-mono text-sm break-all">{result.binary}</p>
                     </div>
+                    <CopyButton value={result.binary} size="sm" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">IPv6 Formats</CardTitle>
+                  <CardTitle className="text-lg">IPv6 Forms</CardTitle>
+                  <CardDescription>RFC 4291 section 2.5.5</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <ResultRow label="IPv6 Mapped (::ffff:x.x.x.x)" value={result.ipv6Mapped} />
-                  <ResultRow label="IPv6 Compatible (::x.x.x.x)" value={result.ipv6Compatible} />
+                  {[
+                    {
+                      label: "IPv4-Mapped (::ffff:a.b.c.d)",
+                      value: result.ipv6Mapped,
+                      note: "Used by dual-stack socket APIs",
+                    },
+                    {
+                      label: "IPv4-Compatible (::a.b.c.d)",
+                      value: result.ipv6Compatible,
+                      note: "Deprecated by RFC 4291 2.5.5.1; do not deploy",
+                    },
+                  ].map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between gap-2 rounded-lg border p-3"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-muted-foreground text-xs">{row.label}</p>
+                        <p className="truncate font-mono text-sm">{row.value}</p>
+                        <p className="text-muted-foreground mt-1 text-xs">{row.note}</p>
+                      </div>
+                      <CopyButton value={row.value} size="sm" />
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </>
@@ -310,7 +264,7 @@ export function IPConverter() {
             <Card>
               <CardContent className="flex h-48 items-center justify-center">
                 <p className="text-muted-foreground text-center">
-                  Enter a valid IP address to see conversions
+                  Enter a valid IPv4 address to see every conversion
                 </p>
               </CardContent>
             </Card>
@@ -325,35 +279,39 @@ export function IPConverter() {
         <CardContent>
           <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
             <div>
-              <h4 className="mb-2 font-semibold">Private Ranges (RFC 1918)</h4>
-              <ul className="text-muted-foreground space-y-1">
-                <li>• 10.0.0.0/8</li>
-                <li>• 172.16.0.0/12</li>
-                <li>• 192.168.0.0/16</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-2 font-semibold">Special Addresses</h4>
-              <ul className="text-muted-foreground space-y-1">
-                <li>• 127.0.0.0/8 (Loopback)</li>
-                <li>• 169.254.0.0/16 (Link-local)</li>
-                <li>• 0.0.0.0/8 (This network)</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-2 font-semibold">IP Classes</h4>
-              <ul className="text-muted-foreground space-y-1">
-                <li>• Class A: 1-126.x.x.x</li>
-                <li>• Class B: 128-191.x.x.x</li>
-                <li>• Class C: 192-223.x.x.x</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="mb-2 font-semibold">Format Examples</h4>
+              <h3 className="mb-2 font-semibold">Private (RFC 1918)</h3>
               <ul className="text-muted-foreground space-y-1 font-mono text-xs">
-                <li>• 192.168.1.1</li>
-                <li>• 3232235777</li>
-                <li>• 0xC0A80101</li>
+                <li>10.0.0.0/8</li>
+                <li>172.16.0.0/12</li>
+                <li>192.168.0.0/16</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">Not globally routable</h3>
+              <ul className="text-muted-foreground space-y-1 font-mono text-xs">
+                <li>0.0.0.0/8</li>
+                <li>100.64.0.0/10</li>
+                <li>127.0.0.0/8</li>
+                <li>169.254.0.0/16</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">Classful ranges (RFC 791)</h3>
+              <ul className="text-muted-foreground space-y-1 text-xs">
+                <li>A: 1 to 126</li>
+                <li>B: 128 to 191</li>
+                <li>C: 192 to 223</li>
+                <li>D: 224 to 239 (multicast)</li>
+                <li>E: 240 to 255 (reserved)</li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="mb-2 font-semibold">Same address, five ways</h3>
+              <ul className="text-muted-foreground space-y-1 font-mono text-xs">
+                <li>192.168.1.1</li>
+                <li>3232235777</li>
+                <li>0xC0A80101</li>
+                <li>0o30052000401</li>
               </ul>
             </div>
           </div>
@@ -362,3 +320,5 @@ export function IPConverter() {
     </div>
   )
 }
+
+export default IPConverter

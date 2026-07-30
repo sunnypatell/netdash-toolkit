@@ -73,6 +73,8 @@ export interface ContrastCheck {
   aaLarge: boolean
   aaaLarge: boolean
   uiComponent: boolean
+  /** a translucent input was flattened first, so the ratio is of the composite */
+  composited: boolean
 }
 
 const NAMED = Object.keys(colorsNamed)
@@ -156,7 +158,14 @@ export function oklchDisplay(color: Color): { l: number; c: number; h: number } 
 export function toStrings(color: Color): ColorStrings {
   const a = alphaOf(color)
   const { r, g, b } = rgb255(color)
-  const hsl = hslDisplay(color)
+  // 2dp, not the integers the sliders show: an integer hsl() string re-parses up
+  // to 5/255 away from the colour it was copied from
+  const hslRaw = toHsl(color) as Hsl
+  const hsl = {
+    h: roundTo(hue(hslRaw.h), 2),
+    s: roundTo(hslRaw.s * 100, 2),
+    l: roundTo(hslRaw.l * 100, 2),
+  }
   const hwb = toHwb(color)
   const lab = toLab(color)
   const lch = toLch(color)
@@ -171,7 +180,7 @@ export function toStrings(color: Color): ColorStrings {
     hex8: formatHex8(toRgb(color)) ?? "#000000ff",
     rgb: a < 1 ? `rgb(${r} ${g} ${b} / ${roundTo(a, 3)})` : `rgb(${r} ${g} ${b})`,
     hsl: `hsl(${hsl.h} ${hsl.s}% ${hsl.l}%${suffix})`,
-    hwb: `hwb(${Math.round(hue(hwb.h))} ${Math.round(hwb.w * 100)}% ${Math.round(hwb.b * 100)}%${suffix})`,
+    hwb: `hwb(${roundTo(hue(hwb.h), 2)} ${roundTo(hwb.w * 100, 2)}% ${roundTo(hwb.b * 100, 2)}%${suffix})`,
     lab: `lab(${roundTo(lab.l, 2)}% ${roundTo(lab.a, 2)} ${roundTo(lab.b, 2)}${suffix})`,
     lch: `lch(${roundTo(lch.l, 2)}% ${roundTo(lch.c, 2)} ${roundTo(hue(lch.h), 2)}${suffix})`,
     oklab: `oklab(${roundTo(oklab.l, 4)} ${roundTo(oklab.a, 4)} ${roundTo(oklab.b, 4)}${suffix})`,
@@ -181,11 +190,60 @@ export function toStrings(color: Color): ColorStrings {
   }
 }
 
+type Triple = { r: number; g: number; b: number }
+
+const WHITE: Triple = { r: 1, g: 1, b: 1 }
+
+function srgbTriple(color: Color): Triple {
+  const c = toRgb(srgbFallback(color)) as Rgb
+  const clamp = (n: number) => Math.min(1, Math.max(0, n))
+  return { r: clamp(c.r), g: clamp(c.g), b: clamp(c.b) }
+}
+
+// source-over in gamma-encoded srgb, which is what the compositor actually does
+function flatten(over: Color, under: Triple): Rgb {
+  const a = alphaOf(over)
+  const c = srgbTriple(over)
+  if (a >= 1) return { mode: "rgb", r: c.r, g: c.g, b: c.b }
+  return {
+    mode: "rgb",
+    r: c.r * a + under.r * (1 - a),
+    g: c.g * a + under.g * (1 - a),
+    b: c.b * a + under.b * (1 - a),
+  }
+}
+
+const UNKNOWN_CONTRAST: ContrastCheck = {
+  ratio: NaN,
+  aaNormal: false,
+  aaaNormal: false,
+  aaLarge: false,
+  aaaLarge: false,
+  uiComponent: false,
+  composited: false,
+}
+
+/**
+ * WCAG 2.2 1.4.3 measures the text as rendered, so a translucent colour has to be
+ * composited before its luminance means anything: 50% black on white is 3.98:1,
+ * not the 21:1 you get by ignoring alpha. A translucent *background* is flattened
+ * over white, since nothing here knows what is really behind it.
+ *
+ * Out-of-sRGB inputs are gamut-mapped first so the ratio describes the swatch
+ * that gets painted rather than a colour the display cannot show.
+ */
 export function contrastCheck(
   foreground: Color | string,
   background: Color | string
 ): ContrastCheck {
-  const ratio = wcagContrast(foreground, background)
+  const fg = typeof foreground === "string" ? parseColor(foreground) : foreground
+  const bg = typeof background === "string" ? parseColor(background) : background
+  if (!fg || !bg) return UNKNOWN_CONTRAST
+
+  const backdrop = flatten(bg, WHITE)
+  const ratio = wcagContrast(flatten(fg, backdrop), backdrop)
+  if (!Number.isFinite(ratio)) return UNKNOWN_CONTRAST
+
   return {
     ratio,
     aaNormal: ratio >= 4.5,
@@ -193,6 +251,7 @@ export function contrastCheck(
     aaLarge: ratio >= 3,
     aaaLarge: ratio >= 4.5,
     uiComponent: ratio >= 3,
+    composited: alphaOf(fg) < 1 || alphaOf(bg) < 1,
   }
 }
 

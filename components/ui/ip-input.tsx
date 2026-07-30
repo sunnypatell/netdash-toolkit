@@ -115,8 +115,11 @@ export function IPInput({
           </Badge>
         )}
       </div>
+      {/* status, not alert: this validates on every keystroke, so an assertive
+          region would interrupt the screen reader mid-address. aria-invalid and
+          aria-describedby above still tie the message to the field. */}
       {!isValid && value && (
-        <p id={errorId} className="text-destructive text-sm" role="alert">
+        <p id={errorId} className="text-destructive text-sm" role="status">
           {isPrefixInput
             ? `Invalid prefix length (must be 0-${ipVersion === "ipv6" ? "128" : ipVersion === "ipv4" ? "32" : "128"})`
             : `Invalid ${ipVersion === "both" ? "IP address" : ipVersion.toUpperCase()} format${allowCIDR ? " or CIDR notation" : ""}`}

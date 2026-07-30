@@ -20,7 +20,16 @@ const sourceOf = (slug: string) => {
   // the one slug whose file name differs from its url segment
   const fileName = slug === "wifi-qr" ? "wifi-qr-generator" : slug
   const path = join(toolsDir, `${fileName}.tsx`)
-  return existsSync(path) ? readFileSync(path, "utf8") : null
+  if (existsSync(path)) return readFileSync(path, "utf8")
+
+  // a tool split into one file per panel keeps its slug as a directory with an
+  // index.tsx; the whole directory is the tool's source for these assertions
+  const dir = join(toolsDir, fileName)
+  if (!existsSync(dir)) return null
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".tsx"))
+    .map((f) => readFileSync(join(dir, f), "utf8"))
+    .join("\n")
 }
 
 // network-testing is a grab-bag: tools import pure constants from it as well
@@ -45,9 +54,13 @@ function performsNetworkIO(src: string): boolean {
     if (name === "network-testing") continue // handled by NETWORK_SYMBOLS above
     const libPath = join(repoRoot, "lib", `${name}.ts`)
     // fetch used as a value, either called or passed. a paren-only match missed
-    // lib/oui-vendors injecting it as a default parameter, and a bare \bfetch\b
-    // matched the literal "node-fetch" in ua-parse's bot list.
-    if (existsSync(libPath) && /\bfetch\s*\(|=\s*fetch\b/.test(readFileSync(libPath, "utf8"))) {
+    // lib/oui-vendors injecting it as a default parameter, `=\s*fetch` missed
+    // lib/email-auth defaulting with `?? fetch`, and a bare \bfetch\b matched
+    // the literal "node-fetch" in ua-parse's bot list.
+    if (
+      existsSync(libPath) &&
+      /\bfetch\s*\(|(?:=|\?\?)\s*fetch\b/.test(readFileSync(libPath, "utf8"))
+    ) {
       return true
     }
   }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
+import { parseAsBoolean, parseAsInteger, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,19 +23,51 @@ import {
   type PasswordOptions,
 } from "@/lib/password-gen"
 
+const MIN_LENGTH = 8
+const MAX_LENGTH = 128
+
+const CHARACTER_CLASSES = [
+  { key: "upper", id: "upper", label: "Uppercase (A-Z)", sample: "ABCDEF" },
+  { key: "lower", id: "lower", label: "Lowercase (a-z)", sample: "abcdef" },
+  { key: "digits", id: "digits", label: "Numbers (0-9)", sample: "012345" },
+  { key: "symbols", id: "symbols", label: "Symbols (!@#$)", sample: "!@#$%^" },
+] as const
+
 export function PasswordGenerator() {
+  // the options live in the query string so a policy ("32 chars, no symbols")
+  // is shareable. the generated password never does: a secret in a url is a
+  // secret in browser history, in the referer header and in every proxy log,
+  // and a password reproducible from a link is not a password.
+  const [query, setQuery] = useQueryStates(
+    {
+      length: parseAsInteger.withDefault(16),
+      upper: parseAsBoolean.withDefault(true),
+      lower: parseAsBoolean.withDefault(true),
+      digits: parseAsBoolean.withDefault(true),
+      symbols: parseAsBoolean.withDefault(true),
+      noAmbiguous: parseAsBoolean.withDefault(false),
+      noSimilar: parseAsBoolean.withDefault(false),
+    },
+    // dragging the length slider should not fill the back button
+    { history: "replace" }
+  )
+
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(true)
-  const [options, setOptions] = useState<PasswordOptions>({
-    length: 16,
-    uppercase: true,
-    lowercase: true,
-    numbers: true,
-    symbols: true,
-    excludeAmbiguous: false,
-    excludeSimilar: false,
-  })
   const [history, setHistory] = useState<string[]>([])
+
+  const options: PasswordOptions = useMemo(
+    () => ({
+      length: Math.min(Math.max(query.length, MIN_LENGTH), MAX_LENGTH),
+      uppercase: query.upper,
+      lowercase: query.lower,
+      numbers: query.digits,
+      symbols: query.symbols,
+      excludeAmbiguous: query.noAmbiguous,
+      excludeSimilar: query.noSimilar,
+    }),
+    [query]
+  )
 
   // entropy is quoted from the charset that will actually be drawn from, so
   // exclusions move the number and an empty charset is an error, not -Infinity
@@ -52,10 +85,6 @@ export function PasswordGenerator() {
       toast.error(e instanceof EmptyCharsetError ? e.message : "Could not generate a password")
     }
   }, [options])
-
-  const updateOption = <K extends keyof PasswordOptions>(key: K, value: PasswordOptions[K]) => {
-    setOptions((prev) => ({ ...prev, [key]: value }))
-  }
 
   return (
     <div className="tool-container">
@@ -149,35 +178,30 @@ export function PasswordGenerator() {
               </div>
               <Slider
                 value={[options.length]}
-                onValueChange={([value]) => updateOption("length", value)}
-                min={8}
-                max={128}
+                onValueChange={([value]) => setQuery({ length: value })}
+                min={MIN_LENGTH}
+                max={MAX_LENGTH}
                 step={1}
                 className="w-full"
                 aria-label="Password length"
               />
               <div className="text-muted-foreground flex justify-between text-xs">
-                <span>8</span>
-                <span>128</span>
+                <span>{MIN_LENGTH}</span>
+                <span>{MAX_LENGTH}</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <Label>Character Types</Label>
               <div className="space-y-3">
-                {[
-                  { key: "uppercase" as const, label: "Uppercase (A-Z)", sample: "ABCDEF" },
-                  { key: "lowercase" as const, label: "Lowercase (a-z)", sample: "abcdef" },
-                  { key: "numbers" as const, label: "Numbers (0-9)", sample: "012345" },
-                  { key: "symbols" as const, label: "Symbols (!@#$)", sample: "!@#$%^" },
-                ].map((item) => (
+                {CHARACTER_CLASSES.map((item) => (
                   <div key={item.key} className="flex items-center space-x-3">
                     <Checkbox
-                      id={item.key}
-                      checked={options[item.key]}
-                      onCheckedChange={(checked) => updateOption(item.key, !!checked)}
+                      id={item.id}
+                      checked={query[item.key]}
+                      onCheckedChange={(checked) => setQuery({ [item.key]: !!checked })}
                     />
-                    <Label htmlFor={item.key} className="flex-1 cursor-pointer">
+                    <Label htmlFor={item.id} className="flex-1 cursor-pointer">
                       {item.label}
                     </Label>
                     <code className="text-muted-foreground text-xs">{item.sample}</code>
@@ -191,21 +215,21 @@ export function PasswordGenerator() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <Checkbox
-                    id="excludeAmbiguous"
-                    checked={options.excludeAmbiguous}
-                    onCheckedChange={(checked) => updateOption("excludeAmbiguous", !!checked)}
+                    id="noAmbiguous"
+                    checked={query.noAmbiguous}
+                    onCheckedChange={(checked) => setQuery({ noAmbiguous: !!checked })}
                   />
-                  <Label htmlFor="excludeAmbiguous" className="cursor-pointer">
+                  <Label htmlFor="noAmbiguous" className="cursor-pointer">
                     Exclude ambiguous characters ({"{}[]()/\\'\"`~,;:.<>"})
                   </Label>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Checkbox
-                    id="excludeSimilar"
-                    checked={options.excludeSimilar}
-                    onCheckedChange={(checked) => updateOption("excludeSimilar", !!checked)}
+                    id="noSimilar"
+                    checked={query.noSimilar}
+                    onCheckedChange={(checked) => setQuery({ noSimilar: !!checked })}
                   />
-                  <Label htmlFor="excludeSimilar" className="cursor-pointer">
+                  <Label htmlFor="noSimilar" className="cursor-pointer">
                     Exclude similar characters (i, l, 1, L, o, 0, O)
                   </Label>
                 </div>
@@ -264,7 +288,7 @@ export function PasswordGenerator() {
               },
             ].map((tip, i) => (
               <div key={i} className="flex gap-3 rounded-lg border p-4">
-                <tip.icon className="text-primary h-5 w-5 flex-shrink-0" />
+                <tip.icon className="text-primary h-5 w-5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">{tip.title}</p>
                   <p className="text-muted-foreground text-xs">{tip.desc}</p>

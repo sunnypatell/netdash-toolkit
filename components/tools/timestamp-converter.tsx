@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Clock, RefreshCw, Globe, XCircle, Info } from "lucide-react"
+import { Clock, RefreshCw, Globe, XCircle, Info, Pause, Play } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { ResultCard } from "@/components/ui/result-card"
@@ -37,48 +38,82 @@ import {
   zonedTimeToEpochMs,
 } from "@/lib/timezones"
 
+const UNIT_OPTIONS = [
+  "auto",
+  "s",
+  "ms",
+  "us",
+  "ns",
+  "filetime",
+  "ticks",
+  "cocoa",
+  "excel",
+] as const satisfies readonly (TimestampUnit | "auto")[]
+
 export function TimestampConverter() {
-  const [raw, setRaw] = useState("")
-  const [unit, setUnit] = useState<TimestampUnit | "auto">("auto")
-  const [timeZone, setTimeZone] = useState("UTC")
-  const [dateInput, setDateInput] = useState("")
-  const [timeInput, setTimeInput] = useState("")
+  // the timestamp, its unit and the target zone are the whole input, so they
+  // live in the query string and a converted instant becomes a shareable link
+  const [query, setQuery] = useQueryStates(
+    {
+      ts: parseAsString.withDefault(""),
+      unit: parseAsStringLiteral(UNIT_OPTIONS).withDefault("auto"),
+      tz: parseAsString.withDefault(""),
+    },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
+
+  const raw = query.ts
+  const unit = query.unit
+  // an unset tz means "this browser": resolving it during ssr render would bake
+  // one visitor's zone into the static html
+  const [browserZone, setBrowserZone] = useState("UTC")
   // new Date() during render would differ between server and client html
   const [now, setNow] = useState<Date | null>(null)
+  const [dateInput, setDateInput] = useState("")
+  const [timeInput, setTimeInput] = useState("")
+
+  // sc 2.2.2: an auto-updating clock needs a way to stop it
+  const [paused, setPaused] = useState(false)
 
   useEffect(() => {
-    setTimeZone(localTimeZone())
+    setBrowserZone(localTimeZone())
     setNow(new Date())
-    const interval = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(interval)
   }, [])
 
-  const zones = useMemo(() => listTimeZones(), [])
-  const browserZone = useMemo(() => localTimeZone(), [])
-
-  // date + time pickers feed the timestamp field, interpreted in the selected zone
   useEffect(() => {
-    if (!dateInput || !timeInput) return
-    const [y, mo, d] = dateInput.split("-").map(Number)
-    const [h, mi, s] = timeInput.split(":").map(Number)
+    if (paused) return
+    const interval = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(interval)
+  }, [paused])
+
+  const timeZone = query.tz || browserZone
+  const zones = useMemo(() => listTimeZones(), [])
+
+  // the pickers write the timestamp field directly rather than through an
+  // effect, so changing the zone can never silently rewrite what was typed
+  const applyPickers = (date: string, time: string) => {
+    setDateInput(date)
+    setTimeInput(time)
+    if (!date || !time) return
+    const [y, mo, d] = date.split("-").map(Number)
+    const [h, mi, s] = time.split(":").map(Number)
     if ([y, mo, d, h, mi].some((n) => !Number.isFinite(n))) return
     const epochMs = zonedTimeToEpochMs(
       { year: y, month: mo, day: d, hour: h, minute: mi, second: Number.isFinite(s) ? s : 0 },
       timeZone
     )
-    setRaw(Math.floor(epochMs / 1000).toString())
-    setUnit("auto")
-  }, [dateInput, timeInput, timeZone])
+    void setQuery({ ts: Math.floor(epochMs / 1000).toString(), unit: "auto" })
+  }
 
   const parsed = useMemo(() => parseTimestampInput(raw, { unit, timeZone }), [raw, unit, timeZone])
 
   const applyNow = () => {
     const current = new Date()
-    setRaw(Math.floor(current.getTime() / 1000).toString())
-    setUnit("auto")
     // both pickers must come from the same wall clock, never a UTC date with a local time
     setDateInput(toLocalDateInputValue(current))
     setTimeInput(toLocalTimeInputValue(current))
+    void setQuery({ ts: Math.floor(current.getTime() / 1000).toString(), unit: "auto" })
   }
 
   const presets = useMemo(() => {
@@ -121,11 +156,30 @@ export function TimestampConverter() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Current Time
-            </CardTitle>
-            <CardDescription>Live updating timestamp</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Current Time
+                </CardTitle>
+                <CardDescription>
+                  {paused ? "Updates paused" : "Live updating timestamp"}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPaused((v) => !v)}
+                aria-pressed={paused}
+              >
+                {paused ? (
+                  <Play className="mr-1 h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Pause className="mr-1 h-4 w-4" aria-hidden="true" />
+                )}
+                {paused ? "Resume updates" : "Pause updates"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-3">
@@ -187,7 +241,7 @@ export function TimestampConverter() {
                 <Input
                   id="timestamp"
                   value={raw}
-                  onChange={(e) => setRaw(e.target.value)}
+                  onChange={(e) => setQuery({ ts: e.target.value })}
                   placeholder="1609459200 or 2021-01-01T00:00:00Z"
                   className="font-mono"
                   aria-invalid={raw.trim() !== "" && !parsed.ok}
@@ -201,7 +255,10 @@ export function TimestampConverter() {
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="unit">Numeric unit</Label>
-                <Select value={unit} onValueChange={(v) => setUnit(v as TimestampUnit | "auto")}>
+                <Select
+                  value={unit}
+                  onValueChange={(v) => setQuery({ unit: v as TimestampUnit | "auto" })}
+                >
                   <SelectTrigger id="unit" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -221,7 +278,7 @@ export function TimestampConverter() {
                   <Globe className="h-4 w-4" />
                   Timezone
                 </Label>
-                <Select value={timeZone} onValueChange={setTimeZone}>
+                <Select value={timeZone} onValueChange={(v) => setQuery({ tz: v })}>
                   <SelectTrigger id="tz" className="w-full font-mono">
                     <SelectValue />
                   </SelectTrigger>
@@ -245,7 +302,7 @@ export function TimestampConverter() {
                   id="date"
                   type="date"
                   value={dateInput}
-                  onChange={(e) => setDateInput(e.target.value)}
+                  onChange={(e) => applyPickers(e.target.value, timeInput)}
                 />
               </div>
               <div className="space-y-2">
@@ -255,7 +312,7 @@ export function TimestampConverter() {
                   type="time"
                   step="1"
                   value={timeInput}
-                  onChange={(e) => setTimeInput(e.target.value)}
+                  onChange={(e) => applyPickers(dateInput, e.target.value)}
                 />
               </div>
             </div>
@@ -342,10 +399,7 @@ export function TimestampConverter() {
             {presets.map((item) => (
               <button
                 key={item.label}
-                onClick={() => {
-                  setRaw(item.ts.toString())
-                  setUnit("auto")
-                }}
+                onClick={() => setQuery({ ts: item.ts.toString(), unit: "auto" })}
                 className="hover:bg-muted/50 rounded-lg border p-3 text-left transition-colors"
               >
                 <p className="text-sm font-medium">{item.label}</p>

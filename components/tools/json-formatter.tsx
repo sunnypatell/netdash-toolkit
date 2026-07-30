@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import { parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,193 +14,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Copy,
-  Braces,
-  Trash2,
-  Download,
-  CheckCircle2,
-  XCircle,
-  Minimize2,
-  Maximize2,
-} from "lucide-react"
+import { Copy, Braces, Trash2, Download, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { copyText } from "@/lib/clipboard"
 import { downloadTextFile, dateStamp } from "@/lib/download"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { INDENT_LABELS, analyzeJson, type JsonIndent, type JsonOutputMode } from "@/lib/json-format"
 
-interface JSONStats {
-  keys: number
-  arrays: number
-  objects: number
-  strings: number
-  numbers: number
-  booleans: number
-  nulls: number
-  depth: number
-}
+const INDENTS = ["2", "4", "tab"] as const
+const OUTPUT_MODES = ["pretty", "minify"] as const
 
-function getJSONStats(obj: unknown, depth = 0): JSONStats {
-  const stats: JSONStats = {
-    keys: 0,
-    arrays: 0,
-    objects: 0,
-    strings: 0,
-    numbers: 0,
-    booleans: 0,
-    nulls: 0,
-    depth,
-  }
+const SAMPLE = JSON.stringify(
+  {
+    name: "NetDash Toolkit",
+    version: "1.0.0",
+    features: ["subnet calculator", "dns tools", "port scanner"],
+    config: { theme: "dark", notifications: true, maxResults: 100 },
+    metadata: { created: "2024-01-15", updated: null, tags: ["networking", "tools"] },
+  },
+  null,
+  2
+)
 
-  if (obj === null) {
-    stats.nulls = 1
-    return stats
-  }
-
-  if (Array.isArray(obj)) {
-    stats.arrays = 1
-    obj.forEach((item) => {
-      const childStats = getJSONStats(item, depth + 1)
-      stats.keys += childStats.keys
-      stats.arrays += childStats.arrays
-      stats.objects += childStats.objects
-      stats.strings += childStats.strings
-      stats.numbers += childStats.numbers
-      stats.booleans += childStats.booleans
-      stats.nulls += childStats.nulls
-      if (childStats.depth > stats.depth) stats.depth = childStats.depth
-    })
-    return stats
-  }
-
-  if (typeof obj === "object") {
-    stats.objects = 1
-    const keys = Object.keys(obj as Record<string, unknown>)
-    stats.keys = keys.length
-    keys.forEach((key) => {
-      const childStats = getJSONStats((obj as Record<string, unknown>)[key], depth + 1)
-      stats.keys += childStats.keys
-      stats.arrays += childStats.arrays
-      stats.objects += childStats.objects
-      stats.strings += childStats.strings
-      stats.numbers += childStats.numbers
-      stats.booleans += childStats.booleans
-      stats.nulls += childStats.nulls
-      if (childStats.depth > stats.depth) stats.depth = childStats.depth
-    })
-    return stats
-  }
-
-  if (typeof obj === "string") stats.strings = 1
-  if (typeof obj === "number") stats.numbers = 1
-  if (typeof obj === "boolean") stats.booleans = 1
-
-  return stats
-}
+// the two things JSON.parse destroys without a word
+const TRAP_SAMPLE = '{"id": 9007199254740993, "role": "user", "role": "admin"}'
 
 export function JSONFormatter() {
+  // only the formatting options go in the url. a pasted document is routinely
+  // tens of kilobytes and is often somebody's api response, so it stays local.
+  const [{ indent, output: outputMode }, setQuery] = useQueryStates(
+    {
+      indent: parseAsStringLiteral(INDENTS).withDefault("2"),
+      output: parseAsStringLiteral(OUTPUT_MODES).withDefault("pretty"),
+    },
+    { history: "replace" }
+  )
+
   const [input, setInput] = useState("")
-  const [output, setOutput] = useState("")
-  const [isValid, setIsValid] = useState<boolean | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [indentSize, setIndentSize] = useState("2")
-  const [stats, setStats] = useState<JSONStats | null>(null)
 
-  useEffect(() => {
-    if (!input.trim()) {
-      setOutput("")
-      setIsValid(null)
-      setError(null)
-      setStats(null)
-      return
-    }
+  const analysis = useMemo(
+    () => analyzeJson(input, indent, outputMode),
+    [input, indent, outputMode]
+  )
 
-    try {
-      const parsed = JSON.parse(input)
-      setIsValid(true)
-      setError(null)
-      setOutput(JSON.stringify(parsed, null, parseInt(indentSize)))
-      setStats(getJSONStats(parsed))
-    } catch (e) {
-      setIsValid(false)
-      setError((e as Error).message)
-      setOutput("")
-      setStats(null)
-    }
-  }, [input, indentSize])
-
-  const copyToClipboard = async (text: string) => {
-    if (await copyText(text)) {
-      toast.success("JSON copied to clipboard")
-    } else {
-      toast.error("Copy failed")
-    }
+  const copyToClipboard = async (value: string) => {
+    if (await copyText(value)) toast.success("JSON copied to clipboard")
+    else toast.error("Copy failed")
   }
 
-  const minify = () => {
-    if (!isValid) return
-    try {
-      const parsed = JSON.parse(input)
-      setOutput(JSON.stringify(parsed))
-    } catch {
-      // Already handled
-    }
-  }
-
-  const format = () => {
-    if (!isValid) return
-    try {
-      const parsed = JSON.parse(input)
-      setOutput(JSON.stringify(parsed, null, parseInt(indentSize)))
-    } catch {
-      // Already handled
-    }
-  }
-
-  const downloadJSON = () => {
-    if (!output) return
-    downloadTextFile(output, `formatted-${dateStamp()}.json`, "application/json")
-  }
-
-  const clear = () => {
-    setInput("")
-    setOutput("")
-    setIsValid(null)
-    setError(null)
-    setStats(null)
-  }
-
-  const loadSample = () => {
-    setInput(
-      JSON.stringify(
-        {
-          name: "NetDash Toolkit",
-          version: "1.0.0",
-          features: ["subnet calculator", "dns tools", "port scanner"],
-          config: {
-            theme: "dark",
-            notifications: true,
-            maxResults: 100,
-          },
-          metadata: {
-            created: "2024-01-15",
-            updated: null,
-            tags: ["networking", "tools", "utilities"],
-          },
-        },
-        null,
-        2
-      )
-    )
-  }
+  const stats = analysis.stats
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Braces}
         title="JSON Formatter"
-        description="Format, validate, and minify JSON data"
+        description="Format, validate and minify JSON, and surface what JSON.parse quietly changes"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -209,19 +80,25 @@ export function JSONFormatter() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   Input
-                  {isValid !== null &&
-                    (isValid ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  {analysis.valid !== null &&
+                    (analysis.valid ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" aria-hidden="true" />
                     ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
+                      <XCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
                     ))}
                 </CardTitle>
                 <CardDescription>Paste or type JSON to format</CardDescription>
               </div>
               <Badge
-                variant={isValid ? "default" : isValid === false ? "destructive" : "secondary"}
+                variant={
+                  analysis.valid
+                    ? "default"
+                    : analysis.valid === false
+                      ? "destructive"
+                      : "secondary"
+                }
               >
-                {isValid ? "Valid" : isValid === false ? "Invalid" : "Empty"}
+                {analysis.valid ? "Valid" : analysis.valid === false ? "Invalid" : "Empty"}
               </Badge>
             </div>
           </CardHeader>
@@ -231,24 +108,34 @@ export function JSONFormatter() {
               id="json-input"
               aria-label="JSON input"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(event) => setInput(event.target.value)}
               placeholder='{"key": "value"}'
               className="h-80 resize-none font-mono text-sm"
             />
 
-            {error && (
+            {analysis.error && (
               <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertDescription className="font-mono text-xs">{error}</AlertDescription>
+                <XCircle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription className="font-mono text-xs">{analysis.error}</AlertDescription>
               </Alert>
             )}
 
+            {analysis.warnings.map((warning) => (
+              <Alert key={warning.message}>
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                <AlertDescription className="text-xs">{warning.message}</AlertDescription>
+              </Alert>
+            ))}
+
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={loadSample}>
+              <Button variant="outline" size="sm" onClick={() => setInput(SAMPLE)}>
                 Load Sample
               </Button>
-              <Button variant="outline" size="sm" onClick={clear}>
-                <Trash2 className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={() => setInput(TRAP_SAMPLE)}>
+                Load Lossy Sample
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setInput("")}>
+                <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                 Clear
               </Button>
             </div>
@@ -261,21 +148,44 @@ export function JSONFormatter() {
               <div>
                 <CardTitle>Formatted Output</CardTitle>
                 <CardDescription>
-                  {output ? `${output.length} characters` : "Enter valid JSON to see output"}
+                  {analysis.output
+                    ? `${analysis.output.length.toLocaleString()} characters`
+                    : "Enter valid JSON to see output"}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="indent" className="text-sm">
-                  Indent:
+              <div className="flex flex-wrap items-center gap-2">
+                <Label htmlFor="json-output-mode" className="text-sm">
+                  Output:
                 </Label>
-                <Select value={indentSize} onValueChange={setIndentSize}>
-                  <SelectTrigger id="indent" className="w-20">
+                <Select
+                  value={outputMode}
+                  onValueChange={(value) => setQuery({ output: value as JsonOutputMode })}
+                >
+                  <SelectTrigger id="json-output-mode" className="w-28">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="4">4</SelectItem>
-                    <SelectItem value="0">Tab</SelectItem>
+                    <SelectItem value="pretty">Pretty</SelectItem>
+                    <SelectItem value="minify">Minified</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Label htmlFor="json-indent" className="text-sm">
+                  Indent:
+                </Label>
+                <Select
+                  value={indent}
+                  onValueChange={(value) => setQuery({ indent: value as JsonIndent })}
+                  disabled={outputMode === "minify"}
+                >
+                  <SelectTrigger id="json-indent" className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDENTS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {INDENT_LABELS[value]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -285,7 +195,7 @@ export function JSONFormatter() {
             <Textarea
               id="json-output"
               aria-label="Formatted JSON output"
-              value={output}
+              value={analysis.output}
               readOnly
               placeholder="Formatted JSON will appear here..."
               className="bg-muted/50 h-80 resize-none font-mono text-sm"
@@ -295,22 +205,25 @@ export function JSONFormatter() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(output)}
-                disabled={!output}
+                onClick={() => copyToClipboard(analysis.output)}
+                disabled={!analysis.output}
               >
-                <Copy className="mr-2 h-4 w-4" />
+                <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
                 Copy
               </Button>
-              <Button variant="outline" size="sm" onClick={format} disabled={!isValid}>
-                <Maximize2 className="mr-2 h-4 w-4" />
-                Format
-              </Button>
-              <Button variant="outline" size="sm" onClick={minify} disabled={!isValid}>
-                <Minimize2 className="mr-2 h-4 w-4" />
-                Minify
-              </Button>
-              <Button variant="outline" size="sm" onClick={downloadJSON} disabled={!output}>
-                <Download className="mr-2 h-4 w-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  downloadTextFile(
+                    analysis.output,
+                    `formatted-${dateStamp()}.json`,
+                    "application/json"
+                  )
+                }
+                disabled={!analysis.output}
+              >
+                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                 Download
               </Button>
             </div>
@@ -336,7 +249,7 @@ export function JSONFormatter() {
                 { label: "Max Depth", value: stats.depth },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-lg border p-3 text-center">
-                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-2xl font-bold">{stat.value.toLocaleString()}</p>
                   <p className="text-muted-foreground text-xs">{stat.label}</p>
                 </div>
               ))}
@@ -344,6 +257,33 @@ export function JSONFormatter() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>What JSON.parse changes without telling you</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="text-muted-foreground list-inside list-disc space-y-2 text-sm">
+            <li>
+              An integer past 2<sup>53</sup>-1 is rounded to the nearest double, so{" "}
+              <code className="font-mono">9007199254740993</code> comes back as{" "}
+              <code className="font-mono">9007199254740992</code>. Keep large IDs as strings.
+            </li>
+            <li>
+              A repeated key keeps only the last value. RFC 8259 calls duplicate names
+              unpredictable, and every JavaScript parser resolves it the same silent way.
+            </li>
+            <li>
+              A number too large for a double becomes Infinity on the way in and{" "}
+              <code className="font-mono">null</code> on the way out.
+            </li>
+            <li>
+              JSON.parse accepts any nesting depth, but JSON.stringify recurses and gives up near
+              10,000 levels.
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   )
 }

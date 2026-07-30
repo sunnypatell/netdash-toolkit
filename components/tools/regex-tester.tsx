@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -59,17 +60,27 @@ const PRESETS = [
 ]
 
 export function RegexTester() {
-  const [pattern, setPattern] = useState(DEFAULT_PATTERN)
-  const [testString, setTestString] = useState(DEFAULT_TEST_STRING)
-  const [flags, setFlags] = useState<Record<string, boolean>>({ g: true, i: true })
-
-  const flagStr = useMemo(
-    () =>
-      REGEX_FLAGS.filter((f) => flags[f.key])
-        .map((f) => f.key)
-        .join(""),
-    [flags]
+  // a pattern, its flags and a sample corpus are all short and never sensitive,
+  // so the whole thing goes in the url and a reproduction is a link
+  const [query, setQuery] = useQueryStates(
+    {
+      pattern: parseAsString.withDefault(DEFAULT_PATTERN),
+      flags: parseAsString.withDefault(DEFAULT_FLAGS),
+      test: parseAsString.withDefault(DEFAULT_TEST_STRING),
+    },
+    { history: "replace" }
   )
+
+  const { pattern, flags: flagStr, test: testString } = query
+  const setPattern = (value: string) => void setQuery({ pattern: value })
+  const setTestString = (value: string) => void setQuery({ test: value })
+
+  // canonical order, so the url never carries "ig" and the /flags readout is stable
+  const flags = useMemo(() => {
+    const active: Record<string, boolean> = {}
+    for (const flag of REGEX_FLAGS) active[flag.key] = flagStr.includes(flag.key)
+    return active
+  }, [flagStr])
 
   const [request, setRequest] = useState<MatchRequest>({
     pattern: DEFAULT_PATTERN,
@@ -173,12 +184,14 @@ export function RegexTester() {
   }, [request.input, result, invalid, timedOut])
 
   const toggleFlag = (key: string, on: boolean) => {
-    setFlags((prev) => {
-      const next = { ...prev, [key]: on }
-      // u and v cannot be combined; picking one drops the other
-      if (on && key === "u") next.v = false
-      if (on && key === "v") next.u = false
-      return next
+    const next = { ...flags, [key]: on }
+    // u and v cannot be combined; picking one drops the other
+    if (on && key === "u") next.v = false
+    if (on && key === "v") next.u = false
+    void setQuery({
+      flags: REGEX_FLAGS.filter((f) => next[f.key])
+        .map((f) => f.key)
+        .join(""),
     })
   }
 

@@ -1,0 +1,112 @@
+import type { IPv6RangeEntry } from "./types"
+
+// prefixes and rfc references follow the iana ipv6 special-purpose address
+// registry; 2000::/3 and ff00::/8 come from RFC 4291 sections 2.4 and 2.7,
+// which the special-purpose registry does not list.
+export const IPV6_SPECIAL_RANGES: readonly IPv6RangeEntry[] = [
+  {
+    range: "::/128",
+    name: "Unspecified",
+    routable: "No",
+    rfc: "RFC 4291",
+    description: "No address yet, only valid as a source during address configuration",
+  },
+  {
+    range: "::1/128",
+    name: "Loopback",
+    routable: "No",
+    rfc: "RFC 4291",
+    description: "The host itself, equivalent to 127.0.0.1",
+  },
+  {
+    range: "::ffff:0:0/96",
+    name: "IPv4-mapped",
+    routable: "No",
+    rfc: "RFC 4291",
+    description: "Represents an IPv4 address inside an IPv6 socket API",
+  },
+  {
+    range: "64:ff9b::/96",
+    name: "IPv4-IPv6 Translation",
+    routable: "Varies",
+    rfc: "RFC 6052",
+    description: "Well-known prefix for NAT64 translation",
+  },
+  {
+    range: "100::/64",
+    name: "Discard-Only",
+    routable: "No",
+    rfc: "RFC 6666",
+    description: "Remote triggered black hole target, traffic is dropped",
+  },
+  {
+    range: "2000::/3",
+    name: "Global Unicast",
+    routable: "Yes",
+    rfc: "RFC 4291",
+    description: "The range currently allocated to RIRs for public addressing",
+  },
+  {
+    range: "2001::/32",
+    name: "Teredo",
+    routable: "Yes",
+    rfc: "RFC 4380",
+    description: "IPv6 over UDP tunnelling through NAT",
+  },
+  {
+    range: "2001:20::/28",
+    name: "ORCHIDv2",
+    routable: "No",
+    rfc: "RFC 7343",
+    description: "Cryptographic hash identifiers, not routed",
+  },
+  {
+    range: "2001:db8::/32",
+    name: "Documentation",
+    routable: "No",
+    rfc: "RFC 3849",
+    description: "Examples and documentation, never routed",
+  },
+  {
+    range: "2002::/16",
+    name: "6to4",
+    routable: "Yes",
+    rfc: "RFC 3056",
+    description: "Automatic tunnelling, deprecated by RFC 7526",
+  },
+  {
+    range: "3fff::/20",
+    name: "Documentation",
+    routable: "No",
+    rfc: "RFC 9637",
+    description: "Second documentation block, reserved in 2024",
+  },
+  {
+    range: "fc00::/7",
+    name: "Unique Local (ULA)",
+    routable: "No",
+    rfc: "RFC 4193",
+    description: "Site-local addressing, the IPv6 answer to RFC 1918",
+  },
+  {
+    range: "fd00::/8",
+    name: "Unique Local, locally assigned",
+    routable: "No",
+    rfc: "RFC 4193",
+    description: "The half of fc00::/7 with L=1, where the 40-bit global ID is self-generated",
+  },
+  {
+    range: "fe80::/10",
+    name: "Link-Local Unicast",
+    routable: "No",
+    rfc: "RFC 4291",
+    description: "Autoconfigured per interface, required on every IPv6 interface",
+  },
+  {
+    range: "ff00::/8",
+    name: "Multicast",
+    routable: "Varies",
+    rfc: "RFC 4291",
+    description: "Scope is encoded in the address; ff02::1 is all nodes on the link",
+  },
+]

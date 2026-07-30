@@ -1,146 +1,120 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
+import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Binary, AlertTriangle } from "lucide-react"
+import { Binary, AlertTriangle, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-import { intToIpv4, netmaskToPrefix, prefixToMaskInt, prefixToNetmask } from "@/lib/network-utils"
+import { DataTable, type DataColumn } from "@/components/tools/reference-table"
+import { maskInfo, parseMaskInput } from "@/lib/mask-convert"
+import { SUBNET_MASKS } from "@/lib/reference/subnet-masks"
+import { COMMON_SUBNETS } from "@/lib/reference/common-subnets"
+import type { SubnetMaskEntry } from "@/lib/reference/types"
 
-interface MaskResult {
-  cidr: number
-  dotted: string
-  wildcard: string
-  binary: string
-  hosts: number
-  networks: string
-  class: string
-}
+const PRESETS = [8, 16, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 
-const PRESET_MASKS = [
-  { cidr: 8, label: "/8 (Class A)" },
-  { cidr: 16, label: "/16 (Class B)" },
-  { cidr: 24, label: "/24 (Class C)" },
-  { cidr: 25, label: "/25" },
-  { cidr: 26, label: "/26" },
-  { cidr: 27, label: "/27" },
-  { cidr: 28, label: "/28" },
-  { cidr: 29, label: "/29" },
-  { cidr: 30, label: "/30 (P2P)" },
-  { cidr: 31, label: "/31 (P2P)" },
-  { cidr: 32, label: "/32 (Host)" },
+const USE_CASE_BY_PREFIX = new Map(COMMON_SUBNETS.map((entry) => [entry.prefix, entry.useCase]))
+
+const columns: DataColumn<SubnetMaskEntry>[] = [
+  {
+    key: "prefix",
+    header: "CIDR",
+    headerClassName: "w-20 p-2 text-left font-medium",
+    text: (row) => `/${row.prefix}`,
+    cell: (row) => <Badge variant="secondary">/{row.prefix}</Badge>,
+  },
+  {
+    key: "mask",
+    header: "Subnet Mask",
+    cellClassName: "p-2 font-mono",
+    text: (row) => row.mask,
+  },
+  {
+    key: "wildcard",
+    header: "Wildcard",
+    cellClassName: "p-2 font-mono",
+    text: (row) => row.wildcard,
+  },
+  {
+    key: "hosts",
+    header: "Usable Hosts",
+    cellClassName: "p-2",
+    text: (row) => row.usableHosts.toLocaleString(),
+  },
+  {
+    key: "use",
+    header: "Typical Use",
+    cellClassName: "text-muted-foreground p-2",
+    text: (row) => USE_CASE_BY_PREFIX.get(row.prefix) ?? "",
+  },
 ]
 
-export function SubnetMaskConverter() {
-  const [input, setInput] = useState("255.255.255.0")
-  const [error, setError] = useState<string | null>(null)
-
-  const parseMask = (value: string): number | null => {
-    const trimmed = value.trim()
-
-    // Check if it is CIDR notation
-    if (trimmed.startsWith("/")) {
-      const cidr = parseInt(trimmed.slice(1), 10)
-      if (!isNaN(cidr) && cidr >= 0 && cidr <= 32) return cidr
-    }
-
-    // Check if its just a number
-    if (/^\d+$/.test(trimmed)) {
-      const cidr = parseInt(trimmed, 10)
-      if (!isNaN(cidr) && cidr >= 0 && cidr <= 32) return cidr
-    }
-
-    // dotted decimal; netmaskToPrefix rejects non-contiguous masks
-    try {
-      return netmaskToPrefix(trimmed)
-    } catch {
-      return null
-    }
-  }
-
-  const result = useMemo<MaskResult | null>(() => {
-    setError(null)
-    const cidr = parseMask(input)
-
-    if (cidr === null) {
-      if (input.trim()) {
-        setError(
-          "Invalid subnet mask. Enter CIDR (/24), prefix length (24), or dotted decimal (255.255.255.0)"
-        )
-      }
-      return null
-    }
-
-    const maskInt = prefixToMaskInt(cidr)
-    const dotted = intToIpv4(maskInt)
-    const wildcard = intToIpv4(~maskInt >>> 0)
-    const binary = dotted
-      .split(".")
-      .map((o) => Number(o).toString(2).padStart(8, "0"))
-      .join(".")
-
-    const hostBits = 32 - cidr
-    const hosts = cidr >= 31 ? Math.pow(2, hostBits) : Math.pow(2, hostBits) - 2
-
-    // Determine class
-    let netClass = "Classless"
-    if (cidr <= 8) netClass = "Class A or larger"
-    else if (cidr <= 16) netClass = "Class B or larger"
-    else if (cidr <= 24) netClass = "Class C or larger"
-
-    const networks = Math.pow(2, cidr).toLocaleString()
-
-    return {
-      cidr,
-      dotted,
-      wildcard,
-      binary,
-      hosts,
-      networks,
-      class: netClass,
-    }
-  }, [input])
-
-  const FormatRow = ({ label, value }: { label: string; value: string }) => (
+function FormatRow({ label, value }: { label: string; value: string }) {
+  return (
     <div className="flex items-center justify-between rounded-lg border p-3">
-      <div>
+      <div className="min-w-0">
         <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="font-mono text-sm">{value}</p>
+        <p className="font-mono text-sm break-all">{value}</p>
       </div>
       <CopyButton value={value} size="sm" />
     </div>
   )
+}
+
+export function SubnetMaskConverter() {
+  const [query, setQuery] = useQueryStates(
+    { mask: parseAsString.withDefault("255.255.255.0") },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
+
+  const { mask } = query
+
+  // derived, so an invalid mask cannot leave the previous answer on screen
+  const { result, error } = useMemo(() => {
+    const prefix = parseMaskInput(mask)
+    if (prefix === null) {
+      return {
+        result: null,
+        error: mask.trim()
+          ? "Not a valid mask. Enter CIDR (/24), a prefix length (24), a dotted-decimal mask (255.255.255.0) or a wildcard (0.0.0.255). Non-contiguous masks are rejected."
+          : "",
+      }
+    }
+    return { result: maskInfo(prefix), error: "" }
+  }, [mask])
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Binary}
         title="Subnet Mask Converter"
-        description="Convert between CIDR, dotted decimal, and wildcard masks"
+        description="Convert between CIDR, dotted decimal, wildcard and binary masks"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Input</CardTitle>
-            <CardDescription>Enter a subnet mask in any format</CardDescription>
+            <CardDescription>Enter a mask in any of the four notations</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="mask">Subnet Mask</Label>
               <Input
                 id="mask"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                value={mask}
+                onChange={(e) => setQuery({ mask: e.target.value })}
                 placeholder="/24 or 255.255.255.0"
                 className="font-mono"
               />
               <p className="text-muted-foreground mt-1 text-xs">
-                Accepts: /24, 24, or 255.255.255.0
+                Accepts /24, 24, 255.255.255.0 or 0.0.0.255
               </p>
             </div>
 
@@ -154,14 +128,14 @@ export function SubnetMaskConverter() {
             <div className="space-y-2 pt-2">
               <p className="text-muted-foreground text-xs">Quick Select</p>
               <div className="flex flex-wrap gap-1">
-                {PRESET_MASKS.map((m) => (
+                {PRESETS.map((prefix) => (
                   <Badge
-                    key={m.cidr}
+                    key={prefix}
                     variant="outline"
                     className="cursor-pointer"
-                    onClick={() => setInput("/" + m.cidr)}
+                    onClick={() => setQuery({ mask: `/${prefix}` })}
                   >
-                    /{m.cidr}
+                    /{prefix}
                   </Badge>
                 ))}
               </div>
@@ -173,21 +147,40 @@ export function SubnetMaskConverter() {
           <CardHeader>
             <CardTitle>Conversions</CardTitle>
             <CardDescription>
-              {result
-                ? "All subnet mask formats for /" + result.cidr
-                : "Enter a mask to see conversions"}
+              {result ? `All notations for /${result.prefix}` : "Enter a mask to see conversions"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {result ? (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <FormatRow label="CIDR Notation" value={"/" + result.cidr} />
-                <FormatRow label="Subnet Mask (Dotted Decimal)" value={result.dotted} />
-                <FormatRow label="Wildcard Mask" value={result.wildcard} />
-                <FormatRow label="Usable Hosts" value={result.hosts.toLocaleString()} />
-                <FormatRow label="Binary" value={result.binary} />
-                <FormatRow label="Total Networks" value={result.networks} />
-              </div>
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <FormatRow label="CIDR Notation" value={`/${result.prefix}`} />
+                  <FormatRow label="Subnet Mask (dotted decimal)" value={result.netmask} />
+                  <FormatRow label="Wildcard Mask" value={result.wildcard} />
+                  <FormatRow label="Binary" value={result.binary} />
+                  <FormatRow label="Usable Hosts" value={result.usableHosts.toLocaleString()} />
+                  <FormatRow
+                    label="Total Addresses"
+                    value={result.totalAddresses.toLocaleString()}
+                  />
+                  <FormatRow label="Host Bits" value={String(result.hostBits)} />
+                  <FormatRow
+                    label={`Blocks of this size in IPv4`}
+                    value={result.blocksInIPv4Space.toLocaleString()}
+                  />
+                </div>
+
+                {(result.prefix === 31 || result.prefix === 32) && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      {result.prefix === 31
+                        ? "A /31 has no network or broadcast address: both addresses are usable on a point-to-point link (RFC 3021)."
+                        : "A /32 addresses a single interface. Used for host routes, loopbacks and ACL entries."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </>
             ) : (
               <div className="flex h-48 items-center justify-center">
                 <p className="text-muted-foreground">Enter a valid subnet mask</p>
@@ -197,55 +190,13 @@ export function SubnetMaskConverter() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Common Subnet Masks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-2 text-left font-medium">CIDR</th>
-                  <th className="p-2 text-left font-medium">Subnet Mask</th>
-                  <th className="p-2 text-left font-medium">Wildcard</th>
-                  <th className="p-2 text-left font-medium">Hosts</th>
-                  <th className="p-2 text-left font-medium">Use Case</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { cidr: 8, hosts: "16,777,214", use: "Large enterprise" },
-                  { cidr: 16, hosts: "65,534", use: "Medium enterprise" },
-                  { cidr: 24, hosts: "254", use: "Small network/VLAN" },
-                  { cidr: 25, hosts: "126", use: "Half Class C" },
-                  { cidr: 26, hosts: "62", use: "Quarter Class C" },
-                  { cidr: 27, hosts: "30", use: "Small department" },
-                  { cidr: 28, hosts: "14", use: "Small group" },
-                  { cidr: 29, hosts: "6", use: "Point-to-multipoint" },
-                  { cidr: 30, hosts: "2", use: "Point-to-point link" },
-                  { cidr: 31, hosts: "2", use: "P2P link (RFC 3021)" },
-                  { cidr: 32, hosts: "1", use: "Host route/Loopback" },
-                ].map((row) => {
-                  const mask = prefixToNetmask(row.cidr)
-                  const wildcard = intToIpv4(~prefixToMaskInt(row.cidr) >>> 0)
-                  return (
-                    <tr key={row.cidr} className="hover:bg-muted/50 border-b">
-                      <td className="p-2">
-                        <Badge variant="secondary">/{row.cidr}</Badge>
-                      </td>
-                      <td className="p-2 font-mono">{mask}</td>
-                      <td className="p-2 font-mono">{wildcard}</td>
-                      <td className="p-2">{row.hosts}</td>
-                      <td className="text-muted-foreground p-2">{row.use}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <DataTable
+        title="Every Prefix Length"
+        description="Mask, wildcard and usable host count for /0 through /32"
+        rows={SUBNET_MASKS}
+        columns={columns}
+        rowKey={(row) => String(row.prefix)}
+      />
     </div>
   )
 }

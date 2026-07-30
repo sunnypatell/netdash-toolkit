@@ -66,6 +66,9 @@ export const electronNetwork = {
         port: number
         state: "open" | "closed" | "filtered"
         service?: string
+        // set for open ports by electron/network/handlers.ts; the type omitted it,
+        // so the caller had been reading it through an `any` cast
+        responseTime?: number
       }>
     >("portScan", host, ports, options)
   },

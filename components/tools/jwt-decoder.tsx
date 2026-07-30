@@ -5,7 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Key, XCircle, AlertTriangle, Clock, ShieldAlert, ShieldQuestion } from "lucide-react"
+import {
+  Key,
+  XCircle,
+  AlertTriangle,
+  Clock,
+  ShieldAlert,
+  ShieldQuestion,
+  Pause,
+  Play,
+} from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -57,11 +66,14 @@ export function JWTDecoder() {
   const error = !result.ok && result.error.code !== "empty" ? result.error : null
   const hasTimeClaim = decoded !== null && decoded.time.state !== "no-time-claims"
 
+  // sc 2.2.2: the countdown updates indefinitely, so it needs a stop
+  const [paused, setPaused] = useState(false)
+
   useEffect(() => {
-    if (!hasTimeClaim) return
+    if (!hasTimeClaim || paused) return
     const id = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(id)
-  }, [hasTimeClaim])
+  }, [hasTimeClaim, paused])
 
   const loadSample = () => {
     setToken(
@@ -145,11 +157,28 @@ export function JWTDecoder() {
 
             {decoded && tone && (
               <div className={`rounded-lg p-3 ${tone.box}`}>
-                <div className="flex items-center gap-2">
-                  <Clock className={`h-4 w-4 ${tone.icon}`} />
-                  <span className={`text-sm font-medium ${tone.text}`}>
-                    {timeClaimLabel(decoded.time)}
-                  </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className={`h-4 w-4 ${tone.icon}`} />
+                    <span className={`text-sm font-medium ${tone.text}`}>
+                      {timeClaimLabel(decoded.time)}
+                    </span>
+                  </div>
+                  {hasTimeClaim && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPaused((v) => !v)}
+                      aria-pressed={paused}
+                    >
+                      {paused ? (
+                        <Play className="mr-1 h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Pause className="mr-1 h-4 w-4" aria-hidden="true" />
+                      )}
+                      {paused ? "Resume countdown" : "Pause countdown"}
+                    </Button>
+                  )}
                 </div>
                 <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
                   {decoded.time.notBefore && (

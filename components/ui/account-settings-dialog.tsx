@@ -307,6 +307,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
               <Input
                 id="newEmail"
                 type="email"
+                autoComplete="email"
                 placeholder="new@example.com"
                 value={newEmail}
                 onChange={(e) => {
@@ -322,6 +323,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                 <Input
                   id="emailPassword"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="Enter your password to confirm"
                   value={emailPassword}
                   onChange={(e) => {
@@ -365,6 +367,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <Input
                     id="newPasswordGoogle"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="At least 6 characters"
                     value={newPassword}
                     onChange={(e) => {
@@ -379,6 +382,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <Input
                     id="confirmPasswordGoogle"
                     type="password"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => {
                       setConfirmPassword(e.target.value)
@@ -406,6 +410,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <Input
                     id="currentPassword"
                     type="password"
+                    autoComplete="current-password"
                     value={currentPassword}
                     onChange={(e) => {
                       setCurrentPassword(e.target.value)
@@ -421,6 +426,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <Input
                     id="newPassword"
                     type="password"
+                    autoComplete="new-password"
                     placeholder="At least 6 characters"
                     value={newPassword}
                     onChange={(e) => {
@@ -435,6 +441,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                   <Input
                     id="confirmPassword"
                     type="password"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => {
                       setConfirmPassword(e.target.value)

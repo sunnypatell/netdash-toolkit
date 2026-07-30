@@ -1,82 +1,85 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState } from "react"
+import { parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, ArrowRight, ArrowLeft, FileCode, Trash2, Upload, Download } from "lucide-react"
+import { Copy, ArrowRight, ArrowLeft, FileCode, Trash2, Download } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { copyText } from "@/lib/clipboard"
 import { downloadTextFile, dateStamp } from "@/lib/download"
 import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
+import { formatBytes } from "@/lib/format"
+import {
+  ALPHABET_LABELS,
+  decodeBase64,
+  detectBase64,
+  encodeBase64,
+  encodeBytesToBase64,
+} from "@/lib/base64"
+
+const MODES = ["encode", "decode"] as const
+const ALPHABETS = ["standard", "urlsafe"] as const
+type Mode = (typeof MODES)[number]
+
+const SAMPLES = [
+  { label: "Hello World", value: "Hello, World!" },
+  { label: "Non-ASCII", value: "café 日本語 😀" },
+  { label: "JSON Object", value: '{"name":"Ada","age":36}' },
+  { label: "Standard Base64", value: "SGVsbG8sIFdvcmxkIQ==" },
+  { label: "URL-safe Base64", value: "8J-YgD_Dvw" },
+]
 
 export function Base64Encoder() {
-  const [input, setInput] = useState("")
-  const [output, setOutput] = useState("")
-  const [mode, setMode] = useState<"encode" | "decode">("encode")
-  const [error, setError] = useState<string | null>(null)
-  const [fileInput, setFileInput] = useState<File | null>(null)
+  // mode and alphabet go in the url, the payload does not: base64 input is
+  // routinely a whole file or a secret, and neither belongs in a shareable link
+  const [{ mode, alphabet }, setQuery] = useQueryStates(
+    {
+      mode: parseAsStringLiteral(MODES).withDefault("encode"),
+      alphabet: parseAsStringLiteral(ALPHABETS).withDefault("standard"),
+    },
+    { history: "replace" }
+  )
 
-  useEffect(() => {
-    setError(null)
+  const [text, setText] = useState("")
+  const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null)
 
-    if (!input.trim() && !fileInput) {
-      setOutput("")
+  // derived, never stored. the old effect wrote the file's base64 into state and
+  // was then immediately overwritten by the encoding of the "[File: x]" label it
+  // had just put in the input box, so the tool displayed the wrong value.
+  const result = useMemo(() => {
+    if (mode === "encode" && file) return encodeBytesToBase64(file.bytes, alphabet)
+    if (!text.trim()) return { output: "", error: null }
+    return mode === "encode" ? encodeBase64(text, alphabet) : decodeBase64(text, alphabet)
+  }, [mode, alphabet, text, file])
+
+  const { output, error } = result
+
+  const handleFile = async (chosen: File | null) => {
+    if (!chosen) {
+      setFile(null)
       return
     }
-
-    try {
-      if (mode === "encode") {
-        // Handle text encoding
-        const encoded = btoa(unescape(encodeURIComponent(input)))
-        setOutput(encoded)
-      } else {
-        // Handle decoding
-        const decoded = decodeURIComponent(escape(atob(input)))
-        setOutput(decoded)
-      }
-    } catch {
-      setError(mode === "decode" ? "Invalid Base64 string" : "Encoding failed")
-      setOutput("")
-    }
-  }, [input, mode, fileInput])
-
-  const handleFileEncode = async (file: File) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const base64 = reader.result as string
-      // Remove data URL prefix
-      const base64Data = base64.split(",")[1]
-      setOutput(base64Data)
-      setInput(`[File: ${file.name}]`)
-    }
-    reader.readAsDataURL(file)
+    const bytes = new Uint8Array(await chosen.arrayBuffer())
+    setFile({ name: chosen.name, bytes })
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setFileInput(file)
-      handleFileEncode(file)
-    }
-  }
-
-  const copyToClipboard = async (text: string) => {
-    if (await copyText(text)) {
-      toast.success("Copied to clipboard")
-    } else {
-      toast.error("Copy failed")
-    }
+  const copyToClipboard = async (value: string) => {
+    if (await copyText(value)) toast.success("Copied to clipboard")
+    else toast.error("Copy failed")
   }
 
   const swapContent = () => {
-    setInput(output)
-    setMode(mode === "encode" ? "decode" : "encode")
+    if (!output) return
+    setFile(null)
+    setText(output)
+    void setQuery({ mode: mode === "encode" ? "decode" : "encode" })
   }
 
   const downloadOutput = () => {
@@ -88,10 +91,18 @@ export function Base64Encoder() {
   }
 
   const clear = () => {
-    setInput("")
-    setOutput("")
-    setFileInput(null)
-    setError(null)
+    setText("")
+    setFile(null)
+  }
+
+  const loadSample = (value: string) => {
+    const detected = detectBase64(value)
+    setFile(null)
+    setText(value)
+    void setQuery({
+      mode: detected.isBase64 ? "decode" : "encode",
+      alphabet: detected.isBase64 ? detected.alphabet : alphabet,
+    })
   }
 
   return (
@@ -99,13 +110,13 @@ export function Base64Encoder() {
       <ToolHeader
         icon={FileCode}
         title="Base64 Encoder/Decoder"
-        description="Encode and decode Base64 strings and files"
+        description="Encode and decode Base64 text and files, in both RFC 4648 alphabets"
       />
 
-      <Tabs value={mode} onValueChange={(v) => setMode(v as "encode" | "decode")}>
+      <Tabs value={mode} onValueChange={(value) => setQuery({ mode: value as Mode })}>
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <CardTitle>Base64 Converter</CardTitle>
                 <CardDescription>Convert between text and Base64 encoding</CardDescription>
@@ -116,23 +127,50 @@ export function Base64Encoder() {
               </TabsList>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {/* one panel keyed to the active mode, so the tab's aria-controls always resolves */}
             <TabsContent value={mode} className="space-y-4">
+              <fieldset className="space-y-2">
+                <legend className="text-sm font-medium">Alphabet</legend>
+                <div className="flex flex-wrap gap-4">
+                  {ALPHABETS.map((value) => (
+                    <div key={value} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id={`alphabet-${value}`}
+                        name="alphabet"
+                        value={value}
+                        checked={alphabet === value}
+                        onChange={() => setQuery({ alphabet: value })}
+                        className="accent-primary h-4 w-4"
+                      />
+                      <Label htmlFor={`alphabet-${value}`} className="cursor-pointer font-normal">
+                        {ALPHABET_LABELS[value]}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {alphabet === "standard"
+                    ? "Index 62 and 63 are + and /, and the output is padded with =."
+                    : "Index 62 and 63 are - and _, and padding is dropped so the value is safe in a URL or a filename."}
+                </p>
+              </fieldset>
+
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="input">
+                    <Label htmlFor="base64-input">
                       {mode === "encode" ? "Plain Text" : "Base64 String"}
                     </Label>
-                    <Badge variant="outline">{input.length} chars</Badge>
+                    <Badge variant="outline">{text.length} chars</Badge>
                   </div>
                   <Textarea
-                    id="input"
-                    value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value)
-                      setFileInput(null)
+                    id="base64-input"
+                    value={text}
+                    onChange={(event) => {
+                      setText(event.target.value)
+                      setFile(null)
                     }}
                     placeholder={
                       mode === "encode" ? "Enter text to encode..." : "Enter Base64 to decode..."
@@ -141,13 +179,19 @@ export function Base64Encoder() {
                   />
                   {mode === "encode" && (
                     <div className="space-y-2">
-                      <Label htmlFor="file-upload">Or encode a file</Label>
+                      <Label htmlFor="base64-file">Or encode a file</Label>
                       <Input
                         type="file"
-                        onChange={handleFileChange}
+                        onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
                         className="cursor-pointer"
-                        id="file-upload"
+                        id="base64-file"
                       />
+                      {file && (
+                        <p className="text-muted-foreground text-xs">
+                          Encoding {file.name} ({formatBytes(file.bytes.length)}). The text box is
+                          ignored while a file is selected.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -165,22 +209,22 @@ export function Base64Encoder() {
                     }
                   >
                     {mode === "encode" ? (
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     ) : (
-                      <ArrowLeft className="h-4 w-4" />
+                      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                     )}
                   </Button>
                 </div>
 
                 <div className="space-y-2 lg:col-start-2 lg:row-start-1">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="output">
+                    <Label htmlFor="base64-output">
                       {mode === "encode" ? "Base64 String" : "Plain Text"}
                     </Label>
                     <Badge variant="outline">{output.length} chars</Badge>
                   </div>
                   <Textarea
-                    id="output"
+                    id="base64-output"
                     value={output}
                     readOnly
                     placeholder="Output will appear here..."
@@ -193,15 +237,15 @@ export function Base64Encoder() {
                       onClick={() => copyToClipboard(output)}
                       disabled={!output}
                     >
-                      <Copy className="mr-2 h-4 w-4" />
+                      <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
                       Copy
                     </Button>
                     <Button variant="outline" size="sm" onClick={downloadOutput} disabled={!output}>
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                       Download
                     </Button>
                     <Button variant="outline" size="sm" onClick={clear}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                       Clear
                     </Button>
                   </div>
@@ -225,18 +269,10 @@ export function Base64Encoder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {[
-                { label: "Hello World", value: "Hello, World!" },
-                { label: "JSON Object", value: '{"name":"John","age":30}' },
-                { label: "URL", value: "https://example.com/path?query=value" },
-                { label: "Base64 Sample", value: "SGVsbG8sIFdvcmxkIQ==" },
-              ].map((sample, i) => (
+              {SAMPLES.map((sample) => (
                 <button
-                  key={i}
-                  onClick={() => {
-                    setInput(sample.value)
-                    setMode(sample.value.match(/^[A-Za-z0-9+/]+=*$/) ? "decode" : "encode")
-                  }}
+                  key={sample.label}
+                  onClick={() => loadSample(sample.value)}
                   className="hover:bg-muted/50 w-full rounded border p-2 text-left transition-colors"
                 >
                   <p className="text-sm font-medium">{sample.label}</p>
@@ -253,20 +289,19 @@ export function Base64Encoder() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              Base64 is a binary-to-text encoding scheme that represents binary data in ASCII string
-              format. It's commonly used for:
+              Base64 maps every 3 bytes onto 4 ASCII characters. RFC 4648 defines two alphabets:
+              section 4 is the standard one, section 5 swaps the last two symbols so the result can
+              travel in a URL or a filename.
             </p>
             <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-              <li>Encoding binary data in JSON/XML</li>
-              <li>Data URLs for images in HTML/CSS</li>
-              <li>Email attachments (MIME)</li>
-              <li>Basic authentication headers</li>
-              <li>Storing complex data in URLs</li>
+              <li>Text is encoded as UTF-8 bytes, so non-ASCII round-trips exactly</li>
+              <li>Line breaks and spaces in Base64 input are ignored when decoding</li>
+              <li>Unpadded URL-safe input is accepted, as RFC 7515 tokens omit the =</li>
             </ul>
             <Alert>
               <AlertDescription className="text-sm">
-                Base64 is <strong>not</strong> encryption. It's just encoding and can be easily
-                decoded by anyone. Never use Base64 to hide sensitive data.
+                Base64 is <strong>not</strong> encryption. It is just an encoding and anyone can
+                reverse it. Never use it to hide sensitive data.
               </AlertDescription>
             </Alert>
           </CardContent>

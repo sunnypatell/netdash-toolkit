@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
+import { parseAsArrayOf, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,93 +14,49 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Download, Ruler } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
-import { PROTOCOL_OVERHEADS } from "@/lib/network-testing"
+import { calculateMTU, ENCAPSULATIONS, type IPVersion, type Transport } from "@/lib/mtu"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 
-interface ProtocolOverhead {
-  name: string
-  overhead: number
-  enabled: boolean
-}
+const ENCAP_IDS = ENCAPSULATIONS.map((option) => option.id)
 
 export function MTUCalculator() {
-  const [linkMTU, setLinkMTU] = useState("1500")
-  const [ipVersion, setIpVersion] = useState("ipv4")
-  const [transport, setTransport] = useState("tcp")
-  // link mtu is already the l3 payload limit (1500 excludes the 14-byte
-  // ethernet header), so only encapsulation that eats into it is listed here
-  const [protocols, setProtocols] = useState<ProtocolOverhead[]>([
-    { name: "802.1Q VLAN", overhead: PROTOCOL_OVERHEADS["802.1Q"], enabled: false },
-    { name: "QinQ (802.1ad)", overhead: PROTOCOL_OVERHEADS.QinQ, enabled: false },
-    { name: "PPPoE", overhead: PROTOCOL_OVERHEADS.PPPoE, enabled: false },
-    { name: "GRE", overhead: PROTOCOL_OVERHEADS.GRE, enabled: false },
-    { name: "VXLAN", overhead: PROTOCOL_OVERHEADS.VXLAN, enabled: false },
-    { name: "IPsec ESP", overhead: PROTOCOL_OVERHEADS["IPsec ESP"], enabled: false },
-  ])
+  const [query, setQuery] = useQueryStates(
+    {
+      mtu: parseAsString.withDefault("1500"),
+      ip: parseAsStringLiteral(["ipv4", "ipv6"] as const).withDefault("ipv4"),
+      transport: parseAsStringLiteral(["tcp", "udp", "none"] as const).withDefault("tcp"),
+      encap: parseAsArrayOf(parseAsString).withDefault([]),
+    },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
 
-  const calculateMTU = () => {
-    const baseMTU = Number.parseInt(linkMTU) || 1500
+  const { mtu, ip, transport, encap } = query
 
-    // Calculate total overhead
-    let totalOverhead = 0
+  // unknown ids from a hand-edited link are dropped rather than silently summed
+  const enabled = useMemo(() => encap.filter((id) => ENCAP_IDS.includes(id)), [encap])
 
-    // Protocol overheads
-    protocols.forEach((protocol) => {
-      if (protocol.enabled) {
-        totalOverhead += protocol.overhead
-      }
+  const result = useMemo(() => {
+    const linkMTU = Number.parseInt(mtu, 10)
+    if (!Number.isInteger(linkMTU) || linkMTU <= 0) return null
+    return calculateMTU(linkMTU, ip as IPVersion, transport as Transport, enabled)
+  }, [mtu, ip, transport, enabled])
+
+  const toggleEncapsulation = (id: string) => {
+    void setQuery({
+      encap: enabled.includes(id) ? enabled.filter((other) => other !== id) : [...enabled, id],
     })
-
-    // IP header overhead
-    const ipOverhead = ipVersion === "ipv4" ? 20 : 40
-    totalOverhead += ipOverhead
-
-    // Transport header overhead
-    const transportOverhead = transport === "tcp" ? 20 : transport === "udp" ? 8 : 0
-    totalOverhead += transportOverhead
-
-    const payloadMTU = baseMTU - totalOverhead
-
-    return {
-      linkMTU: baseMTU,
-      totalOverhead,
-      payloadMTU,
-      // rfc 8200 s5 for ipv6; 576 is ipv4's minimum reassembly buffer, which
-      // is the practical floor operators care about (rfc 791's mtu min is 68)
-      fragmentationWarning: ipVersion === "ipv6" ? payloadMTU < 1280 : payloadMTU < 576,
-      breakdown: {
-        protocols: protocols.filter((p) => p.enabled),
-        ip: { version: ipVersion, overhead: ipOverhead },
-        transport: { protocol: transport, overhead: transportOverhead },
-      },
-    }
-  }
-
-  const result = calculateMTU()
-
-  const toggleProtocol = (index: number) => {
-    const newProtocols = [...protocols]
-    newProtocols[index].enabled = !newProtocols[index].enabled
-    setProtocols(newProtocols)
   }
 
   const exportResults = () => {
-    const data = {
-      configuration: {
-        linkMTU: Number.parseInt(linkMTU),
-        ipVersion,
-        transport,
-        enabledProtocols: protocols.filter((p) => p.enabled).map((p) => p.name),
-      },
-      results: result,
-    }
-
+    if (!result) return
     downloadTextFile(
-      JSON.stringify(data, null, 2),
+      JSON.stringify({ input: { mtu, ip, transport, encapsulations: enabled }, result }, null, 2),
       `mtu-calculation-${dateStamp()}.json`,
       "application/json"
     )
@@ -110,7 +67,7 @@ export function MTUCalculator() {
       <ToolHeader
         icon={Ruler}
         title="MTU Calculator"
-        description="Calculate Maximum Transmission Unit and payload sizes with protocol overhead analysis."
+        description="Work out payload MTU and TCP MSS for a path, with the encapsulation cost broken down"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -124,127 +81,145 @@ export function MTUCalculator() {
               <Label htmlFor="link-mtu">Link MTU (bytes)</Label>
               <Input
                 id="link-mtu"
-                value={linkMTU}
-                onChange={(e) => setLinkMTU(e.target.value)}
+                value={mtu}
+                onChange={(e) => setQuery({ mtu: e.target.value })}
                 placeholder="1500"
               />
               <p className="text-muted-foreground mt-1 text-xs">
-                Layer 3 MTU. Ethernet&apos;s 1500 already excludes the 14-byte frame header.
+                Layer 3 MTU of the outer link. Ethernet&apos;s 1500 already excludes the 14-byte
+                frame header.
               </p>
             </div>
 
             <div>
-              <Label htmlFor="ip-version">IP Version</Label>
-              <Select value={ipVersion} onValueChange={setIpVersion}>
+              <Label htmlFor="ip-version">Inner IP Version</Label>
+              <Select value={ip} onValueChange={(value) => setQuery({ ip: value as IPVersion })}>
                 <SelectTrigger id="ip-version">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ipv4">IPv4 (20 bytes)</SelectItem>
-                  <SelectItem value="ipv6">IPv6 (40 bytes)</SelectItem>
+                  <SelectItem value="ipv4">IPv4 (20-byte header)</SelectItem>
+                  <SelectItem value="ipv6">IPv6 (40-byte header)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label htmlFor="transport">Transport Protocol</Label>
-              <Select value={transport} onValueChange={setTransport}>
+              <Select
+                value={transport}
+                onValueChange={(value) => setQuery({ transport: value as Transport })}
+              >
                 <SelectTrigger id="transport">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="tcp">TCP (20 bytes)</SelectItem>
                   <SelectItem value="udp">UDP (8 bytes)</SelectItem>
-                  <SelectItem value="none">None (0 bytes)</SelectItem>
+                  <SelectItem value="none">None (raw IP payload)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label>Protocol Stack</Label>
-              <div className="mt-2 space-y-2">
-                {protocols.map((protocol, index) => (
-                  <div key={protocol.name} className="flex items-center space-x-2">
+            <fieldset>
+              <legend className="text-sm font-medium">Encapsulation</legend>
+              <div className="mt-2 space-y-3">
+                {ENCAPSULATIONS.map((option) => (
+                  <div key={option.id} className="flex items-start gap-2">
                     <Checkbox
-                      id={`protocol-${index}`}
-                      checked={protocol.enabled}
-                      onCheckedChange={() => toggleProtocol(index)}
+                      id={`encap-${option.id}`}
+                      checked={enabled.includes(option.id)}
+                      onCheckedChange={() => toggleEncapsulation(option.id)}
+                      className="mt-1"
                     />
-                    <Label
-                      htmlFor={`protocol-${index}`}
-                      className="flex-1 cursor-pointer text-sm font-normal"
-                    >
-                      {protocol.name}
-                    </Label>
-                    <Badge variant="secondary">{protocol.overhead} bytes</Badge>
+                    <div className="min-w-0 flex-1">
+                      <Label
+                        htmlFor={`encap-${option.id}`}
+                        className="cursor-pointer text-sm font-normal"
+                      >
+                        {option.label}
+                      </Label>
+                      <p className="text-muted-foreground text-xs">{option.detail}</p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0">
+                      {option.bytes} bytes
+                    </Badge>
                   </div>
                 ))}
               </div>
-            </div>
+            </fieldset>
           </CardContent>
         </Card>
 
         <div className="space-y-4">
-          <ResultCard
-            title="MTU Analysis"
-            data={[
-              { label: "Link MTU", value: `${result.linkMTU} bytes` },
-              { label: "Total Overhead", value: `${result.totalOverhead} bytes` },
-              { label: "Payload MTU", value: `${result.payloadMTU} bytes`, highlight: true },
-            ]}
-          />
+          {result ? (
+            <>
+              <ResultCard
+                title="MTU Analysis"
+                data={[
+                  { label: "Link MTU", value: `${result.linkMTU} bytes` },
+                  {
+                    label: "Encapsulation Overhead",
+                    value: `${result.encapsulationOverhead} bytes`,
+                  },
+                  { label: "Effective IP MTU", value: `${result.effectiveMTU} bytes` },
+                  { label: "Payload MTU", value: `${result.payloadBytes} bytes`, highlight: true },
+                  { label: "TCP MSS", value: `${result.tcpMSS} bytes`, highlight: true },
+                  {
+                    label: "Default MSS if unnegotiated",
+                    value: `${result.defaultMSS} bytes`,
+                    description: "RFC 9293 section 3.7.1",
+                  },
+                ]}
+              />
 
-          {result.fragmentationWarning && (
-            <Card className="border-destructive">
-              <CardContent className="pt-6">
-                <div className="text-destructive flex items-center space-x-2">
+              {result.errors.map((message) => (
+                <Alert key={message} variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <span className="font-medium">Fragmentation Warning</span>
-                </div>
-                <p className="text-muted-foreground mt-2 text-sm">
-                  Payload MTU is below IPv4 minimum (576 bytes). This may cause fragmentation
-                  issues.
-                </p>
-              </CardContent>
-            </Card>
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              ))}
+
+              {result.warnings.map((message) => (
+                <Alert key={message}>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>{message}</AlertDescription>
+                </Alert>
+              ))}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Overhead Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {result.breakdown.map((row) => (
+                      <div key={row.label} className="flex justify-between text-sm">
+                        <span>{row.label}</span>
+                        <span className="font-mono">{row.bytes} bytes</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 font-medium">
+                      <span>Total subtracted from the link MTU</span>
+                      <span className="font-mono">
+                        {result.linkMTU - result.payloadBytes} bytes
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={exportResults} variant="outline" className="w-full">
+                <Download className="mr-2 h-4 w-4" />
+                Export Results
+              </Button>
+            </>
+          ) : (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>Enter a link MTU above zero.</AlertDescription>
+            </Alert>
           )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Overhead Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {result.breakdown.protocols.map((protocol) => (
-                  <div key={protocol.name} className="flex justify-between text-sm">
-                    <span>{protocol.name}</span>
-                    <span>{protocol.overhead} bytes</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm">
-                  <span>{result.breakdown.ip.version.toUpperCase()} Header</span>
-                  <span>{result.breakdown.ip.overhead} bytes</span>
-                </div>
-                {result.breakdown.transport.overhead > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span>{result.breakdown.transport.protocol.toUpperCase()} Header</span>
-                    <span>{result.breakdown.transport.overhead} bytes</span>
-                  </div>
-                )}
-                <div className="flex justify-between border-t pt-2 font-medium">
-                  <span>Total Overhead</span>
-                  <span>{result.totalOverhead} bytes</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex space-x-2">
-            <Button onClick={exportResults} variant="outline" className="flex-1">
-              <Download className="mr-2 h-4 w-4" />
-              Export Results
-            </Button>
-          </div>
         </div>
       </div>
     </div>

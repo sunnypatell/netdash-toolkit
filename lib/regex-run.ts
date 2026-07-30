@@ -72,6 +72,20 @@ export function runRegexMatch(request: RegexMatchRequest, deadlineMs: number): R
   const input = typeof request.input === "string" ? request.input : ""
   const cap = request.maxMatches > 0 ? request.maxMatches : 1
   const repeat = request.flags.indexOf("g") !== -1 || request.flags.indexOf("y") !== -1
+  const unicode = request.flags.indexOf("u") !== -1 || request.flags.indexOf("v") !== -1
+
+  // ecma-262 22.2.7.3 AdvanceStringIndex. under u/v, exec snaps lastIndex back to
+  // the start of the code point, so a bare +1 inside a surrogate pair is undone
+  // and the zero-length loop never terminates.
+  const advance = function (from: number): number {
+    const next = from + 1
+    if (!unicode || next >= input.length) return next
+    const lead = input.charCodeAt(from)
+    if (lead < 0xd800 || lead > 0xdbff) return next
+    const trail = input.charCodeAt(next)
+    if (trail < 0xdc00 || trail > 0xdfff) return next
+    return from + 2
+  }
 
   const collect = function (match: RegExpExecArray): void {
     result.total = result.total + 1
@@ -102,7 +116,7 @@ export function runRegexMatch(request: RegexMatchRequest, deadlineMs: number): R
       let match = re.exec(input)
       while (match !== null) {
         collect(match)
-        if (match[0].length === 0) re.lastIndex = re.lastIndex + 1
+        if (match[0].length === 0) re.lastIndex = advance(re.lastIndex)
         if (re.lastIndex > input.length) break
         if (Date.now() - started > deadlineMs) {
           result.deadlineHit = true

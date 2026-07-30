@@ -31,9 +31,22 @@ export interface ConfigTemplate {
   config: string
 }
 
+// ieee 802.1q: the VID is 12 bits, but VID 0 means "priority tag, no VLAN" and
+// VID 4095 is reserved for implementation use, leaving 1-4094 assignable
+export const VLAN_ID_MIN = 1
+export const VLAN_ID_MAX = 4094
+export const STANDARD_RESERVED_VLAN_IDS: readonly number[] = [0, 4095]
+
+// tag sizes in bytes: a C-TAG is TPID + TCI, and 802.1ad stacks an S-TAG on top
+export const VLAN_TAG_BYTES = { "802.1Q": 4, "802.1ad": 8 } as const
+
+export function isStandardReservedVLAN(id: number): boolean {
+  return STANDARD_RESERVED_VLAN_IDS.includes(id)
+}
+
 // VLAN ID validation
 export function isValidVLANId(id: number): boolean {
-  return id >= 1 && id <= 4094
+  return Number.isInteger(id) && id >= VLAN_ID_MIN && id <= VLAN_ID_MAX
 }
 
 // Check for reserved VLAN IDs
@@ -51,7 +64,11 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
 
   // Validate VLAN ID
   if (!isValidVLANId(vlan.id)) {
-    errors.push(`VLAN ID ${vlan.id} is invalid (must be 1-4094)`)
+    errors.push(
+      isStandardReservedVLAN(vlan.id)
+        ? `VLAN ID ${vlan.id} is reserved by IEEE 802.1Q (0 is the priority tag, 4095 is reserved for implementation use)`
+        : `VLAN ID ${vlan.id} is invalid (must be ${VLAN_ID_MIN}-${VLAN_ID_MAX})`
+    )
   }
 
   // Check for reserved VLANs
