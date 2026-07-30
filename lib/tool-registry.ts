@@ -423,7 +423,7 @@ export const tools: ToolDefinition[] = [
     runtime: {
       offline: false,
       thirdParty: ["the host you enter"],
-      desktopOnly: ["real ICMP ping", "system traceroute"],
+      desktopOnly: ["real ICMP ping", "system traceroute", "local network interface enumeration"],
     },
     load: () =>
       import("@/components/tools/ping-traceroute").then((m) => ({ default: m.PingTraceroute })),
@@ -436,7 +436,7 @@ export const tools: ToolDefinition[] = [
     description: "Scan network hosts for open ports and running services",
     icon: Scan,
     category: "diagnostics",
-    features: ["Common ports", "Custom ranges", "Service detection"],
+    features: ["Common ports", "Custom ranges", "Port name lookup"],
     runtime: {
       offline: false,
       thirdParty: ["the host you enter"],
@@ -455,7 +455,7 @@ export const tools: ToolDefinition[] = [
     features: ["Certificate info", "Expiry check", "Chain validation"],
     runtime: {
       offline: false,
-      thirdParty: ["the host you enter", "api.certspotter.com"],
+      thirdParty: ["the hostname you enter", "api.certspotter.com"],
     },
     load: () => import("@/components/tools/ssl-checker").then((m) => ({ default: m.SSLChecker })),
     keywords: ["ssl", "tls", "certificate", "https", "security"],
@@ -470,7 +470,7 @@ export const tools: ToolDefinition[] = [
     features: ["Domain info", "IP ownership", "Registrar data"],
     runtime: {
       offline: false,
-      thirdParty: ["rdap.org and whichever registry it redirects to"],
+      thirdParty: ["rdap.org", "the registry or RIR RDAP server rdap.org redirects to"],
     },
     load: () => import("@/components/tools/whois-lookup").then((m) => ({ default: m.WhoisLookup })),
     keywords: ["whois", "domain", "registration", "ownership", "registrar"],
@@ -561,7 +561,7 @@ export const tools: ToolDefinition[] = [
     features: ["Header analysis", "Security score", "Category sorting"],
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "api.hackertarget.com"],
+      thirdParty: ["api.hackertarget.com"],
     },
     load: () => import("@/components/tools/http-headers").then((m) => ({ default: m.HTTPHeaders })),
     keywords: ["http", "headers", "response", "security", "web"],
@@ -577,7 +577,7 @@ export const tools: ToolDefinition[] = [
     popular: true,
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "api.hackertarget.com", "observatory-api.mdn.mozilla.net"],
+      thirdParty: ["api.hackertarget.com", "observatory-api.mdn.mozilla.net"],
     },
     load: () =>
       import("@/components/tools/security-headers").then((m) => ({ default: m.SecurityHeaders })),
@@ -593,7 +593,7 @@ export const tools: ToolDefinition[] = [
     features: ["Redirect chain", "HTTPS upgrade", "Loop detection"],
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "api.hackertarget.com"],
+      thirdParty: ["api.hackertarget.com"],
     },
     load: () =>
       import("@/components/tools/redirect-checker").then((m) => ({ default: m.RedirectChecker })),
