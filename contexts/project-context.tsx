@@ -100,6 +100,17 @@ const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+// the minimum an imported entry must carry to render as a project at all
+function isImportableProject(
+  value: unknown
+): value is Record<string, unknown> & { name: string; items: unknown[] } {
+  return isRecord(value) && typeof value.name === "string" && Array.isArray(value.items)
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
@@ -113,6 +124,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // the snapshot callback below outlives the render that created it, so it
   // must read projects through a ref rather than the captured array
   const localProjectsRef = useRef<Project[]>([])
+  // ids the current account's cloud snapshot supplied, and the uid it came from
+  const cloudIdsRef = useRef<Set<string>>(new Set())
+  const syncedUidRef = useRef<string | null>(null)
 
   // Load projects from localStorage on initial mount
   useEffect(() => {
@@ -139,6 +153,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [projects, loading])
+
+  // Drop the previous account's cloud projects when the signed-in user changes.
+  // without this they stay in state, look local-only to the next account's
+  // snapshot, and get re-uploaded into that account with its uid as ownerId.
+  // must run before the sync effect below, so it is declared first.
+  useEffect(() => {
+    const uid = user?.uid ?? null
+    if (syncedUidRef.current === uid) return
+    const previousUid = syncedUidRef.current
+    syncedUidRef.current = uid
+    // first sign-in on this device: local work is meant to merge into the cloud
+    if (previousUid === null) return
+
+    const stale = cloudIdsRef.current
+    cloudIdsRef.current = new Set()
+    if (stale.size === 0) return
+    localProjectsRef.current = localProjectsRef.current.filter((p) => !stale.has(p.id))
+    setProjects((prev) => prev.filter((p) => !stale.has(p.id)))
+  }, [user])
 
   // Update user profile and user index for sharing
   useEffect(() => {
@@ -195,6 +228,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
         // Merge cloud projects with local projects
         const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
+        cloudIdsRef.current = cloudProjectIds
 
         // Find local-only projects to upload
         const localOnlyProjects = localProjectsRef.current.filter((p) => !cloudProjectIds.has(p.id))
@@ -341,17 +375,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return newProject
   }
 
+  // the cloud write used to be fired from inside the setProjects updater, so it
+  // was unawaited and the caller toasted "saved" before it had even been sent.
   const updateProject = async (id: string, updates: Partial<Project>) => {
+    let updated: Project | undefined
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id === id) {
-          const updated = { ...p, ...updates, updatedAt: Date.now() }
-          saveToCloud(updated)
-          return updated
-        }
-        return p
+        if (p.id !== id) return p
+        updated = { ...p, ...updates, updatedAt: Date.now() }
+        return updated
       })
     )
+    if (updated) await saveToCloud(updated)
   }
 
   const deleteProject = async (id: string): Promise<{ success: boolean; error?: string }> => {
@@ -362,7 +397,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       // Delete from cloud first (wait for completion)
       await deleteFromCloud(id)
 
-      // Then update local state
+      // Then update local state. the ref has to be pruned in the same tick:
+      // setProjects has not committed yet, so a snapshot arriving before the
+      // next render would still see the project here, call it local-only and
+      // upload it again.
+      localProjectsRef.current = localProjectsRef.current.filter((p) => p.id !== id)
+      cloudIdsRef.current.delete(id)
       setProjects((prev) => prev.filter((p) => p.id !== id))
 
       // Clean up tracking ref only on success
@@ -396,37 +436,31 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       createdAt: Date.now(),
     }
 
+    let updated: Project | undefined
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id === projectId) {
-          const updated = {
-            ...p,
-            items: [...p.items, newItem],
-            updatedAt: Date.now(),
-          }
-          saveToCloud(updated)
-          return updated
-        }
-        return p
+        if (p.id !== projectId) return p
+        updated = { ...p, items: [...p.items, newItem], updatedAt: Date.now() }
+        return updated
       })
     )
+    if (updated) await saveToCloud(updated)
   }
 
   const removeItemFromProject = async (projectId: string, itemId: string) => {
+    let updated: Project | undefined
     setProjects((prev) =>
       prev.map((p) => {
-        if (p.id === projectId) {
-          const updated = {
-            ...p,
-            items: p.items.filter((item) => item.id !== itemId),
-            updatedAt: Date.now(),
-          }
-          saveToCloud(updated)
-          return updated
+        if (p.id !== projectId) return p
+        updated = {
+          ...p,
+          items: p.items.filter((item) => item.id !== itemId),
+          updatedAt: Date.now(),
         }
-        return p
+        return updated
       })
     )
+    if (updated) await saveToCloud(updated)
   }
 
   const getProjectById = (id: string) => {
@@ -607,41 +641,59 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
 
   const importProjects = async (jsonString: string): Promise<number> => {
+    let data: unknown
     try {
-      const data = JSON.parse(jsonString)
-      let importedProjects: Project[] = []
-
-      if (Array.isArray(data)) {
-        importedProjects = data
-      } else if (data.projects && Array.isArray(data.projects)) {
-        importedProjects = data.projects
-      } else if (data.id && data.name) {
-        importedProjects = [data]
-      }
-
-      // Assign new IDs to avoid conflicts
-      const now = Date.now()
-      const processedProjects = importedProjects.map((p) => ({
-        ...p,
-        id: generateId(),
-        createdAt: p.createdAt || now,
-        updatedAt: now,
-        ownerId: user?.uid,
-        ownerEmail: user?.email || undefined,
-      }))
-
-      setProjects((prev) => [...processedProjects, ...prev])
-
-      // Upload to cloud if enabled
-      for (const project of processedProjects) {
-        await saveToCloud(project)
-      }
-
-      return processedProjects.length
+      data = JSON.parse(jsonString)
     } catch (error) {
-      console.error("Failed to import projects:", error)
+      console.error("Failed to parse imported projects:", error)
       throw new Error("Invalid project data format")
     }
+
+    let candidates: unknown[] = []
+    if (Array.isArray(data)) {
+      candidates = data
+    } else if (isRecord(data) && Array.isArray(data.projects)) {
+      candidates = data.projects
+    } else if (isRecord(data)) {
+      candidates = [data]
+    }
+
+    // an unrelated json file used to import "successfully" and leave projects
+    // with no items/tags array behind, which crashes the list on next render
+    // and gets uploaded to firestore in that state
+    const now = Date.now()
+    const processedProjects = candidates.filter(isImportableProject).map((p) => ({
+      ...p,
+      name: p.name,
+      description: typeof p.description === "string" ? p.description : "",
+      tags: Array.isArray(p.tags) ? p.tags.filter((t): t is string => typeof t === "string") : [],
+      items: p.items.filter(isRecord).map((item) => ({
+        ...item,
+        id: typeof item.id === "string" ? item.id : generateId(),
+        type: (typeof item.type === "string" ? item.type : "other") as ProjectItemType,
+        name: typeof item.name === "string" ? item.name : "Untitled item",
+        data: isRecord(item.data) ? item.data : {},
+        createdAt: typeof item.createdAt === "number" ? item.createdAt : now,
+      })),
+      id: generateId(),
+      createdAt: typeof p.createdAt === "number" ? p.createdAt : now,
+      updatedAt: now,
+      ownerId: user?.uid,
+      ownerEmail: user?.email || undefined,
+    }))
+
+    if (processedProjects.length === 0) {
+      throw new Error("No projects found in this file")
+    }
+
+    setProjects((prev) => [...processedProjects, ...prev])
+
+    // Upload to cloud if enabled
+    for (const project of processedProjects) {
+      await saveToCloud(project)
+    }
+
+    return processedProjects.length
   }
 
   return (
