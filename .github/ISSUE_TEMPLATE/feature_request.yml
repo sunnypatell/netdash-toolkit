@@ -37,26 +37,33 @@ body:
     validations:
       required: true
 
+  # category rather than a per-tool list: the toolkit has dozens of tools and a
+  # hardcoded list here goes stale every time one is added
   - type: dropdown
+    id: category
+    attributes:
+      label: Related Area
+      description: Which section of the sidebar does this belong in?
+      options:
+        - N/A - brand new tool
+        - Calculators
+        - IP Tools
+        - Network Config
+        - Diagnostics
+        - Generators
+        - Reference
+        - Dev Tools
+        - App shell (sidebar, search, settings, projects, auth)
+        - Multiple areas / general
+    validations:
+      required: true
+
+  - type: input
     id: related-tool
     attributes:
       label: Related Tool (if applicable)
-      description: Which existing tool is this feature related to?
-      options:
-        - N/A - New Tool
-        - Ping Tool
-        - Traceroute
-        - Port Scanner
-        - DNS Lookup
-        - Subnet Calculator
-        - VLSM Planner
-        - VLAN Manager
-        - IP Conflict Checker
-        - Network Topology Mapper
-        - Bandwidth Monitor
-        - Multiple Tools / General
-    validations:
-      required: true
+      description: The existing tool this builds on, as it appears in the sidebar.
+      placeholder: VLSM Planner
 
   - type: textarea
     id: problem

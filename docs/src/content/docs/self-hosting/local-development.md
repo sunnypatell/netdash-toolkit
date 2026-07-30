@@ -19,16 +19,17 @@ pnpm dev
 
 ## The scripts that matter
 
-| Script            | What it runs                                                     | When to use it                                     |
-| ----------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
-| `pnpm dev`        | `next dev`                                                       | day-to-day work on the app                         |
-| `pnpm build`      | `pnpm build:docs` then `next build`                              | the full artifact, docs included                   |
-| `pnpm build:app`  | `next build` only                                                | fast app-only rebuild; leaves `public/docs/` alone |
-| `pnpm build:docs` | installs and builds `docs/`, copies `docs/dist` to `public/docs` | when you change anything under `docs/`             |
-| `pnpm test`       | `vitest run` across both projects                                | before every push                                  |
-| `pnpm validate`   | typecheck, lint, format check, test, build                       | the exact chain CI runs                            |
+| Script               | What it runs                                                     | When to use it                                     |
+| -------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
+| `pnpm dev`           | `next dev`                                                       | day-to-day work on the app                         |
+| `pnpm build`         | `pnpm build:docs` then `next build`                              | the full artifact, docs included                   |
+| `pnpm build:app`     | `next build` only                                                | fast app-only rebuild; leaves `public/docs/` alone |
+| `pnpm build:docs`    | installs and builds `docs/`, copies `docs/dist` to `public/docs` | when you change anything under `docs/`             |
+| `pnpm test`          | `vitest run` across both projects                                | before every push                                  |
+| `pnpm validate`      | format:check, lint, typecheck, electron:compile, test            | the exact chain the CI `Quality` job runs          |
+| `pnpm validate:full` | `validate` plus the full build                                   | before pushing a change the build consumes         |
 
-`pnpm validate` is the one to trust, because it is the same sequence as the `quality` and `build` jobs in `.github/workflows/ci.yml`. Note that `next.config.mjs` sets both `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` to `true`, so a build passing does not mean types pass; the separate `pnpm typecheck` and `pnpm lint` steps are the real gates.
+`pnpm validate` is the one to trust, because it is the same sequence, in the same order, as the CI `Quality` job in `.github/workflows/ci.yml`. It deliberately does not build, since the build is a separate CI job and takes minutes; `pnpm validate:full` adds it. Note that `next.config.mjs` sets both `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` to `true`, so a build passing does not mean types pass; the separate `pnpm typecheck` and `pnpm lint` steps are the real gates.
 
 ## How the docs end up inside the app
 
@@ -59,4 +60,6 @@ The dev and build scripts both run `scripts/generate-tool-pages.mjs` first, whic
 
 `vercel.json` sets `"buildCommand": "pnpm build"`, so a Vercel deploy runs the docs build first and would fail rather than publish a site with missing docs. The output is plain static files, so any static host works: copy `out/` behind a server that serves `index.html` for directory paths.
 
-`vercel.json` also sets five response headers on every path, including `X-Frame-Options: DENY` and a two-year `Strict-Transport-Security`. It does not set a Content-Security-Policy, and the Electron static server sets none of these headers at all, so a self-hosted deployment inherits only what its own web server adds.
+`vercel.json` also sets seven response headers on every path: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, a two-year `Strict-Transport-Security`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and a Content-Security-Policy whose value is asserted identical to the desktop build's by `tests/unit/csp.test.ts`.
+
+Those headers are Vercel configuration, not part of the static output, so a self-hosted deployment gets **none** of them unless its own web server adds them. If you are copying `out/` behind nginx or Caddy, copy the `headers` block out of `vercel.json` as well; the CSP in particular is what keeps `object-src` and `frame-ancestors` shut.

@@ -72,6 +72,11 @@ jobs:
       - name: Typecheck (electron main/preload)
         run: pnpm electron:compile
 
+      # ci runs these on every push to main, but a tag can be cut from any
+      # commit - without this a release could ship on a red suite
+      - name: Run tests
+        run: pnpm test
+
       # artifact filenames embed package.json's version while notes/cask
       # urls derive from the tag - a mismatch would publish a release whose
       # verification commands reference files that don't exist.

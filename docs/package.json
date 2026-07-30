@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "node scripts/generate-tool-pages.mjs && astro dev",
     "start": "node scripts/generate-tool-pages.mjs && astro dev",
-    "build": "node scripts/generate-tool-pages.mjs && astro build && node scripts/check-links.mjs",
+    "build": "node scripts/generate-tool-pages.mjs && node scripts/check-counts.mjs && astro build && node scripts/check-links.mjs",
     "generate": "node scripts/generate-tool-pages.mjs",
     "check:links": "node scripts/check-links.mjs",
+    "check:counts": "node scripts/check-counts.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

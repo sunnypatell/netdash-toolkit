@@ -44,23 +44,32 @@ body:
     validations:
       required: true
 
+  # category rather than a per-tool list: the toolkit has dozens of tools and a
+  # hardcoded list here goes stale every time one is added
   - type: dropdown
+    id: category
+    attributes:
+      label: Affected Area
+      description: Which section of the sidebar is the tool in?
+      options:
+        - Calculators
+        - IP Tools
+        - Network Config
+        - Diagnostics
+        - Generators
+        - Reference
+        - Dev Tools
+        - App shell (sidebar, search, settings, projects, auth)
+        - Multiple areas / not sure
+    validations:
+      required: true
+
+  - type: input
     id: tool
     attributes:
-      label: Affected Tool
-      description: Which tool is affected by this bug?
-      options:
-        - Ping Tool
-        - Traceroute
-        - Port Scanner
-        - DNS Lookup
-        - Subnet Calculator
-        - VLSM Planner
-        - VLAN Manager
-        - IP Conflict Checker
-        - Network Topology Mapper
-        - Bandwidth Monitor
-        - Other / Multiple Tools
+      label: Tool Name
+      description: The tool as it appears in the sidebar, or the URL you were on.
+      placeholder: Subnet Calculator
     validations:
       required: true
 

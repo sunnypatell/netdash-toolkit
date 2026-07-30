@@ -19,9 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **a route per tool** at `/tools/<slug>`, so tools are deep-linkable and the back button works
-- **115 unit tests** over the math, the vendor parsers, and the electron handlers, with fixtures captured from real `ping`/`traceroute`/`arp` output
+- **1,250+ unit tests** across 76 files in `tests/unit/`, over the address math, the vendor parsers, the electron output parsers and the csp/egress invariants, with fixtures captured from real `ping`/`traceroute`/`arp` output, plus a component suite in `tests/components/` that mounts every tool and runs axe against the wcag 2.2 aa tag set
 - **registry invariant tests** that fail when the registry and the code disagree
 - **dashboard search** over the tool keywords that were already in the registry and unused
+- **a documentation site** at `/docs`, built with astro starlight from its own pnpm project, copied into `public/docs/` by `pnpm build:docs` and therefore served offline by the desktop app. the per-tool pages are generated from `lib/tool-registry.ts` on every build, and `docs/scripts/check-counts.mjs` fails the build when a hand-written page states a tool count the registry no longer supports
+- **a content-security-policy on both builds**, held in `electron/csp.ts` as data; `tests/unit/csp.test.ts` asserts the desktop policy serialises identically to the one in `vercel.json`, and derives the third-party egress list from the source tree so a new outbound host fails ci rather than a user
+- **a wcag 2.2 aa gate**: axe-core against every tool scoped to the 2.2 aa tag set, a token-contrast test that parses `app/globals.css` directly, and dedicated suites for the criteria axe cannot see (target size, focus indicators, keyboard operability, reflow and text spacing)
+- **url state on every tool**, so a result is a shareable link
 - `RELEASING.md`
 
 ### Changed
@@ -29,7 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **the registry is the single source of truth.** the 51-case switch, the sidebar's duplicated lists, about.tsx's 16 hand-written tool entries, and a second copy of the `ProjectItemType` union are gone.
 - **dashboard first load js: 530 kB -> 131 kB**, since tools are per-route chunks instead of 49 eager imports
 - shared `lib/clipboard`, `lib/download` and `lib/format` replace 21 hand-rolled clipboard handlers, 19 blob-download blocks, and two conflicting byte-unit ladders
-- next 15.5.21 plus patched transitives; **dependencies 48 -> 28**
+- **every multi-tool file split into a directory with the logic extracted to `lib/`**. 20 tool components became directories of panels, and roughly 30 new `lib/` modules came out of them, including `browser-limits` (the cors safelist and the fetch standard's blocked-port table), `port-probe`, `browser-ping`, `hash`, `mtu`, `security-header-grade` and `http-relay`. the point was testability: logic in a component can only be tested by mounting it
+- **`pnpm build` now builds the docs first**, so a docs failure fails the app build rather than shipping a stale or missing `/docs`
+- next 15.5.21 plus patched transitives; **runtime dependencies 54 -> 37**
 
 ### Removed
 
@@ -66,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **calculators**: bandwidth calculator, network calculator (latency/throughput/ip math), uptime calculator
   - **generators**: random ip/mac/ipv6 generator, wifi qr generator enhancements
   - **diagnostics**: ssl/tls checker, whois lookup, email diagnostics (spf/dkim/dmarc), redirect checker, http headers analyzer
-  - **utilities**: ip range enumerator, url encoder/decoder, regex tester, json formatter, base64 encoder, lorem ipsum generator, cron parser, timestamp converter, hash generator (sha/md5), jwt decoder, password generator, user agent parser
+  - **utilities**: ip range enumerator, url encoder/decoder, regex tester, json formatter, base64 encoder, lorem ipsum generator, cron parser, timestamp converter, hash generator (sha-1/256/384/512; web crypto registers no md5), jwt decoder, password generator, user agent parser
   - **reference pages**: port reference, cidr reference, protocol reference, ipv6 reference, common subnets
 - **centralized tool registry** - new `lib/tool-registry.ts` for unified tool management with metadata, categories, and search
 - **reusable copybutton component** - consistent copy-to-clipboard with visual checkmark feedback across all tools
@@ -153,24 +159,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Subnet Calculator** - IPv4/IPv6 subnetting with CIDR notation and RFC3021 support
 - **VLSM Planner** - Variable Length Subnet Masking with optimal allocation algorithms
-- **VLAN Manager** - Multi-vendor VLAN configuration templates (Cisco, Juniper, Arista, HP)
-- **Routing Tools** - OSPF, EIGRP, BGP, and static route configuration builders
+- **VLAN Manager** - VLAN configuration templates for Cisco IOS and Aruba CX
+- **Routing Tools** - OSPF, EIGRP and static route configuration builders, plus an administrative-distance reference table that includes BGP
 - **Wireless Tools** - WiFi channel planning, signal strength analysis, interference detection
-- **ACL Generator** - Cisco IOS access control list generation with rule validation
+- **ACL Generator** - access control list generation for Cisco IOS, Juniper JunOS and Palo Alto PAN-OS, with rule validation
 - **Conflict Checker** - IP and MAC address conflict detection from ARP tables
 - **Network Tester** - RTT measurements, throughput testing, and latency analysis
 - **DNS Tools** - DNS-over-HTTPS queries with multiple resolver support
 - **MTU Calculator** - Protocol overhead analysis for optimal MTU configuration
 - **IPv6 Tools** - EUI-64 generation, link-local addresses, solicited-node multicast
 - **OUI Lookup** - MAC address vendor identification
-- **Port Scanner** - TCP port scanning with service detection (Electron only)
+- **Port Scanner** - TCP connect scanning (Electron only); port names come from a static table, never a banner read off the wire
 - **Ping & Traceroute** - ICMP diagnostics (Electron only)
 - Electron desktop app for Windows, macOS, and Linux
 - Dark/light theme support with system preference detection
 - Responsive design for mobile and tablet devices
-- 100% client-side calculations for privacy
+- calculations run client-side with no backend; the tools that must query the network name their upstream host before sending
 
-[Unreleased]: https://github.com/sunnypatell/netdash-toolkit/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/sunnypatell/netdash-toolkit/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/sunnypatell/netdash-toolkit/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.7.0...v3.0.0
 [2.7.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.6.0...v2.7.0
 [2.6.0]: https://github.com/sunnypatell/netdash-toolkit/compare/v2.5.0...v2.6.0

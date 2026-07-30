@@ -7,7 +7,7 @@ A release is a tag push. Everything after that is automated by [`.github/workflo
 
 ## Verify a download
 
-Run these three commands. If all three pass, the binary on your disk is byte-for-byte what the tagged source built on GitHub's runners.
+One download and three checks. If all three checks pass, the binary on your disk is byte-for-byte what the tagged source built on GitHub's runners.
 
 ```bash
 # 1. fetch the artifact, the checksum list and the provenance

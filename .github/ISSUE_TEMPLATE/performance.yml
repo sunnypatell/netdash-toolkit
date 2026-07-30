@@ -53,25 +53,32 @@ body:
     validations:
       required: true
 
+  # category rather than a per-tool list: the toolkit has dozens of tools and a
+  # hardcoded list here goes stale every time one is added
   - type: dropdown
-    id: affected-tool
+    id: affected-area
     attributes:
-      label: Affected Tool
-      description: Which tool or area is affected?
+      label: Affected Area
+      description: Which section of the sidebar is affected?
       options:
-        - General / Application-wide
-        - Ping Tool
-        - Traceroute
-        - Port Scanner
-        - DNS Lookup
-        - Subnet Calculator
-        - VLSM Planner
-        - VLAN Manager
-        - IP Conflict Checker
-        - Network Topology Mapper
-        - Bandwidth Monitor
+        - General / application-wide
+        - Calculators
+        - IP Tools
+        - Network Config
+        - Diagnostics
+        - Generators
+        - Reference
+        - Dev Tools
+        - App shell (sidebar, search, settings, projects, auth)
     validations:
       required: true
+
+  - type: input
+    id: affected-tool
+    attributes:
+      label: Tool Name (if a specific tool)
+      description: The tool as it appears in the sidebar.
+      placeholder: Port Scanner
 
   - type: textarea
     id: description

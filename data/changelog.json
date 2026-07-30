@@ -1,9 +1,26 @@
 {
   "releases": [
     {
+      "version": "3.0.1",
+      "type": "patch",
+      "title": "Supply-chain hardened releases",
+      "changes": [
+        "Releases now ship SLSA Build L3 provenance, GitHub artifact attestations, a CycloneDX SBOM and checksums.txt",
+        "Release notes carry copy-paste verification commands for every artifact",
+        "macOS x64 builds are now ad-hoc signed too, so Gatekeeper's open-anyway path works on Intel; a CI gate re-runs codesign --verify and fails the release if it does not",
+        "Electron packaging smoke test on every push, so packaging breakage is caught before release time"
+      ],
+      "technical": [
+        "OpenSSF Scorecard, dependency review and workflow lint (actionlint + zizmor) workflows",
+        "CodeQL now scans the GitHub Actions workflows themselves",
+        "Every action pinned by commit SHA, with step-security/harden-runner ahead of checkout",
+        "The release is created as a draft and published once with all assets attached"
+      ]
+    },
+    {
       "version": "3.0.0",
       "type": "major",
-      "title": "Major Expansion - 40+ Networking Tools",
+      "title": "Major expansion to 40+ networking tools",
       "changes": [
         "Expanded from 16 to 40+ professional networking tools",
         "Added 15 new tools with centralized registry system",
@@ -99,13 +116,13 @@
       "title": "Project Manager & Platform Expansion",
       "changes": [
         "Implemented complete Project Manager with localStorage persistence and full CRUD operations",
-        "Added multi-vendor ACL generators supporting Juniper SRX and Palo Alto platforms alongside Cisco",
+        "Added multi-vendor ACL generators supporting Juniper JunOS and Palo Alto platforms alongside Cisco",
         "Introduced TTL-based DNS caching for DNS over HTTPS queries with cache stats visualization",
         "Achieved comprehensive WCAG 2.2 AA accessibility compliance across all components"
       ],
       "technical": [
         "Project Manager uses localStorage with JSON schema for cross-session persistence",
-        "ACL generators produce vendor-specific syntax for Cisco IOS, Juniper SRX, and Palo Alto",
+        "ACL generators produce vendor-specific syntax for Cisco IOS, Juniper JunOS, and Palo Alto",
         "DNS cache implements TTL-aware expiration with hit rate tracking",
         "ARIA labels, keyboard navigation, and focus management meet WCAG 2.2 AA guidelines"
       ]
@@ -151,7 +168,7 @@
     },
     {
       "version": "2.1.0",
-      "type": "major",
+      "type": "minor",
       "title": "Comprehensive Networking Suite Expansion",
       "changes": [
         "Added complete Routing Tools suite with OSPF, EIGRP, static routes, and administrative distance reference",
@@ -188,7 +205,7 @@
       "type": "patch",
       "title": "Live OUI Database Integration",
       "changes": [
-        "Integrated macvendors.com API with comprehensive vendor records",
+        "Integrated the api.maclookup.app OUI API, with a bundled prefix database tried first",
         "Implemented rate-limited bulk processing for MAC address lookups",
         "Added comprehensive MAC address format support",
         "Enhanced error handling and fallback mechanisms"
@@ -207,12 +224,12 @@
         "Replaced simulated ping/traceroute with real HTTP-based RTT measurement",
         "Implemented animated real-time results with performance.now() timing",
         "Added CORS-aware requests with configurable timeout handling",
-        "Enhanced port scanner with WebSocket and HTTP probes"
+        "Enhanced port scanner with no-cors HTTP probes"
       ],
       "technical": [
         "Performance.now() for microsecond timing precision",
         "CORS handling for cross-origin network requests",
-        "WebSocket probes for port connectivity testing"
+        "no-cors HTTP probes; an opaque response is the only reachability signal a page gets"
       ]
     },
     {
@@ -221,13 +238,13 @@
       "title": "Production-Grade Architecture Overhaul",
       "changes": [
         "Complete rewrite: contextIsolation on, no nodeIntegration, per-tool code splitting",
-        "Implemented AES-GCM encryption with PBKDF2 key derivation for project storage",
+        "Moved project storage behind a single context, with localStorage as the primary store",
         "Added comprehensive WCAG 2.2 AA accessibility compliance",
         "Introduced CSP with strict security policies preventing XSS attacks"
       ],
       "technical": [
-        "Web Crypto API for client-side encryption",
-        "IndexedDB with encrypted storage layer",
+        "Web Crypto used for digests only; there is no encryption layer in this app",
+        "localStorage as the durable store, with optional Firestore sync; both hold plaintext JSON",
         "Semantic HTML with ARIA labels and keyboard navigation",
         "Content Security Policy implementation"
       ]
@@ -269,7 +286,7 @@
       "type": "minor",
       "title": "Multi-Platform ACL Generator",
       "changes": [
-        "Added support for Cisco IOS, Palo Alto, and Juniper SRX platforms",
+        "Added support for Cisco IOS, Palo Alto, and Juniper JunOS platforms",
         "Implemented wildcard mask calculation using bitwise operations",
         "Enhanced protocol and port validation with comprehensive error checking",
         "Added rule documentation and configuration export functionality"
@@ -349,14 +366,14 @@
       "type": "patch",
       "title": "Project Management Security",
       "changes": [
-        "Implemented client-side AES-GCM encryption for project storage",
-        "Added PBKDF2 key derivation with SHA-256 integrity hashing",
+        "Reworked project import and export",
+        "Added SHA-256 digests for integrity checking of exported files",
         "Enhanced JSON schema versioning with migration support",
-        "Improved secure import/export with password-based encryption"
+        "Improved project import and export handling"
       ],
       "technical": [
-        "AES-GCM encryption with Web Crypto API",
-        "PBKDF2 key derivation functions",
+        "SHA-256 digests via the Web Crypto API",
+        "No key derivation: this app performs no encryption",
         "SHA-256 integrity verification"
       ]
     },
@@ -366,14 +383,14 @@
       "title": "Enhanced Port Scanner",
       "changes": [
         "Implemented browser-based port connectivity testing",
-        "Added WebSocket and HTTP probe methods",
+        "Added the no-cors HTTP probe method",
         "Enhanced concurrent scanning with configurable timeouts",
-        "Improved service detection and status reporting"
+        "Improved status reporting; port names come from a static table, never a banner read"
       ],
       "technical": [
-        "WebSocket connection probing",
+        "no-cors HTTP probing",
         "Concurrent request management",
-        "Service fingerprinting algorithms"
+        "Static port-to-service name table; nothing is fingerprinted"
       ]
     },
     {
@@ -414,13 +431,13 @@
       "title": "Performance Optimizations",
       "changes": [
         "Optimized for large IP/subnet operations using efficient data structures",
-        "Implemented service worker caching for offline-first architecture",
+        "Reduced bundle size so the app loads fast on a cold cache",
         "Enhanced memory management for large dataset processing",
         "Added progressive loading for improved initial page load times"
       ],
       "technical": [
         "Efficient data structure implementations",
-        "Service worker caching strategies",
+        "Per-route code splitting",
         "Memory optimization for large datasets"
       ]
     },

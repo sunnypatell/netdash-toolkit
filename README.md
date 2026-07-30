@@ -12,7 +12,7 @@
 <br />
 
 [![Live Demo](https://img.shields.io/badge/LIVE-DEMO-10b981?style=for-the-badge&logo=vercel&logoColor=white)](https://netdash-toolkit.vercel.app)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
@@ -43,7 +43,7 @@
 
 ## What is NetDash?
 
-**NetDash Toolkit** is a comprehensive, browser-based network engineering workbench that consolidates **40+ professional networking tools** into a single, elegant interface. Built for network engineers, system administrators, and IT professionals who need powerful utilities without the overhead of installing multiple applications.
+**NetDash Toolkit** is a browser-based network engineering workbench that consolidates **48 networking tools** into a single interface. Built for network engineers, system administrators, and IT professionals who need these utilities without installing an application for each one. The tool list, its categories, and the network disclosure below are all read out of [`lib/tool-registry.ts`](lib/tool-registry.ts), so they cannot drift from what ships.
 
 <br />
 
@@ -52,30 +52,30 @@
 <tr>
 <td align="center" width="25%">
 
-### Privacy First
+### No backend
 
-All calculations run **100% client-side**. Your network data never leaves your browser.
-
-</td>
-<td align="center" width="25%">
-
-### Cloud Sync
-
-Sign in with Google or Email to sync your projects across devices with Firebase.
+36 of the 48 tools make no network request at all. The other 12 name the exact hosts they contact before they contact them.
 
 </td>
 <td align="center" width="25%">
 
-### Zero Install
+### Optional cloud sync
 
-Access professional-grade tools instantly from any modern browser. No downloads required.
+Sign in with Google or Email to sync saved projects across devices with Firebase. Every tool works signed out, and projects are stored as plaintext documents, not encrypted.
 
 </td>
 <td align="center" width="25%">
 
-### Dark Mode
+### Zero install
 
-Beautiful light and dark themes that adapt to your system preferences.
+The web build needs nothing but a browser. The desktop build exists only for the four things a browser cannot do: ICMP, traceroute, TCP connect scanning, and reading the ARP cache.
+
+</td>
+<td align="center" width="25%">
+
+### Accessible
+
+WCAG 2.2 AA, held by axe-core over every tool plus a contrast test that parses the shipped design tokens. Light and dark themes carry different primaries because one value cannot clear 4.5:1 on both.
 
 </td>
 </tr>
@@ -92,20 +92,19 @@ Beautiful light and dark themes that adapt to your system preferences.
 
 <div align="center">
 
-|        Category         |                          Tools                           | Description                                                                                     |
-| :---------------------: | :------------------------------------------------------: | :---------------------------------------------------------------------------------------------- |
-|  **Address Planning**   |      Subnet Calculator, VLSM Planner, VLAN Manager       | IPv4/IPv6 subnetting with RFC3021 support, optimal VLSM allocation, multi-vendor VLAN templates |
-| **Routing & Switching** |       Routing Tools, Wireless Tools, ACL Generator       | OSPF/EIGRP/Static route builders, WiFi channel planning, Cisco IOS ACL generation               |
-|   **Troubleshooting**   |       Conflict Checker, Network Tester, DNS Tools        | IP/MAC conflict detection, RTT/throughput testing, DNS-over-HTTPS queries                       |
-|      **Utilities**      | MTU Calculator, IPv6 Tools, OUI Lookup, Cable Calculator | Protocol overhead analysis, EUI-64 generation, MAC vendor ID, fiber/copper signal loss          |
-|      **Wireless**       |            Wireless Tools, WiFi QR Generator             | Channel planning, interference analysis, WiFi QR codes for instant network connection           |
-|     **Converters**      |   IP Converter, Data Unit, Subnet Mask, MAC Formatter    | Binary/hex/decimal IP conversion, data unit conversion, MAC address formatting                  |
-|     **Diagnostics**     |   SSL Checker, WHOIS, Email Diagnostics, HTTP Headers    | TLS certificate analysis, domain lookup, SPF/DKIM/DMARC validation, header inspection           |
-|      **Dev Tools**      |   JSON Formatter, Regex Tester, JWT Decoder, Hash Gen    | JSON beautification, regex testing with highlighting, JWT decoding, SHA/MD5 hashing             |
-|      **Reference**      |     Port Reference, CIDR Reference, Protocol Numbers     | Searchable port database, CIDR cheat sheet, protocol reference tables                           |
-|    **Cloud & Sync**     |         Project Manager, Sharing, Authentication         | Firebase cloud sync, project sharing, Google/Email sign-in, cross-device persistence            |
+|      Category      | Tools |                       Examples                       | What they do, and what leaves your device                                                                                                                             |
+| :----------------: | :---: | :--------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|  **Calculators**   |   8   |     Subnet, VLSM, MTU, Bandwidth, Cable, Uptime      | IPv4/IPv6 subnetting with RFC 3021 `/31` support, MTU and TCP MSS with cited per-layer overhead, TIA fiber and copper loss. All offline                               |
+|    **IP Tools**    |   6   | IP Converter, Enumerator, IPv6 Tools, Conflict Check | Base conversion, range expansion, modified EUI-64, ARP and DHCP correlation. Offline; the conflict checker's only I/O is the desktop build reading your own ARP cache |
+| **Network Config** |   4   | VLAN Manager, Routing Tools, ACL Generator, Wireless | Cisco IOS and Aruba CX VLANs, OSPF/EIGRP/static routes, ACLs for Cisco IOS, Juniper JunOS and Palo Alto PAN-OS. All offline                                           |
+|  **Diagnostics**   |  11   |  Ping & Traceroute, DNS, SSL, WHOIS, Email, Headers  | DoH lookups, Certificate Transparency history, RDAP, SPF/DKIM/DMARC, header and redirect audit. Ten of the twelve networked tools are here                            |
+|   **Generators**   |   2   |              Random Generator, WiFi QR               | Random IPv4/IPv6/MAC from `crypto.getRandomValues` with rejection sampling, WPA2/WPA3 QR payloads. Offline                                                            |
+|   **Reference**    |   6   |   Reference Hub, OUI, Ports, CIDR, Protocols, IPv6   | Searchable port and protocol tables, CIDR cheat sheet, MAC vendor prefixes. Offline, except an optional remote OUI lookup                                             |
+|   **Dev Tools**    |  11   |    JSON, Regex, JWT, Hash, Base64, Cron, Password    | Formatting, decoding, SHA-1/256/384/512 digests (Web Crypto registers no MD5), cron and timestamp parsing. All offline                                                |
 
 </div>
+
+Counts come from the registry. `pnpm test` fails if a tool's declared `runtime.offline` disagrees with whether its source actually performs network I/O, which is the gate that exists because the dashboard once advertised "100% offline ready" while twelve tools were making requests.
 
 <br />
 
@@ -117,8 +116,8 @@ Beautiful light and dark themes that adapt to your system preferences.
 
 ### Prerequisites
 
-- **Node.js** 20.0 or later
-- **pnpm** 9.0 or later (recommended) or npm
+- **Node.js** 20, the major pinned in `.nvmrc`, so `nvm use` picks it up
+- **pnpm** 10 or later; the exact version is pinned in `packageManager`, so `corepack enable` is enough
 
 ### Installation
 
@@ -147,8 +146,9 @@ pnpm build
 # App only, skipping the docs build
 pnpm build:app
 
-# Start production server
-pnpm start
+# Serve the static export locally. `next start` does not work with
+# output: "export", so there is no server to start.
+npx serve@latest out
 ```
 
 <br />
@@ -270,7 +270,7 @@ pnpm dev
 - ICMP type and code support
 - TCP flags and "established" keyword
 - Security warnings for dangerous rules
-- Cisco IOS configuration output
+- Cisco IOS, Juniper JunOS and Palo Alto PAN-OS configuration output
 
 </details>
 
@@ -383,18 +383,21 @@ pnpm dev
 
 <div align="center">
 
-|     Layer      | Technology                                                                  |
-| :------------: | :-------------------------------------------------------------------------- |
-| **Framework**  | [Next.js 14](https://nextjs.org/) with App Router                           |
-|  **Language**  | [TypeScript 5](https://www.typescriptlang.org/)                             |
-|  **Styling**   | [Tailwind CSS 4](https://tailwindcss.com/)                                  |
-| **Components** | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/) |
-|  **Backend**   | [Firebase](https://firebase.google.com/) (Auth + Firestore)                 |
-|   **Icons**    | [Lucide React](https://lucide.dev/)                                         |
-|   **Charts**   | [Recharts](https://recharts.org/)                                           |
-|   **Forms**    | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)   |
-|  **Theming**   | [next-themes](https://github.com/pacocoursey/next-themes)                   |
-| **Deployment** | [Vercel](https://vercel.com/)                                               |
+|     Layer      | Technology                                                                                                                        |
+| :------------: | :-------------------------------------------------------------------------------------------------------------------------------- |
+| **Framework**  | [Next.js 15](https://nextjs.org/) App Router, `output: "export"`                                                                  |
+|  **Language**  | [TypeScript 5](https://www.typescriptlang.org/)                                                                                   |
+|  **Styling**   | [Tailwind CSS 4](https://tailwindcss.com/)                                                                                        |
+| **Components** | [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/)                                                       |
+|  **Backend**   | none. [Firebase](https://firebase.google.com/) Auth + Firestore are optional, and only for saved projects                         |
+|   **Icons**    | [Lucide React](https://lucide.dev/)                                                                                               |
+|   **Toasts**   | [Sonner](https://sonner.emilkowal.ski/), the one toast system in the app                                                          |
+| **URL state**  | [nuqs](https://nuqs.47ng.com/), so a tool result is a shareable link                                                              |
+|  **Testing**   | [Vitest](https://vitest.dev/), [Testing Library](https://testing-library.com/), [axe-core](https://github.com/dequelabs/axe-core) |
+|  **Theming**   | [next-themes](https://github.com/pacocoursey/next-themes)                                                                         |
+|    **Docs**    | [Astro Starlight](https://starlight.astro.build/), a separate pnpm project                                                        |
+|  **Desktop**   | [Electron 39](https://www.electronjs.org/) + [electron-builder](https://www.electron.build/)                                      |
+| **Deployment** | [Vercel](https://vercel.com/)                                                                                                     |
 
 </div>
 
@@ -408,38 +411,33 @@ pnpm dev
 
 ```
 netdash-toolkit/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx         # Root layout with theme provider
-│   ├── page.tsx           # Main application page
-│   └── globals.css        # Global styles and Tailwind config
+├── app/                    # Next.js App Router, static export
+│   ├── layout.tsx         # root layout, theme provider, Sonner toaster
+│   ├── globals.css        # design tokens; tests/unit/contrast.test.ts parses this file
+│   ├── (shell)/           # dashboard, /tools/[slug], /about, /projects
+│   └── auth/action/       # Firebase email-action handler, outside the shell
 ├── components/
-│   ├── ui/                # shadcn/ui components
-│   │   ├── button.tsx
-│   │   ├── card.tsx
-│   │   ├── ip-input.tsx   # Custom IP address input
-│   │   └── ...
-│   ├── tools/             # Network tool components
-│   │   ├── subnet-calculator.tsx
-│   │   ├── vlsm-planner.tsx
-│   │   ├── vlan-manager.tsx
-│   │   └── ...
-│   ├── dashboard.tsx      # Main dashboard view
-│   ├── sidebar.tsx        # Navigation sidebar
-│   └── header.tsx         # Application header
-├── lib/                   # Utility libraries
-│   ├── tool-registry.ts   # Centralized tool metadata and search
-│   ├── network-utils.ts   # IPv4/IPv6 calculations
-│   ├── network-testing.ts # RTT, DNS, throughput utilities
-│   ├── conflict-utils.ts  # Conflict detection algorithms
-│   ├── vlan-utils.ts      # VLAN validation and config generation
-│   ├── vlsm-utils.ts      # VLSM planning algorithms
-│   ├── firebase.ts        # Firebase configuration and auth
-│   ├── sharing.ts         # Project sharing utilities
-│   └── parsers.ts         # Multi-format data parsers
-├── hooks/                 # React hooks
-│   └── use-toast.ts       # Toast notification hook
-└── public/                # Static assets
-    └── favicon.svg        # Application icon
+│   ├── ui/                # shadcn/ui primitives plus ip-input, tool-header, result-card
+│   └── tools/             # one file per simple tool, one directory per multi-panel tool
+├── lib/                    # every piece of logic worth testing lives here
+│   ├── tool-registry.ts   # the single source of truth: 48 tools, categories, runtime disclosure
+│   ├── browser-limits.ts  # CORS safelist, the fetch standard's blocked ports, mixed-content
+│   ├── network-utils.ts   # IPv4/IPv6 address math
+│   ├── mtu.ts             # MTU and MSS arithmetic, every byte cited
+│   ├── port-probe.ts      # browser port probe; never reports a state it cannot prove
+│   ├── browser-ping.ts    # HTTPS round trip, labelled as one
+│   ├── hash.ts            # the four digests Web Crypto registers, and why MD5 is not one
+│   ├── reference/         # static datasets: ports, protocol numbers, address ranges
+│   └── ...                # one module per concern
+├── contexts/              # auth and project React contexts
+├── electron/              # main process, preload bridge, CSP, navigation policy, IPC handlers
+├── tests/
+│   ├── unit/              # node-environment tests over lib/ and electron/
+│   ├── components/        # happy-dom mounts, plus the axe WCAG 2.2 AA gate
+│   └── fixtures/          # real captured ping / traceroute / arp output
+├── docs/                   # Astro Starlight site, its own pnpm project and lockfile
+├── data/changelog.json    # release history rendered by /about and the header badge
+└── public/                # static assets, plus the built docs at public/docs/
 ```
 
 <br />
@@ -452,28 +450,28 @@ netdash-toolkit/
 
 <div align="center">
 
-| Status  | Feature              | Description                                   |
-| :-----: | :------------------- | :-------------------------------------------- |
-|  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless    |
-|  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS               |
-|  Done   | Dark Mode            | System-aware theming                          |
-|  Done   | Cloud Sync           | Firebase auth, project sync across devices    |
-|  Done   | Project Sharing      | Share projects with collaborators via email   |
-|  Done   | Electron App         | Desktop version with native networking        |
-|  Done   | Real ICMP Ping       | Native ping with Electron                     |
-|  Done   | Real Traceroute      | TTL-based hop discovery                       |
-|  Done   | Port Scanner         | TCP/UDP socket scanning                       |
-|  Done   | Network Discovery    | ARP scanning, device enumeration              |
-|  Done   | Cable Calculator     | TIA-compliant fiber/copper signal loss        |
-|  Done   | WiFi QR Generator    | WPA2/WPA3/WEP QR codes for instant connection |
-|  Done   | SSL/TLS Checker      | Certificate analysis and security scoring     |
-|  Done   | WHOIS Lookup         | Domain and IP registration data               |
-|  Done   | Email Diagnostics    | SPF, DKIM, DMARC validation                   |
-|  Done   | Developer Tools      | JSON, Regex, JWT, Hash, Password generators   |
-|  Done   | Reference Pages      | Port numbers, CIDR, protocols, IPv6           |
-| Planned | Configuration Backup | SSH-based device config backup                |
-| Planned | SNMP Polling         | Device monitoring via SNMP                    |
-| Planned | Network Topology     | Visual network mapping                        |
+| Status  | Feature              | Description                                       |
+| :-----: | :------------------- | :------------------------------------------------ |
+|  Done   | Core Tools           | Subnet, VLSM, VLAN, Routing, ACL, Wireless        |
+|  Done   | Network Testing      | RTT, Throughput, DNS-over-HTTPS                   |
+|  Done   | Dark Mode            | System-aware theming                              |
+|  Done   | Cloud Sync           | Firebase auth, project sync across devices        |
+|  Done   | Project Sharing      | Share projects with collaborators via email       |
+|  Done   | Electron App         | Desktop version with native networking            |
+|  Done   | Real ICMP Ping       | Native ping with Electron                         |
+|  Done   | Real Traceroute      | TTL-based hop discovery                           |
+|  Done   | Port Scanner         | TCP connect scanning, desktop only                |
+|  Done   | ARP Cache Read       | Parses `arp -a` on the desktop build; not a sweep |
+|  Done   | Cable Calculator     | TIA-compliant fiber/copper signal loss            |
+|  Done   | WiFi QR Generator    | WPA2/WPA3/WEP QR codes for instant connection     |
+|  Done   | SSL/TLS Checker      | Certificate analysis and security scoring         |
+|  Done   | WHOIS Lookup         | Domain and IP registration data                   |
+|  Done   | Email Diagnostics    | SPF, DKIM, DMARC validation                       |
+|  Done   | Developer Tools      | JSON, Regex, JWT, SHA digests, Password gen       |
+|  Done   | Reference Pages      | Port numbers, CIDR, protocols, IPv6               |
+| Planned | Configuration Backup | SSH-based device config backup                    |
+| Planned | SNMP Polling         | Device monitoring via SNMP                        |
+| Planned | Network Topology     | Visual network mapping                            |
 
 </div>
 
@@ -485,16 +483,20 @@ netdash-toolkit/
 
 ## Browser Limitations
 
-Running entirely in the browser has some constraints:
+The web platform gives a page one way to reach the network: HTTP, through `fetch`. Everything below follows from that, and none of it is worked around with a simulation. Where the platform cannot answer, the tool says so.
 
-| Feature           | Limitation                        | Workaround                    |
-| :---------------- | :-------------------------------- | :---------------------------- |
-| **ICMP Ping**     | Browsers cannot send ICMP packets | HTTP-based RTT testing        |
-| **Traceroute**    | No TTL manipulation available     | Simulated hop visualization   |
-| **Port Scanning** | TCP/UDP sockets not accessible    | Educational simulation mode   |
-| **Direct DNS**    | Only DoH providers accessible     | Multiple DoH provider support |
+| Feature              | The limit, and where it comes from                                | What the app does instead                                                                          |
+| :------------------- | :---------------------------------------------------------------- | :------------------------------------------------------------------------------------------------- |
+| **ICMP ping**        | No web API emits ICMP; it needs a raw socket                      | Times one HTTPS round trip and labels the transport `https-round-trip`, never `icmp`               |
+| **Traceroute**       | No web API sets a per-packet IP TTL                               | Refuses, and explains why. Nothing is sent                                                         |
+| **Port scanning**    | No raw sockets, and the Fetch Standard blocks 83 ports outright   | HTTP probe reporting `open`, `unknown` or `browser-blocked`. Never `closed`, which it cannot prove |
+| **Response headers** | A cross-origin response exposes exactly 7 CORS-safelisted headers | Names the headers it could not read, rather than reporting them absent                             |
+| **Direct DNS**       | No UDP socket to port 53                                          | DNS over HTTPS across 5 providers, 2 of them in the RFC 8484 wire format                           |
+| **MD5**              | Web Crypto registers 4 digest algorithms and MD5 is not one       | Offers SHA-1/256/384/512 and lists MD5 as unavailable with the reason                              |
 
-> **Available Now**: Electron desktop app with full native networking capabilities!
+Two of those rows are the reason this section exists. Traceroute used to return five hardcoded hops with random jitter added to look measured, and the port scanner used to report `Math.random() > 0.8` as "open". Both were deleted rather than improved. A refusal is a better answer than a plausible fiction.
+
+> **Available now:** the Electron desktop build adds real ICMP ping, system traceroute, TCP connect scanning and direct DNS queries. It is the same UI, with a Node process behind an IPC bridge.
 
 <br />
 
@@ -504,17 +506,19 @@ Running entirely in the browser has some constraints:
 
 ## Electron Desktop App
 
-NetDash Toolkit is available as a native desktop application with **real networking capabilities** that go beyond browser limitations.
+The desktop build is the same static export inside an Electron shell. It adds exactly four capabilities, each by driving a tool your machine already has rather than reimplementing it.
 
-### Native Features
+### What the desktop build adds
 
-| Feature               |    Browser    |         Desktop App          |
-| :-------------------- | :-----------: | :--------------------------: |
-| **ICMP Ping**         | HTTP fallback |      Real ICMP packets       |
-| **Traceroute**        |   Simulated   | Real TTL-based hop discovery |
-| **Port Scanning**     |    Limited    |    Full TCP/UDP scanning     |
-| **Network Discovery** | Not available |         ARP scanning         |
-| **DNS Queries**       |   DoH only    |      Direct DNS queries      |
+| Capability           | Browser                             | Desktop                                        | Mechanism                                                                                            |
+| :------------------- | :---------------------------------- | :--------------------------------------------- | :--------------------------------------------------------------------------------------------------- |
+| **ICMP ping**        | HTTPS round trip, labelled as one   | Real ICMP echo                                 | Spawns your system `ping` binary                                                                     |
+| **Traceroute**       | Refused                             | Full path discovery                            | Spawns `traceroute`, `tracert` on Windows                                                            |
+| **Port scanning**    | `open` or `unknown`, never `closed` | `open`, `closed` and `filtered` told apart     | Node `net.Socket` connect, TCP only, no UDP                                                          |
+| **Local neighbours** | Not available                       | Reads the system ARP cache                     | Runs `arp -a` and parses it. Not a sweep, so it only shows hosts this machine has recently talked to |
+| **DNS queries**      | DoH to a public resolver            | Any DNS server you name, including on your LAN | Node `dns.promises.Resolver`                                                                         |
+
+Nothing here asks for elevation. The Windows installer requests `asInvoker`, which is also why ICMP goes through the system `ping` binary instead of a raw socket.
 
 ### Install Desktop App
 
@@ -548,11 +552,11 @@ pnpm dist:linux
 
 ### System Requirements
 
-| Platform    | Requirements                                              |
-| :---------- | :-------------------------------------------------------- |
-| **macOS**   | macOS 10.13+ (High Sierra or later), x64 or Apple Silicon |
-| **Windows** | Windows 10+, x64                                          |
-| **Linux**   | Ubuntu 18.04+, Debian 10+, or equivalent                  |
+| Platform    | Requirements                                                                                                                                 |
+| :---------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| **macOS**   | macOS 12.0+ (Monterey or later), x64 or Apple Silicon. Electron 39 declares `LSMinimumSystemVersion 12.0`, so older releases will not launch |
+| **Windows** | Windows 10+, x64                                                                                                                             |
+| **Linux**   | Ubuntu 22.04+, Debian 12+, or equivalent (glibc 2.31+)                                                                                       |
 
 <br />
 
@@ -562,16 +566,25 @@ pnpm dist:linux
 
 ## Available Scripts
 
-| Command             | Description                               |
-| :------------------ | :---------------------------------------- |
-| `pnpm dev`          | Start development server with hot reload  |
-| `pnpm build`        | Generate optimized production build       |
-| `pnpm start`        | Serve production build locally            |
-| `pnpm lint`         | Run ESLint for code quality               |
-| `pnpm electron:dev` | Start Electron app in development mode    |
-| `pnpm dist:mac`     | Build macOS app (DMG + ZIP)               |
-| `pnpm dist:win`     | Build Windows installer (NSIS + Portable) |
-| `pnpm dist:linux`   | Build Linux packages (AppImage + DEB)     |
+| Command                 | Description                                                                            |
+| :---------------------- | :------------------------------------------------------------------------------------- |
+| `pnpm dev`              | Development server with hot reload                                                     |
+| `pnpm validate`         | format:check, lint, typecheck, electron:compile, test. Exactly the CI `Quality` job    |
+| `pnpm validate:full`    | `validate` plus the full build. Run it if you touched anything the build consumes      |
+| `pnpm build`            | Build the docs site, then the app. This is what Vercel and CI run                      |
+| `pnpm build:app`        | The app only, leaving `public/docs/` alone                                             |
+| `pnpm build:docs`       | Build `docs/` and copy the output into `public/docs/`                                  |
+| `pnpm test`             | Vitest, both projects. `test:unit` and `test:components` run one each                  |
+| `pnpm typecheck`        | `tsc --noEmit`. A passing build does not check types, see below                        |
+| `pnpm lint`             | ESLint. Note `next lint` is deprecated and is removed in Next.js 16                    |
+| `pnpm format:check`     | Prettier in check mode. CI fails on this                                               |
+| `pnpm electron:compile` | Typecheck and emit the Electron main process, which has its own `tsconfig.json`        |
+| `pnpm electron:pack`    | Pack an unpacked app directory for this platform, which is the CI packaging smoke test |
+| `pnpm dist:mac`         | Build macOS app (DMG + ZIP). Also `dist:win`, `dist:linux`, `dist:all`                 |
+
+There is no `pnpm start`. `next start` refuses to serve an `output: "export"` build, so serve `out/` with any static file server instead.
+
+`next.config.mjs` sets `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` to `true`, so a green build proves nothing about types or lint. `pnpm typecheck` and `pnpm lint` are the real gates, and CI runs them as separate steps.
 
 <br />
 
@@ -581,13 +594,17 @@ pnpm dist:linux
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, because CI enforces more than a review does.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat(scope): add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Put logic in `lib/` and write a test for it in `tests/unit/`. Anything that mounts a component goes in `tests/components/`
+4. Run `pnpm validate` and `pnpm electron:compile`. That is the exact chain CI runs, so a green run locally is a green run there
+5. Commit your changes (`git commit -m 'feat(scope): add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+Adding a tool means one entry in [`lib/tool-registry.ts`](lib/tool-registry.ts) and nothing else: the sidebar, the command palette, the static route, the docs pages and the network disclosure all read from it. If the tool makes any network request, set `runtime.offline: false` and list the hosts, or the registry test fails.
 
 <br />
 

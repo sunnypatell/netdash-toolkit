@@ -24,7 +24,7 @@ pnpm lint
 pnpm validate
 ```
 
-`pnpm validate` is the whole CI chain locally: `typecheck`, `lint`, `format:check`, `test`, `build`. [`CONTRIBUTING.md`](https://github.com/sunnypatell/netdash-toolkit/blob/main/CONTRIBUTING.md) puts it directly: if it passes locally it passes there.
+`pnpm validate` is the CI `Quality` job locally, in the same order: `format:check`, `lint`, `typecheck`, `electron:compile`, `test`. It stops short of the build on purpose, because the build is a separate CI job; `pnpm validate:full` adds it. [`CONTRIBUTING.md`](https://github.com/sunnypatell/netdash-toolkit/blob/main/CONTRIBUTING.md) puts it directly: if it passes locally it passes there.
 
 ## Comments explain why, never what
 
@@ -91,7 +91,7 @@ Five rules, each with a gate behind it:
 | Set `runtime.offline: false` and list `thirdParty` hosts if it does any network I/O | `tool-registry.test.ts` fails, because it derives network I/O from the source |
 | Set `projectItemType` only if the component actually renders `SaveToProject`        | the registry would promise persistence the tool does not implement            |
 
-The fourth rule is the one with history. The comment on the `ToolRuntime` interface explains it: the dashboard hardcoded "100% offline ready" while 12 tools did network I/O, and nothing in the registry could contradict it. The test now derives the truth from the source so the metadata cannot drift again.
+The fourth rule is the one with history. The comment on the `ToolRuntime` interface explains it: the dashboard hardcoded "100% offline ready" while a dozen tools did network I/O, and nothing in the registry could contradict it. The test now derives the truth from the source so the metadata cannot drift again.
 
 Adding a **category** is a bigger change than adding a tool. The docs sidebar is manual by design, so `docs/scripts/generate-tool-pages.mjs` fails the docs build if the registry's categories and the sidebar in `docs/astro.config.mjs` disagree, and tells you which one is unaccounted for. Add the sidebar entry and update `SIDEBAR_CATEGORIES` in the same change.
 
@@ -111,6 +111,7 @@ Four constraints the docs hold to, all of them load-bearing:
 - **No remote assets.** No CDN script, no external stylesheet, no webfont. The same build is served offline by the desktop app, so anything remote would break it.
 - **Internal links are absolute and base-prefixed**, with a trailing slash: `/docs/diagnostics/browser-limits/`. `pnpm build` crawls the built HTML and fails on any internal link that does not resolve.
 - **Pages under `/docs/tools/` are generated.** Edit the registry, not the markdown.
+- **Tool counts in prose are checked against the registry.** `scripts/check-counts.mjs` runs during `pnpm build` and fails on any sentence stating a count the registry no longer supports, naming the file, the line and the matched text. If you phrase a count a way the script does not recognise, add the shape to its rules rather than routing around it. [Tests and gates](/docs/contributing/tests-and-gates/) has the detail.
 - **Every claim traces to code.** Link the implementation and, where one exists, the test that guards it. If something cannot be verified, say so in the page rather than rounding it up.
 
 :::tip[The Bar for a Claim]

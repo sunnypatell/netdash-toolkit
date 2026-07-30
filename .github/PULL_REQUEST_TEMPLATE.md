@@ -1,97 +1,39 @@
-## Description
+<!--
+Keep this short. A few well-written bullets beat a wall of checked boxes.
+Delete any section that does not apply.
+-->
 
-<!-- Provide a brief description of the changes in this PR -->
+## What and why
 
-## Type of Change
+<!-- What changed, and what problem it solves. The diff shows the "what" on its
+     own, so spend the words on the "why". -->
 
-<!-- Mark the relevant option with an "x" -->
-
-- [ ] Bug fix (non-breaking change that fixes an issue)
-- [ ] New feature (non-breaking change that adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Performance improvement
-- [ ] Code refactoring (no functional changes)
-- [ ] Documentation update
-- [ ] CI/CD or build configuration
-- [ ] Dependencies update
-
-## Related Issues
-
-<!-- Link any related issues using "Fixes #123" or "Relates to #123" -->
+-
 
 Fixes #
 
-## Changes Made
+## How you verified it
 
-<!-- List the specific changes made in this PR -->
+<!-- Reproducible signal, not "looks fine". Paste the command, the failing input
+     that now passes, the log line, whatever you actually ran. -->
 
 -
--
--
 
-## Screenshots / Recordings
+- [ ] `pnpm validate` passes (typecheck, lint, format, electron typecheck, both test projects)
+- [ ] `pnpm validate:full` passes, or this PR does not touch the build
+- [ ] new logic in `lib/` has tests in `tests/unit/`
 
-<!-- If applicable, add screenshots or recordings to demonstrate the changes -->
+## Platforms exercised
 
-## Testing
+<!-- Only if the change can behave differently per platform (electron main,
+     packaging, native networking). Skip it otherwise. -->
 
-<!-- Describe how you tested these changes -->
-
-### Test Environment
-
-- [ ] macOS (Apple Silicon)
-- [ ] macOS (Intel)
+- [ ] macOS
 - [ ] Windows
 - [ ] Linux
-- [ ] Web Browser
+- [ ] Web
 
-### Tests Performed
+## Anything a reviewer should know
 
-- [ ] Manual testing
-- [ ] Build succeeds (`pnpm build`)
-- [ ] Lint passes (`pnpm lint`)
-- [ ] Type check passes (`pnpm typecheck`)
-- [ ] Electron compiles (`pnpm electron:compile`)
-
-### Test Steps
-
-<!-- Describe the steps to test this PR -->
-
-1.
-2.
-3.
-
-## Checklist
-
-<!-- Mark completed items with an "x" -->
-
-### Code Quality
-
-- [ ] My code follows the project's coding style
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] My changes generate no new warnings or errors
-
-### Documentation
-
-- [ ] I have updated the documentation accordingly
-- [ ] I have updated the CHANGELOG.md (if applicable)
-
-### Security
-
-- [ ] I have not introduced any security vulnerabilities
-- [ ] I have not exposed any sensitive information (API keys, credentials, etc.)
-- [ ] Input validation is properly implemented (if applicable)
-
-### Performance
-
-- [ ] I have considered the performance impact of my changes
-- [ ] No unnecessary re-renders or expensive operations introduced
-
-## Additional Notes
-
-<!-- Any additional information that reviewers should know -->
-
----
-
-> **Reviewer Notes:** Please ensure all CI checks pass before merging. If you have questions about specific changes, use inline comments for targeted feedback.
+<!-- Breaking changes, follow-up work you deliberately left out, decisions you
+     are unsure about, screenshots for UI changes. -->

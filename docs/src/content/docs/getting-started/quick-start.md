@@ -45,7 +45,22 @@ Then open `http://localhost:3000/tools/subnet-calculator/`. Enter `192.168.1.1` 
 Saving is the only feature that requires an account, and it is the only path by which tool output reaches a server. [Accounts and saved projects](/docs/privacy/accounts-and-projects/) covers exactly what is stored.
 :::
 
-## 5. Install the desktop build if you need real ICMP
+## 5. Read a result you cannot trust
+
+This is the step most tool directories leave out, and it is the one worth learning first: several results carry a qualifier, and the qualifier is the result.
+
+| What you see                     | Where                                     | What it actually means                                                                                                      |
+| -------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `unknown` on a port              | Port scanner, browser                     | The probe did not complete. Closed, filtered, a non-HTTP service, a TLS mismatch and a content blocker all fail identically |
+| `browser-blocked` on a port      | Port scanner, browser                     | Nothing was sent. The Fetch Standard refuses that port outright, so its real state is unmeasurable here                     |
+| "unverified, via relay"          | HTTP headers, security headers, redirects | A third party fetched it, not you. That party can add, drop or rewrite anything, and you cannot tell                        |
+| A DNSSEC badge                   | DNS tools                                 | The resolver's AD bit, which is the resolver's claim about its own validation. Nothing was validated locally                |
+| `HTTPS request` as the transport | Ping, RTT panel                           | An HTTP round trip including DNS, TCP and TLS. Do not compare it to an ICMP figure                                          |
+| A Certificate Transparency date  | SSL checker                               | What was **issued** for the domain, from a CT log. Not what the server is presenting right now                              |
+
+The rule underneath all six: if the app cannot measure something, it says so rather than picking the plausible answer. Two of these exist because the plausible answer used to be picked. [What a browser cannot do](/docs/diagnostics/browser-limits/) has the mechanism for each.
+
+## 6. Install the desktop build if you need real ICMP
 
 The browser cannot send an ICMP echo request, so the desktop build exists for the four diagnostics that need OS-level networking: ICMP ping, system traceroute, TCP connect scanning, and ARP-based local discovery.
 

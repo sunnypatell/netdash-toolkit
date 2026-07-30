@@ -22,13 +22,15 @@ export interface ToolRuntime {
 
 That block is what the UI reads to warn you before a request, and it is what the [tools pages](/docs/tools/) in these docs are generated from. So the disclosure in the app, the disclosure in the docs, and the routing table all come from one declaration.
 
-| Guard                                                                                                                           | What it actually checks                                                                | What it does NOT check                                           |
-| ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [`tests/unit/tool-registry.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/tool-registry.test.ts) | `runtime.offline === false` is set for exactly the tools whose source does network I/O | that the host names listed are the host names actually requested |
-| The same test                                                                                                                   | every non-offline tool names at least one third-party host                             | that the list is complete                                        |
-| The same test                                                                                                                   | the reported offline count matches the registry                                        | anything about request bodies                                    |
+| Guard                                                                                                                           | What it actually checks                                                                                                      | What it does NOT check                                           |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| [`tests/unit/tool-registry.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/tool-registry.test.ts) | `runtime.offline === false` is set for exactly the tools whose source does network I/O                                       | that the host names listed are the host names actually requested |
+| The same test                                                                                                                   | every non-offline tool discloses at least one destination, counting either a `thirdParty` host or a `desktopOnly` capability | that the list is complete                                        |
+| The same test                                                                                                                   | the reported offline count matches the registry                                                                              | anything about request bodies                                    |
 
 Read the right-hand column as the honest scope limit. The test catches a tool that starts making requests without declaring it, which was the original failure mode; it does not diff the host list against the URLs in the component. So treat `thirdParty` as a declaration the project holds itself to, verified for existence rather than for accuracy. If you need certainty for a specific tool, read its source, or watch your own network.
+
+One tool uses the second half of that rule. The conflict checker declares `offline: false` with no `thirdParty` entry at all, and only `desktopOnly: ["reading the local ARP cache"]`. That is accurate rather than a loophole: its browser path parses text you paste and contacts nobody, and its one piece of I/O is the desktop build shelling out to `arp -a` on your own machine. There is no third party to name, so naming one would be worse than naming none.
 
 ## The hosts, by capability
 
@@ -50,13 +52,25 @@ Grouped by what they are for rather than by tool, because the same resolver serv
 
 The last row is the one people forget. When you ping or scan a target, that target sees a connection from your address. That is inherent to the measurement, not something the app adds.
 
+Three hosts belong to sign-in rather than to any tool, and they are listed separately because they are reached only if you sign in, or only if this deployment was built with a Google client id:
+
+| Host                              | Reached when                                                | What it receives                                    |
+| --------------------------------- | ----------------------------------------------------------- | --------------------------------------------------- |
+| `accounts.google.com`             | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set, and not on localhost | the One Tap prompt loads; Google sees the page view |
+| `apis.google.com`                 | Firebase Auth loads its `gapi` helper                       | the same                                            |
+| Your project's Firebase endpoints | you are signed in and sync is enabled                       | your auth token and your project documents          |
+
+The third row is deliberately not a literal hostname. Firebase derives its endpoints from the `authDomain` and `projectId` in the build's environment, so the exact names depend on whose deployment you are using. On the official deployment they are Google's. On your own fork they are yours, and with no Firebase environment variables at all there are no such requests, because `initializeApp` is never called. [Accounts and saved projects](/docs/privacy/accounts-and-projects/) has the detail.
+
+The first two are also visible in the Content-Security-Policy rather than only in the code: `script-src` names `https://apis.google.com` and `https://accounts.google.com`, and `frame-src` names `https://*.firebaseapp.com` and `https://accounts.google.com`. A policy is a testable artifact, which is why `tests/unit/csp.test.ts` derives the expected egress list from the source tree and fails if the two disagree.
+
 RDAP is worth one note: it is the [RFC 9082](https://www.rfc-editor.org/rfc/rfc9082#section-3.1) and [RFC 9083](https://www.rfc-editor.org/rfc/rfc9083#section-1) replacement for WHOIS, and `rdap.org` is a bootstrap redirector, so your query is forwarded to the authoritative registry for that object. Two parties see it, not one.
 
 ## The two relays, and why they exist
 
 Two hosts in that table are relays rather than authorities, and the code labels them that way at every layer.
 
-`api.hackertarget.com` is used because of the CORS restriction described in [what a browser cannot do](/docs/diagnostics/browser-limits/): a page cannot read another site's security headers, so the only alternatives are a relay or nothing. The comment in [`components/tools/http-headers.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/http-headers.tsx) records that the endpoint was verified by `curl` to send `Access-Control-Allow-Origin: *` and to return one header block per redirect hop, and that it is still an unaffiliated relay, so everything it returns is labelled as such.
+`api.hackertarget.com` is used because of the CORS restriction described in [what a browser cannot do](/docs/diagnostics/browser-limits/): a page cannot read another site's security headers, so the only alternatives are a relay or nothing. It is reached from exactly one module, [`lib/http-relay.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/http-relay.ts), whose comment records that the endpoint was verified by `curl` to send `Access-Control-Allow-Origin: *` and to return one header block per redirect hop, that it "can add, drop or rewrite anything", and that "every caller labels its output unverified". Three tools call it, each behind its own explicitly-chosen relay panel: HTTP headers, security headers, and the redirect checker.
 
 What that means for you, stated plainly:
 
@@ -89,15 +103,20 @@ We do not run advertising trackers, marketing pixels, or session-replay tools. W
 Specifically:
 
 - **Nothing you type into an offline tool leaves the browser.** Subnet math, VLSM plans, VLAN and ACL configs, MTU calculations, hashes, password generation, JSON formatting, regex testing, timestamp conversion, colour conversion: all local.
-- **Password and key generation is local.** [`lib/password-gen.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/password-gen.ts) calls [`crypto.getRandomValues`](https://w3c.github.io/webcrypto/#Crypto-method-getRandomValues) and nothing else; the file comment states "no `Math.random` anywhere in this repo", and [`tests/unit/password-gen.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/password-gen.test.ts) asserts that an empty charset raises rather than silently falling back. Output is never transmitted.
+- **Password and key generation is local, and unbiased.** [`lib/password-gen.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/password-gen.ts) draws from [`crypto.getRandomValues`](https://w3c.github.io/webcrypto/#Crypto-method-getRandomValues) and rejects draws that land in the biased tail rather than folding them with `%`, which would over-represent the first `2^32 mod n` characters of the charset. [`tests/unit/password-gen.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/password-gen.test.ts) asserts that directly in "discards draws in the biased tail", and [`tests/unit/random-gen.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/random-gen.test.ts) checks the statistical consequence in "shows no low-bucket skew, which is what modulo folding looks like". Output is never transmitted.
 - **The desktop build adds no telemetry.** It makes the same requests the web build makes, plus whichever diagnostic you run.
 - **No GeoIP.** There is no IP geolocation provider anywhere in the codebase.
+- **No encryption, anywhere, of anything.** This is stated as a limitation rather than omitted. A repository-wide search for `subtle.encrypt`, `subtle.decrypt`, `deriveKey`, `deriveBits`, `PBKDF2`, `importKey` and `generateKey` returns nothing. The only Web Crypto the app uses is `crypto.subtle.digest` in [`lib/hash.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/hash.ts) and `crypto.getRandomValues` in `lib/password-gen.ts`. Saved projects are plain JSON in `localStorage` and plain documents in Firestore. If you have read a claim anywhere that this app encrypts project storage with AES-GCM and PBKDF2, that claim is false and no code has ever backed it.
+
+:::caution[A Claim in the Source That Is Not True]
+The comment at the top of `lib/password-gen.ts` reads "crypto.getRandomValues only. no `Math.random` anywhere in this repo." The first sentence is true of that file. The second is not true of the repository: `Math.random` is used for placeholder prose in `lib/lorem.ts` (deliberately, and documented as decorative), for the cache-busting query parameter and the DNS query ID in `lib/network-testing.ts`, and for project id generation in `contexts/project-context.tsx`. None of those is a security-relevant draw, so the practical claim holds; the sentence as written does not, and it is recorded here rather than quietly dropped.
+:::
 
 ## Not in scope (yet)
 
-- **A Content-Security-Policy.** `vercel.json` sets five headers and no CSP, and the Electron static server sets none at all. Safe to defer because there is no backend and no user-generated content rendered as markup, but it is a gap.
 - **Analytics as an opt-in.** Vercel Analytics is unconditional. Making it a preference would be better, and would need a consent surface the app does not have yet.
-- **Host-list verification in CI.** The registry test proves a host list exists, not that it matches the code. Closing that gap means statically extracting URLs per component, which is worth doing and is not done.
+- **A `runtime.thirdParty` list checked against the code.** The registry test proves a host list exists and is non-empty; it does not diff those names against the URLs the component actually requests. `tests/unit/csp.test.ts` closes half of this from the other direction, since it extracts request-target literals from `lib/`, `components/`, `app/` and `contexts/` and fails if the CSP does not permit them, so a **new** egress host cannot appear unnoticed. What is still missing is the per-tool attribution: nothing asserts that the host a given tool declares is the host that tool calls.
+- **Self-service account deletion.** Covered on [accounts and saved projects](/docs/privacy/accounts-and-projects/); it is an email request today.
 
 :::caution[The One Rule Worth Remembering]
 If a tool shows no host warning, it made no request. If it shows hosts, assume those operators saw exactly what you typed. Do not paste an internal hostname into a DoH lookup and expect it to stay internal.

@@ -7,9 +7,14 @@
 # - electron packaging (--dir) runs on every push/PR; previously electron
 #   packaging was only ever exercised at release time, which is the worst
 #   possible moment to find out it broke.
+# - quality and build run in parallel, not chained. actions minutes are free
+#   on a public repo, so gating build behind quality only bought a saved
+#   runner on already-broken prs and cost every healthy pr the full quality
+#   wall clock before the build even started.
 # - caching: pnpm store (integrity-checked by the lockfile), .next/cache,
-#   and the electron + electron-builder binary caches. release builds in
-#   release.yml deliberately do NOT use these caches (hermetic builds).
+#   the docs (astro) install, and the electron + electron-builder binary
+#   caches. release builds in release.yml deliberately do NOT use these
+#   caches (hermetic builds).
 name: CI
 
 on:
@@ -56,14 +61,14 @@ jobs:
       - name: Typecheck (electron main/preload)
         run: pnpm electron:compile
 
-      - name: Run unit tests
+      # both vitest projects: unit (node) + components (happy-dom)
+      - name: Run tests
         run: pnpm test
 
   build:
     name: Build (web + electron pack)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: quality
     steps:
       - name: Harden runner (egress audit)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -82,9 +87,20 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'components/**', 'contexts/**', 'hooks/**', 'lib/**', 'styles/**', 'types/**', 'next.config.mjs') }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'components/**', 'contexts/**', 'data/**', 'lib/**', 'types/**', 'next.config.mjs', 'postcss.config.mjs') }}
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
+      # docs/ is a separate pnpm project with its own lockfile, so `pnpm build`
+      # installs it from the network on every run: setup-node's store cache is
+      # keyed on the ROOT lockfile only and is written by whichever job finishes
+      # first, so the astro deps never make it in. exact key only - a partially
+      # restored node_modules is worse than a clean install.
+      - name: Restore docs (astro) install
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: docs/node_modules
+          key: docs-deps-${{ runner.os }}-${{ hashFiles('docs/pnpm-lock.yaml') }}
 
       - name: Restore Electron binary caches
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -97,8 +113,10 @@ jobs:
       - name: Build web application
         run: pnpm build
 
+      # same script a contributor runs locally (`pnpm electron:pack` packs for
+      # the host platform); --linux is appended for the runner
       - name: Pack Electron app (smoke test)
-        run: pnpm electron:compile && pnpm exec electron-builder --linux --dir
+        run: pnpm electron:pack --linux
 
       - name: Assert packaged app launchable artifacts exist
         run: |

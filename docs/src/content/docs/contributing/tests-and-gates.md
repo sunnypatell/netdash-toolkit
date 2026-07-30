@@ -157,18 +157,45 @@ The exclusions are argued rather than assumed. `--border` is **NOT** in `UI_PAIR
 
 There is also a guard against the gate quietly becoming vacuous: `hex()` asserts each token is an opaque six-digit hex before using it, because a token expressed as `oklch()` or `color-mix()` composites over whatever is behind it and its contrast cannot be reasoned about from the value alone. A separate test asserts both themes define the same colour token set, so a token added to one theme and not the other fails rather than going unchecked.
 
+## Gate 4: the docs cannot state a tool count the registry disagrees with
+
+This one lives in the docs build rather than in vitest, and it exists because the failure already happened. A tool moved from `runtime.offline: false` to `offline: true`, the offline count moved with it, and eleven hand-written sentences across nine pages silently became wrong. The generated pages under `/docs/tools/` re-derive their numbers from the registry on every build and were unaffected; only the prose drifted, which is exactly the failure mode prose has.
+
+[`docs/scripts/check-counts.mjs`](https://github.com/sunnypatell/netdash-toolkit/blob/main/docs/scripts/check-counts.mjs) runs between the page generator and `astro build`. It reads the registry through the same `read-registry.mjs` the generator uses, derives five numbers, then scans every hand-written page for a number sitting in one of the shapes the docs use to state a count:
+
+| Shape in the prose                                   | Must equal                                                                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `48 tools`, `48-tool dashboard`                      | the total                                                                                                      |
+| `36 of the 48`                                       | one of total, offline, networked, saveable, or a per-category count, **and** the denominator must be the total |
+| `36 offline`, `36 of them never`, `36 fully working` | the offline count                                                                                              |
+| `the other 12`, `12 networked tools`                 | the networked count                                                                                            |
+| `7 categories`                                       | the category count                                                                                             |
+
+Two design choices are worth naming. The denominator guard on the second row is what stops it matching `0 of 100`, which is a security-header score rather than a tool fraction. And the generated `tools/` directory is skipped entirely, because a check on a file that is rewritten from the same source on every build proves nothing.
+
+The failure output names the file, the line, the exact text it matched, the number it found, and the numbers the registry can currently justify:
+
+```text
+docs/src/content/docs/index.mdx:6
+  matched   "36 of them never" as an offline tool count
+  found     36
+  registry  37
+```
+
+The scope limit is real and worth stating: a phrasing the script does not recognise is not checked at all. If you write a count a new way, add its shape to the rules rather than working around the check.
+
 ## What CI runs
 
 [`.github/workflows/ci.yml`](https://github.com/sunnypatell/netdash-toolkit/blob/main/.github/workflows/ci.yml) has two jobs, and every action is pinned by commit SHA with `step-security/harden-runner` in egress-audit mode ahead of checkout.
 
-| Job     | Steps, in order                                                                                                                   |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Quality | `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm electron:compile`, `pnpm test`                                          |
-| Build   | `pnpm build`, then `pnpm electron:compile && electron-builder --linux --dir`, then an assertion that the packaged artifacts exist |
+| Job     | Steps, in order                                                                                      |
+| ------- | ---------------------------------------------------------------------------------------------------- |
+| Quality | `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm electron:compile`, `pnpm test`             |
+| Build   | `pnpm build`, then `pnpm electron:pack --linux`, then an assertion that the packaged artifacts exist |
 
 Two things follow from that table. `pnpm electron:compile` is in the Quality job as a typecheck: the Electron main process has its own `tsconfig.json`, so `pnpm typecheck` does not cover it and compiling is how it gets checked. And because the Build job runs the root `pnpm build`, which now chains `pnpm build:docs` first, **CI builds this documentation site on every run**. A docs build failure fails CI, which is the intended behaviour: the alternative is shipping a deploy whose `/docs/` is stale or missing.
 
-`pnpm validate` runs the Quality sequence plus the build locally, so it is the closest local approximation of a green CI run.
+`pnpm validate` is the Quality sequence locally, and `pnpm validate:full` adds the build, so the second is the closest local approximation of a full green CI run.
 
 ## Adding a test
 

@@ -45,9 +45,10 @@ runtime: {
 
 ## Not in scope (yet)
 
-- **A Content-Security-Policy.** `vercel.json` sets five security headers, and none of them is a CSP. The Electron static server reproduces none of them either. This is safe to defer because the app has no backend and no user-generated content to inject, but it is a real gap and it is worth naming rather than burying.
+- **A CSP without `'unsafe-inline'`.** Both builds now send a Content-Security-Policy, but `script-src` and `style-src` both carry `'unsafe-inline'`, because a static export inlines its own hydration script and has no per-request nonce to bind. That is the ceiling for `output: "export"`, and closing it would mean giving up the static build or adding a build step that hashes every inline script. Safe to defer because there is no backend and no user-supplied markup rendered as HTML. `script-src` also carries `'wasm-unsafe-eval'`, which the documentation search genuinely needs and which permits WebAssembly compilation only, not `eval`.
+- **A `connect-src` allowlist.** `connect-src` is `'self' https: http:` on purpose, and the comment in `electron/csp.ts` says why: the network tester, port probe, ping fallback and TLS trust probe all fetch a host **you** type, so an allowlist would have to contain the whole internet or break the tools. The mitigation is that the hosts the app itself contacts are enumerated and tested rather than restricted at the CSP layer.
 - **Auto-update in the desktop app.** `electron-builder.json` sets `"publish": null` and there is no `electron-updater` anywhere in the tree, so updates are a manual download or a `brew upgrade`. Deferring it is defensible for a free project with signed release artifacts, since the verification path in the docs does not depend on an update channel being trustworthy.
-- **A sandboxed renderer.** `webPreferences` sets `contextIsolation: true` and `nodeIntegration: false` but leaves `sandbox: false`. The navigation allowlist is what currently keeps the preload bridge away from remote origins.
+- **A sandboxed renderer.** `webPreferences` sets `contextIsolation: true` and `nodeIntegration: false` but leaves `sandbox: false`. The navigation allowlist and the single-entry permission allowlist are what currently keep the preload bridge away from remote origins.
 
 :::note
 Every number and behaviour on this page came from reading the code, not from a changelog. If something here contradicts what the app does, the code is right and this page is a bug; open an issue against [the repository](https://github.com/sunnypatell/netdash-toolkit).
