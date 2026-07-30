@@ -22,7 +22,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   getNetworkInterfaces: () => ipcRenderer.invoke("network:getInterfaces"),
 
-  arpScan: (subnet?: string) => ipcRenderer.invoke("network:arpScan", subnet),
+  // reads the local arp cache. it takes no subnet because it sends no packets:
+  // it can only report neighbours this host has already resolved.
+  getArpTable: () => ipcRenderer.invoke("network:arpTable"),
 
   // System info
   getSystemInfo: () => ipcRenderer.invoke("system:getInfo"),
@@ -50,7 +52,7 @@ declare global {
         options?: { server?: string; type?: string }
       ) => Promise<DnsResult>
       getNetworkInterfaces: () => Promise<NetworkInterface[]>
-      arpScan: (subnet?: string) => Promise<ArpEntry[]>
+      getArpTable: () => Promise<ArpEntry[]>
       getSystemInfo: () => Promise<SystemInfo>
     }
   }
@@ -65,6 +67,7 @@ interface PingResult {
   avg: number
   packetLoss: number
   times: number[]
+  error?: string
 }
 
 interface TracerouteHop {
@@ -78,12 +81,14 @@ interface TracerouteHop {
 interface TracerouteResult {
   destination: string
   hops: TracerouteHop[]
+  error?: string
 }
 
 interface PortScanResult {
   port: number
   state: "open" | "closed" | "filtered"
   service?: string
+  responseTime?: number
 }
 
 interface DnsResult {
@@ -91,10 +96,12 @@ interface DnsResult {
   records: Array<{
     type: string
     value: string
+    // populated for A and AAAA, which are the only types node reports a ttl for
     ttl?: number
   }>
   server: string
   responseTime: number
+  error?: string
 }
 
 interface NetworkInterface {
@@ -109,8 +116,8 @@ interface NetworkInterface {
 interface ArpEntry {
   ip: string
   mac: string
+  // a device name on unix, the interface's own address on windows
   interface?: string
-  vendor?: string
 }
 
 interface SystemInfo {

@@ -1,0 +1,7 @@
+PING 192.0.2.9 (192.0.2.9) 56(84) bytes of data.
+64 bytes from 192.0.2.9: icmp_seq=1 ttl=64 time=1.21 ms
+64 bytes from 192.0.2.9: icmp_seq=3 ttl=64 time=1.44 ms
+
+--- 192.0.2.9 ping statistics ---
+4 packets transmitted, 2 received, 50% packet loss, time 3045ms
+rtt min/avg/max/mdev = 1.210/1.325/1.440/0.115 ms

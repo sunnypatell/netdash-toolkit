@@ -1,0 +1,10 @@
+
+Tracing route to one.one.one.one [192.0.2.1]
+over a maximum of 30 hops:
+
+  1    <1 ms    <1 ms    <1 ms  192.168.1.1
+  2     8 ms     9 ms     8 ms  198.51.100.9
+  3     *        *        *     Request timed out.
+  4    11 ms    10 ms    11 ms  one.one.one.one [192.0.2.1]
+
+Trace complete.

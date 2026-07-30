@@ -6,11 +6,11 @@
  * @license MIT
  */
 
-import { app, BrowserWindow, ipcMain, session, shell, Menu, dialog, nativeTheme } from "electron"
+import { app, BrowserWindow, ipcMain, session, shell, Menu, dialog } from "electron"
 import * as path from "path"
 import * as http from "http"
 import handler from "serve-handler"
-import { registerNetworkHandlers } from "./network/handlers"
+import { registerNetworkHandlers, shutdownNetworkHandlers } from "./network/handlers"
 import { CONTENT_SECURITY_POLICY } from "./csp"
 import { appOrigins, decideNavigation, isPermissionAllowed } from "./navigation"
 
@@ -53,10 +53,12 @@ function startStaticServer(): Promise<number> {
 }
 
 function stopStaticServer(): void {
-  if (staticServer) {
-    staticServer.close()
-    staticServer = null
-  }
+  if (!staticServer) return
+  // close() alone waits for keep-alive sockets the renderer still holds, which
+  // on quit means the listener outlives the app
+  staticServer.closeAllConnections()
+  staticServer.close()
+  staticServer = null
 }
 
 // ============================================================================
@@ -137,7 +139,7 @@ function createWindow(): void {
 
   // setWindowOpenHandler only sees window.open and target=_blank. without this,
   // a location.href assignment or a plain anchor click navigates the window to a
-  // remote origin, and preload.js (which exposes portScan, arpScan and friends)
+  // remote origin, and preload.js (which exposes portScan, getArpTable and friends)
   // runs for every navigation in this webContents.
   mainWindow.webContents.on("will-navigate", (event, url) => {
     const decision = decideNavigation(url, allowedOrigins)
@@ -233,21 +235,13 @@ function createMenu(): void {
 // IPC HANDLERS
 // ============================================================================
 
+// only what preload.ts actually bridges. the dialog and theme handlers that used
+// to live here were unreachable (contextIsolation is on and preload never
+// exposed them) while still forwarding raw renderer objects into native dialogs.
 function registerAppHandlers(): void {
   ipcMain.handle("app:getVersion", () => app.getVersion())
   ipcMain.handle("app:getPlatform", () => process.platform)
   ipcMain.handle("app:isElectron", () => true)
-  ipcMain.handle("app:getTheme", () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"))
-
-  ipcMain.handle("dialog:showOpenDialog", async (_event, options) => {
-    if (!mainWindow) return { canceled: true, filePaths: [] }
-    return dialog.showOpenDialog(mainWindow, options)
-  })
-
-  ipcMain.handle("dialog:showMessageBox", async (_event, options) => {
-    if (!mainWindow) return { response: 0 }
-    return dialog.showMessageBox(mainWindow, options)
-  })
 }
 
 // ============================================================================
@@ -305,6 +299,9 @@ app.on("window-all-closed", () => {
 })
 
 app.on("before-quit", () => {
+  // a scan in flight owns child processes and sockets; quitting mid-scan used to
+  // leave both to finish on their own
+  shutdownNetworkHandlers()
   stopStaticServer()
 })
 

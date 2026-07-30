@@ -1,296 +1,485 @@
 /**
  * NetDash Toolkit - Network Handlers
- * Enterprise-grade network operations with security hardening
+ *
+ * Every handler here runs in the main process and either spawns a system binary
+ * or opens a socket, on input that came from the renderer. Validation, bounds and
+ * lifecycle live here; the pure parts live in ./validation and ./parsers so they
+ * can be tested without electron.
  *
  * @author Sunny Patel
  * @license MIT
  */
 
 import { ipcMain } from "electron"
-import * as os from "os"
+import type { ChildProcess } from "child_process"
+import { spawn } from "child_process"
+import { existsSync } from "fs"
 import * as dns from "dns"
 import * as net from "net"
-import { spawn } from "child_process"
+import * as os from "os"
+import {
+  buildPingArgs,
+  buildTracerouteArgs,
+  parseArpOutput,
+  parsePingLoss,
+  parsePingOutput,
+  parseTracerouteOutput,
+  type ArpEntry,
+  type TracerouteHop,
+} from "./parsers"
+import { resolveCommandPath, validateDnsServer, validateHost, validatePorts } from "./validation"
 
 // ============================================================================
-// SECURITY: Input Validation
+// BOUNDS
 // ============================================================================
 
-/**
- * Validates and sanitizes hostname/IP input to prevent command injection
- * Allows: hostnames, IPv4, IPv6 addresses
- * Blocks: shell metacharacters, command injection attempts
- */
-function validateHost(host: string): { valid: boolean; sanitized: string; error?: string } {
-  if (!host || typeof host !== "string") {
-    return { valid: false, sanitized: "", error: "Host is required" }
-  }
-
-  const trimmed = host.trim()
-
-  if (trimmed.length === 0) {
-    return { valid: false, sanitized: "", error: "Host cannot be empty" }
-  }
-
-  if (trimmed.length > 253) {
-    return { valid: false, sanitized: "", error: "Host too long (max 253 characters)" }
-  }
-
-  // Block dangerous shell characters that could lead to command injection
-  const dangerousChars = /[;&|`$(){}[\]<>\\'"!\n\r\t]/
-  if (dangerousChars.test(trimmed)) {
-    return { valid: false, sanitized: "", error: "Invalid characters in host" }
-  }
-
-  // IPv4 validation
-  const ipv4Regex =
-    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
-  if (ipv4Regex.test(trimmed)) {
-    return { valid: true, sanitized: trimmed }
-  }
-
-  // IPv6 validation (simplified - covers most cases)
-  const ipv6Regex =
-    /^(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}$|^::(?:[a-fA-F0-9]{1,4}:){0,6}[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,7}:$|^(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,5}(?::[a-fA-F0-9]{1,4}){1,2}$|^(?:[a-fA-F0-9]{1,4}:){1,4}(?::[a-fA-F0-9]{1,4}){1,3}$|^(?:[a-fA-F0-9]{1,4}:){1,3}(?::[a-fA-F0-9]{1,4}){1,4}$|^(?:[a-fA-F0-9]{1,4}:){1,2}(?::[a-fA-F0-9]{1,4}){1,5}$|^[a-fA-F0-9]{1,4}:(?::[a-fA-F0-9]{1,4}){1,6}$/
-  if (ipv6Regex.test(trimmed)) {
-    return { valid: true, sanitized: trimmed }
-  }
-
-  // Hostname validation (RFC 1123)
-  const hostnameRegex =
-    /^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*$/
-  if (hostnameRegex.test(trimmed)) {
-    return { valid: true, sanitized: trimmed.toLowerCase() }
-  }
-
-  return { valid: false, sanitized: "", error: "Invalid hostname or IP address format" }
-}
-
-/**
- * Validates port number
- */
-function validatePort(port: number): boolean {
-  return Number.isInteger(port) && port >= 1 && port <= 65535
-}
-
-/**
- * Validates port array
- */
-function validatePorts(ports: number[]): { valid: boolean; sanitized: number[]; error?: string } {
-  if (!Array.isArray(ports)) {
-    return { valid: false, sanitized: [], error: "Ports must be an array" }
-  }
-
-  if (ports.length === 0) {
-    return { valid: false, sanitized: [], error: "At least one port is required" }
-  }
-
-  if (ports.length > 10000) {
-    return { valid: false, sanitized: [], error: "Too many ports (max 10000)" }
-  }
-
-  const sanitized = ports.filter(validatePort)
-  if (sanitized.length === 0) {
-    return { valid: false, sanitized: [], error: "No valid ports provided" }
-  }
-
-  return { valid: true, sanitized }
-}
-
-/**
- * Validates DNS server address
- */
-function validateDnsServer(server: string): { valid: boolean; sanitized: string; error?: string } {
-  if (!server) {
-    return { valid: true, sanitized: "" } // Use system default
-  }
-
-  // DNS server should be an IP address
-  const hostValidation = validateHost(server)
-  if (!hostValidation.valid) {
-    return { valid: false, sanitized: "", error: "Invalid DNS server address" }
-  }
-
-  // Only allow IP addresses for DNS servers (not hostnames)
-  const ipv4Regex =
-    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
-  if (!ipv4Regex.test(hostValidation.sanitized)) {
-    return { valid: false, sanitized: "", error: "DNS server must be an IP address" }
-  }
-
-  return { valid: true, sanitized: hostValidation.sanitized }
-}
-
-// ============================================================================
-// LOGGING
-// ============================================================================
+// nothing the renderer sends may exceed these. they exist because a renderer
+// that is not the app (see navigation.ts) would otherwise decide how much work
+// the privileged process does.
+const MAX_COMMAND_MS = 120_000
+const MAX_OUTPUT_BYTES = 1_000_000
+const MAX_OPEN_SOCKETS = 256
+const DNS_TIMEOUT_MS = 5_000
+const ARP_TIMEOUT_MS = 10_000
 
 type LogLevel = "info" | "warn" | "error" | "debug"
 
 function log(level: LogLevel, message: string, data?: Record<string, unknown>) {
   const timestamp = new Date().toISOString()
   const prefix = `[NetDash][${timestamp}][${level.toUpperCase()}]`
+  const sink = level === "error" ? console.error : level === "warn" ? console.warn : console.log
 
   if (data) {
-    console[level === "error" ? "error" : level === "warn" ? "warn" : "log"](
-      `${prefix} ${message}`,
-      JSON.stringify(data)
-    )
+    sink(`${prefix} ${message}`, JSON.stringify(data))
   } else {
-    console[level === "error" ? "error" : level === "warn" ? "warn" : "log"](`${prefix} ${message}`)
+    sink(`${prefix} ${message}`)
   }
+}
+
+// ============================================================================
+// OPTION READING
+// ============================================================================
+
+function readOption(options: unknown, key: string): unknown {
+  if (typeof options !== "object" || options === null) return undefined
+  return (options as Record<string, unknown>)[key]
+}
+
+// a non-number reaching Math.min used to produce NaN and then the literal string
+// "NaN" on a command line, so the type check is not decoration
+function clampOption(
+  options: unknown,
+  key: string,
+  fallback: number,
+  min: number,
+  max: number
+): number {
+  const raw = readOption(options, key)
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return fallback
+  return Math.min(Math.max(Math.floor(raw), min), max)
+}
+
+function readStringOption(options: unknown, key: string): string | undefined {
+  const raw = readOption(options, key)
+  return typeof raw === "string" ? raw : undefined
+}
+
+// ============================================================================
+// RESOURCE LIFECYCLE
+// ============================================================================
+
+const activeChildren = new Set<ChildProcess>()
+const activeSockets = new Set<net.Socket>()
+
+/**
+ * Called from app quit. A scan in flight owns real child processes and real
+ * sockets; without this they outlive the window that asked for them.
+ */
+export function shutdownNetworkHandlers(): void {
+  for (const child of activeChildren) child.kill("SIGKILL")
+  activeChildren.clear()
+
+  for (const socket of activeSockets) socket.destroy()
+  activeSockets.clear()
+}
+
+// a global ceiling on concurrent connect attempts. the per-request concurrency
+// cap alone does not bound anything, because the renderer can invoke the handler
+// as many times as it likes.
+let openSockets = 0
+const socketWaiters: Array<() => void> = []
+
+function acquireSocketSlot(): Promise<void> {
+  if (openSockets < MAX_OPEN_SOCKETS) {
+    openSockets += 1
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    socketWaiters.push(() => {
+      openSockets += 1
+      resolve()
+    })
+  })
+}
+
+function releaseSocketSlot(): void {
+  openSockets -= 1
+  socketWaiters.shift()?.()
+}
+
+// ============================================================================
+// COMMAND EXECUTION
+// ============================================================================
+
+async function executeCommand(
+  command: string,
+  args: string[],
+  timeout: number
+): Promise<{ stdout: string; stderr: string }> {
+  const bounded = Math.min(timeout, MAX_COMMAND_MS)
+
+  return new Promise((resolve, reject) => {
+    const fullCommand = resolveCommandPath(
+      command,
+      process.platform,
+      existsSync,
+      process.env.SystemRoot
+    )
+
+    log("debug", `Executing command: ${fullCommand} ${args.join(" ")}`)
+
+    // argument array, no shell, absolute path where one exists
+    const child = spawn(fullCommand, args, { windowsHide: true })
+    activeChildren.add(child)
+
+    let stdout = ""
+    let stderr = ""
+    let settled = false
+    let escalation: NodeJS.Timeout | null = null
+
+    const settle = (finish: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(deadline)
+      finish()
+    }
+
+    const collect = (chunk: Buffer, into: "stdout" | "stderr") => {
+      const text = chunk.toString()
+      if (into === "stdout") {
+        if (stdout.length < MAX_OUTPUT_BYTES) stdout += text
+      } else if (stderr.length < MAX_OUTPUT_BYTES) {
+        stderr += text
+      }
+    }
+
+    child.stdout?.on("data", (chunk: Buffer) => collect(chunk, "stdout"))
+    child.stderr?.on("data", (chunk: Buffer) => collect(chunk, "stderr"))
+
+    const forget = () => {
+      activeChildren.delete(child)
+      if (escalation) {
+        clearTimeout(escalation)
+        escalation = null
+      }
+    }
+
+    child.on("error", (error: NodeJS.ErrnoException) => {
+      forget()
+      settle(() => {
+        if (error.code === "ENOENT") {
+          reject(
+            new Error(
+              `Command not found: ${fullCommand}. The required network tool may not be installed.`
+            )
+          )
+        } else if (error.code === "EACCES") {
+          reject(
+            new Error(`Permission denied: ${fullCommand}. Try running with elevated privileges.`)
+          )
+        } else {
+          reject(error)
+        }
+      })
+    })
+
+    child.on("close", (code) => {
+      forget()
+      settle(() => {
+        // ping exits non-zero on an unreachable host but still prints its summary
+        if (stdout) return resolve({ stdout, stderr })
+
+        // "cannot resolve host: Unknown host" only ever reaches stderr, and
+        // discarding it turned a name failure into a silent 100% packet loss
+        const diagnostic = stderr.trim().split("\n")[0]
+        if (code !== 0) {
+          return reject(new Error(diagnostic || `Command failed with exit code ${code}`))
+        }
+        resolve({ stdout, stderr })
+      })
+    })
+
+    const deadline = setTimeout(() => {
+      child.kill("SIGTERM")
+      // child.killed only records that a signal was sent, so escalation cannot
+      // be conditional on it
+      escalation = setTimeout(() => child.kill("SIGKILL"), 1000)
+      escalation.unref()
+
+      settle(() => {
+        if (stdout) resolve({ stdout, stderr })
+        else reject(new Error(`Command timed out after ${bounded}ms`))
+      })
+    }, bounded)
+  })
+}
+
+// ============================================================================
+// PORT SCANNING
+// ============================================================================
+
+export interface PortScanResult {
+  port: number
+  state: "open" | "closed" | "filtered"
+  service?: string
+  responseTime?: number
+}
+
+/**
+ * One real TCP connect attempt. Every exit path destroys the socket.
+ */
+export async function scanPort(
+  host: string,
+  port: number,
+  timeout: number
+): Promise<PortScanResult> {
+  return new Promise((resolve) => {
+    const socket = new net.Socket()
+    activeSockets.add(socket)
+
+    let resolved = false
+    const startTime = Date.now()
+
+    const cleanup = (state: "open" | "closed" | "filtered") => {
+      if (resolved) return
+      resolved = true
+
+      const responseTime = Date.now() - startTime
+      activeSockets.delete(socket)
+      socket.destroy()
+
+      resolve({
+        port,
+        state,
+        service: getServiceName(port),
+        responseTime: state === "open" ? responseTime : undefined,
+      })
+    }
+
+    socket.setTimeout(timeout)
+    socket.on("connect", () => cleanup("open"))
+    socket.on("timeout", () => cleanup("filtered"))
+
+    socket.on("error", (err: NodeJS.ErrnoException) => {
+      // refused means something answered; everything else is indistinguishable
+      // from a filter at this layer
+      cleanup(err.code === "ECONNREFUSED" ? "closed" : "filtered")
+    })
+
+    socket.on("close", () => cleanup("filtered"))
+
+    try {
+      socket.connect(port, host)
+    } catch {
+      cleanup("filtered")
+    }
+  })
 }
 
 // ============================================================================
 // NETWORK HANDLERS
 // ============================================================================
 
-/**
- * Register all network-related IPC handlers
- */
+const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"] as const
+type DnsRecordType = (typeof DNS_RECORD_TYPES)[number]
+
+interface DnsRecord {
+  type: string
+  value: string
+  ttl?: number
+}
+
+function isDnsRecordType(value: string): value is DnsRecordType {
+  return (DNS_RECORD_TYPES as readonly string[]).includes(value)
+}
+
+// a switch rather than resolve(host, type as any): it keeps the call typed and
+// it is the only way to ask node for the ttl, which the return type promises
+async function resolveRecords(
+  resolver: dns.promises.Resolver,
+  hostname: string,
+  type: DnsRecordType
+): Promise<DnsRecord[]> {
+  switch (type) {
+    case "A":
+      return (await resolver.resolve4(hostname, { ttl: true })).map((record) => ({
+        type,
+        value: record.address,
+        ttl: record.ttl,
+      }))
+    case "AAAA":
+      return (await resolver.resolve6(hostname, { ttl: true })).map((record) => ({
+        type,
+        value: record.address,
+        ttl: record.ttl,
+      }))
+    case "CNAME":
+      return (await resolver.resolveCname(hostname)).map((value) => ({ type, value }))
+    case "NS":
+      return (await resolver.resolveNs(hostname)).map((value) => ({ type, value }))
+    case "PTR":
+      return (await resolver.resolvePtr(hostname)).map((value) => ({ type, value }))
+    case "TXT":
+      return (await resolver.resolveTxt(hostname)).map((chunks) => ({
+        type,
+        value: JSON.stringify(chunks),
+      }))
+    case "MX":
+      return (await resolver.resolveMx(hostname)).map((record) => ({
+        type,
+        value: JSON.stringify(record),
+      }))
+    case "SRV":
+      return (await resolver.resolveSrv(hostname)).map((record) => ({
+        type,
+        value: JSON.stringify(record),
+      }))
+    case "SOA":
+      return [{ type, value: JSON.stringify(await resolver.resolveSoa(hostname)) }]
+  }
+}
+
 export function registerNetworkHandlers() {
   log("info", "Registering network handlers")
 
   // --------------------------------
-  // PING Handler
+  // PING
   // --------------------------------
-  ipcMain.handle(
-    "network:ping",
-    async (_event, host: string, options?: { timeout?: number; count?: number }) => {
-      const validation = validateHost(host)
-      if (!validation.valid) {
-        log("warn", "Ping validation failed", { host, error: validation.error })
-        return {
-          host,
-          alive: false,
-          time: 0,
-          min: 0,
-          max: 0,
-          avg: 0,
-          packetLoss: 100,
-          times: [],
-          error: validation.error,
-        }
-      }
-
-      const sanitizedHost = validation.sanitized
-      const count = Math.min(Math.max(options?.count || 4, 1), 10) // Limit to 1-10
-      const timeout = Math.min(Math.max(options?.timeout || 5000, 1000), 30000) // Limit to 1-30 seconds
-
-      log("info", "Starting ping", { host: sanitizedHost, count, timeout })
-
-      try {
-        const platform = process.platform
-        const args = buildPingArgs(platform, sanitizedHost, count, timeout)
-
-        const startTime = Date.now()
-        const result = await executeCommand("ping", args, timeout * count + 5000)
-        const totalTime = Date.now() - startTime
-
-        const times = parsePingOutput(result.stdout, platform)
-        const alive = times.length > 0
-        // clamp: dup! replies can produce more replies than probes sent
-        const packetLoss = Math.max(0, ((count - times.length) / count) * 100)
-
-        log("info", "Ping completed", {
-          host: sanitizedHost,
-          alive,
-          packetLoss,
-          avgTime: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0,
-        })
-
-        return {
-          host: sanitizedHost,
-          alive,
-          time: totalTime,
-          min: times.length > 0 ? Math.min(...times) : 0,
-          max: times.length > 0 ? Math.max(...times) : 0,
-          avg: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0,
-          packetLoss,
-          times,
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Ping failed"
-        log("error", "Ping failed", { host: sanitizedHost, error: errorMessage })
-
-        return {
-          host: sanitizedHost,
-          alive: false,
-          time: 0,
-          min: 0,
-          max: 0,
-          avg: 0,
-          packetLoss: 100,
-          times: [],
-          error: errorMessage,
-        }
+  ipcMain.handle("network:ping", async (_event, host: unknown, options: unknown) => {
+    const validation = validateHost(host)
+    if (!validation.valid) {
+      log("warn", "Ping validation failed", { error: validation.error })
+      return {
+        host: typeof host === "string" ? host : "",
+        alive: false,
+        time: 0,
+        min: 0,
+        max: 0,
+        avg: 0,
+        packetLoss: 100,
+        times: [],
+        error: validation.error,
       }
     }
-  )
 
-  // --------------------------------
-  // TRACEROUTE Handler
-  // --------------------------------
-  ipcMain.handle(
-    "network:traceroute",
-    async (_event, host: string, options?: { maxHops?: number; timeout?: number }) => {
-      const validation = validateHost(host)
-      if (!validation.valid) {
-        log("warn", "Traceroute validation failed", { host, error: validation.error })
-        return {
-          destination: host,
-          hops: [],
-          error: validation.error,
-        }
+    const sanitizedHost = validation.sanitized
+    const count = clampOption(options, "count", 4, 1, 10)
+    const timeout = clampOption(options, "timeout", 5000, 1000, 30000)
+
+    log("info", "Starting ping", { host: sanitizedHost, count, timeout })
+
+    try {
+      const platform = process.platform
+      const args = buildPingArgs(platform, sanitizedHost, count, timeout)
+
+      const startTime = Date.now()
+      const result = await executeCommand("ping", args, timeout * count + 5000)
+      const totalTime = Date.now() - startTime
+
+      const times = parsePingOutput(result.stdout, platform)
+      const alive = times.length > 0
+      // prefer the figure ping printed: it knows how many probes it actually
+      // sent, which our own count is only a request for
+      const reportedLoss = parsePingLoss(result.stdout)
+      const packetLoss =
+        reportedLoss ?? Math.min(100, Math.max(0, ((count - times.length) / count) * 100))
+
+      log("info", "Ping completed", { host: sanitizedHost, alive, packetLoss })
+
+      return {
+        host: sanitizedHost,
+        alive,
+        time: totalTime,
+        min: times.length > 0 ? Math.min(...times) : 0,
+        max: times.length > 0 ? Math.max(...times) : 0,
+        avg: times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0,
+        packetLoss,
+        times,
       }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Ping failed"
+      log("error", "Ping failed", { host: sanitizedHost, error: errorMessage })
 
-      const sanitizedHost = validation.sanitized
-      const maxHops = Math.min(Math.max(options?.maxHops || 30, 1), 64) // Limit to 1-64
-      const timeout = Math.min(Math.max(options?.timeout || 5000, 1000), 10000) // Limit to 1-10 seconds
-
-      log("info", "Starting traceroute", { host: sanitizedHost, maxHops, timeout })
-
-      try {
-        const platform = process.platform
-        const args = buildTracerouteArgs(platform, sanitizedHost, maxHops, timeout)
-        const command = platform === "win32" ? "tracert" : "traceroute"
-
-        const result = await executeCommand(command, args, timeout * maxHops + 10000)
-        const hops = parseTracerouteOutput(result.stdout, platform)
-
-        log("info", "Traceroute completed", { host: sanitizedHost, hopCount: hops.length })
-
-        return {
-          destination: sanitizedHost,
-          hops,
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Traceroute failed"
-        log("error", "Traceroute failed", { host: sanitizedHost, error: errorMessage })
-
-        return {
-          destination: sanitizedHost,
-          hops: [],
-          error: errorMessage,
-        }
+      return {
+        host: sanitizedHost,
+        alive: false,
+        time: 0,
+        min: 0,
+        max: 0,
+        avg: 0,
+        packetLoss: 100,
+        times: [],
+        error: errorMessage,
       }
     }
-  )
+  })
 
   // --------------------------------
-  // PORT SCAN Handler
+  // TRACEROUTE
+  // --------------------------------
+  ipcMain.handle("network:traceroute", async (_event, host: unknown, options: unknown) => {
+    const validation = validateHost(host)
+    if (!validation.valid) {
+      log("warn", "Traceroute validation failed", { error: validation.error })
+      return {
+        destination: typeof host === "string" ? host : "",
+        hops: [] as TracerouteHop[],
+        error: validation.error,
+      }
+    }
+
+    const sanitizedHost = validation.sanitized
+    const maxHops = clampOption(options, "maxHops", 30, 1, 64)
+    const timeout = clampOption(options, "timeout", 5000, 1000, 10000)
+
+    log("info", "Starting traceroute", { host: sanitizedHost, maxHops, timeout })
+
+    try {
+      const platform = process.platform
+      const args = buildTracerouteArgs(platform, sanitizedHost, maxHops, timeout)
+      const command = platform === "win32" ? "tracert" : "traceroute"
+
+      const result = await executeCommand(command, args, timeout * maxHops + 10000)
+      const hops = parseTracerouteOutput(result.stdout, platform)
+
+      log("info", "Traceroute completed", { host: sanitizedHost, hopCount: hops.length })
+      return { destination: sanitizedHost, hops }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Traceroute failed"
+      log("error", "Traceroute failed", { host: sanitizedHost, error: errorMessage })
+      return { destination: sanitizedHost, hops: [] as TracerouteHop[], error: errorMessage }
+    }
+  })
+
+  // --------------------------------
+  // PORT SCAN
   // --------------------------------
   ipcMain.handle(
     "network:portScan",
-    async (
-      _event,
-      host: string,
-      ports: number[],
-      options?: { timeout?: number; concurrent?: number }
-    ) => {
+    async (_event, host: unknown, ports: unknown, options: unknown) => {
       const hostValidation = validateHost(host)
       if (!hostValidation.valid) {
-        log("warn", "Port scan host validation failed", { host, error: hostValidation.error })
+        log("warn", "Port scan host validation failed", { error: hostValidation.error })
         return []
       }
 
@@ -302,8 +491,8 @@ export function registerNetworkHandlers() {
 
       const sanitizedHost = hostValidation.sanitized
       const sanitizedPorts = portsValidation.sanitized
-      const timeout = Math.min(Math.max(options?.timeout || 3000, 500), 10000) // 500ms - 10s
-      const concurrent = Math.min(Math.max(options?.concurrent || 50, 1), 200) // 1-200 concurrent
+      const timeout = clampOption(options, "timeout", 3000, 500, 10000)
+      const concurrent = clampOption(options, "concurrent", 50, 1, 200)
 
       log("info", "Starting port scan", {
         host: sanitizedHost,
@@ -312,26 +501,27 @@ export function registerNetworkHandlers() {
         concurrent,
       })
 
-      const results: Array<{
-        port: number
-        state: "open" | "closed" | "filtered"
-        service?: string
-      }> = []
+      const results: PortScanResult[] = []
 
-      // Process ports in batches
       for (let i = 0; i < sanitizedPorts.length; i += concurrent) {
         const batch = sanitizedPorts.slice(i, i + concurrent)
         const batchResults = await Promise.all(
-          batch.map((port) => scanPort(sanitizedHost, port, timeout))
+          batch.map(async (port) => {
+            await acquireSocketSlot()
+            try {
+              return await scanPort(sanitizedHost, port, timeout)
+            } finally {
+              releaseSocketSlot()
+            }
+          })
         )
         results.push(...batchResults)
       }
 
-      const openPorts = results.filter((r) => r.state === "open").length
       log("info", "Port scan completed", {
         host: sanitizedHost,
         scanned: results.length,
-        open: openPorts,
+        open: results.filter((r) => r.state === "open").length,
       })
 
       return results
@@ -339,113 +529,92 @@ export function registerNetworkHandlers() {
   )
 
   // --------------------------------
-  // DNS LOOKUP Handler
+  // DNS LOOKUP
   // --------------------------------
-  ipcMain.handle(
-    "network:dnsLookup",
-    async (_event, hostname: string, options?: { server?: string; type?: string }) => {
-      const hostValidation = validateHost(hostname)
-      if (!hostValidation.valid) {
-        log("warn", "DNS lookup validation failed", { hostname, error: hostValidation.error })
-        return {
-          hostname,
-          records: [],
-          server: "system",
-          responseTime: 0,
-          error: hostValidation.error,
-        }
-      }
-
-      let serverToUse = "system"
-      if (options?.server) {
-        const serverValidation = validateDnsServer(options.server)
-        if (!serverValidation.valid) {
-          return {
-            hostname,
-            records: [],
-            server: options.server,
-            responseTime: 0,
-            error: serverValidation.error,
-          }
-        }
-        serverToUse = serverValidation.sanitized || "system"
-      }
-
-      const sanitizedHostname = hostValidation.sanitized
-      const recordType = options?.type || "A"
-      const validTypes = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"]
-
-      if (!validTypes.includes(recordType)) {
-        return {
-          hostname: sanitizedHostname,
-          records: [],
-          server: serverToUse,
-          responseTime: 0,
-          error: `Invalid record type. Supported: ${validTypes.join(", ")}`,
-        }
-      }
-
-      log("info", "Starting DNS lookup", {
-        hostname: sanitizedHostname,
-        type: recordType,
-        server: serverToUse,
-      })
-
-      const startTime = Date.now()
-
-      try {
-        // per-request resolver: dns.setServers is process-global and concurrent
-        // lookups would race and could permanently clobber resolver config
-        const resolver = new dns.promises.Resolver()
-        if (serverToUse !== "system") {
-          resolver.setServers([serverToUse])
-        }
-
-        const records: Array<{ type: string; value: string; ttl?: number }> = []
-        const addresses = await resolver.resolve(sanitizedHostname, recordType as any)
-
-        if (Array.isArray(addresses)) {
-          addresses.forEach((addr) => {
-            if (typeof addr === "string") {
-              records.push({ type: recordType, value: addr })
-            } else if (typeof addr === "object" && addr !== null) {
-              records.push({ type: recordType, value: JSON.stringify(addr) })
-            }
-          })
-        } else if (addresses && typeof addresses === "object") {
-          // soa queries resolve to a single record object
-          records.push({ type: recordType, value: JSON.stringify(addresses) })
-        }
-
-        log("info", "DNS lookup completed", {
-          hostname: sanitizedHostname,
-          recordCount: records.length,
-          responseTime: Date.now() - startTime,
-        })
-
-        return {
-          hostname: sanitizedHostname,
-          records,
-          server: serverToUse,
-          responseTime: Date.now() - startTime,
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "DNS lookup failed"
-        log("error", "DNS lookup failed", { hostname: sanitizedHostname, error: errorMessage })
-
-        return {
-          hostname: sanitizedHostname,
-          records: [],
-          server: serverToUse,
-          responseTime: Date.now() - startTime,
-          error: errorMessage,
-        }
+  ipcMain.handle("network:dnsLookup", async (_event, hostname: unknown, options: unknown) => {
+    const hostValidation = validateHost(hostname)
+    if (!hostValidation.valid) {
+      log("warn", "DNS lookup validation failed", { error: hostValidation.error })
+      return {
+        hostname: typeof hostname === "string" ? hostname : "",
+        records: [] as DnsRecord[],
+        server: "system",
+        responseTime: 0,
+        error: hostValidation.error,
       }
     }
-  )
+
+    const requestedServer = readStringOption(options, "server")
+    const serverValidation = validateDnsServer(requestedServer)
+    if (!serverValidation.valid) {
+      return {
+        hostname: hostValidation.sanitized,
+        records: [] as DnsRecord[],
+        server: requestedServer ?? "system",
+        responseTime: 0,
+        error: serverValidation.error,
+      }
+    }
+
+    const serverToUse = serverValidation.sanitized || "system"
+    const sanitizedHostname = hostValidation.sanitized
+    const recordType = readStringOption(options, "type") ?? "A"
+
+    if (!isDnsRecordType(recordType)) {
+      return {
+        hostname: sanitizedHostname,
+        records: [] as DnsRecord[],
+        server: serverToUse,
+        responseTime: 0,
+        error: `Invalid record type. Supported: ${DNS_RECORD_TYPES.join(", ")}`,
+      }
+    }
+
+    log("info", "Starting DNS lookup", {
+      hostname: sanitizedHostname,
+      type: recordType,
+      server: serverToUse,
+    })
+
+    const startTime = Date.now()
+
+    try {
+      // per-request resolver: dns.setServers is process-global and concurrent
+      // lookups would race. the timeout is explicit because the default is none,
+      // and the server address came from the renderer.
+      const resolver = new dns.promises.Resolver({ timeout: DNS_TIMEOUT_MS, tries: 2 })
+      if (serverToUse !== "system") resolver.setServers([serverToUse])
+
+      const records = await resolveRecords(resolver, sanitizedHostname, recordType)
+
+      log("info", "DNS lookup completed", {
+        hostname: sanitizedHostname,
+        recordCount: records.length,
+        responseTime: Date.now() - startTime,
+      })
+
+      return {
+        hostname: sanitizedHostname,
+        records,
+        server: serverToUse,
+        responseTime: Date.now() - startTime,
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "DNS lookup failed"
+      log("error", "DNS lookup failed", { hostname: sanitizedHostname, error: errorMessage })
+
+      return {
+        hostname: sanitizedHostname,
+        records: [] as DnsRecord[],
+        server: serverToUse,
+        responseTime: Date.now() - startTime,
+        error: errorMessage,
+      }
+    }
+  })
 
   // --------------------------------
-  // NETWORK INTERFACES Handler
+  // NETWORK INTERFACES
   // --------------------------------
   ipcMain.handle("network:getInterfaces", async () => {
     log("debug", "Getting network interfaces")
@@ -461,31 +630,19 @@ export function registerNetworkHandlers() {
     }> = []
 
     for (const [name, addrs] of Object.entries(interfaces)) {
-      if (!addrs) continue
+      if (!addrs || addrs.length === 0) continue
 
-      const iface: {
-        name: string
-        mac: string
-        ipv4?: string
-        ipv6?: string
-        netmask?: string
-        internal: boolean
-      } = {
+      const ipv4 = addrs.find((addr) => addr.family === "IPv4")
+      const ipv6 = addrs.find((addr) => addr.family === "IPv6")
+
+      result.push({
         name,
-        mac: addrs[0]?.mac || "00:00:00:00:00:00",
-        internal: addrs[0]?.internal || false,
-      }
-
-      for (const addr of addrs) {
-        if (addr.family === "IPv4") {
-          iface.ipv4 = addr.address
-          iface.netmask = addr.netmask
-        } else if (addr.family === "IPv6") {
-          iface.ipv6 = addr.address
-        }
-      }
-
-      result.push(iface)
+        mac: addrs[0].mac || "00:00:00:00:00:00",
+        ipv4: ipv4?.address,
+        ipv6: ipv6?.address,
+        netmask: ipv4?.netmask,
+        internal: addrs[0].internal,
+      })
     }
 
     log("debug", "Network interfaces retrieved", { count: result.length })
@@ -493,28 +650,28 @@ export function registerNetworkHandlers() {
   })
 
   // --------------------------------
-  // ARP SCAN Handler
+  // ARP TABLE
   // --------------------------------
-  ipcMain.handle("network:arpScan", async () => {
-    log("info", "Starting ARP scan")
+  // a cache read, not a sweep. it reports the neighbours this host has already
+  // talked to and sends no packets of its own, which is why it takes no subnet.
+  ipcMain.handle("network:arpTable", async () => {
+    log("info", "Reading ARP table")
 
     try {
-      const platform = process.platform
-      // ARP command is safe - no user input
-      const result = await executeCommand("arp", ["-a"], 10000)
-      const entries = parseArpOutput(result.stdout, platform)
+      const result = await executeCommand("arp", ["-a"], ARP_TIMEOUT_MS)
+      const entries = parseArpOutput(result.stdout, process.platform)
 
-      log("info", "ARP scan completed", { entryCount: entries.length })
+      log("info", "ARP table read", { entryCount: entries.length })
       return entries
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "ARP scan failed"
-      log("error", "ARP scan failed", { error: errorMessage })
-      return []
+      const errorMessage = error instanceof Error ? error.message : "ARP table read failed"
+      log("error", "ARP table read failed", { error: errorMessage })
+      return [] as ArpEntry[]
     }
   })
 
   // --------------------------------
-  // SYSTEM INFO Handler
+  // SYSTEM INFO
   // --------------------------------
   ipcMain.handle("system:getInfo", async () => {
     log("debug", "Getting system info")
@@ -533,539 +690,46 @@ export function registerNetworkHandlers() {
 }
 
 // ============================================================================
-// COMMAND EXECUTION (Safe)
-// ============================================================================
-
-/**
- * Get the full path for a command based on platform
- * Tries multiple known locations as fallbacks
- */
-function getCommandPath(command: string): string {
-  const platform = process.platform
-
-  // Primary paths - most common locations
-  const primaryPaths: Record<string, Record<string, string>> = {
-    ping: {
-      darwin: "/sbin/ping",
-      linux: "/bin/ping",
-      win32: "ping",
-    },
-    traceroute: {
-      darwin: "/usr/sbin/traceroute",
-      linux: "/usr/bin/traceroute",
-      win32: "tracert",
-    },
-    arp: {
-      darwin: "/usr/sbin/arp",
-      linux: "/usr/sbin/arp",
-      win32: "arp",
-    },
-  }
-
-  // Fallback paths - alternative locations on some systems
-  const fallbackPaths: Record<string, Record<string, string[]>> = {
-    ping: {
-      darwin: ["/usr/bin/ping", "/usr/sbin/ping"],
-      linux: ["/usr/bin/ping", "/sbin/ping"],
-      win32: [],
-    },
-    traceroute: {
-      darwin: ["/usr/bin/traceroute"],
-      linux: ["/sbin/traceroute", "/usr/sbin/traceroute"],
-      win32: [],
-    },
-    arp: {
-      darwin: ["/usr/bin/arp"],
-      linux: ["/sbin/arp", "/usr/bin/arp"],
-      win32: [],
-    },
-  }
-
-  const primary = primaryPaths[command]?.[platform]
-  if (primary) {
-    return primary
-  }
-
-  // Try fallbacks (this is mainly for edge cases)
-  const fallbacks = fallbackPaths[command]?.[platform] || []
-  if (fallbacks.length > 0) {
-    return fallbacks[0]
-  }
-
-  // Last resort - let the system find it
-  return command
-}
-
-/**
- * Execute a command safely using spawn (avoids shell interpretation)
- */
-async function executeCommand(
-  command: string,
-  args: string[],
-  timeout: number
-): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    // Use full path for system commands to avoid PATH issues in packaged app
-    const fullCommand = getCommandPath(command)
-
-    log("debug", `Executing command: ${fullCommand} ${args.join(" ")}`)
-
-    const child = spawn(fullCommand, args, {
-      timeout,
-      windowsHide: true,
-      // No shell = no command injection
-    })
-
-    let stdout = ""
-    let stderr = ""
-    let killed = false
-
-    child.stdout?.on("data", (data) => {
-      stdout += data.toString()
-    })
-
-    child.stderr?.on("data", (data) => {
-      stderr += data.toString()
-    })
-
-    child.on("error", (error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") {
-        reject(
-          new Error(
-            `Command not found: ${fullCommand}. The required network tool may not be installed.`
-          )
-        )
-      } else if (error.code === "EACCES") {
-        reject(
-          new Error(`Permission denied: ${fullCommand}. Try running with elevated privileges.`)
-        )
-      } else {
-        reject(error)
-      }
-    })
-
-    child.on("close", (code) => {
-      if (killed) {
-        return // Already handled by timeout
-      }
-      // Some network commands return non-zero even on partial success
-      // e.g., ping returns 1 if host unreachable but still provides output
-      if (stdout || stderr) {
-        resolve({ stdout, stderr })
-      } else if (code !== 0) {
-        reject(new Error(`Command failed with exit code ${code}`))
-      } else {
-        resolve({ stdout, stderr })
-      }
-    })
-
-    // Timeout handling
-    const timeoutId = setTimeout(() => {
-      killed = true
-      child.kill("SIGTERM")
-      // Give it a moment to terminate gracefully
-      setTimeout(() => {
-        if (!child.killed) {
-          child.kill("SIGKILL")
-        }
-      }, 1000)
-      // Return partial results if available
-      if (stdout) {
-        resolve({ stdout, stderr })
-      } else {
-        reject(new Error(`Command timed out after ${timeout}ms`))
-      }
-    }, timeout)
-
-    child.on("close", () => {
-      clearTimeout(timeoutId)
-    })
-  })
-}
-
-/**
- * Build ping command arguments based on platform
- */
-export function buildPingArgs(
-  platform: string,
-  host: string,
-  count: number,
-  timeout: number
-): string[] {
-  if (platform === "win32") {
-    // Windows: -n count, -w timeout (milliseconds)
-    return ["-n", String(count), "-w", String(timeout), host]
-  } else if (platform === "darwin") {
-    // macOS: -c count, -W waittime (milliseconds), -t timeout (seconds)
-    // -W is per-packet wait time in ms, -t is overall timeout in seconds
-    return [
-      "-c",
-      String(count),
-      "-W",
-      String(timeout),
-      "-t",
-      String(Math.ceil((timeout * count) / 1000) + 2),
-      host,
-    ]
-  } else {
-    // Linux: -c count, -W timeout (seconds)
-    return ["-c", String(count), "-W", String(Math.ceil(timeout / 1000)), host]
-  }
-}
-
-/**
- * Build traceroute command arguments based on platform
- */
-function buildTracerouteArgs(
-  platform: string,
-  host: string,
-  maxHops: number,
-  timeout: number
-): string[] {
-  const waitSeconds = Math.max(1, Math.ceil(timeout / 1000))
-
-  if (platform === "win32") {
-    // Windows tracert: -h maxHops, -w timeout (milliseconds)
-    return ["-h", String(maxHops), "-w", String(timeout), "-d", host]
-  } else if (platform === "darwin") {
-    // macOS traceroute: -m maxHops, -w wait (seconds), -q queries per hop
-    // Use -n to skip DNS resolution for faster results, -q 1 for single query
-    return ["-m", String(maxHops), "-w", String(waitSeconds), "-q", "1", "-n", host]
-  } else {
-    // Linux traceroute: -m maxHops, -w wait (seconds)
-    return ["-m", String(maxHops), "-w", String(waitSeconds), "-q", "1", "-n", host]
-  }
-}
-
-// ============================================================================
-// PORT SCANNING
-// ============================================================================
-
-/**
- * Scan a single port using TCP socket - REAL socket-level scanning
- * This creates actual TCP connections to determine port state
- */
-export async function scanPort(
-  host: string,
-  port: number,
-  timeout: number
-): Promise<{
-  port: number
-  state: "open" | "closed" | "filtered"
-  service?: string
-  responseTime?: number
-}> {
-  return new Promise((resolve) => {
-    const socket = new net.Socket()
-    let state: "open" | "closed" | "filtered" = "filtered"
-    let resolved = false
-    const startTime = Date.now()
-
-    const cleanup = (finalState: "open" | "closed" | "filtered") => {
-      if (!resolved) {
-        resolved = true
-        state = finalState
-        const responseTime = Date.now() - startTime
-        socket.destroy()
-
-        log("debug", `Port scan result: ${host}:${port} = ${state}`, { responseTime })
-
-        resolve({
-          port,
-          state,
-          service: getServiceName(port),
-          responseTime: state === "open" ? responseTime : undefined,
-        })
-      }
-    }
-
-    socket.setTimeout(timeout)
-
-    socket.on("connect", () => {
-      cleanup("open")
-    })
-
-    socket.on("timeout", () => {
-      cleanup("filtered")
-    })
-
-    socket.on("error", (err: NodeJS.ErrnoException) => {
-      if (err.code === "ECONNREFUSED") {
-        // Connection refused = port is closed (something is listening but refusing)
-        cleanup("closed")
-      } else if (err.code === "EHOSTUNREACH" || err.code === "ENETUNREACH") {
-        // Host/network unreachable
-        cleanup("filtered")
-      } else if (err.code === "ETIMEDOUT") {
-        // Connection timed out
-        cleanup("filtered")
-      } else if (err.code === "ECONNRESET") {
-        // Connection reset - typically means filtered by firewall
-        cleanup("filtered")
-      } else {
-        // Other errors - assume filtered
-        log("debug", `Port scan error: ${host}:${port}`, { error: err.code || err.message })
-        cleanup("filtered")
-      }
-    })
-
-    socket.on("close", () => {
-      if (!resolved) {
-        cleanup("filtered")
-      }
-    })
-
-    try {
-      socket.connect(port, host)
-    } catch (err) {
-      cleanup("filtered")
-    }
-  })
-}
-
-// ============================================================================
-// OUTPUT PARSERS
-// ============================================================================
-
-/**
- * Parse ping output based on platform
- */
-export function parsePingOutput(output: string, platform: string): number[] {
-  const times: number[] = []
-  const lines = output.split("\n")
-  const seenSequences = new Set<string>()
-
-  for (const line of lines) {
-    let match: RegExpMatchArray | null = null
-
-    if (platform === "win32") {
-      match = line.match(/time[=<](\d+(?:\.\d+)?)\s*ms/i)
-    } else {
-      match = line.match(/time=(\d+(?:\.\d+)?)\s*ms/i)
-    }
-
-    if (match) {
-      // count each icmp sequence once so dup! replies don't inflate the reply count
-      const seqMatch = line.match(/icmp_seq[=\s](\d+)/i)
-      if (seqMatch) {
-        if (seenSequences.has(seqMatch[1])) {
-          continue
-        }
-        seenSequences.add(seqMatch[1])
-      }
-      times.push(parseFloat(match[1]))
-    }
-  }
-
-  return times
-}
-
-/**
- * Parse traceroute output based on platform
- */
-export function parseTracerouteOutput(
-  output: string,
-  platform: string
-): Array<{ hop: number; ip: string; hostname?: string; rtt: number[]; timeout: boolean }> {
-  const hops: Array<{
-    hop: number
-    ip: string
-    hostname?: string
-    rtt: number[]
-    timeout: boolean
-  }> = []
-
-  const lines = output.split("\n")
-
-  for (const line of lines) {
-    // Skip header lines and empty lines
-    const trimmed = line.trim()
-    if (
-      trimmed.startsWith("traceroute") ||
-      trimmed.startsWith("Tracing") ||
-      trimmed.startsWith("over a maximum") ||
-      trimmed === "" ||
-      trimmed.startsWith("Trace complete")
-    ) {
-      continue
-    }
-
-    if (platform === "win32") {
-      // Windows tracert: "  1    <1 ms    <1 ms    <1 ms  192.168.1.1"
-      // or "  1     *        *        *     Request timed out."
-      const winMatch = line.match(
-        /^\s*(\d+)\s+(?:(<?\d+)\s*ms|\*)\s+(?:(<?\d+)\s*ms|\*)\s+(?:(<?\d+)\s*ms|\*)\s+([\d.]+|Request timed out\.|\*)/i
-      )
-
-      if (winMatch) {
-        const hop = parseInt(winMatch[1])
-        const rtt: number[] = []
-        let ip = "*"
-
-        // Check if it's a timeout
-        if (winMatch[5] && !winMatch[5].includes("timed out") && winMatch[5] !== "*") {
-          ip = winMatch[5]
-        }
-
-        // tracert reports sub-ms hops as "<1 ms"; record the ceiling of the bound (1)
-        const parseWinRtt = (value: string): number =>
-          value.startsWith("<") ? Math.ceil(parseFloat(value.slice(1))) : parseFloat(value)
-
-        if (winMatch[2] && winMatch[2] !== "*") rtt.push(parseWinRtt(winMatch[2]))
-        if (winMatch[3] && winMatch[3] !== "*") rtt.push(parseWinRtt(winMatch[3]))
-        if (winMatch[4] && winMatch[4] !== "*") rtt.push(parseWinRtt(winMatch[4]))
-
-        hops.push({
-          hop,
-          ip,
-          hostname: undefined,
-          rtt,
-          timeout: ip === "*" || rtt.length === 0,
-        })
-      }
-    } else {
-      // macOS/Linux formats:
-      //   " 1  192.168.1.1  1.234 ms"
-      //   " 2  *"
-      //   " 3  router.example.com (10.0.0.1)  5.1 ms"
-      const hopMatch = trimmed.match(/^(\d+)\s+(.+)$/)
-      if (!hopMatch) {
-        continue
-      }
-
-      const hop = parseInt(hopMatch[1])
-      const rest = hopMatch[2].trim()
-
-      const rtt = Array.from(rest.matchAll(/(\d+(?:\.\d+)?)\s*ms/g), (m) => parseFloat(m[1]))
-      const hasStar = /(?:^|\s)\*(?:\s|$)/.test(rest)
-
-      // require an rtt or a "*" so unrelated numbered lines never parse as hops
-      if (rtt.length === 0 && !hasStar) {
-        continue
-      }
-
-      let ip = "*"
-      let hostname: string | undefined
-
-      const namedMatch = rest.match(/^([^\s()]+)\s+\(([0-9a-fA-F.:]+)\)/)
-      if (namedMatch) {
-        hostname = namedMatch[1]
-        ip = namedMatch[2]
-      } else {
-        const ipMatch = rest.match(/^([0-9a-fA-F.:]+)(?:\s|$)/)
-        if (ipMatch) {
-          ip = ipMatch[1]
-        }
-      }
-
-      hops.push({
-        hop,
-        ip,
-        hostname,
-        rtt,
-        timeout: ip === "*" || rtt.length === 0,
-      })
-    }
-  }
-
-  return hops
-}
-
-/**
- * Parse ARP output
- */
-// bsd/macos arp prints unpadded octets (8:0:27:1a:2b:3c); normalize to aa:bb:cc:dd:ee:ff
-// bsd arp prints unpadded octets ("8:0:27:1a:2b:3c"); pad every form to
-// lowercase colon-separated so downstream comparisons match
-export function normalizeMac(raw: string): string {
-  const hex = raw.replace(/[^0-9a-fA-F]/g, "")
-  if (hex.length === 12) {
-    return (hex.match(/.{2}/g) ?? []).join(":").toLowerCase()
-  }
-  return raw
-    .split(/[:-]/)
-    .map((octet) => octet.padStart(2, "0"))
-    .join(":")
-    .toLowerCase()
-}
-
-export function parseArpOutput(
-  output: string,
-  platform: string
-): Array<{ ip: string; mac: string; interface?: string }> {
-  const entries: Array<{ ip: string; mac: string; interface?: string }> = []
-  const lines = output.split("\n")
-
-  for (const line of lines) {
-    let match: RegExpMatchArray | null = null
-
-    if (platform === "win32") {
-      // Windows: "  192.168.1.1           00-11-22-33-44-55     dynamic"
-      match = line.match(/\s*([\d.]+)\s+([0-9A-Fa-f-]{17})\s+(?:dynamic|static)/i)
-    } else {
-      // macOS/BSD: "? (192.168.1.1) at 8:0:27:1a:2b:3c on en0"
-      // Linux:     "? (192.168.1.1) at 00:11:22:33:44:55 [ether] on eth0"
-      match = line.match(
-        /\(?([\d.]+)\)?\s+at\s+((?:[0-9A-Fa-f]{1,2}:){5}[0-9A-Fa-f]{1,2})(?:\s+\[\w+\])?(?:\s+on\s+([\w.]+))?/i
-      )
-    }
-
-    if (match) {
-      entries.push({
-        ip: match[1],
-        mac: normalizeMac(match[2]),
-        interface: match[3],
-      })
-    }
-  }
-
-  return entries
-}
-
-// ============================================================================
 // SERVICE NAME LOOKUP
 // ============================================================================
 
-/**
- * Common port to service name mapping
- */
-function getServiceName(port: number): string | undefined {
-  const services: Record<number, string> = {
-    20: "FTP-DATA",
-    21: "FTP",
-    22: "SSH",
-    23: "Telnet",
-    25: "SMTP",
-    53: "DNS",
-    67: "DHCP",
-    68: "DHCP",
-    80: "HTTP",
-    110: "POP3",
-    123: "NTP",
-    143: "IMAP",
-    161: "SNMP",
-    162: "SNMP-Trap",
-    443: "HTTPS",
-    445: "SMB",
-    465: "SMTPS",
-    514: "Syslog",
-    587: "SMTP-Submit",
-    636: "LDAPS",
-    993: "IMAPS",
-    995: "POP3S",
-    1433: "MSSQL",
-    1521: "Oracle",
-    3306: "MySQL",
-    3389: "RDP",
-    5432: "PostgreSQL",
-    5900: "VNC",
-    6379: "Redis",
-    8080: "HTTP-Proxy",
-    8443: "HTTPS-Alt",
-    9200: "Elasticsearch",
-    11211: "Memcached",
-    27017: "MongoDB",
-  }
+const SERVICES: Record<number, string> = {
+  20: "FTP-DATA",
+  21: "FTP",
+  22: "SSH",
+  23: "Telnet",
+  25: "SMTP",
+  53: "DNS",
+  67: "DHCP",
+  68: "DHCP",
+  80: "HTTP",
+  110: "POP3",
+  123: "NTP",
+  143: "IMAP",
+  161: "SNMP",
+  162: "SNMP-Trap",
+  443: "HTTPS",
+  445: "SMB",
+  465: "SMTPS",
+  514: "Syslog",
+  587: "SMTP-Submit",
+  636: "LDAPS",
+  993: "IMAPS",
+  995: "POP3S",
+  1433: "MSSQL",
+  1521: "Oracle",
+  3306: "MySQL",
+  3389: "RDP",
+  5432: "PostgreSQL",
+  5900: "VNC",
+  6379: "Redis",
+  8080: "HTTP-Proxy",
+  8443: "HTTPS-Alt",
+  9200: "Elasticsearch",
+  11211: "Memcached",
+  27017: "MongoDB",
+}
 
-  return services[port]
+function getServiceName(port: number): string | undefined {
+  return SERVICES[port]
 }

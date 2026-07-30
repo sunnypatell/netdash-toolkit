@@ -1,0 +1,12 @@
+
+Ping wird ausgefuehrt fuer 192.0.2.1 mit 32 Bytes Daten:
+Antwort von 192.0.2.1: Bytes=32 Zeit=12ms TTL=57
+Antwort von 192.0.2.1: Bytes=32 Zeit<1ms TTL=57
+Zeitueberschreitung der Anforderung.
+Antwort von 192.0.2.1: Bytes=32 Zeit=11ms TTL=57
+
+Ping-Statistik fuer 192.0.2.1:
+    Pakete: Gesendet = 4, Empfangen = 3, Verloren = 1
+    (25% Verlust),
+Ca. Zeitangaben in Millisek.:
+    Minimum = 0ms, Maximum = 12ms, Mittelwert = 7ms

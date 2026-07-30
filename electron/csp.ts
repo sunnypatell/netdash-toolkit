@@ -15,9 +15,15 @@ export const CSP_DIRECTIVES: CspDirectives = {
   // a static export inlines hydration scripts and has no per-request nonce, so
   // 'unsafe-inline' is the ceiling here. apis.google.com is firebase auth's gapi
   // loader, accounts.google.com is google identity services (one tap).
+  // 'wasm-unsafe-eval' is required by pagefind, which powers search on the docs
+  // site: it compiles a wasm index through WebAssembly.instantiateStreaming, and
+  // chromium gates wasm compilation on script-src. without it, docs search is
+  // dead on the web deploy and in the desktop app at the same time. it permits
+  // wasm only, not eval or new Function.
   "script-src": [
     "'self'",
     "'unsafe-inline'",
+    "'wasm-unsafe-eval'",
     "https://apis.google.com",
     "https://accounts.google.com",
   ],

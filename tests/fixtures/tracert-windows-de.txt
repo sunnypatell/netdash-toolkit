@@ -1,0 +1,8 @@
+
+Routenverfolgung zu 192.0.2.1 ueber maximal 30 Abschnitte
+
+  1    <1 ms    <1 ms    <1 ms  192.168.1.1
+  2     *        *        *     Zeitueberschreitung der Anforderung.
+  3     8 ms     9 ms     8 ms  198.51.100.9
+
+Ablaufverfolgung beendet.

@@ -76,6 +76,8 @@ export const electronNetwork = {
   async dnsLookup(hostname: string, options?: { server?: string; type?: string }) {
     return callElectronAPI<{
       hostname: string
+      // ttl is present for A and AAAA only; node's resolver reports none for the
+      // other record types
       records: Array<{ type: string; value: string; ttl?: number }>
       server: string
       responseTime: number
@@ -96,15 +98,17 @@ export const electronNetwork = {
     >("getNetworkInterfaces")
   },
 
-  async arpScan(subnet?: string) {
+  // reads the local arp cache. it takes no subnet and sweeps nothing: the only
+  // hosts it can report are the ones this machine has already resolved.
+  async getArpTable() {
     return callElectronAPI<
       Array<{
         ip: string
         mac: string
+        // a device name on unix, the interface's own address on windows
         interface?: string
-        vendor?: string
       }>
-    >("arpScan", subnet)
+    >("getArpTable")
   },
 
   async getSystemInfo() {

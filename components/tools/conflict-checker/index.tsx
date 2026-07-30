@@ -74,7 +74,7 @@ export function ConflictChecker() {
     setIsScanning(true)
     setScanError("")
     try {
-      const arpEntries = await electronNetwork.arpScan()
+      const arpEntries = await electronNetwork.getArpTable()
       const entries: ParsedARPEntry[] = (arpEntries ?? []).map((entry) => ({
         ip: entry.ip,
         mac: entry.mac,

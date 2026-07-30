@@ -2,7 +2,7 @@
 // launching electron.
 //
 // this matters more here than in a typical app: preload.ts exposes ping,
-// traceroute, portScan, arpScan and getSystemInfo to the renderer, and a preload
+// traceroute, portScan, getArpTable and getSystemInfo to the renderer, and a preload
 // runs for every navigation in its webContents. so a renderer-initiated
 // navigation to a remote origin would hand that origin the ability to scan the
 // user's internal network from the user's machine. setWindowOpenHandler does not

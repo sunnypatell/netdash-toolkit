@@ -1,0 +1,5 @@
+
+Schnittstelle: 192.168.1.10 --- 0xc
+  Internetadresse       Physische Adresse     Typ
+  192.168.1.1           00-11-22-33-44-55     dynamisch
+  192.168.1.41          84-a3-29-58-8e-89     dynamisch
