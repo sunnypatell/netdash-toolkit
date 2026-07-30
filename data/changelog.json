@@ -80,7 +80,7 @@
       "changes": [
         "Added Firebase Authentication with Google OAuth and Email/Password sign-in options",
         "Implemented cloud sync for projects with real-time Firestore database integration",
-        "Added Google One Tap sign-in for seamless browser authentication experience",
+        "Added Google One Tap sign-in, so returning users skip the redirect",
         "Introduced password reset functionality with Firebase email verification",
         "Added account linking to merge Google and email accounts with same email address",
         "Implemented Save to Project and Load from Project functionality across all tools"
@@ -90,7 +90,7 @@
         "Firestore database with user-scoped security rules (/users/{userId}/projects)",
         "Google Identity Services integration for One Tap sign-in with FedCM support",
         "React Context API for auth and project state management with cloud fallback to localStorage",
-        "Account linking using Firebase linkWithCredential for seamless provider merging"
+        "Account linking through Firebase linkWithCredential, so one email is one account"
       ]
     },
     {
@@ -220,7 +220,7 @@
       "type": "major",
       "title": "Production-Grade Architecture Overhaul",
       "changes": [
-        "Complete rewrite with enterprise-grade security and performance",
+        "Complete rewrite: contextIsolation on, no nodeIntegration, per-tool code splitting",
         "Implemented AES-GCM encryption with PBKDF2 key derivation for project storage",
         "Added comprehensive WCAG 2.2 AA accessibility compliance",
         "Introduced CSP with strict security policies preventing XSS attacks"

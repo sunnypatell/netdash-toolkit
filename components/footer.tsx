@@ -68,9 +68,9 @@ export function Footer() {
 
         <div className="border-border mt-6 border-t pt-6 text-center">
           <p className="text-muted-foreground text-xs">
-            © 2025 Sunny Patel. This is a demonstration of frontend development capabilities. All
-            calculators run entirely in your browser. The tools that query DNS, TLS or WHOIS say so
-            before they send anything, and cloud sync is opt-in.
+            © {new Date().getFullYear()} Sunny Patel. Free to use, MIT licensed. All calculators run
+            entirely in your browser. The tools that query DNS, TLS or WHOIS say so before they send
+            anything, and cloud sync is opt-in.
           </p>
         </div>
       </div>

@@ -125,7 +125,11 @@ it("defines the same colour tokens in both themes", () => {
 // the whole --sidebar-ring family was translucent. css counts too.
 // the class literals are assembled at runtime so tailwind does not scan this
 // file and emit the very utilities it exists to forbid.
-it("2.4.7: no focus ring is drawn at partial alpha", () => {
+// the first version of this scan matched only `-ring/N` and missed
+// `ring-destructive/20`, which seven primitives used for the aria-invalid state.
+// an invalid-state ring identifies a control's state, so 1.4.11 binds it exactly
+// as it binds the focus ring. matching any ring colour token, not one name.
+it("2.4.7 and 1.4.11: no ring is drawn at partial alpha", () => {
   const roots = ["components", "app"]
   const offenders: string[] = []
   let scanned = 0
@@ -135,7 +139,7 @@ it("2.4.7: no focus ring is drawn at partial alpha", () => {
       scanned++
       const file = join(root, rel)
       for (const m of readFileSync(file, "utf8").matchAll(
-        new RegExp(`(?:ring|outline|border)-ring\\${"/"}(\\d+)`, "g")
+        new RegExp(`(?:ring|outline)-[a-z-]+\\${"/"}(\\d+)`, "g")
       )) {
         offenders.push(`${file}: ${m[0]}`)
       }
@@ -143,6 +147,16 @@ it("2.4.7: no focus ring is drawn at partial alpha", () => {
   }
   expect(scanned).toBeGreaterThan(40)
   expect(offenders, offenders.join("\n")).toEqual([])
+})
+
+it("1.4.11: the destructive ring clears 3:1 on both page backgrounds", () => {
+  for (const theme of ["light", "dark"] as const) {
+    const r = ratio(hex(theme, "destructive"), hex(theme, "background"))
+    expect(
+      r,
+      `--destructive on --background in ${theme} is ${r.toFixed(2)}:1`
+    ).toBeGreaterThanOrEqual(3)
+  }
 })
 
 it("1.4.11: every ring token is opaque, in both themes", () => {
