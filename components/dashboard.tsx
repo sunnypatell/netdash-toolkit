@@ -6,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { RuntimeBadge } from "@/components/ui/runtime-badge"
 import { Network, Layers, TrendingUp, Shield, ArrowRight, Search } from "lucide-react"
 import {
   categories,
+  offlineToolCount,
   categoryLabelOf,
   getPopularTools,
   getToolsByCategory,
@@ -39,9 +41,11 @@ const stats = [
     icon: TrendingUp,
   },
   {
-    title: "Offline Ready",
-    value: "100%",
-    description: "Works without internet",
+    title: "Fully Offline",
+    // computed, never hardcoded: this tile claimed 100% while 12 tools did
+    // network i/o, and a registry invariant test now keeps it honest
+    value: `${offlineToolCount()}/${tools.length}`,
+    description: "Never leave your device",
     icon: Shield,
   },
 ]
@@ -77,9 +81,12 @@ function ToolCard({ tool }: { tool: ToolDefinition }) {
                   </Badge>
                 )}
               </div>
-              <Badge variant="secondary" className="mt-1 w-fit text-xs">
-                {categoryLabelOf(tool)}
-              </Badge>
+              <div className="mt-1 flex flex-wrap items-center gap-1">
+                <Badge variant="secondary" className="w-fit text-xs">
+                  {categoryLabelOf(tool)}
+                </Badge>
+                <RuntimeBadge tool={tool} />
+              </div>
             </div>
           </div>
         </div>

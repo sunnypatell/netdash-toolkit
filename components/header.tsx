@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/ui/user-menu"
 import { Badge } from "@/components/ui/badge"
-import { Menu } from "lucide-react"
+import { Menu, Search } from "lucide-react"
+import { openCommandPalette } from "@/components/command-palette"
 import changelog from "@/data/changelog.json"
 
 // Get latest version from changelog
@@ -46,6 +47,19 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
               Network Toolbox
             </h1>
           </div>
+
+          {/* a shortcut nobody can see is a shortcut nobody uses */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openCommandPalette}
+            className="text-muted-foreground hidden items-center gap-2 sm:flex"
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <Search className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="text-xs">Search tools</span>
+            <kbd className="bg-muted rounded border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+          </Button>
         </div>
 
         <div className="flex shrink-0 items-center space-x-2 sm:space-x-4">

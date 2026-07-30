@@ -1,8 +1,9 @@
 "use client"
 
-import { Suspense, lazy, useMemo } from "react"
+import { Suspense, lazy, useEffect, useMemo } from "react"
 import { Loader2 } from "lucide-react"
 import { getToolBySlug } from "@/lib/tool-registry"
+import { rememberToolVisit } from "@/components/command-palette"
 
 function ToolSkeleton() {
   return (
@@ -21,6 +22,11 @@ function ToolSkeleton() {
 // scope made all 48 tool chunks preload on every tool page. resolving the
 // loader at runtime keeps the page to its own chunk.
 export function ToolShell({ slug }: { slug: string }) {
+  // feeds the palette's Recent group from actual navigation
+  useEffect(() => {
+    rememberToolVisit(slug)
+  }, [slug])
+
   const Tool = useMemo(() => {
     const tool = getToolBySlug(slug)
     if (!tool) return null

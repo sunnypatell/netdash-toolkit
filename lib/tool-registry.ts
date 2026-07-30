@@ -82,6 +82,19 @@ export type ProjectItemType =
 // a lazy import thunk; each tool becomes its own chunk, loaded on navigation
 export type ToolLoader = () => Promise<{ default: ComponentType }>
 
+// what a tool actually needs at runtime. the dashboard used to hardcode
+// "100% offline ready" while 12 tools did network i/o, and nothing in the
+// registry could contradict it. a test derives these from the source so the
+// metadata cannot drift from the code again.
+export interface ToolRuntime {
+  // false when the tool performs network i/o of any kind
+  offline: boolean
+  // hosts that receive user input, so the ui can say so before a request
+  thirdParty?: string[]
+  // capabilities that only exist in the desktop build, named honestly
+  desktopOnly?: string[]
+}
+
 export interface ToolDefinition {
   slug: string // url segment under /tools/, and the only tool id anywhere
   label: string // sidebar label
@@ -95,7 +108,18 @@ export interface ToolDefinition {
   // must not promise persistence the tool doesn't implement
   projectItemType?: ProjectItemType
   keywords: string[] // drives search
+  // omitted means fully offline; declare it whenever the tool leaves the device
+  runtime?: ToolRuntime
   load: ToolLoader
+}
+
+// true when the tool never leaves the device
+export function isOffline(tool: ToolDefinition): boolean {
+  return tool.runtime?.offline !== false
+}
+
+export function offlineToolCount(): number {
+  return tools.filter(isOffline).length
 }
 
 // Category metadata
@@ -273,6 +297,11 @@ export const tools: ToolDefinition[] = [
     icon: AlertTriangle,
     category: "ip-tools",
     features: ["Multi-source parsing", "Conflict detection", "Remediation tips"],
+    runtime: {
+      offline: false,
+      thirdParty: ["your local network (desktop only)"],
+      desktopOnly: ["ARP scanning of the local network"],
+    },
     load: () =>
       import("@/components/tools/conflict-checker").then((m) => ({ default: m.ConflictChecker })),
     keywords: ["ip", "mac", "conflict", "duplicate", "arp", "dhcp"],
@@ -342,6 +371,11 @@ export const tools: ToolDefinition[] = [
     category: "diagnostics",
     features: ["RTT measurement", "Throughput tests", "CORS-enabled"],
     popular: true,
+    runtime: {
+      offline: false,
+      thirdParty: ["the URL you enter", "DoH resolvers"],
+      desktopOnly: ["direct DNS queries"],
+    },
     load: () =>
       import("@/components/tools/network-tester").then((m) => ({ default: m.NetworkTester })),
     keywords: ["test", "connectivity", "rtt", "latency", "throughput"],
@@ -354,6 +388,17 @@ export const tools: ToolDefinition[] = [
     icon: Globe,
     category: "diagnostics",
     features: ["DoH support", "Multiple providers", "DNSSEC validation"],
+    runtime: {
+      offline: false,
+      thirdParty: [
+        "cloudflare-dns.com",
+        "dns.google",
+        "dns.quad9.net",
+        "doh.opendns.com",
+        "dns.adguard-dns.com",
+      ],
+      desktopOnly: ["direct DNS queries"],
+    },
     load: () => import("@/components/tools/dns-tools").then((m) => ({ default: m.DNSTools })),
     keywords: ["dns", "lookup", "doh", "resolver", "records"],
   },
@@ -366,6 +411,11 @@ export const tools: ToolDefinition[] = [
     category: "diagnostics",
     features: ["Connectivity tests", "Path tracing", "Latency measurement"],
     popular: true,
+    runtime: {
+      offline: false,
+      thirdParty: ["the host you enter"],
+      desktopOnly: ["real ICMP ping", "system traceroute"],
+    },
     load: () =>
       import("@/components/tools/ping-traceroute").then((m) => ({ default: m.PingTraceroute })),
     keywords: ["ping", "traceroute", "tracert", "icmp", "path"],
@@ -378,6 +428,11 @@ export const tools: ToolDefinition[] = [
     icon: Scan,
     category: "diagnostics",
     features: ["Common ports", "Custom ranges", "Service detection"],
+    runtime: {
+      offline: false,
+      thirdParty: ["the host you enter"],
+      desktopOnly: ["real TCP connect scanning"],
+    },
     load: () => import("@/components/tools/port-scanner").then((m) => ({ default: m.PortScanner })),
     keywords: ["port", "scan", "service", "open", "tcp"],
   },
@@ -389,6 +444,10 @@ export const tools: ToolDefinition[] = [
     icon: Lock,
     category: "diagnostics",
     features: ["Certificate info", "Expiry check", "Chain validation"],
+    runtime: {
+      offline: false,
+      thirdParty: ["www.ssllabs.com", "api.certspotter.com"],
+    },
     load: () => import("@/components/tools/ssl-checker").then((m) => ({ default: m.SSLChecker })),
     keywords: ["ssl", "tls", "certificate", "https", "security"],
   },
@@ -400,6 +459,10 @@ export const tools: ToolDefinition[] = [
     icon: Search,
     category: "diagnostics",
     features: ["Domain info", "IP ownership", "Registrar data"],
+    runtime: {
+      offline: false,
+      thirdParty: ["rdap.org", "api.hackertarget.com"],
+    },
     load: () => import("@/components/tools/whois-lookup").then((m) => ({ default: m.WhoisLookup })),
     keywords: ["whois", "domain", "registration", "ownership", "registrar"],
   },
@@ -411,6 +474,10 @@ export const tools: ToolDefinition[] = [
     icon: Mail,
     category: "diagnostics",
     features: ["MX records", "SPF/DKIM/DMARC", "Deliverability"],
+    runtime: {
+      offline: false,
+      thirdParty: ["cloudflare-dns.com", "dns.google"],
+    },
     load: () =>
       import("@/components/tools/email-diagnostics").then((m) => ({ default: m.EmailDiagnostics })),
     keywords: ["email", "mx", "spf", "dkim", "dmarc", "smtp"],
@@ -466,6 +533,10 @@ export const tools: ToolDefinition[] = [
     icon: Search,
     category: "reference",
     features: ["IEEE OUI database", "Vendor identification", "MAC analysis"],
+    runtime: {
+      offline: false,
+      thirdParty: ["maclookup.app", "api.macvendors.com"],
+    },
     load: () => import("@/components/tools/oui-lookup").then((m) => ({ default: m.OUILookup })),
     keywords: ["oui", "mac", "vendor", "manufacturer", "ieee"],
   },
@@ -479,6 +550,10 @@ export const tools: ToolDefinition[] = [
     icon: FileText,
     category: "diagnostics",
     features: ["Header analysis", "Security score", "Category sorting"],
+    runtime: {
+      offline: false,
+      thirdParty: ["the URL you enter", "api.allorigins.win"],
+    },
     load: () => import("@/components/tools/http-headers").then((m) => ({ default: m.HTTPHeaders })),
     keywords: ["http", "headers", "response", "security", "web"],
   },
@@ -491,6 +566,10 @@ export const tools: ToolDefinition[] = [
     category: "diagnostics",
     features: ["HSTS check", "CSP analysis", "Security grade"],
     popular: true,
+    runtime: {
+      offline: false,
+      thirdParty: ["the URL you enter", "api.allorigins.win"],
+    },
     load: () =>
       import("@/components/tools/security-headers").then((m) => ({ default: m.SecurityHeaders })),
     keywords: ["security", "headers", "hsts", "csp", "xss"],
@@ -503,6 +582,10 @@ export const tools: ToolDefinition[] = [
     icon: Globe,
     category: "diagnostics",
     features: ["Redirect chain", "HTTPS upgrade", "Loop detection"],
+    runtime: {
+      offline: false,
+      thirdParty: ["the URL you enter"],
+    },
     load: () =>
       import("@/components/tools/redirect-checker").then((m) => ({ default: m.RedirectChecker })),
     keywords: ["redirect", "301", "302", "url", "chain"],
@@ -801,16 +884,32 @@ export function categoryLabelOf(tool: ToolDefinition): string {
   return categories.find((c) => c.id === tool.category)?.label ?? tool.category
 }
 
+// ranked, not just filtered: results used to come back in registry declaration
+// order, so searching "subnet" did not put Subnet Calculator first.
+function matchScore(tool: ToolDefinition, q: string): number {
+  const label = tool.label.toLowerCase()
+  const title = tool.title.toLowerCase()
+
+  if (tool.slug === q) return 100
+  if (label === q || title === q) return 90
+  if (tool.slug.startsWith(q)) return 80
+  if (label.startsWith(q) || title.startsWith(q)) return 70
+  if (label.includes(q) || title.includes(q)) return 60
+  if (tool.keywords.some((k) => k === q)) return 50
+  if (tool.keywords.some((k) => k.startsWith(q))) return 40
+  if (tool.keywords.some((k) => k.includes(q))) return 30
+  if (tool.description.toLowerCase().includes(q)) return 20
+  return 0
+}
+
 export function searchTools(query: string): ToolDefinition[] {
   const q = query.trim().toLowerCase()
   if (!q) return []
-  return tools.filter(
-    (t) =>
-      t.label.toLowerCase().includes(q) ||
-      t.title.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q) ||
-      t.keywords.some((k) => k.includes(q))
-  )
+  return tools
+    .map((tool) => ({ tool, score: matchScore(tool, q) }))
+    .filter((r) => r.score > 0)
+    .sort((a, b) => b.score - a.score || a.tool.label.localeCompare(b.tool.label))
+    .map((r) => r.tool)
 }
 
 export function getProjectItemLabel(type: ProjectItemType): string {
