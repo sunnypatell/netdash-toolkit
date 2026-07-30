@@ -1,194 +1,72 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Timer, CheckCircle2, XCircle, Calendar } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Timer, CheckCircle2, XCircle, Calendar, Globe, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import { analyzeCron, CRON_MACROS, formatRelativeMs } from "@/lib/cron"
+import { formatInZone, listTimeZones, localTimeZone } from "@/lib/timezones"
 
-interface CronPart {
-  field: string
-  value: string
-  description: string
-  valid: boolean
-  range: string
-}
+const RUN_COUNT = 8
 
-interface CronResult {
-  valid: boolean
-  description: string
-  parts: CronPart[]
-  nextRuns: Date[]
-}
-
-function parseValue(value: string, min: number, max: number): number[] | null {
-  const results: number[] = []
-
-  if (value === "*") {
-    for (let i = min; i <= max; i++) results.push(i)
-    return results
-  }
-
-  const parts = value.split(",")
-  for (const part of parts) {
-    // Handle step values (*/5, 1-10/2)
-    const [range, stepStr] = part.split("/")
-    const step = stepStr ? parseInt(stepStr, 10) : 1
-    if (isNaN(step) || step < 1) return null
-
-    if (range === "*") {
-      for (let i = min; i <= max; i += step) results.push(i)
-    } else if (range.includes("-")) {
-      const [startStr, endStr] = range.split("-")
-      const start = parseInt(startStr, 10)
-      const end = parseInt(endStr, 10)
-      if (isNaN(start) || isNaN(end) || start < min || end > max || start > end) return null
-      for (let i = start; i <= end; i += step) results.push(i)
-    } else {
-      const num = parseInt(range, 10)
-      if (isNaN(num) || num < min || num > max) return null
-      results.push(num)
-    }
-  }
-
-  return [...new Set(results)].sort((a, b) => a - b)
-}
-
-function describeField(field: string, value: string, values: number[] | null): string {
-  if (value === "*") return `every ${field}`
-  if (!values || values.length === 0) return "invalid"
-  if (value.includes("/")) {
-    const step = value.split("/")[1]
-    return `every ${step} ${field}${parseInt(step) > 1 ? "s" : ""}`
-  }
-  if (values.length === 1) return `at ${field} ${values[0]}`
-  if (values.length <= 3) return `at ${field}s ${values.join(", ")}`
-  return `${values.length} specific ${field}s`
-}
-
-function parseCron(expression: string): CronResult {
-  const parts = expression.trim().split(/\s+/)
-
-  if (parts.length !== 5) {
-    return {
-      valid: false,
-      description: "Invalid cron expression. Expected 5 fields: minute hour day month weekday",
-      parts: [],
-      nextRuns: [],
-    }
-  }
-
-  const fields = [
-    { name: "minute", min: 0, max: 59, range: "0-59" },
-    { name: "hour", min: 0, max: 23, range: "0-23" },
-    { name: "day", min: 1, max: 31, range: "1-31" },
-    { name: "month", min: 1, max: 12, range: "1-12" },
-    { name: "weekday", min: 0, max: 6, range: "0-6 (Sun-Sat)" },
-  ]
-
-  const cronParts: CronPart[] = []
-  const parsedValues: (number[] | null)[] = []
-  let allValid = true
-
-  for (let i = 0; i < 5; i++) {
-    const values = parseValue(parts[i], fields[i].min, fields[i].max)
-    parsedValues.push(values)
-    const valid = values !== null
-    if (!valid) allValid = false
-
-    cronParts.push({
-      field: fields[i].name,
-      value: parts[i],
-      description: describeField(fields[i].name, parts[i], values),
-      valid,
-      range: fields[i].range,
-    })
-  }
-
-  // Generate human description
-  let description = ""
-  if (allValid) {
-    const [min, hour, day, month, weekday] = parts
-
-    if (expression === "* * * * *") {
-      description = "Every minute"
-    } else if (min !== "*" && hour !== "*" && day === "*" && month === "*" && weekday === "*") {
-      description = `At ${hour.padStart(2, "0")}:${min.padStart(2, "0")} every day`
-    } else if (min !== "*" && hour === "*" && day === "*" && month === "*" && weekday === "*") {
-      description = `At minute ${min} of every hour`
-    } else if (min === "0" && hour === "0" && day === "*" && month === "*" && weekday === "*") {
-      description = "At midnight every day"
-    } else if (min === "0" && hour === "0" && day === "1" && month === "*" && weekday === "*") {
-      description = "At midnight on the 1st of every month"
-    } else if (weekday !== "*" && day === "*") {
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-      const dayValues = parsedValues[4] || []
-      const dayNames = dayValues.map((d) => days[d]).join(", ")
-      description = `At ${hour.padStart(2, "0")}:${min.padStart(2, "0")} on ${dayNames}`
-    } else {
-      description = cronParts.map((p) => p.description).join(", ")
-    }
-  } else {
-    description = "Invalid cron expression"
-  }
-
-  // Calculate next runs
-  const nextRuns: Date[] = []
-  if (allValid) {
-    const now = new Date()
-    let check = new Date(now)
-    check.setSeconds(0)
-    check.setMilliseconds(0)
-
-    const [minutes, hours, days, months, weekdays] = parsedValues as number[][]
-
-    for (let i = 0; i < 1000 && nextRuns.length < 5; i++) {
-      check = new Date(check.getTime() + 60000) // Add 1 minute
-
-      if (
-        minutes.includes(check.getMinutes()) &&
-        hours.includes(check.getHours()) &&
-        days.includes(check.getDate()) &&
-        months.includes(check.getMonth() + 1) &&
-        weekdays.includes(check.getDay())
-      ) {
-        nextRuns.push(new Date(check))
-      }
-    }
-  }
-
-  return { valid: allValid, description, parts: cronParts, nextRuns }
-}
+const PRESETS = [
+  { label: "Every minute", cron: "* * * * *" },
+  { label: "Every 15 minutes", cron: "*/15 * * * *" },
+  { label: "Every 30 seconds", cron: "*/30 * * * * *" },
+  { label: "Hourly", cron: "0 * * * *" },
+  { label: "Daily at midnight", cron: "@daily" },
+  { label: "Weekdays at 09:00", cron: "0 9 * * 1-5" },
+  { label: "Weekends at 09:00", cron: "0 9 * * SAT,SUN" },
+  { label: "Sunday via alias 7", cron: "0 9 * * 7" },
+  { label: "1st of the month", cron: "0 0 1 * *" },
+  { label: "Last day of the month", cron: "0 0 L * *" },
+  { label: "3rd Friday of the month", cron: "0 0 * * 5#3" },
+  { label: "Nearest weekday to the 15th", cron: "0 0 15W * *" },
+  { label: "Overnight window (wraps)", cron: "0 22-2 * * *" },
+  { label: "Quarterly", cron: "0 0 1 JAN,APR,JUL,OCT *" },
+  { label: "On startup", cron: "@reboot" },
+]
 
 export function CronParser() {
   const [expression, setExpression] = useState("0 9 * * 1-5")
+  const [timeZone, setTimeZone] = useState("UTC")
+  // next-run projection depends on "now", so it must not run during ssr render
+  const [from, setFrom] = useState<Date | null>(null)
 
-  const result = useMemo(() => parseCron(expression), [expression])
+  useEffect(() => {
+    setTimeZone(localTimeZone())
+    setFrom(new Date())
+    const interval = setInterval(() => setFrom(new Date()), 30000)
+    return () => clearInterval(interval)
+  }, [])
 
-  const presets = [
-    { label: "Every minute", cron: "* * * * *" },
-    { label: "Every hour", cron: "0 * * * *" },
-    { label: "Every day at midnight", cron: "0 0 * * *" },
-    { label: "Every day at 9 AM", cron: "0 9 * * *" },
-    { label: "Weekdays at 9 AM", cron: "0 9 * * 1-5" },
-    { label: "Every Monday at 9 AM", cron: "0 9 * * 1" },
-    { label: "1st of every month", cron: "0 0 1 * *" },
-    { label: "Every 15 minutes", cron: "*/15 * * * *" },
-    { label: "Every 6 hours", cron: "0 */6 * * *" },
-    { label: "Twice daily (9 AM & 6 PM)", cron: "0 9,18 * * *" },
-  ]
+  const zones = useMemo(() => listTimeZones(), [])
+
+  const result = useMemo(
+    () => analyzeCron(expression, { timeZone, count: RUN_COUNT, from }),
+    [expression, timeZone, from]
+  )
+
+  const trimmed = expression.trim()
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Timer}
         title="Cron Expression Parser"
-        description="Parse and understand cron expressions"
+        description="Describe cron expressions and project their next runs in any timezone"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -196,14 +74,16 @@ export function CronParser() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               Cron Expression
-              {expression.trim() &&
+              {trimmed &&
                 (result.valid ? (
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                 ) : (
                   <XCircle className="h-5 w-5 text-red-500" />
                 ))}
             </CardTitle>
-            <CardDescription>Enter a 5-field cron expression</CardDescription>
+            <CardDescription>
+              5, 6 (with seconds) or 7 (with year) fields, or an @macro
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -213,65 +93,115 @@ export function CronParser() {
                   id="cron"
                   value={expression}
                   onChange={(e) => setExpression(e.target.value)}
-                  placeholder="* * * * *"
+                  placeholder="*/5 * * * *"
                   className="font-mono text-lg"
+                  aria-invalid={trimmed !== "" && !result.valid}
                 />
                 <CopyButton value={expression} variant="outline" />
               </div>
             </div>
 
-            {result.valid && (
+            <div className="space-y-2">
+              <Label htmlFor="cron-tz" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Timezone
+              </Label>
+              <Select value={timeZone} onValueChange={setTimeZone}>
+                <SelectTrigger id="cron-tz" className="w-full font-mono">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {zones.map((zone) => (
+                    <SelectItem key={zone} value={zone} className="font-mono">
+                      {zone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Runs are computed in this IANA zone, so DST shifts are honoured instead of
+                duplicating or skipping runs.
+              </p>
+            </div>
+
+            {result.valid && result.description && (
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-lg font-medium">{result.description}</p>
               </div>
             )}
 
-            {!result.valid && expression.trim() && (
+            {trimmed !== "" && !result.valid && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{result.description}</AlertDescription>
+                <AlertDescription>{result.error ?? "Invalid cron expression"}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label>Field Breakdown</Label>
-              <div className="grid grid-cols-5 gap-2">
-                {["MIN", "HOUR", "DAY", "MON", "DOW"].map((label, i) => (
-                  <div key={label} className="text-center">
-                    <div
-                      className={`rounded border p-2 font-mono text-sm ${
-                        result.parts[i]?.valid === false
-                          ? "border-red-500 bg-red-50 dark:bg-red-900/20"
-                          : "bg-muted/50"
-                      }`}
-                    >
-                      {expression.split(/\s+/)[i] || "-"}
-                    </div>
-                    <p className="text-muted-foreground mt-1 text-xs">{label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {trimmed === "" && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>Enter a cron expression to get started.</AlertDescription>
+              </Alert>
+            )}
 
-            {result.parts.length > 0 && (
+            {result.valid && result.runsError && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{result.runsError}</AlertDescription>
+              </Alert>
+            )}
+
+            {result.fields.length > 0 && (
               <div className="space-y-2">
-                {result.parts.map((part, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between rounded border p-2 ${
-                      !part.valid ? "border-red-500 bg-red-50 dark:bg-red-900/20" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono">
-                        {part.field}
-                      </Badge>
-                      <span className="text-sm">{part.description}</span>
+                <Label>Field Breakdown</Label>
+                <div
+                  className="grid gap-2"
+                  style={{ gridTemplateColumns: `repeat(${result.fields.length}, minmax(0, 1fr))` }}
+                >
+                  {result.fields.map((field) => (
+                    <div key={field.role} className="text-center">
+                      <div className="bg-muted/50 truncate rounded border p-2 font-mono text-sm">
+                        {field.value}
+                      </div>
+                      <p className="text-muted-foreground mt-1 text-xs">{field.short}</p>
                     </div>
-                    <span className="text-muted-foreground text-xs">{part.range}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="space-y-2 pt-2">
+                  {result.fields.map((field) => (
+                    <div
+                      key={field.role}
+                      className="flex items-center justify-between gap-2 rounded border p-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Badge variant="outline" className="font-mono">
+                          {field.label}
+                        </Badge>
+                        <span className="truncate font-mono text-sm">{field.value}</span>
+                      </div>
+                      <span className="text-muted-foreground text-xs whitespace-nowrap">
+                        {field.range}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {result.macro && result.valid && (
+              <div className="rounded border p-2 text-sm">
+                <Badge variant="outline" className="mr-2 font-mono">
+                  macro
+                </Badge>
+                Shorthand expression - no field breakdown
+              </div>
+            )}
+
+            {result.normalized !== trimmed && result.valid && (
+              <p className="text-muted-foreground text-xs">
+                Wrap-around range expanded for scheduling:{" "}
+                <code className="font-mono">{result.normalized}</code>
+              </p>
             )}
           </CardContent>
         </Card>
@@ -283,32 +213,33 @@ export function CronParser() {
                 <Calendar className="h-5 w-5" />
                 Next Runs
               </CardTitle>
-              <CardDescription>Next 5 scheduled executions</CardDescription>
+              <CardDescription>
+                Next {RUN_COUNT} executions in {timeZone} and UTC
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {result.nextRuns.length > 0 ? (
+              {result.runs.length > 0 ? (
                 <div className="space-y-2">
-                  {result.nextRuns.map((date, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <span className="font-mono text-sm">
-                        {date.toLocaleString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      {i === 0 && <Badge>Next</Badge>}
+                  {result.runs.map((run, i) => (
+                    <div key={run.date.toISOString()} className="rounded-lg border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-sm">
+                          {formatInZone(run.date, timeZone)}
+                        </span>
+                        {i === 0 && <Badge>Next</Badge>}
+                      </div>
+                      <div className="text-muted-foreground mt-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-mono">{run.date.toISOString()}</span>
+                        <span>{formatRelativeMs(run.inMs)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <p className="text-muted-foreground py-8 text-center">
-                  Enter a valid cron expression to see next runs
+                  {from === null
+                    ? "Loading schedule..."
+                    : (result.runsError ?? "Enter a valid cron expression to see next runs")}
                 </p>
               )}
             </CardContent>
@@ -317,14 +248,15 @@ export function CronParser() {
           <Card>
             <CardHeader>
               <CardTitle>Presets</CardTitle>
+              <CardDescription>Including the extensions cron implementations add</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-2">
-                {presets.map((preset) => (
+                {PRESETS.map((preset) => (
                   <button
                     key={preset.cron}
                     onClick={() => setExpression(preset.cron)}
-                    className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-2 text-left transition-colors"
+                    className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-lg border p-2 text-left transition-colors"
                   >
                     <span className="text-sm">{preset.label}</span>
                     <code className="text-muted-foreground font-mono text-xs">{preset.cron}</code>
@@ -339,6 +271,10 @@ export function CronParser() {
       <Card>
         <CardHeader>
           <CardTitle>Cron Syntax Reference</CardTitle>
+          <CardDescription>
+            Day-of-month and day-of-week are OR-ed, as POSIX cron specifies: when both are
+            restricted, either match fires the job.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -352,11 +288,17 @@ export function CronParser() {
               </thead>
               <tbody>
                 {[
+                  { field: "Second (6/7-field only)", values: "0-59", special: "* , - /" },
                   { field: "Minute", values: "0-59", special: "* , - /" },
                   { field: "Hour", values: "0-23", special: "* , - /" },
-                  { field: "Day of Month", values: "1-31", special: "* , - /" },
-                  { field: "Month", values: "1-12", special: "* , - /" },
-                  { field: "Day of Week", values: "0-6 (0=Sun)", special: "* , - /" },
+                  { field: "Day of Month", values: "1-31", special: "* , - / L W ?" },
+                  { field: "Month", values: "1-12 or JAN-DEC", special: "* , - /" },
+                  {
+                    field: "Day of Week",
+                    values: "0-7 or SUN-SAT (0 and 7 are Sunday)",
+                    special: "* , - / # L ?",
+                  },
+                  { field: "Year (7-field only)", values: "1970-2099", special: "* , - /" },
                 ].map((row) => (
                   <tr key={row.field} className="border-b">
                     <td className="p-2 font-medium">{row.field}</td>
@@ -371,13 +313,29 @@ export function CronParser() {
             {[
               { char: "*", desc: "Any value" },
               { char: ",", desc: "Value list (1,3,5)" },
-              { char: "-", desc: "Range (1-5)" },
+              { char: "-", desc: "Range (1-5), wraps (22-2)" },
               { char: "/", desc: "Step (*/15)" },
+              { char: "L", desc: "Last (0 0 L * *)" },
+              { char: "W", desc: "Nearest weekday (15W)" },
+              { char: "#", desc: "Nth weekday (5#3)" },
+              { char: "?", desc: "No specific value" },
             ].map((item) => (
               <div key={item.char} className="rounded border p-2 text-center">
                 <code className="text-lg font-bold">{item.char}</code>
                 <p className="text-muted-foreground text-xs">{item.desc}</p>
               </div>
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+            {Object.entries(CRON_MACROS).map(([macro, equivalent]) => (
+              <button
+                key={macro}
+                onClick={() => setExpression(macro)}
+                className="bg-muted hover:bg-muted/60 rounded px-2 py-1 text-center font-mono text-xs transition-colors"
+              >
+                {macro}
+                <span className="text-muted-foreground block">{equivalent || "event-based"}</span>
+              </button>
             ))}
           </div>
         </CardContent>

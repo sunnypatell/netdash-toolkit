@@ -1,153 +1,120 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Key, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react"
+import { Key, XCircle, AlertTriangle, Clock, ShieldAlert, ShieldQuestion } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { inspectJwt, timeClaimLabel, type DecodedJwt } from "@/lib/jwt-decode"
 
-interface JWTHeader {
-  alg: string
-  typ: string
-  [key: string]: unknown
+const REGISTERED_CLAIMS = ["iss", "sub", "aud", "exp", "nbf", "iat", "jti"]
+
+function formatDate(date: Date) {
+  return date.toLocaleString("en-US", { dateStyle: "medium", timeStyle: "medium" })
 }
 
-interface JWTPayload {
-  iss?: string
-  sub?: string
-  aud?: string | string[]
-  exp?: number
-  nbf?: number
-  iat?: number
-  jti?: string
-  [key: string]: unknown
-}
-
-interface DecodedJWT {
-  header: JWTHeader
-  payload: JWTPayload
-  signature: string
-  isExpired: boolean
-  expiresAt?: Date
-  issuedAt?: Date
-  notBefore?: Date
-}
-
-function decodeBase64Url(str: string): string {
-  // Add padding if needed
-  let base64 = str.replace(/-/g, "+").replace(/_/g, "/")
-  while (base64.length % 4) {
-    base64 += "="
-  }
-  return decodeURIComponent(escape(atob(base64)))
-}
-
-function decodeJWT(token: string): DecodedJWT | null {
-  try {
-    const parts = token.trim().split(".")
-    if (parts.length !== 3) return null
-
-    const header = JSON.parse(decodeBase64Url(parts[0]))
-    const payload = JSON.parse(decodeBase64Url(parts[1]))
-    const signature = parts[2]
-
-    const now = Date.now() / 1000
-    const isExpired = payload.exp ? payload.exp < now : false
-
-    return {
-      header,
-      payload,
-      signature,
-      isExpired,
-      expiresAt: payload.exp ? new Date(payload.exp * 1000) : undefined,
-      issuedAt: payload.iat ? new Date(payload.iat * 1000) : undefined,
-      notBefore: payload.nbf ? new Date(payload.nbf * 1000) : undefined,
-    }
-  } catch {
-    return null
+function timeToneClasses(state: DecodedJwt["time"]["state"]) {
+  switch (state) {
+    case "expired":
+      return {
+        box: "bg-red-100 dark:bg-red-900/30",
+        icon: "text-red-600",
+        text: "text-red-700 dark:text-red-400",
+      }
+    case "not-yet-valid":
+      return {
+        box: "bg-amber-100 dark:bg-amber-900/30",
+        icon: "text-amber-600",
+        text: "text-amber-700 dark:text-amber-400",
+      }
+    case "active":
+      return {
+        box: "bg-green-100 dark:bg-green-900/30",
+        icon: "text-green-600",
+        text: "text-green-700 dark:text-green-400",
+      }
+    default:
+      return {
+        box: "bg-muted/50",
+        icon: "text-muted-foreground",
+        text: "text-muted-foreground",
+      }
   }
 }
 
 export function JWTDecoder() {
   const [token, setToken] = useState("")
-  const [decoded, setDecoded] = useState<DecodedJWT | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // countdown ticks every second; without it the remaining time was frozen at
+  // whatever it was when the token was pasted
+  const [now, setNow] = useState(() => Date.now())
+
+  const result = useMemo(() => inspectJwt(token, now), [token, now])
+  const decoded = result.ok ? result.jwt : null
+  const error = !result.ok && result.error.code !== "empty" ? result.error : null
+  const hasTimeClaim = decoded !== null && decoded.time.state !== "no-time-claims"
 
   useEffect(() => {
-    if (!token.trim()) {
-      setDecoded(null)
-      setError(null)
-      return
-    }
-
-    const result = decodeJWT(token)
-    if (result) {
-      setDecoded(result)
-      setError(null)
-    } else {
-      setDecoded(null)
-      setError("Invalid JWT format. Make sure it has three parts separated by dots.")
-    }
-  }, [token])
+    if (!hasTimeClaim) return
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [hasTimeClaim])
 
   const loadSample = () => {
-    // Sample JWT (expired, for demo purposes)
     setToken(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE3MDAwMDAwMDAsInJvbGUiOiJhZG1pbiIsImVtYWlsIjoiam9obkBleGFtcGxlLmNvbSJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
     )
   }
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleString("en-US", {
-      dateStyle: "medium",
-      timeStyle: "medium",
-    })
-  }
+  const customClaims = decoded
+    ? Object.keys(decoded.payload).filter((k) => !REGISTERED_CLAIMS.includes(k))
+    : []
 
-  const getTimeRemaining = (exp: Date) => {
-    const now = new Date()
-    const diff = exp.getTime() - now.getTime()
-
-    if (diff < 0) return "Expired"
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-
-    if (days > 0) return `${days}d ${hours}h remaining`
-    if (hours > 0) return `${hours}h ${minutes}m remaining`
-    return `${minutes}m remaining`
-  }
+  const tone = decoded ? timeToneClasses(decoded.time.state) : null
 
   return (
     <div className="tool-container">
-      <ToolHeader icon={Key} title="JWT Decoder" description="Decode and inspect JSON Web Tokens" />
+      <ToolHeader
+        icon={Key}
+        title="JWT Decoder"
+        description="Decode a JSON Web Token and inspect its claims - decoding only, no signature verification"
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  JWT Token
-                  {decoded &&
-                    (decoded.isExpired ? (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    ) : (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ))}
-                </CardTitle>
-                <CardDescription>Paste a JWT to decode it</CardDescription>
+                <CardTitle>JWT Token</CardTitle>
+                <CardDescription>Paste a compact JWS to decode it</CardDescription>
               </div>
               {decoded && (
-                <Badge variant={decoded.isExpired ? "destructive" : "default"}>
-                  {decoded.isExpired ? "Expired" : "Valid"}
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant="outline" className="gap-1">
+                    <ShieldQuestion className="h-3 w-3" />
+                    Signature not verified
+                  </Badge>
+                  <Badge
+                    variant={
+                      decoded.time.state === "expired"
+                        ? "destructive"
+                        : decoded.time.state === "active"
+                          ? "default"
+                          : "secondary"
+                    }
+                  >
+                    {decoded.time.state === "expired"
+                      ? "Expired"
+                      : decoded.time.state === "not-yet-valid"
+                        ? "Not yet valid"
+                        : decoded.time.state === "active"
+                          ? "Within time window"
+                          : "No time claims"}
+                  </Badge>
+                </div>
               )}
             </div>
           </CardHeader>
@@ -157,12 +124,13 @@ export function JWTDecoder() {
               onChange={(e) => setToken(e.target.value)}
               placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
               className="h-32 resize-none font-mono text-sm"
+              aria-label="JWT token"
             />
 
             {error && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{error.message}</AlertDescription>
               </Alert>
             )}
 
@@ -175,24 +143,48 @@ export function JWTDecoder() {
               </Button>
             </div>
 
-            {decoded?.expiresAt && (
-              <div
-                className={`rounded-lg p-3 ${decoded.isExpired ? "bg-red-100 dark:bg-red-900/30" : "bg-green-100 dark:bg-green-900/30"}`}
-              >
+            {decoded && tone && (
+              <div className={`rounded-lg p-3 ${tone.box}`}>
                 <div className="flex items-center gap-2">
-                  <Clock
-                    className={`h-4 w-4 ${decoded.isExpired ? "text-red-600" : "text-green-600"}`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${decoded.isExpired ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}
-                  >
-                    {getTimeRemaining(decoded.expiresAt)}
+                  <Clock className={`h-4 w-4 ${tone.icon}`} />
+                  <span className={`text-sm font-medium ${tone.text}`}>
+                    {timeClaimLabel(decoded.time)}
                   </span>
                 </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  Expires: {formatDate(decoded.expiresAt)}
-                </p>
+                <div className="text-muted-foreground mt-1 space-y-0.5 text-xs">
+                  {decoded.time.notBefore && (
+                    <p>Not before (nbf): {formatDate(decoded.time.notBefore)}</p>
+                  )}
+                  {decoded.time.expiresAt && (
+                    <p>Expires (exp): {formatDate(decoded.time.expiresAt)}</p>
+                  )}
+                  {decoded.time.issuedAt && (
+                    <p>Issued at (iat): {formatDate(decoded.time.issuedAt)}</p>
+                  )}
+                  {decoded.time.state === "no-time-claims" && (
+                    <p>
+                      This token carries no exp and no nbf, so it never expires on its own. Only the
+                      issuer can revoke it.
+                    </p>
+                  )}
+                </div>
+                {decoded.time.malformed.length > 0 && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    Ignored non-numeric time claim(s): {decoded.time.malformed.join(", ")}
+                  </p>
+                )}
               </div>
+            )}
+
+            {decoded?.algIsNone && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>alg: &quot;none&quot;</strong> - this token is unsigned. Anyone can forge
+                  one. Servers must reject &quot;none&quot; outright rather than treat it as a valid
+                  algorithm.
+                </AlertDescription>
+              </Alert>
             )}
           </CardContent>
         </Card>
@@ -214,9 +206,28 @@ export function JWTDecoder() {
                     </pre>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge variant="secondary">Algorithm: {decoded.header.alg}</Badge>
-                    <Badge variant="secondary">Type: {decoded.header.typ}</Badge>
+                    <Badge variant={decoded.algIsNone ? "destructive" : "secondary"}>
+                      alg: {decoded.alg ?? "missing"}
+                    </Badge>
+                    <Badge variant="secondary">typ: {decoded.typ ?? "absent"}</Badge>
+                    {decoded.kid && <Badge variant="outline">kid: {decoded.kid}</Badge>}
+                    {decoded.crit && (
+                      <Badge variant="outline">crit: {decoded.crit.join(", ")}</Badge>
+                    )}
                   </div>
+                  {decoded.alg === null && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      No alg in the header. A compliant JWS always declares one.
+                    </p>
+                  )}
+                  {(decoded.kid || decoded.crit) && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      {decoded.kid && `kid selects which key of the issuer's set signed this. `}
+                      {decoded.crit &&
+                        `crit lists extensions a verifier must understand or reject. `}
+                      Both are only meaningful against alg {decoded.alg ?? "(missing)"}.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
@@ -235,22 +246,52 @@ export function JWTDecoder() {
                   </div>
 
                   <div className="mt-3 space-y-2">
-                    {decoded.payload.iss && (
+                    {typeof decoded.payload.iss === "string" && (
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Issuer:</span>{" "}
+                        <span className="text-muted-foreground">Issuer (iss):</span>{" "}
                         <span className="font-mono">{decoded.payload.iss}</span>
                       </div>
                     )}
-                    {decoded.payload.sub && (
+                    {typeof decoded.payload.sub === "string" && (
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Subject:</span>{" "}
+                        <span className="text-muted-foreground">Subject (sub):</span>{" "}
                         <span className="font-mono">{decoded.payload.sub}</span>
                       </div>
                     )}
-                    {decoded.issuedAt && (
+                    {decoded.audience.length > 0 && (
                       <div className="text-sm">
-                        <span className="text-muted-foreground">Issued At:</span>{" "}
-                        <span className="font-mono">{formatDate(decoded.issuedAt)}</span>
+                        <span className="text-muted-foreground">Audience (aud):</span>{" "}
+                        <span className="font-mono">{decoded.audience.join(", ")}</span>
+                      </div>
+                    )}
+                    {decoded.jwtId && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">JWT ID (jti):</span>{" "}
+                        <span className="font-mono">{decoded.jwtId}</span>
+                      </div>
+                    )}
+                    {decoded.time.issuedAt && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Issued At (iat):</span>{" "}
+                        <span className="font-mono">{formatDate(decoded.time.issuedAt)}</span>
+                      </div>
+                    )}
+                    {decoded.time.notBefore && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Not Before (nbf):</span>{" "}
+                        <span className="font-mono">{formatDate(decoded.time.notBefore)}</span>
+                      </div>
+                    )}
+                    {decoded.time.expiresAt && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Expires (exp):</span>{" "}
+                        <span className="font-mono">{formatDate(decoded.time.expiresAt)}</span>
+                      </div>
+                    )}
+                    {customClaims.length > 0 && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Custom claims:</span>{" "}
+                        <span className="font-mono">{customClaims.join(", ")}</span>
                       </div>
                     )}
                   </div>
@@ -263,13 +304,16 @@ export function JWTDecoder() {
                 </CardHeader>
                 <CardContent>
                   <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="font-mono text-sm break-all">{decoded.signature}</p>
+                    <p className="font-mono text-sm break-all">
+                      {decoded.signature || "(empty - unsigned token)"}
+                    </p>
                   </div>
                   <Alert className="mt-3">
                     <AlertTriangle className="h-4 w-4" />
                     <AlertDescription className="text-sm">
-                      This tool only decodes the token. It does not verify the signature. Never
-                      trust a JWT without server-side validation.
+                      This tool decodes only. It has no key, so it cannot and does not check the
+                      signature - a decoded token is never proof of anything. The status above
+                      describes the exp/nbf claims, not authenticity.
                     </AlertDescription>
                   </Alert>
                 </CardContent>
@@ -302,6 +346,8 @@ export function JWTDecoder() {
               { claim: "nbf", name: "Not Before", desc: "Token not valid before this time" },
               { claim: "iat", name: "Issued At", desc: "When the token was created" },
               { claim: "jti", name: "JWT ID", desc: "Unique identifier for the token" },
+              { claim: "alg", name: "Algorithm", desc: "Header: how the token was signed" },
+              { claim: "kid", name: "Key ID", desc: "Header: which signing key was used" },
             ].map((item) => (
               <div key={item.claim} className="rounded-lg border p-3">
                 <div className="flex items-center gap-2">

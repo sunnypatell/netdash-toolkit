@@ -1,89 +1,166 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { FileSearch, CheckCircle2, XCircle } from "lucide-react"
+import { FileSearch, CheckCircle2, XCircle, AlertTriangle, Timer } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
+import {
+  createRegexWorker,
+  runRegexMatch,
+  REGEX_FLAGS,
+  type RegexMatchResult,
+} from "@/lib/regex-run"
 
-interface Match {
-  match: string
-  index: number
-  groups: string[]
+// a regex engine cannot be interrupted mid-exec, so the only real protection
+// against catastrophic backtracking is running it off-thread and killing it.
+const DEADLINE_MS = 1000
+const MAX_MATCHES = 500
+const DEBOUNCE_MS = 250
+
+type Status = "idle" | "running" | "done" | "timeout"
+
+interface MatchRequest {
+  pattern: string
+  flags: string
+  input: string
 }
 
-interface RegexResult {
-  valid: boolean
-  error?: string
-  matches: Match[]
-  matchCount: number
+const EMPTY_RESULT: RegexMatchResult = {
+  error: null,
+  matches: [],
+  total: 0,
+  truncated: false,
+  scanMs: 0,
+  deadlineHit: false,
 }
+
+const DEFAULT_PATTERN = "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b"
+const DEFAULT_TEST_STRING =
+  "Contact us at support@example.com or sales@company.org for more information."
+const DEFAULT_FLAGS = "gi"
+
+const PRESETS = [
+  { label: "Email", pattern: DEFAULT_PATTERN },
+  { label: "URL", pattern: "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+" },
+  { label: "IPv4", pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b" },
+  { label: "IPv6", pattern: "([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}" },
+  { label: "Phone (US)", pattern: "\\(?\\d{3}\\)?[-\\s.]?\\d{3}[-\\s.]?\\d{4}" },
+  { label: "Date (named groups)", pattern: "(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})" },
+  { label: "MAC Address", pattern: "([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}" },
+  { label: "Any letter (needs u)", pattern: "\\p{L}+" },
+  { label: "Catastrophic backtracking", pattern: "(a+)+$" },
+]
 
 export function RegexTester() {
-  const [pattern, setPattern] = useState("\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b")
-  const [testString, setTestString] = useState(
-    "Contact us at support@example.com or sales@company.org for more information."
+  const [pattern, setPattern] = useState(DEFAULT_PATTERN)
+  const [testString, setTestString] = useState(DEFAULT_TEST_STRING)
+  const [flags, setFlags] = useState<Record<string, boolean>>({ g: true, i: true })
+
+  const flagStr = useMemo(
+    () =>
+      REGEX_FLAGS.filter((f) => flags[f.key])
+        .map((f) => f.key)
+        .join(""),
+    [flags]
   )
-  const [flags, setFlags] = useState({ g: true, i: true, m: false, s: false })
 
-  const result = useMemo((): RegexResult => {
-    if (!pattern.trim()) {
-      return { valid: true, matches: [], matchCount: 0 }
+  const [request, setRequest] = useState<MatchRequest>({
+    pattern: DEFAULT_PATTERN,
+    flags: DEFAULT_FLAGS,
+    input: DEFAULT_TEST_STRING,
+  })
+  const [status, setStatus] = useState<Status>("idle")
+  const [result, setResult] = useState<RegexMatchResult>(EMPTY_RESULT)
+  const [offThread, setOffThread] = useState(true)
+
+  // debounce so a slow pattern is not re-evaluated on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setRequest({ pattern, flags: flagStr, input: testString }),
+      DEBOUNCE_MS
+    )
+    return () => clearTimeout(timer)
+  }, [pattern, flagStr, testString])
+
+  const workerRef = useRef<{ worker: Worker; url: string } | null>(null)
+  const requestId = useRef(0)
+
+  const killWorker = useCallback(() => {
+    const current = workerRef.current
+    if (current) {
+      current.worker.terminate()
+      URL.revokeObjectURL(current.url)
+      workerRef.current = null
+    }
+  }, [])
+
+  useEffect(() => killWorker, [killWorker])
+
+  useEffect(() => {
+    if (!request.pattern) {
+      setStatus("done")
+      setResult(EMPTY_RESULT)
+      return
     }
 
-    try {
-      const flagStr = Object.entries(flags)
-        .filter(([, v]) => v)
-        .map(([k]) => k)
-        .join("")
-      const regex = new RegExp(pattern, flagStr)
+    if (!workerRef.current) workerRef.current = createRegexWorker(DEADLINE_MS)
+    const current = workerRef.current
 
-      const matches: Match[] = []
-      let match: RegExpExecArray | null
-
-      if (flags.g) {
-        while ((match = regex.exec(testString)) !== null) {
-          matches.push({
-            match: match[0],
-            index: match.index,
-            groups: match.slice(1),
-          })
-          if (match[0].length === 0) regex.lastIndex++
-        }
-      } else {
-        match = regex.exec(testString)
-        if (match) {
-          matches.push({
-            match: match[0],
-            index: match.index,
-            groups: match.slice(1),
-          })
-        }
-      }
-
-      return { valid: true, matches, matchCount: matches.length }
-    } catch (e) {
-      return { valid: false, error: (e as Error).message, matches: [], matchCount: 0 }
+    if (!current) {
+      // no Worker in this environment: same code path, but the deadline can only
+      // bound the match loop, not a single runaway exec()
+      setOffThread(false)
+      setStatus("done")
+      setResult(runRegexMatch({ ...request, maxMatches: MAX_MATCHES }, DEADLINE_MS))
+      return
     }
-  }, [pattern, testString, flags])
 
-  const highlightedText = useMemo(() => {
-    if (!result.valid || result.matches.length === 0) return testString
+    setOffThread(true)
+    const id = requestId.current + 1
+    requestId.current = id
+    setStatus("running")
 
-    let lastIndex = 0
+    const timer = setTimeout(() => {
+      // terminate mid-exec; a fresh worker is created for the next request
+      killWorker()
+      setStatus("timeout")
+      setResult(EMPTY_RESULT)
+    }, DEADLINE_MS + 100)
+
+    const onMessage = (event: MessageEvent<RegexMatchResult>) => {
+      if (event.data?.id !== id) return
+      clearTimeout(timer)
+      setResult(event.data)
+      setStatus(event.data.deadlineHit ? "timeout" : "done")
+    }
+
+    current.worker.addEventListener("message", onMessage)
+    current.worker.postMessage({ ...request, id, maxMatches: MAX_MATCHES })
+
+    return () => {
+      clearTimeout(timer)
+      current.worker.removeEventListener("message", onMessage)
+    }
+  }, [request, killWorker])
+
+  const timedOut = status === "timeout"
+  const invalid = !timedOut && result.error !== null
+  const stale = status === "running" || request.pattern !== pattern || request.input !== testString
+
+  const highlighted = useMemo(() => {
+    if (invalid || timedOut || result.matches.length === 0) return request.input
     const parts: React.ReactNode[] = []
-
+    let lastIndex = 0
     result.matches.forEach((match, i) => {
-      if (match.index > lastIndex) {
-        parts.push(testString.slice(lastIndex, match.index))
-      }
+      if (match.index < lastIndex) return
+      if (match.index > lastIndex) parts.push(request.input.slice(lastIndex, match.index))
       parts.push(
         <mark key={i} className="rounded bg-yellow-300 px-0.5 dark:bg-yellow-700">
           {match.match}
@@ -91,31 +168,26 @@ export function RegexTester() {
       )
       lastIndex = match.index + match.match.length
     })
-
-    if (lastIndex < testString.length) {
-      parts.push(testString.slice(lastIndex))
-    }
-
+    if (lastIndex < request.input.length) parts.push(request.input.slice(lastIndex))
     return parts
-  }, [testString, result])
+  }, [request.input, result, invalid, timedOut])
 
-  const presets = [
-    { label: "Email", pattern: "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" },
-    { label: "URL", pattern: "https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+" },
-    { label: "IPv4", pattern: "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b" },
-    { label: "IPv6", pattern: "([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}" },
-    { label: "Phone (US)", pattern: "\\(?\\d{3}\\)?[-\\s.]?\\d{3}[-\\s.]?\\d{4}" },
-    { label: "Date (YYYY-MM-DD)", pattern: "\\d{4}-\\d{2}-\\d{2}" },
-    { label: "MAC Address", pattern: "([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}" },
-    { label: "HTML Tag", pattern: "<([a-z][a-z0-9]*)\\b[^>]*>(.*?)</\\1>" },
-  ]
+  const toggleFlag = (key: string, on: boolean) => {
+    setFlags((prev) => {
+      const next = { ...prev, [key]: on }
+      // u and v cannot be combined; picking one drops the other
+      if (on && key === "u") next.v = false
+      if (on && key === "v") next.u = false
+      return next
+    })
+  }
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={FileSearch}
         title="Regex Tester"
-        description="Test and debug regular expressions with live highlighting"
+        description="Test regular expressions off the main thread with a hard timeout"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -124,10 +196,11 @@ export function RegexTester() {
             <CardTitle className="flex items-center gap-2">
               Pattern
               {pattern &&
-                (result.valid ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                ) : (
+                !stale &&
+                (invalid || timedOut ? (
                   <XCircle className="h-5 w-5 text-red-500" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
                 ))}
             </CardTitle>
             <CardDescription>Enter a regular expression pattern</CardDescription>
@@ -144,14 +217,9 @@ export function RegexTester() {
                     onChange={(e) => setPattern(e.target.value)}
                     placeholder="[A-Za-z]+"
                     className="border-0 font-mono focus-visible:ring-0"
+                    aria-invalid={invalid}
                   />
-                  <span className="text-muted-foreground px-3">
-                    /
-                    {Object.entries(flags)
-                      .filter(([, v]) => v)
-                      .map(([k]) => k)
-                      .join("")}
-                  </span>
+                  <span className="text-muted-foreground px-3">/{flagStr}</span>
                 </div>
                 <CopyButton value={pattern} variant="outline" />
               </div>
@@ -159,33 +227,56 @@ export function RegexTester() {
 
             <div className="space-y-2">
               <Label>Flags</Label>
-              <div className="flex flex-wrap gap-4">
-                {[
-                  { key: "g", label: "Global", desc: "Find all matches" },
-                  { key: "i", label: "Case Insensitive", desc: "Ignore case" },
-                  { key: "m", label: "Multiline", desc: "^ and $ match line boundaries" },
-                  { key: "s", label: "Dotall", desc: ". matches newlines" },
-                ].map((flag) => (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {REGEX_FLAGS.map((flag) => (
                   <div key={flag.key} className="flex items-center space-x-2">
                     <Checkbox
-                      id={flag.key}
-                      checked={flags[flag.key as keyof typeof flags]}
-                      onCheckedChange={(checked) =>
-                        setFlags((prev) => ({ ...prev, [flag.key]: !!checked }))
-                      }
+                      id={`flag-${flag.key}`}
+                      checked={!!flags[flag.key]}
+                      onCheckedChange={(checked) => toggleFlag(flag.key, !!checked)}
                     />
-                    <Label htmlFor={flag.key} className="cursor-pointer text-sm">
+                    <Label
+                      htmlFor={`flag-${flag.key}`}
+                      className="cursor-pointer font-mono text-sm"
+                      title={flag.desc}
+                    >
                       {flag.label}
                     </Label>
                   </div>
                 ))}
               </div>
+              <p className="text-muted-foreground text-xs">
+                {REGEX_FLAGS.filter((f) => flags[f.key])
+                  .map((f) => `${f.key}: ${f.desc}`)
+                  .join(" - ") || "No flags selected"}
+              </p>
             </div>
 
-            {!result.valid && result.error && (
+            {timedOut && (
+              <Alert variant="destructive">
+                <Timer className="h-4 w-4" />
+                <AlertDescription>
+                  Pattern timed out after {DEADLINE_MS}ms and was stopped - this usually means
+                  catastrophic backtracking. Simplify nested quantifiers such as{" "}
+                  <code className="font-mono">(a+)+</code> or shorten the test string.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {invalid && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
                 <AlertDescription className="font-mono text-xs">{result.error}</AlertDescription>
+              </Alert>
+            )}
+
+            {!offThread && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Web Workers are unavailable here, so matching runs on the main thread. The timeout
+                  can only stop the match loop, not a single runaway match.
+                </AlertDescription>
               </Alert>
             )}
 
@@ -200,11 +291,26 @@ export function RegexTester() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Badge variant={result.matchCount > 0 ? "default" : "secondary"}>
-                {result.matchCount} match{result.matchCount !== 1 ? "es" : ""}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={result.total > 0 && !invalid && !timedOut ? "default" : "secondary"}>
+                {timedOut || invalid ? "0" : result.total} match
+                {(timedOut || invalid ? 0 : result.total) !== 1 ? "es" : ""}
               </Badge>
+              {status === "running" && <Badge variant="outline">matching...</Badge>}
+              {!invalid && !timedOut && status === "done" && (
+                <Badge variant="outline">{result.scanMs}ms</Badge>
+              )}
+              {result.truncated && !timedOut && (
+                <Badge variant="outline">showing first {MAX_MATCHES}</Badge>
+              )}
             </div>
+
+            {result.truncated && !timedOut && (
+              <p className="text-muted-foreground text-xs">
+                {result.total.toLocaleString()} matches found, {MAX_MATCHES} rendered - the rest are
+                counted but not listed so the page stays responsive.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -215,8 +321,8 @@ export function RegexTester() {
               <CardDescription>Matches are highlighted in yellow</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-muted/50 min-h-[120px] rounded-lg border p-4 font-mono text-sm whitespace-pre-wrap">
-                {highlightedText}
+              <div className="bg-muted/50 max-h-64 min-h-[120px] overflow-y-auto rounded-lg border p-4 font-mono text-sm whitespace-pre-wrap">
+                {highlighted}
               </div>
             </CardContent>
           </Card>
@@ -224,10 +330,11 @@ export function RegexTester() {
           <Card>
             <CardHeader>
               <CardTitle>Match Details</CardTitle>
+              <CardDescription>Positional and named capture groups</CardDescription>
             </CardHeader>
             <CardContent>
-              {result.matches.length > 0 ? (
-                <div className="max-h-64 space-y-2 overflow-y-auto">
+              {result.matches.length > 0 && !timedOut ? (
+                <div className="max-h-96 space-y-2 overflow-y-auto">
                   {result.matches.map((match, i) => (
                     <div key={i} className="rounded-lg border p-3">
                       <div className="flex items-center justify-between">
@@ -238,12 +345,27 @@ export function RegexTester() {
                       {match.groups.length > 0 && (
                         <div className="mt-2 space-y-1">
                           <p className="text-muted-foreground text-xs">Capture Groups:</p>
-                          {match.groups.map((group, j) => (
-                            <div key={j} className="flex items-center gap-2">
-                              <Badge variant="secondary" className="text-xs">
-                                ${j + 1}
+                          {match.groups.map((group) => (
+                            <div key={group.key} className="flex items-center gap-2">
+                              <Badge variant="secondary" className="font-mono text-xs">
+                                {group.key}
                               </Badge>
-                              <span className="font-mono text-xs">{group || "(empty)"}</span>
+                              <span className="font-mono text-xs break-all">
+                                {group.value === null ? "(no match)" : group.value || "(empty)"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {match.named.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-muted-foreground text-xs">Named Groups:</p>
+                          {match.named.map((group) => (
+                            <div key={group.key} className="flex items-center gap-2">
+                              <Badge className="font-mono text-xs">{group.key}</Badge>
+                              <span className="font-mono text-xs break-all">
+                                {group.value === null ? "(no match)" : group.value || "(empty)"}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -253,7 +375,13 @@ export function RegexTester() {
                 </div>
               ) : (
                 <p className="text-muted-foreground py-8 text-center">
-                  {pattern ? "No matches found" : "Enter a pattern to see matches"}
+                  {timedOut
+                    ? "Matching was stopped before any results were returned"
+                    : invalid
+                      ? "Fix the pattern to see matches"
+                      : pattern
+                        ? "No matches found"
+                        : "Enter a pattern to see matches"}
                 </p>
               )}
             </CardContent>
@@ -266,8 +394,8 @@ export function RegexTester() {
           <CardTitle>Common Patterns</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-            {presets.map((preset) => (
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {PRESETS.map((preset) => (
               <button
                 key={preset.label}
                 onClick={() => setPattern(preset.pattern)}
@@ -299,7 +427,11 @@ export function RegexTester() {
               { char: "?", desc: "0 or 1" },
               { char: "{n}", desc: "Exactly n times" },
               { char: "[abc]", desc: "Character class" },
-              { char: "()", desc: "Capture group" },
+              { char: "(?<n>)", desc: "Named group" },
+              { char: "\\p{L}", desc: "Unicode property (u flag)" },
+              { char: "\\u{1F600}", desc: "Code point (u flag)" },
+              { char: "(?=)", desc: "Lookahead" },
+              { char: "(?<=)", desc: "Lookbehind" },
             ].map((item) => (
               <div key={item.char} className="flex items-center gap-2">
                 <code className="bg-muted rounded px-2 py-1 font-bold">{item.char}</code>

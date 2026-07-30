@@ -1,103 +1,121 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Clock, RefreshCw, Calendar } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Clock, RefreshCw, Globe, XCircle, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { ResultCard } from "@/components/ui/result-card"
+import {
+  TIMESTAMP_UNITS,
+  epochMsToUnitString,
+  formatRelativeToNow,
+  parseTimestampInput,
+  startOfLocalDay,
+  toLocalDateInputValue,
+  toLocalTimeInputValue,
+  type TimestampUnit,
+} from "@/lib/timestamp"
+import {
+  formatInZone,
+  formatOffset,
+  listTimeZones,
+  localTimeZone,
+  zoneOffsetMs,
+  zonedTimeToEpochMs,
+} from "@/lib/timezones"
 
 export function TimestampConverter() {
-  const [timestamp, setTimestamp] = useState("")
+  const [raw, setRaw] = useState("")
+  const [unit, setUnit] = useState<TimestampUnit | "auto">("auto")
+  const [timeZone, setTimeZone] = useState("UTC")
   const [dateInput, setDateInput] = useState("")
   const [timeInput, setTimeInput] = useState("")
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [converted, setConverted] = useState<Date | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // new Date() during render would differ between server and client html
+  const [now, setNow] = useState<Date | null>(null)
 
-  // Update current time every second
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
+    setTimeZone(localTimeZone())
+    setNow(new Date())
+    const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
 
-  // Convert timestamp to date
+  const zones = useMemo(() => listTimeZones(), [])
+  const browserZone = useMemo(() => localTimeZone(), [])
+
+  // date + time pickers feed the timestamp field, interpreted in the selected zone
   useEffect(() => {
-    if (!timestamp.trim()) {
-      setConverted(null)
-      setError(null)
-      return
-    }
+    if (!dateInput || !timeInput) return
+    const [y, mo, d] = dateInput.split("-").map(Number)
+    const [h, mi, s] = timeInput.split(":").map(Number)
+    if ([y, mo, d, h, mi].some((n) => !Number.isFinite(n))) return
+    const epochMs = zonedTimeToEpochMs(
+      { year: y, month: mo, day: d, hour: h, minute: mi, second: Number.isFinite(s) ? s : 0 },
+      timeZone
+    )
+    setRaw(Math.floor(epochMs / 1000).toString())
+    setUnit("auto")
+  }, [dateInput, timeInput, timeZone])
 
-    const num = parseInt(timestamp, 10)
-    if (isNaN(num)) {
-      setError("Invalid timestamp")
-      setConverted(null)
-      return
-    }
+  const parsed = useMemo(() => parseTimestampInput(raw, { unit, timeZone }), [raw, unit, timeZone])
 
-    // Auto-detect milliseconds vs seconds
-    let date: Date
-    if (num > 9999999999999) {
-      // Microseconds
-      date = new Date(num / 1000)
-    } else if (num > 9999999999) {
-      // Milliseconds
-      date = new Date(num)
-    } else {
-      // Seconds
-      date = new Date(num * 1000)
-    }
-
-    if (isNaN(date.getTime())) {
-      setError("Invalid timestamp")
-      setConverted(null)
-    } else {
-      setError(null)
-      setConverted(date)
-    }
-  }, [timestamp])
-
-  // Convert date/time inputs to timestamp
-  useEffect(() => {
-    if (dateInput && timeInput) {
-      const date = new Date(`${dateInput}T${timeInput}`)
-      if (!isNaN(date.getTime())) {
-        setTimestamp(Math.floor(date.getTime() / 1000).toString())
-      }
-    }
-  }, [dateInput, timeInput])
-
-  const setNow = () => {
-    const now = new Date()
-    setTimestamp(Math.floor(now.getTime() / 1000).toString())
-    setDateInput(now.toISOString().split("T")[0])
-    setTimeInput(now.toTimeString().split(" ")[0])
+  const applyNow = () => {
+    const current = new Date()
+    setRaw(Math.floor(current.getTime() / 1000).toString())
+    setUnit("auto")
+    // both pickers must come from the same wall clock, never a UTC date with a local time
+    setDateInput(toLocalDateInputValue(current))
+    setTimeInput(toLocalTimeInputValue(current))
   }
 
-  const formatTimezone = (date: Date) => {
-    const offset = -date.getTimezoneOffset()
-    const hours = Math.floor(Math.abs(offset) / 60)
-    const minutes = Math.abs(offset) % 60
-    const sign = offset >= 0 ? "+" : "-"
-    return `UTC${sign}${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
-  }
+  const presets = useMemo(() => {
+    const base = [
+      { label: "Unix Epoch", ts: 0, desc: "Jan 1, 1970 UTC" },
+      { label: "Y2K", ts: 946684800, desc: "Jan 1, 2000 UTC" },
+      { label: "2038 Problem", ts: 2147483647, desc: "Max 32-bit signed" },
+      { label: "Apollo 11 landing", ts: -14182940, desc: "Negative timestamp" },
+    ]
+    if (!now) return base
+    const nowSec = Math.floor(now.getTime() / 1000)
+    return [
+      ...base,
+      {
+        label: "Today Start",
+        ts: Math.floor(startOfLocalDay(now).getTime() / 1000),
+        desc: "Local midnight",
+      },
+      {
+        label: "Tomorrow",
+        // calendar arithmetic, not +86400, so dst days stay at midnight
+        ts: Math.floor(startOfLocalDay(now, 1).getTime() / 1000),
+        desc: "Next local midnight",
+      },
+      { label: "1 Hour Ago", ts: nowSec - 3600, desc: "Relative" },
+      { label: "1 Week Ago", ts: nowSec - 604800, desc: "Relative" },
+    ]
+  }, [now])
 
-  const currentTimestamp = Math.floor(currentTime.getTime() / 1000)
-  const currentMs = currentTime.getTime()
+  const nowOffset = now ? formatOffset(zoneOffsetMs(now.getTime(), timeZone)) : null
 
   return (
     <div className="tool-container">
       <ToolHeader
         icon={Clock}
         title="Unix Timestamp Converter"
-        description="Convert between Unix timestamps and human-readable dates"
+        description="Convert timestamps, ISO 8601 and date strings across any IANA timezone"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -114,35 +132,41 @@ export function TimestampConverter() {
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-muted-foreground text-xs">Unix Timestamp (seconds)</p>
-                  <p className="font-mono text-lg font-bold">{currentTimestamp}</p>
+                  <p className="font-mono text-lg font-bold">
+                    {now ? Math.floor(now.getTime() / 1000) : "--"}
+                  </p>
                 </div>
-                <CopyButton value={currentTimestamp.toString()} size="sm" />
+                {now && (
+                  <CopyButton value={Math.floor(now.getTime() / 1000).toString()} size="sm" />
+                )}
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-muted-foreground text-xs">Milliseconds</p>
-                  <p className="font-mono text-lg font-bold">{currentMs}</p>
+                  <p className="font-mono text-lg font-bold">{now ? now.getTime() : "--"}</p>
                 </div>
-                <CopyButton value={currentMs.toString()} size="sm" />
+                {now && <CopyButton value={now.getTime().toString()} size="sm" />}
               </div>
 
               <div className="rounded-lg border p-3">
-                <p className="text-muted-foreground text-xs">Local Time</p>
-                <p className="font-mono text-lg">
-                  {currentTime.toLocaleString("en-US", {
-                    dateStyle: "full",
-                    timeStyle: "medium",
-                  })}
-                </p>
-                <Badge variant="outline" className="mt-2">
-                  {formatTimezone(currentTime)}
-                </Badge>
+                <p className="text-muted-foreground text-xs">Selected zone ({timeZone})</p>
+                <p className="font-mono text-sm">{now ? formatInZone(now, timeZone) : "--"}</p>
+                {nowOffset && (
+                  <Badge variant="outline" className="mt-2">
+                    {nowOffset}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="rounded-lg border p-3">
+                <p className="text-muted-foreground text-xs">Browser zone ({browserZone})</p>
+                <p className="font-mono text-sm">{now ? formatInZone(now, browserZone) : "--"}</p>
               </div>
 
               <div className="rounded-lg border p-3">
                 <p className="text-muted-foreground text-xs">UTC / ISO 8601</p>
-                <p className="font-mono text-sm">{currentTime.toISOString()}</p>
+                <p className="font-mono text-sm">{now ? now.toISOString() : "--"}</p>
               </div>
             </div>
           </CardContent>
@@ -150,27 +174,66 @@ export function TimestampConverter() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Convert Timestamp</CardTitle>
-            <CardDescription>Enter a Unix timestamp or select a date</CardDescription>
+            <CardTitle>Convert</CardTitle>
+            <CardDescription>
+              Unix seconds/ms/µs/ns, Windows FILETIME, .NET ticks, Cocoa, Excel serial, ISO 8601 or
+              an RFC 2822 date string
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="timestamp">Unix Timestamp</Label>
+              <Label htmlFor="timestamp">Timestamp or date</Label>
               <div className="flex gap-2">
                 <Input
                   id="timestamp"
-                  value={timestamp}
-                  onChange={(e) => setTimestamp(e.target.value)}
-                  placeholder="1609459200"
+                  value={raw}
+                  onChange={(e) => setRaw(e.target.value)}
+                  placeholder="1609459200 or 2021-01-01T00:00:00Z"
                   className="font-mono"
+                  aria-invalid={raw.trim() !== "" && !parsed.ok}
                 />
-                <Button variant="outline" onClick={setNow}>
+                <Button variant="outline" onClick={applyNow} aria-label="Use current time">
                   <RefreshCw className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-muted-foreground text-xs">
-                Supports seconds, milliseconds, and microseconds
-              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="unit">Numeric unit</Label>
+                <Select value={unit} onValueChange={(v) => setUnit(v as TimestampUnit | "auto")}>
+                  <SelectTrigger id="unit" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto-detect (s / ms / µs / ns)</SelectItem>
+                    {TIMESTAMP_UNITS.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.autoDetectable ? u.label : `${u.label} (explicit only)`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tz" className="flex items-center gap-2">
+                  <Globe className="h-4 w-4" />
+                  Timezone
+                </Label>
+                <Select value={timeZone} onValueChange={setTimeZone}>
+                  <SelectTrigger id="tz" className="w-full font-mono">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {zones.map((zone) => (
+                      <SelectItem key={zone} value={zone} className="font-mono">
+                        {zone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="text-muted-foreground text-center text-sm">or</div>
@@ -196,31 +259,79 @@ export function TimestampConverter() {
                 />
               </div>
             </div>
+            <p className="text-muted-foreground text-xs">
+              Date and time are read as wall-clock time in {timeZone}.
+            </p>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {raw.trim() !== "" && !parsed.ok && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertDescription>{parsed.error}</AlertDescription>
+              </Alert>
+            )}
 
-            {converted && !error && (
-              <ResultCard
-                title="Converted Date"
-                data={[
-                  {
-                    label: "Local",
-                    value: converted.toLocaleString("en-US", {
-                      dateStyle: "full",
-                      timeStyle: "medium",
-                    }),
-                    highlight: true,
-                  },
-                  { label: "UTC", value: converted.toUTCString() },
-                  { label: "ISO 8601", value: converted.toISOString() },
-                  { label: "Unix (s)", value: Math.floor(converted.getTime() / 1000).toString() },
-                  { label: "Unix (ms)", value: converted.getTime().toString() },
-                ]}
-              />
+            {raw.trim() === "" && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Enter a timestamp or date, or press the refresh button for the current time.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {parsed.ok && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline">
+                    {parsed.kind === "numeric"
+                      ? `${parsed.unit}${parsed.autoDetected ? " (auto-detected)" : ""}`
+                      : parsed.kind === "iso"
+                        ? "ISO 8601"
+                        : "date string"}
+                  </Badge>
+                  {now && (
+                    <Badge variant="secondary">
+                      {formatRelativeToNow(parsed.epochMs, now.getTime())}
+                    </Badge>
+                  )}
+                </div>
+                {parsed.note && <p className="text-muted-foreground text-xs">{parsed.note}</p>}
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {parsed.ok && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ResultCard
+            title="Converted Date"
+            data={[
+              {
+                label: `Selected zone (${timeZone})`,
+                value: formatInZone(parsed.date, timeZone),
+                highlight: true,
+              },
+              {
+                label: `Browser zone (${browserZone})`,
+                value: formatInZone(parsed.date, browserZone),
+              },
+              { label: "UTC", value: formatInZone(parsed.date, "UTC") },
+              { label: "ISO 8601", value: parsed.date.toISOString() },
+              { label: "RFC 2822", value: parsed.date.toUTCString() },
+            ]}
+          />
+          <ResultCard
+            title="Epoch Representations"
+            description="Same instant expressed in every supported scale"
+            data={TIMESTAMP_UNITS.map((u) => ({
+              label: u.label,
+              value: epochMsToUnitString(parsed.epochMs, u.id),
+              description: u.hint,
+            }))}
+          />
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -228,27 +339,13 @@ export function TimestampConverter() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: "Unix Epoch", ts: 0, desc: "Jan 1, 1970" },
-              { label: "Y2K", ts: 946684800, desc: "Jan 1, 2000" },
-              { label: "2038 Problem", ts: 2147483647, desc: "Max 32-bit signed" },
-              {
-                label: "Today Start",
-                ts: Math.floor(new Date().setHours(0, 0, 0, 0) / 1000),
-                desc: "Midnight today",
-              },
-              {
-                label: "Tomorrow",
-                ts: Math.floor(new Date().setHours(0, 0, 0, 0) / 1000) + 86400,
-                desc: "Midnight tomorrow",
-              },
-              { label: "1 Hour Ago", ts: currentTimestamp - 3600, desc: "Relative" },
-              { label: "1 Day Ago", ts: currentTimestamp - 86400, desc: "Relative" },
-              { label: "1 Week Ago", ts: currentTimestamp - 604800, desc: "Relative" },
-            ].map((item) => (
+            {presets.map((item) => (
               <button
                 key={item.label}
-                onClick={() => setTimestamp(item.ts.toString())}
+                onClick={() => {
+                  setRaw(item.ts.toString())
+                  setUnit("auto")
+                }}
                 className="hover:bg-muted/50 rounded-lg border p-3 text-left transition-colors"
               >
                 <p className="text-sm font-medium">{item.label}</p>
@@ -262,10 +359,66 @@ export function TimestampConverter() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Time Units in Seconds</CardTitle>
+          <CardTitle>Epoch Reference</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="p-2 text-left">Scale</th>
+                  <th className="p-2 text-left">Epoch</th>
+                  <th className="p-2 text-left">Resolution</th>
+                  <th className="p-2 text-left">Seen in</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { scale: "Unix seconds", epoch: "1970-01-01", res: "1s", seen: "POSIX, JWT exp" },
+                  { scale: "Unix ms", epoch: "1970-01-01", res: "1ms", seen: "JavaScript, Java" },
+                  { scale: "Unix µs", epoch: "1970-01-01", res: "1µs", seen: "PostgreSQL, Chrome" },
+                  {
+                    scale: "Unix ns",
+                    epoch: "1970-01-01",
+                    res: "1ns",
+                    seen: "Go, Prometheus, Cassandra",
+                  },
+                  {
+                    scale: "Windows FILETIME",
+                    epoch: "1601-01-01",
+                    res: "100ns",
+                    seen: "Win32, AD, event logs",
+                  },
+                  {
+                    scale: ".NET ticks",
+                    epoch: "0001-01-01",
+                    res: "100ns",
+                    seen: "DateTime.Ticks",
+                  },
+                  {
+                    scale: "Apple/Cocoa",
+                    epoch: "2001-01-01",
+                    res: "1s",
+                    seen: "macOS, iOS plists",
+                  },
+                  {
+                    scale: "Excel serial",
+                    epoch: "1899-12-30",
+                    res: "1 day",
+                    seen: "Excel, CSV exports",
+                  },
+                ].map((row) => (
+                  <tr key={row.scale} className="border-b">
+                    <td className="p-2 font-medium">{row.scale}</td>
+                    <td className="p-2 font-mono">{row.epoch}</td>
+                    <td className="p-2 font-mono">{row.res}</td>
+                    <td className="text-muted-foreground p-2">{row.seen}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
             {[
               { label: "Minute", value: 60 },
               { label: "Hour", value: 3600 },

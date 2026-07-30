@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,108 +9,18 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Progress } from "@/components/ui/progress"
-import { RefreshCw, Key, Eye, EyeOff, Shield } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { RefreshCw, Key, Eye, EyeOff, Shield, AlertCircle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-
-interface PasswordOptions {
-  length: number
-  uppercase: boolean
-  lowercase: boolean
-  numbers: boolean
-  symbols: boolean
-  excludeAmbiguous: boolean
-  excludeSimilar: boolean
-}
-
-interface PasswordStrength {
-  score: number
-  label: string
-  color: string
-  entropy: number
-}
-
-const CHARS = {
-  uppercase: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  lowercase: "abcdefghijklmnopqrstuvwxyz",
-  numbers: "0123456789",
-  symbols: "!@#$%^&*()_+-=[]{}|;:,.<>?",
-  ambiguous: "{}[]()/\\'\"`~,;:.<>",
-  similar: "il1Lo0O",
-}
-
-function generatePassword(options: PasswordOptions): string {
-  let charset = ""
-
-  if (options.uppercase) charset += CHARS.uppercase
-  if (options.lowercase) charset += CHARS.lowercase
-  if (options.numbers) charset += CHARS.numbers
-  if (options.symbols) charset += CHARS.symbols
-
-  if (options.excludeAmbiguous) {
-    for (const char of CHARS.ambiguous) {
-      charset = charset.replace(char, "")
-    }
-  }
-
-  if (options.excludeSimilar) {
-    for (const char of CHARS.similar) {
-      charset = charset.replace(char, "")
-    }
-  }
-
-  if (charset.length === 0) {
-    charset = CHARS.lowercase + CHARS.numbers
-  }
-
-  let password = ""
-  const array = new Uint32Array(options.length)
-  crypto.getRandomValues(array)
-
-  for (let i = 0; i < options.length; i++) {
-    password += charset[array[i] % charset.length]
-  }
-
-  return password
-}
-
-function calculateStrength(password: string, options: PasswordOptions): PasswordStrength {
-  let charsetSize = 0
-  if (options.uppercase) charsetSize += 26
-  if (options.lowercase) charsetSize += 26
-  if (options.numbers) charsetSize += 10
-  if (options.symbols) charsetSize += CHARS.symbols.length
-
-  const entropy = Math.log2(Math.pow(charsetSize, password.length))
-
-  let score = 0
-  let label = "Very Weak"
-  let color = "bg-red-500"
-
-  if (entropy >= 128) {
-    score = 100
-    label = "Excellent"
-    color = "bg-green-600"
-  } else if (entropy >= 80) {
-    score = 80
-    label = "Strong"
-    color = "bg-green-500"
-  } else if (entropy >= 60) {
-    score = 60
-    label = "Good"
-    color = "bg-yellow-500"
-  } else if (entropy >= 40) {
-    score = 40
-    label = "Fair"
-    color = "bg-orange-500"
-  } else if (entropy >= 28) {
-    score = 20
-    label = "Weak"
-    color = "bg-red-500"
-  }
-
-  return { score, label, color, entropy: Math.round(entropy) }
-}
+import { toast } from "sonner"
+import {
+  buildCharset,
+  generatePassword,
+  strengthOf,
+  EmptyCharsetError,
+  type PasswordOptions,
+} from "@/lib/password-gen"
 
 export function PasswordGenerator() {
   const [password, setPassword] = useState("")
@@ -126,12 +36,21 @@ export function PasswordGenerator() {
   })
   const [history, setHistory] = useState<string[]>([])
 
-  const strength = password ? calculateStrength(password, options) : null
+  // entropy is quoted from the charset that will actually be drawn from, so
+  // exclusions move the number and an empty charset is an error, not -Infinity
+  const charset = useMemo(() => buildCharset(options), [options])
+  const strength = useMemo(() => strengthOf(charset.length, options.length), [charset, options])
+  const empty = charset.length === 0
 
   const generate = useCallback(() => {
-    const newPassword = generatePassword(options)
-    setPassword(newPassword)
-    setHistory((prev) => [newPassword, ...prev.slice(0, 9)])
+    try {
+      const next = generatePassword(options)
+      setPassword(next)
+      setHistory((prev) => [next, ...prev.slice(0, 9)])
+    } catch (e) {
+      setPassword("")
+      toast.error(e instanceof EmptyCharsetError ? e.message : "Could not generate a password")
+    }
   }, [options])
 
   const updateOption = <K extends keyof PasswordOptions>(key: K, value: PasswordOptions[K]) => {
@@ -143,7 +62,7 @@ export function PasswordGenerator() {
       <ToolHeader
         icon={Key}
         title="Password Generator"
-        description="Generate cryptographically secure random passwords"
+        description="Generate passwords from crypto.getRandomValues with a uniform, unbiased character distribution"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -160,6 +79,7 @@ export function PasswordGenerator() {
                 readOnly
                 placeholder="Click generate..."
                 className="h-14 pr-20 font-mono text-lg"
+                aria-label="Generated password"
               />
               <div className="absolute top-1/2 right-2 flex -translate-y-1/2 gap-1">
                 <Button
@@ -167,6 +87,7 @@ export function PasswordGenerator() {
                   size="sm"
                   onClick={() => setShowPassword(!showPassword)}
                   className="h-8 w-8 p-0"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
@@ -174,21 +95,44 @@ export function PasswordGenerator() {
               </div>
             </div>
 
-            {strength && (
+            {empty ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  No characters left to choose from. Enable a character type, or relax the
+                  exclusions - excluding both ambiguous and similar characters from numbers alone
+                  empties the set.
+                </AlertDescription>
+              </Alert>
+            ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Strength</span>
                   <Badge className={strength.color}>{strength.label}</Badge>
                 </div>
-                <Progress value={strength.score} className="h-2" />
-                <p className="text-muted-foreground text-xs">~{strength.entropy} bits of entropy</p>
+                <Progress
+                  value={strength.score}
+                  className="h-2"
+                  aria-label={`Password strength: ${strength.label}`}
+                />
+                <p className="text-muted-foreground text-xs">
+                  ~{strength.entropy} bits of entropy - {options.length} characters drawn from{" "}
+                  {charset.length} possible
+                </p>
               </div>
             )}
 
-            <Button onClick={generate} className="w-full" size="lg">
+            <Button onClick={generate} className="w-full" size="lg" disabled={empty}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Generate Password
             </Button>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Character set in use ({charset.length})</Label>
+              <code className="bg-muted/50 text-muted-foreground block rounded p-2 text-xs break-all">
+                {charset || "(empty)"}
+              </code>
+            </div>
           </CardContent>
         </Card>
 
@@ -210,6 +154,7 @@ export function PasswordGenerator() {
                 max={128}
                 step={1}
                 className="w-full"
+                aria-label="Password length"
               />
               <div className="text-muted-foreground flex justify-between text-xs">
                 <span>8</span>
@@ -251,7 +196,7 @@ export function PasswordGenerator() {
                     onCheckedChange={(checked) => updateOption("excludeAmbiguous", !!checked)}
                   />
                   <Label htmlFor="excludeAmbiguous" className="cursor-pointer">
-                    Exclude ambiguous characters
+                    Exclude ambiguous characters ({"{}[]()/\\'\"`~,;:.<>"})
                   </Label>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -265,6 +210,9 @@ export function PasswordGenerator() {
                   </Label>
                 </div>
               </div>
+              <p className="text-muted-foreground text-xs">
+                Exclusions strip every occurrence and shrink the entropy figure above accordingly.
+              </p>
             </div>
           </CardContent>
         </Card>
