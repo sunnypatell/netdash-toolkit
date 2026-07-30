@@ -4,87 +4,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Globe2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import type { PanelProps } from "@/lib/tool-panel"
+import { IPV6_SPECIAL_RANGES } from "@/lib/reference/ipv6-ranges"
 
-// rfc 8200 / rfc 6890 special-purpose ipv6 address registry
-const SPECIAL_ADDRESSES = [
-  {
-    address: "::/128",
-    name: "Unspecified",
-    description: "No address assigned yet",
-    v4: "0.0.0.0",
-    source: "RFC 4291 2.5.2",
-  },
-  {
-    address: "::1/128",
-    name: "Loopback",
-    description: "Localhost",
-    v4: "127.0.0.1",
-    source: "RFC 4291 2.5.3",
-  },
-  {
-    address: "::ffff:0:0/96",
-    name: "IPv4-Mapped",
-    description: "An IPv4 address inside an IPv6 socket API",
-    v4: "-",
-    source: "RFC 4291 2.5.5.2",
-  },
-  {
-    address: "::/96",
-    name: "IPv4-Compatible (deprecated)",
-    description: "Withdrawn transition form; do not use",
-    v4: "-",
-    source: "RFC 4291 2.5.5.1",
-  },
-  {
-    address: "64:ff9b::/96",
-    name: "NAT64 Well-Known Prefix",
-    description: "IPv4 embedded for stateful translation",
-    v4: "-",
-    source: "RFC 6052",
-  },
-  {
-    address: "100::/64",
-    name: "Discard-Only",
-    description: "Remotely triggered black hole next hop",
-    v4: "-",
-    source: "RFC 6666",
-  },
-  {
-    address: "2001:20::/28",
-    name: "ORCHIDv2",
-    description: "Cryptographic host identifiers",
-    v4: "-",
-    source: "RFC 7343",
-  },
-  {
-    address: "2001:db8::/32",
-    name: "Documentation",
-    description: "Examples and documentation only",
-    v4: "192.0.2.0/24",
-    source: "RFC 3849",
-  },
-  {
-    address: "2002::/16",
-    name: "6to4 (deprecated)",
-    description: "Transition mechanism, formally deprecated",
-    v4: "-",
-    source: "RFC 7526",
-  },
-  {
-    address: "fe80::/10",
-    name: "Link-Local Unicast",
-    description: "Auto-configured, never routed off the link",
-    v4: "169.254.0.0/16",
-    source: "RFC 4291 2.5.6",
-  },
-  {
-    address: "fc00::/7",
-    name: "Unique Local",
-    description: "Private addressing, not globally routed",
-    v4: "RFC 1918 ranges",
-    source: "RFC 4193",
-  },
-]
+// the prefix rows come from the one ipv6 registry table in lib/reference. the
+// ipv4 counterpart is the only column that lives here, because it is a teaching
+// aid for this panel rather than registry data.
+const IPV4_COUNTERPART: Readonly<Record<string, string>> = {
+  "::/128": "0.0.0.0",
+  "::1/128": "127.0.0.1",
+  "2001:db8::/32": "192.0.2.0/24",
+  "fe80::/10": "169.254.0.0/16",
+  "fc00::/7": "RFC 1918 ranges",
+  "fd00::/8": "RFC 1918 ranges",
+}
 
 export function IPv6SpecialAddresses({ embedded }: PanelProps) {
   return (
@@ -120,6 +52,9 @@ export function IPv6SpecialAddresses({ embedded }: PanelProps) {
                     Description
                   </th>
                   <th scope="col" className="p-2 text-left font-medium">
+                    Globally Routed
+                  </th>
+                  <th scope="col" className="p-2 text-left font-medium">
                     IPv4 Equivalent
                   </th>
                   <th scope="col" className="p-2 text-left font-medium">
@@ -128,15 +63,18 @@ export function IPv6SpecialAddresses({ embedded }: PanelProps) {
                 </tr>
               </thead>
               <tbody>
-                {SPECIAL_ADDRESSES.map((entry) => (
-                  <tr key={entry.address} className="hover:bg-muted/50 border-b">
+                {IPV6_SPECIAL_RANGES.map((entry) => (
+                  <tr key={entry.range} className="hover:bg-muted/50 border-b">
                     <th scope="row" className="p-2 text-left font-mono font-normal">
-                      {entry.address}
+                      {entry.range}
                     </th>
                     <td className="p-2">{entry.name}</td>
                     <td className="text-muted-foreground p-2">{entry.description}</td>
-                    <td className="p-2 font-mono text-xs">{entry.v4}</td>
-                    <td className="text-muted-foreground p-2 text-xs">{entry.source}</td>
+                    <td className="p-2">{entry.routable}</td>
+                    <td className="p-2 font-mono text-xs">
+                      {IPV4_COUNTERPART[entry.range] ?? "-"}
+                    </td>
+                    <td className="text-muted-foreground p-2 text-xs">{entry.rfc}</td>
                   </tr>
                 ))}
               </tbody>

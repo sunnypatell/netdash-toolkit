@@ -115,6 +115,18 @@ describe("6 GHz channel plan", () => {
     expect(channels6.find((ch) => ch.channel === 193)?.maxWidth).toBe(160)
     expect(channels6.find((ch) => ch.channel === 233)?.maxWidth).toBe(20)
   })
+
+  it("pins every step of the width ladder on both sides of its boundary", () => {
+    // the 40 MHz pair at 225-229 sat between two tested channels, so the whole
+    // tier could be deleted without failing anything
+    const widthAt = (channel: number) => channels6.find((ch) => ch.channel === channel)?.maxWidth
+    expect(widthAt(189)).toBe(320)
+    expect(widthAt(193)).toBe(160)
+    expect(widthAt(221)).toBe(160)
+    expect(widthAt(225)).toBe(40)
+    expect(widthAt(229)).toBe(40)
+    expect(widthAt(233)).toBe(20)
+  })
 })
 
 describe("capacity maths", () => {
@@ -169,7 +181,9 @@ describe("capacity maths", () => {
     ] as const) {
       const result = capacity(standard, band, 20)
       expect(result.supported).toBe(false)
-      expect(result.reason).toBeTruthy()
+      // named, not just truthy: the two reasons this function can give are
+      // different diagnoses, and toBeTruthy() let either template become "x"
+      expect(result.reason).toBe(`${standard} does not operate in the ${band} GHz band`)
       expect(result.theoretical).toBe(0)
     }
   })
@@ -178,6 +192,11 @@ describe("capacity maths", () => {
     expect(capacity("802.11be", "5", 320).supported).toBe(false)
     expect(capacity("802.11ax", "2.4", 80).supported).toBe(false)
     expect(capacity("802.11n", "5", 80).supported).toBe(false)
+    // the other of the two reasons, so neither template can be swapped for the
+    // other without failing
+    expect(capacity("802.11be", "5", 320).reason).toBe(
+      "802.11be has no 320 MHz mode in the 5 GHz band"
+    )
   })
 
   it("applies the 60% real world factor and keeps per-client above zero", () => {
@@ -188,7 +207,20 @@ describe("capacity maths", () => {
       maxClients: 200,
     })
     expect(result.realWorld).toBe(Math.round(result.theoretical * 0.6))
-    expect(result.perClient).toBeGreaterThan(0)
+    // pinned, not just positive: `realWorld * maxClients` is also above zero
+    expect(result.perClient).toBe(Math.round((result.realWorld / 200) * 10) / 10)
+    expect(result.perClient).toBeLessThan(result.realWorld)
+  })
+
+  it("keeps one decimal so a dense deployment does not read as 0 Mbps per client", () => {
+    const dense = calculateWiFiCapacity({
+      standard: "802.11ax",
+      band: "5",
+      width: 80,
+      maxClients: 2000,
+    })
+    expect(dense.perClient).toBeGreaterThan(0)
+    expect(dense.perClient * 10).toBe(Math.round(dense.perClient * 10))
   })
 
   it("treats junk client counts as one client rather than a divide by zero", () => {

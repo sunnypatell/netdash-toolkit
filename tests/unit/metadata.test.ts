@@ -55,8 +55,10 @@ describe("sitemap", () => {
 describe("robots", () => {
   const result = robots()
 
-  it("points at the sitemap and disallows the non-public routes", () => {
-    expect(result.sitemap).toBe(`${SITE_URL}/sitemap.xml`)
+  it("points at both sitemaps and disallows the non-public routes", () => {
+    // the docs are a separate astro build with their own sitemap
+    expect(result.sitemap).toContain(`${SITE_URL}/sitemap.xml`)
+    expect(result.sitemap).toContain(`${SITE_URL}/docs/sitemap-index.xml`)
     const rules = Array.isArray(result.rules) ? result.rules[0] : result.rules
     expect(rules.disallow).toContain("/projects/")
     expect(rules.disallow).toContain("/auth/")
@@ -81,6 +83,21 @@ describe("manifest", () => {
   it("uses colours that exist in the stylesheet", () => {
     expect(result.theme_color).toMatch(/^#[0-9a-f]{6}$/)
     expect(result.background_color).toMatch(/^#[0-9a-f]{6}$/)
+  })
+})
+
+describe("shipped version", () => {
+  // components/header.tsx renders changelog.releases[0].version, so a release
+  // that bumps package.json without adding a changelog entry ships a badge
+  // showing the previous version. that happened: v3.0.0 on a 3.0.1 build.
+  it("the changelog's newest entry matches the package version", async () => {
+    const [pkg, changelog] = await Promise.all([
+      import("../../package.json"),
+      import("../../data/changelog.json"),
+    ])
+    const newest = (changelog.default ?? changelog).releases[0]?.version
+    expect(newest, "data/changelog.json has no releases").toBeTruthy()
+    expect(newest).toBe((pkg.default ?? pkg).version)
   })
 })
 

@@ -172,7 +172,8 @@ describe("offline panels work standalone", () => {
   it("derives a solicited-node multicast address and an eui-64", () => {
     render(createElement(IPv6Panel, {}))
     fireEvent.click(screen.getByRole("button", { name: "Generate" }))
-    expect(screen.getByText("ff02::1:ff00:0001")).toBeTruthy()
+    // rfc 5952 4.1: no leading zeros, so not ff02::1:ff00:0001
+    expect(screen.getByText("ff02::1:ff00:1")).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: "Generate EUI-64" }))
     expect(screen.getByText("2001:db8::211:22ff:fe33:4455")).toBeTruthy()

@@ -4,7 +4,7 @@ import { useMemo } from "react"
 import { filterRows } from "@/lib/reference/search"
 import { SUBNET_MASKS } from "@/lib/reference/subnet-masks"
 import type { SubnetMaskEntry } from "@/lib/reference/types"
-import { ReferenceTable, type ReferenceColumn } from "./reference-table"
+import { ReferenceTable, searchableText, type ReferenceColumn } from "../shared/reference-table"
 
 const columns: ReferenceColumn<SubnetMaskEntry>[] = [
   {
@@ -41,17 +41,18 @@ const columns: ReferenceColumn<SubnetMaskEntry>[] = [
 
 export function CIDRPanel({ searchTerm }: { searchTerm: string }) {
   const rows = useMemo(
-    () => filterRows(SUBNET_MASKS, searchTerm, (row) => columns.map((column) => column.text(row))),
+    () => filterRows(SUBNET_MASKS, searchTerm, (row) => searchableText(columns, row)),
     [searchTerm]
   )
 
   return (
     <ReferenceTable
       title="CIDR Notation Cheat Sheet"
-      description="Subnet masks, wildcard masks and usable hosts for every prefix length; /31 is RFC 3021 and /32 is a host route"
+      description={`Subnet masks, wildcard masks and usable hosts for every prefix length; /31 is RFC 3021 and /32 is a host route (${rows.length} shown)`}
       rows={rows}
       columns={columns}
       rowKey={(row) => `/${row.prefix}`}
+      maxHeight="h-[500px]"
     />
   )
 }

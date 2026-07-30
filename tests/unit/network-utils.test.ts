@@ -182,6 +182,27 @@ describe("expandIPv6 / compressIPv6 (rfc 5952)", () => {
     expect(isValidIPv6("::ffff:192.168.1.1")).toBe(true)
   })
 
+  it("keeps the dotted quad for ipv4-mapped addresses (rfc 5952 5)", () => {
+    expect(compressIPv6("::ffff:192.168.1.1")).toBe("::ffff:192.168.1.1")
+    expect(compressIPv6("0:0:0:0:0:ffff:c0a8:0101")).toBe("::ffff:192.168.1.1")
+    expect(compressIPv6("::ffff:192.0.2.33")).toBe("::ffff:192.0.2.33")
+    // low groups of 0 still render as an address, not as an empty tail
+    expect(compressIPv6("::ffff:0.0.0.0")).toBe("::ffff:0.0.0.0")
+    expect(compressIPv6("::ffff:192.168.1.1%eth0")).toBe("::ffff:192.168.1.1%eth0")
+  })
+
+  it("applies the dotted quad only to ::ffff:0:0/96", () => {
+    // ::/96 is the deprecated ipv4-compatible block and holds :: and ::1, so
+    // section 5 must not reach it
+    expect(compressIPv6("::1")).toBe("::1")
+    expect(compressIPv6("::")).toBe("::")
+    expect(compressIPv6("::c0a8:101")).toBe("::c0a8:101")
+    // rfc 6052 nat64 is represented in hex, not dotted quad
+    expect(compressIPv6("64:ff9b::192.0.2.33")).toBe("64:ff9b::c000:221")
+    // a mapped-looking suffix under a real prefix is untouched
+    expect(compressIPv6("2001:db8::ffff:c0a8:101")).toBe("2001:db8::ffff:c0a8:101")
+  })
+
   it("lowercases hex per rfc 5952 4.3", () => {
     expect(compressIPv6("2001:DB8::1")).toBe("2001:db8::1")
     expect(compressIPv6("FE80:0:0:0:0:0:0:ABCD")).toBe("fe80::abcd")
@@ -239,11 +260,17 @@ describe("solicitedNodeMulticast", () => {
   it("pads unexpanded groups instead of mis-slicing them", () => {
     // the copy in network-testing.ts sliced the raw text and produced
     // "ff02::1:ff:f1" for this address
-    expect(solicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:0001")
+    expect(solicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:1")
+  })
+
+  it("writes the last group without leading zeros (rfc 5952 4.1)", () => {
+    expect(solicitedNodeMulticast("2001:db8::1")).toBe("ff02::1:ff00:1")
+    // 4.2.2: a single zero group is written "0", never compressed to ::
+    expect(solicitedNodeMulticast("2001:db8::")).toBe("ff02::1:ff00:0")
   })
 
   it("ignores a zone id", () => {
-    expect(solicitedNodeMulticast("fe80::1%eth0")).toBe("ff02::1:ff00:0001")
+    expect(solicitedNodeMulticast("fe80::1%eth0")).toBe("ff02::1:ff00:1")
   })
 })
 

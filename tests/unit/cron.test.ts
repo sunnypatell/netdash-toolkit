@@ -92,6 +92,35 @@ describe("nextCronRuns", () => {
     }
   })
 
+  // the smoke test above asserts only "some run exists", so a normalizeCron that
+  // dropped the nth qualifier turned "third friday" into "every friday" and the
+  // description still said "third Friday" beside a schedule that contradicted it
+  it("puts 5#3 on the third friday of the month, not on every friday", () => {
+    const { runs, error } = nextCronRuns("0 0 * * 5#3", {
+      timeZone: "UTC",
+      count: 4,
+      from: FROM,
+    })
+    expect(error).toBeNull()
+    expect(runs.map((run) => run.date.toISOString().slice(0, 10))).toEqual([
+      "2026-08-21",
+      "2026-09-18",
+      "2026-10-16",
+      "2026-11-20",
+    ])
+  })
+
+  it("fires a 6-field seconds expression every 30 seconds, not every minute", () => {
+    const { runs, error } = nextCronRuns("*/30 * * * * *", {
+      timeZone: "UTC",
+      count: 3,
+      from: FROM,
+    })
+    expect(error).toBeNull()
+    const gaps = runs.slice(1).map((run, i) => run.date.getTime() - runs[i].date.getTime())
+    expect(gaps).toEqual([30_000, 30_000])
+  })
+
   it("resolves @daily and reports @reboot honestly instead of silently empty", () => {
     expect(nextCronRuns("@daily", { timeZone: "UTC", count: 1, from: FROM }).runs).toHaveLength(1)
     const reboot = nextCronRuns("@reboot", { timeZone: "UTC", count: 1, from: FROM })

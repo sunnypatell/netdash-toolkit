@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  formatDuration,
+  formatTokenLifetime,
   inspectJwt,
   readTimeClaims,
   timeClaimLabel,
@@ -138,17 +138,17 @@ describe("decoding fidelity", () => {
   })
 })
 
-describe("formatDuration keeps seconds", () => {
+describe("formatTokenLifetime keeps seconds", () => {
   it("never rounds sub-minute values away", () => {
-    expect(formatDuration(40_000)).toBe("40s")
-    expect(formatDuration(1_000)).toBe("1s")
-    expect(formatDuration(0)).toBe("0s")
+    expect(formatTokenLifetime(40_000)).toBe("40s")
+    expect(formatTokenLifetime(1_000)).toBe("1s")
+    expect(formatTokenLifetime(0)).toBe("0s")
   })
 
   it("builds up progressively", () => {
-    expect(formatDuration(90_000)).toBe("1m 30s")
-    expect(formatDuration(3_661_000)).toBe("1h 1m 1s")
-    expect(formatDuration(90_061_000)).toBe("1d 1h 1m 1s")
+    expect(formatTokenLifetime(90_000)).toBe("1m 30s")
+    expect(formatTokenLifetime(3_661_000)).toBe("1h 1m 1s")
+    expect(formatTokenLifetime(90_061_000)).toBe("1d 1h 1m 1s")
   })
 
   it("labels a token with 40s left as 40s, not 0m", () => {

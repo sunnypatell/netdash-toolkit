@@ -1,5 +1,8 @@
-import { intToIpv4, prefixToMaskInt, prefixToNetmask } from "@/lib/network-utils"
+import { SUBNET_MASKS } from "@/lib/reference/subnet-masks"
 
+// prefix, mask, wildcard and usable hosts live once, in lib/reference/subnet-masks.
+// this module is the ascending view of that table plus the total address count,
+// the one column the reference table has no use for.
 export interface CIDREntry {
   prefix: number
   mask: string
@@ -8,26 +11,9 @@ export interface CIDREntry {
   usableHosts: number
 }
 
-// rfc 3021: a /31 has 2 usable addresses, not 0. a /32 is a host route with 1.
-export function usableHostsForPrefix(prefix: number): number {
-  const total = 2 ** (32 - prefix)
-  if (prefix >= 31) return total
-  return total - 2
-}
-
-function entryFor(prefix: number): CIDREntry {
-  return {
-    prefix,
-    mask: prefixToNetmask(prefix),
-    wildcard: intToIpv4(~prefixToMaskInt(prefix) >>> 0),
-    totalAddresses: 2 ** (32 - prefix),
-    usableHosts: usableHostsForPrefix(prefix),
-  }
-}
-
-export const CIDR_TABLE: readonly CIDREntry[] = Array.from({ length: 33 }, (_, prefix) =>
-  entryFor(prefix)
-)
+export const CIDR_TABLE: readonly CIDREntry[] = [...SUBNET_MASKS]
+  .sort((a, b) => a.prefix - b.prefix)
+  .map((entry) => ({ ...entry, totalAddresses: 2 ** (32 - entry.prefix) }))
 
 export const COMMON_PREFIXES = [8, 16, 24, 25, 26, 27, 28, 29, 30, 31, 32] as const
 

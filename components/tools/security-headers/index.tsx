@@ -12,12 +12,12 @@ import { ToolHeader } from "@/components/ui/tool-header"
 import { CORS_SAFELISTED_RESPONSE_HEADERS } from "@/lib/browser-limits"
 import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
 import { SECURITY_HEADER_SPECS } from "@/lib/security-header-grade"
-import { GradeReport, type GradeInput } from "./security-headers/grade-report"
+import { GradeReport, type GradeInput } from "./grade-report"
 
 // one chunk per acquisition route; only the open tab is fetched and mounted
-const PastePanel = lazy(() => import("./security-headers/paste"))
-const ObservatoryPanel = lazy(() => import("./security-headers/observatory"))
-const RelayPanel = lazy(() => import("./security-headers/relay"))
+const PastePanel = lazy(() => import("./paste"))
+const ObservatoryPanel = lazy(() => import("./observatory"))
+const RelayPanel = lazy(() => import("./relay"))
 
 const TABS = ["paste", "observatory", "relay"] as const
 

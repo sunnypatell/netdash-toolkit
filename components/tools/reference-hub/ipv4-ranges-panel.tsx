@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { IPV4_SPECIAL_RANGES } from "@/lib/reference/ipv4-ranges"
 import { filterRows } from "@/lib/reference/search"
 import type { IPv4RangeEntry } from "@/lib/reference/types"
-import { ReferenceTable, type ReferenceColumn } from "./reference-table"
+import { ReferenceTable, searchableText, type ReferenceColumn } from "../shared/reference-table"
 
 const columns: ReferenceColumn<IPv4RangeEntry>[] = [
   {
@@ -51,20 +51,18 @@ const columns: ReferenceColumn<IPv4RangeEntry>[] = [
 
 export function IPv4RangesPanel({ searchTerm }: { searchTerm: string }) {
   const rows = useMemo(
-    () =>
-      filterRows(IPV4_SPECIAL_RANGES, searchTerm, (row) =>
-        columns.map((column) => column.text(row))
-      ),
+    () => filterRows(IPV4_SPECIAL_RANGES, searchTerm, (row) => searchableText(columns, row)),
     [searchTerm]
   )
 
   return (
     <ReferenceTable
       title="Private and Reserved IPv4 Ranges"
-      description="The IANA IPv4 special-purpose registry, including the RFC 1918 private blocks"
+      description={`The IANA IPv4 special-purpose registry, including the RFC 1918 private blocks (${rows.length} shown)`}
       rows={rows}
       columns={columns}
       rowKey={(row) => row.range}
+      maxHeight="h-[500px]"
     />
   )
 }

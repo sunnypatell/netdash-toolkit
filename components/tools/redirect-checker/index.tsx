@@ -11,11 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Globe, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
-import { ChainSummary, ChainView, type TracedChain } from "./redirect-checker/chain-view"
+import { ChainSummary, ChainView, type TracedChain } from "./chain-view"
 
 // one chunk per acquisition method; only the open tab is fetched and mounted
-const PastePanel = lazy(() => import("./redirect-checker/paste"))
-const RelayPanel = lazy(() => import("./redirect-checker/relay"))
+const PastePanel = lazy(() => import("./paste"))
+const RelayPanel = lazy(() => import("./relay"))
 
 const TABS = ["paste", "relay"] as const
 

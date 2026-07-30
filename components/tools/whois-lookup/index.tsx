@@ -21,12 +21,12 @@ import {
   type RDAPDomainResponse,
   type RDAPIPResponse,
 } from "@/lib/rdap"
-import { ASNResult, IPResult } from "./whois-lookup/network-results"
+import { ASNResult, IPResult } from "./network-results"
 
 // one chunk per domain panel
-const InfoPanel = lazy(() => import("./whois-lookup/info"))
-const ContactsPanel = lazy(() => import("./whois-lookup/contacts"))
-const NameserversPanel = lazy(() => import("./whois-lookup/nameservers"))
+const InfoPanel = lazy(() => import("./info"))
+const ContactsPanel = lazy(() => import("./contacts"))
+const NameserversPanel = lazy(() => import("./nameservers"))
 
 const TABS = ["info", "contacts", "nameservers"] as const
 

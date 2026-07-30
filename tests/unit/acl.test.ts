@@ -8,6 +8,7 @@ import {
   parsePortRange,
   validateExtendedRule,
   validateStandardRule,
+  wildcardToPrefix,
 } from "@/lib/acl"
 import type { ACLPlatform, ACLSpec, ExtendedACLRule, StandardACLRule } from "@/lib/acl"
 
@@ -64,10 +65,24 @@ describe("parseACLNetwork", () => {
     expect(parsed.warnings).toContain("Normalized network to 192.168.1.0/24")
   })
 
-  it("rejects a non-contiguous prefix and junk input", () => {
+  it("rejects an out-of-range prefix and junk input", () => {
+    // renamed: none of these is a mask at all, so none of them ever reached a
+    // contiguity check. parseACLNetwork takes a prefix length, so it cannot
+    // receive a non-contiguous mask in the first place
     expect(() => parseACLNetwork("10.0.0.0/33")).toThrow()
     expect(() => parseACLNetwork("999.1.1.1")).toThrow()
     expect(() => parseACLNetwork("")).toThrow()
+  })
+
+  it("converts a wildcard to a prefix and refuses a non-contiguous one", () => {
+    // the contiguity logic lives here, and nothing called it: its only in-repo
+    // call site is unreachable because parseACLNetwork always sets prefix
+    expect(wildcardToPrefix("0.0.0.255")).toBe(24)
+    expect(wildcardToPrefix("0.0.0.0")).toBe(32)
+    expect(wildcardToPrefix("255.255.255.255")).toBe(0)
+    expect(wildcardToPrefix("0.0.15.255")).toBe(20)
+    // 0.255.0.255 inverts to 255.0.255.0, which is not a run of leading 1 bits
+    expect(() => wildcardToPrefix("0.255.0.255")).toThrow(/contiguous/i)
   })
 })
 
@@ -124,7 +139,10 @@ describe("cisco ios standard acl", () => {
 
   it("closes with an explicit deny any and an access-group hint", () => {
     const output = gen({ aclType: "standard", aclName: "10" }, { standard: SAMPLE_STANDARD_RULES })
-    expect(output).toContain("access-list 10 deny any")
+    // whole line, not a prefix substring: toContain also accepted
+    // "access-list 10 deny any log" and "deny any any", neither of which is
+    // valid standard-acl syntax
+    expect(output.split("\n").map((l) => l.trim())).toContain("access-list 10 deny any")
     expect(output).not.toContain("access-list 10 deny ip any any")
     expect(output).toContain("!  ip access-group 10 in")
   })

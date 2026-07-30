@@ -13,9 +13,9 @@ import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
 import { getToolBySlug } from "@/lib/tool-registry"
 
 // one chunk per panel; the interfaces panel never loads on the web build
-const PingPanel = lazy(() => import("./ping-traceroute/ping"))
-const TraceroutePanel = lazy(() => import("./ping-traceroute/traceroute"))
-const InterfacesPanel = lazy(() => import("./ping-traceroute/interfaces"))
+const PingPanel = lazy(() => import("./ping"))
+const TraceroutePanel = lazy(() => import("./traceroute"))
+const InterfacesPanel = lazy(() => import("./interfaces"))
 
 const TABS = ["ping", "traceroute", "interfaces"] as const
 

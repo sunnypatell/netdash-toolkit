@@ -7,43 +7,25 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { formatCompactNumber } from "@/lib/format"
+import { cidrToRange, intToIpv4 } from "@/lib/network-utils"
+import { IPV4_SPECIAL_RANGES } from "@/lib/reference/ipv4-ranges"
 
 const CommonCIDRs = lazy(() => import("./common"))
 const AllCIDRs = lazy(() => import("./all"))
 
 const TABS = ["common", "all"] as const
 
-const PRIVATE_RANGES = [
-  {
-    cidr: "10.0.0.0/8",
-    legacyClass: "Class A",
-    range: "10.0.0.0 - 10.255.255.255",
-    hosts: "16.7M",
-  },
-  {
-    cidr: "172.16.0.0/12",
-    legacyClass: "Class B",
-    range: "172.16.0.0 - 172.31.255.255",
-    hosts: "1.05M",
-  },
-  {
-    cidr: "192.168.0.0/16",
-    legacyClass: "Class C",
-    range: "192.168.0.0 - 192.168.255.255",
-    hosts: "65.5K",
-  },
-]
+// both cards are views over the one ipv4 registry table in lib/reference. the
+// copies that used to live here labelled the rfc 1918 blocks "Class A/B/C",
+// which reference-data.test.ts now forbids outright.
+const PRIVATE_RANGES = IPV4_SPECIAL_RANGES.filter((entry) => entry.rfc === "RFC 1918")
+const SPECIAL_RANGES = IPV4_SPECIAL_RANGES.filter((entry) => entry.rfc !== "RFC 1918")
 
-const SPECIAL_RANGES = [
-  { cidr: "0.0.0.0/8", purpose: "This network", source: "RFC 1122" },
-  { cidr: "100.64.0.0/10", purpose: "Shared address space (CGNAT)", source: "RFC 6598" },
-  { cidr: "127.0.0.0/8", purpose: "Loopback", source: "RFC 1122" },
-  { cidr: "169.254.0.0/16", purpose: "Link-local (APIPA)", source: "RFC 3927" },
-  { cidr: "192.0.2.0/24", purpose: "Documentation (TEST-NET-1)", source: "RFC 5737" },
-  { cidr: "224.0.0.0/4", purpose: "Multicast", source: "RFC 5771" },
-  { cidr: "240.0.0.0/4", purpose: "Reserved, formerly class E", source: "RFC 1112" },
-  { cidr: "255.255.255.255/32", purpose: "Limited broadcast", source: "RFC 919" },
-]
+function addressSpan(cidr: string): string {
+  const { start, end } = cidrToRange(cidr)
+  return `${intToIpv4(start)} - ${intToIpv4(end)}`
+}
 
 const fallback = <p className="text-muted-foreground py-8 text-center text-sm">Loading table</p>
 
@@ -92,14 +74,15 @@ export function CIDRReference() {
           <CardContent>
             <div className="space-y-3">
               {PRIVATE_RANGES.map((entry) => (
-                <div key={entry.cidr} className="rounded-lg border p-3">
+                <div key={entry.range} className="rounded-lg border p-3">
                   <div className="flex items-center justify-between">
-                    <Badge className="font-mono">{entry.cidr}</Badge>
-                    <span className="text-muted-foreground text-sm">{entry.legacyClass}</span>
+                    <Badge className="font-mono">{entry.range}</Badge>
+                    <span className="text-muted-foreground text-sm">{entry.type}</span>
                   </div>
                   <p className="mt-1 text-sm">
-                    {entry.range} ({entry.hosts} addresses)
+                    {addressSpan(entry.range)} ({formatCompactNumber(entry.addresses)} addresses)
                   </p>
+                  <p className="text-muted-foreground mt-1 text-sm">{entry.description}</p>
                 </div>
               ))}
             </div>
@@ -113,12 +96,13 @@ export function CIDRReference() {
           <CardContent>
             <div className="space-y-2">
               {SPECIAL_RANGES.map((entry) => (
-                <div key={entry.cidr} className="rounded-lg border p-3">
+                <div key={entry.range} className="rounded-lg border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Badge className="font-mono">{entry.cidr}</Badge>
-                    <span className="text-muted-foreground text-xs">{entry.source}</span>
+                    <Badge className="font-mono">{entry.range}</Badge>
+                    <span className="text-muted-foreground text-xs">{entry.rfc}</span>
                   </div>
-                  <p className="text-muted-foreground mt-1 text-sm">{entry.purpose}</p>
+                  <p className="mt-1 text-sm">{entry.type}</p>
+                  <p className="text-muted-foreground mt-1 text-sm">{entry.description}</p>
                 </div>
               ))}
             </div>

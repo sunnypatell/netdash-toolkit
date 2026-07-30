@@ -78,9 +78,11 @@ const FETCH_CALL = /\bfetch\w*\(/
 const FETCH_ARG = /\bfetch\w*\(\s*["'`]?$/
 const ENDPOINT_CONST =
   /\b(?:const|let|var)\s+[A-Z0-9_]*(?:ENDPOINT|API|RESOLVER|HOST)[A-Z0-9_]*\s*=[^=]*$/
-// any screaming-case constant in a file that fetches: lib/rdap.ts calls its
-// BOOTSTRAP, and the next module will name it something else again
-const CONST_IN_FETCHING_FILE = /\b(?:const|let|var)\s+[A-Z][A-Z0-9_]*\s*=[^=]*$/
+// any constant in a file that fetches: lib/rdap.ts calls its BOOTSTRAP, and the
+// next module will name it something else again. this deliberately does not
+// require screaming case, because `const observatoryBase = "https://..."` beside
+// a fetch is the same egress and the screaming-only version missed it.
+const CONST_IN_FETCHING_FILE = /\b(?:const|let|var)\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=[^=]*$/
 const URL_BINDING = /(?:^|[^A-Za-z0-9_.])url\s*[:=]\s*["'`]$/
 const SCRIPT_SRC = /\bscript\w*\.src\s*=\s*["'`]$/
 
@@ -90,40 +92,52 @@ interface Egress {
   interpolated: string[]
 }
 
-function scanEgress(): Egress {
-  const connect = new Map<string, string[]>()
-  const script = new Map<string, string[]>()
-  const interpolated: string[] = []
+function scanSource(src: string, rel: string, into: Egress) {
   const record = (map: Map<string, string[]>, host: string, where: string) => {
     if (host === new URL(WEB_ORIGIN).hostname) return // 'self' on the web build
     map.set(host, [...(map.get(host) ?? []), where])
   }
+  const fileFetches = FETCH_CALL.test(src)
 
+  for (const m of src.matchAll(/https?:\/\/([a-z0-9][a-z0-9.-]*\.[a-z]{2,})/gi)) {
+    const before = src.slice(Math.max(0, m.index - LOOKBACK), m.index).replace(/\s+/g, " ")
+    const where = `${rel}:${src.slice(0, m.index).split("\n").length}`
+    const host = m[1].toLowerCase()
+    if (SCRIPT_SRC.test(before)) record(into.script, host, where)
+    else if (FETCH_ARG.test(before) || ENDPOINT_CONST.test(before))
+      record(into.connect, host, where)
+    else if (fileFetches && (URL_BINDING.test(before) || CONST_IN_FETCHING_FILE.test(before)))
+      record(into.connect, host, where)
+  }
+
+  // a host interpolated straight into a fetch argument: the user typed it.
+  // only direct fetch args are detected, so this is a floor, not the total.
+  for (const m of src.matchAll(/https?:\/\/\$\{|\}:\/\//g)) {
+    if (!FETCH_CALL.test(src.slice(Math.max(0, m.index - 100), m.index))) continue
+    into.interpolated.push(`${rel}:${src.slice(0, m.index).split("\n").length}`)
+  }
+}
+
+function emptyEgress(): Egress {
+  return { connect: new Map(), script: new Map(), interpolated: [] }
+}
+
+function scanEgress(): Egress {
+  const out = emptyEgress()
   for (const dir of SCAN_DIRS) {
     for (const file of sourceFiles(join(repoRoot, dir))) {
-      const src = readFileSync(file, "utf8")
-      const rel = file.slice(repoRoot.length + 1)
-      const fileFetches = FETCH_CALL.test(src)
-
-      for (const m of src.matchAll(/https?:\/\/([a-z0-9][a-z0-9.-]*\.[a-z]{2,})/gi)) {
-        const before = src.slice(Math.max(0, m.index - LOOKBACK), m.index).replace(/\s+/g, " ")
-        const where = `${rel}:${src.slice(0, m.index).split("\n").length}`
-        const host = m[1].toLowerCase()
-        if (SCRIPT_SRC.test(before)) record(script, host, where)
-        else if (FETCH_ARG.test(before) || ENDPOINT_CONST.test(before)) record(connect, host, where)
-        else if (fileFetches && (URL_BINDING.test(before) || CONST_IN_FETCHING_FILE.test(before)))
-          record(connect, host, where)
-      }
-
-      // a host interpolated straight into a fetch argument: the user typed it.
-      // only direct fetch args are detected, so this is a floor, not the total.
-      for (const m of src.matchAll(/https?:\/\/\$\{|\}:\/\//g)) {
-        if (!FETCH_CALL.test(src.slice(Math.max(0, m.index - 100), m.index))) continue
-        interpolated.push(`${rel}:${src.slice(0, m.index).split("\n").length}`)
-      }
+      scanSource(readFileSync(file, "utf8"), file.slice(repoRoot.length + 1), out)
     }
   }
-  return { connect, script, interpolated }
+  return out
+}
+
+// the scan is the only thing standing between an undisclosed third-party call
+// and a green ci run, so it gets fed known-bad input rather than trusted.
+function connectHostsIn(src: string): string[] {
+  const out = emptyEgress()
+  scanSource(src, "synthetic.ts", out)
+  return [...out.connect.keys()].sort()
 }
 
 const egress = scanEgress()
@@ -292,6 +306,30 @@ describe.each(BUILDS)("%s policy", (_name, policy, selfOrigin) => {
     expect(
       permits(policy["connect-src"], "https://whatever-the-user-typed.example/", selfOrigin)
     ).toBe(true)
+  })
+})
+
+describe("the egress scan sees the shapes a third-party call is written in", () => {
+  it.each([
+    ["a direct fetch argument", 'await fetch("https://probe.example/v1")'],
+    [
+      "a screaming-case endpoint constant",
+      'const PROBE_ENDPOINT = "https://probe.example"\nfetch(`${PROBE_ENDPOINT}/v1`)',
+    ],
+    [
+      "a camelCase constant in a fetching file",
+      'const probeBase = "https://probe.example"\nasync function go() { return fetch(`${probeBase}/v1`) }',
+    ],
+    [
+      "a url-keyed property in a fetching file",
+      'const target = { url: "https://probe.example/v1" }\nfetch(target.url)',
+    ],
+  ])("catches %s", (_shape, source) => {
+    expect(connectHostsIn(source)).toContain("probe.example")
+  })
+
+  it("does not sweep in a documentation link from a file that never fetches", () => {
+    expect(connectHostsIn('const learnMore = "https://developer.mozilla.org/en-US/"')).toEqual([])
   })
 })
 

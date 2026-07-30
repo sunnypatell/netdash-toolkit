@@ -9,7 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Server, Search } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { DataTable, searchableText, type DataColumn } from "@/components/tools/reference-table"
+import {
+  ReferenceTable,
+  searchableText,
+  type ReferenceColumn,
+} from "@/components/tools/shared/reference-table"
 import { filterRows } from "@/lib/reference/search"
 import {
   CATEGORIZED_PORTS,
@@ -21,42 +25,42 @@ import {
 
 const CATEGORY_VALUES = ["all", ...(Object.keys(PORT_CATEGORY_LABELS) as PortCategory[])] as const
 
-const columns: DataColumn<CategorizedPortEntry>[] = [
+const columns: ReferenceColumn<CategorizedPortEntry>[] = [
   {
     key: "port",
     header: "Port",
-    headerClassName: "w-24 p-2 text-left font-medium",
+    headClassName: "w-24",
     text: (row) => String(row.port),
     cell: (row) => (
       <Badge variant="secondary" className="font-mono">
         {row.port}
       </Badge>
     ),
-    copyable: true,
+    copyLabel: (row) => `Copy port ${row.port}`,
   },
   {
     key: "protocol",
     header: "Transport",
-    headerClassName: "w-28 p-2 text-left font-medium",
+    headClassName: "w-28",
     text: (row) => row.protocol,
     cell: (row) => <Badge variant="outline">{row.protocol}</Badge>,
   },
   {
     key: "service",
     header: "Service",
-    cellClassName: "p-2 font-medium",
+    cellClassName: "font-medium",
     text: (row) => row.service,
   },
   {
     key: "iana",
     header: "IANA Name",
-    cellClassName: "text-muted-foreground p-2 font-mono text-xs",
+    cellClassName: "text-muted-foreground font-mono text-xs",
     text: (row) => row.ianaName,
   },
   {
     key: "description",
     header: "Description",
-    cellClassName: "text-muted-foreground p-2",
+    cellClassName: "text-muted-foreground whitespace-normal",
     text: (row) => row.description,
   },
 ]
@@ -129,7 +133,7 @@ export function PortReference() {
 
         {/* the filtered table is the panel the selected category tab controls */}
         <TabsContent value={category}>
-          <DataTable
+          <ReferenceTable
             title={`${rows.length} Port${rows.length === 1 ? "" : "s"} Found`}
             description={categoryLabel(category)}
             rows={rows}

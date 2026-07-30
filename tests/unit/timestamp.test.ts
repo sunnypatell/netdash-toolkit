@@ -12,6 +12,12 @@ import {
 } from "@/lib/timestamp"
 import { formatInZone, zonedTimeToEpochMs, zoneOffsetMs } from "@/lib/timezones"
 
+// ci runs on ubuntu with no TZ set, so the ambient zone is UTC, where local ==
+// utc and no day is 23 or 25 hours long. every "local wall clock" and "dst
+// included" assertion below was therefore true of a utc-slicing implementation
+// too. pinning a zone with dst is what makes those tests able to fail.
+process.env.TZ = "America/New_York"
+
 describe("detectInputKind", () => {
   it("separates numbers, iso strings and loose date strings", () => {
     expect(detectInputKind("")).toBe("empty")
@@ -140,6 +146,22 @@ describe("parseTimestampInput", () => {
     expect(huge.ok).toBe(false)
     if (!huge.ok) expect(huge.error).toMatch(/range/i)
   })
+
+  it("rejects a digit string that overflows to Infinity", () => {
+    // "1e999" never reaches the finite guard: NUMERIC_RE has no exponent
+    // alternative, so it is classified text and dies at Date.parse instead. a
+    // plain run of digits is what actually enters the numeric branch and
+    // overflows there
+    const overflow = parseTimestampInput("9".repeat(400))
+    expect(overflow.ok).toBe(false)
+    if (!overflow.ok) expect(overflow.error).toMatch(/finite/i)
+  })
+
+  it("rejects a non-finite instant after the unit is applied", () => {
+    // finite input, infinite product: 1e308 seconds is 1e311 ms
+    const scaled = parseTimestampInput("1".padEnd(309, "0"), { unit: "s" })
+    expect(scaled.ok).toBe(false)
+  })
 })
 
 describe("unit round trips", () => {
@@ -158,9 +180,24 @@ describe("unit round trips", () => {
     expect(epochMsToUnitString(1609459200000, "filetime")).toBe("132539328000000000")
     expect(epochMsToUnitString(1609459200000, "ticks")).toBe("637450560000000000")
   })
+
+  it("renders the small scales exactly too, off a non-round instant", () => {
+    // the round trip above starts from an exact second and an exact excel day,
+    // so it could not tell floor from round, or 6 decimals from 2
+    // the half second is what separates floor from round, and 6 decimals from 2
+    const ms = 1609459200500 // 2021-01-01T00:00:00.500Z
+    expect(epochMsToUnitString(ms, "s")).toBe("1609459200")
+    expect(epochMsToUnitString(ms, "ms")).toBe("1609459200500")
+    expect(epochMsToUnitString(ms, "cocoa")).toBe("631152000")
+    expect(epochMsToUnitString(ms, "excel")).toBe("44197.000006")
+  })
 })
 
 describe("local wall-clock helpers", () => {
+  it("runs in a zone that is not utc, or these tests prove nothing", () => {
+    expect(new Date(Date.UTC(2021, 0, 1, 12)).getHours()).not.toBe(12)
+  })
+
   it("takes the date and the time from the same local clock", () => {
     // toISOString().split("T")[0] mixed with toTimeString() shifts the date by a
     // day every evening west of utc
@@ -171,6 +208,14 @@ describe("local wall-clock helpers", () => {
     }
   })
 
+  it("reads the local calendar fields, not a utc slice of the instant", () => {
+    // 19:30 local on new year's eve is already 00:30Z on the 1st, so a
+    // toISOString().slice() implementation prints tomorrow's date
+    const evening = new Date(2020, 11, 31, 19, 30, 15)
+    expect(toLocalDateInputValue(evening)).toBe("2020-12-31")
+    expect(toLocalTimeInputValue(evening)).toBe("19:30:15")
+  })
+
   it("keeps startOfLocalDay at local midnight across a whole year, dst included", () => {
     const start = new Date(2026, 0, 1, 12, 0, 0)
     for (let day = 0; day < 400; day++) {
@@ -179,6 +224,23 @@ describe("local wall-clock helpers", () => {
       expect(midnight.getMinutes()).toBe(0)
       expect(midnight.getSeconds()).toBe(0)
     }
+  })
+
+  it("crosses a dst boundary by a calendar day, not by 86400000 ms", () => {
+    // spring forward 2026-03-08 in new york: that local day is 23 hours long, so
+    // adding a fixed day of milliseconds lands at 01:00 on the 9th
+    const beforeSpring = new Date(2026, 2, 7, 12, 0, 0)
+    expect(startOfLocalDay(beforeSpring, 1).getTime()).toBe(new Date(2026, 2, 8).getTime())
+    expect(startOfLocalDay(beforeSpring, 2).getTime()).toBe(new Date(2026, 2, 9).getTime())
+    const springDay = startOfLocalDay(beforeSpring, 1)
+    const dayAfter = startOfLocalDay(beforeSpring, 2)
+    expect(dayAfter.getTime() - springDay.getTime()).toBe(23 * 3600 * 1000)
+
+    // fall back 2026-11-01 is 25 hours long
+    const beforeFall = new Date(2026, 9, 31, 12, 0, 0)
+    expect(
+      startOfLocalDay(beforeFall, 2).getTime() - startOfLocalDay(beforeFall, 1).getTime()
+    ).toBe(25 * 3600 * 1000)
   })
 })
 

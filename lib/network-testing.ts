@@ -6,6 +6,8 @@ import {
   toType as wireTypeToType,
 } from "@dnsquery/dns-packet/types.js"
 import { compressIPv6, expandIPv6, solicitedNodeMulticast } from "@/lib/network-utils"
+import { eui64Address } from "@/lib/ipv6-address"
+import { lookupLocal, parseMacInput } from "@/lib/oui-vendors"
 
 // DNS Cache implementation with TTL support
 interface DNSCacheEntry {
@@ -1117,192 +1119,16 @@ export const PROTOCOL_OVERHEADS = {
 // legacy alias kept for existing importers
 export const protocolOverheads = PROTOCOL_OVERHEADS
 
-// Enhanced OUI database with more vendors
-const ouiDatabase: Record<string, string> = {
-  // Cisco
-  "00:00:0C": "Cisco Systems",
-  "00:01:42": "Cisco Systems",
-  "00:01:43": "Cisco Systems",
-  "00:01:96": "Cisco Systems",
-  "00:01:97": "Cisco Systems",
-  "00:02:16": "Cisco Systems",
-  "00:02:17": "Cisco Systems",
-  "00:02:3D": "Cisco Systems",
-  "00:02:4A": "Cisco Systems",
-  "00:02:4B": "Cisco Systems",
-
-  // VMware
-  "00:0C:29": "VMware",
-  "00:1C:14": "VMware",
-  "00:50:56": "VMware",
-
-  // Microsoft
-  "00:15:5D": "Microsoft Corporation",
-  "00:17:FA": "Microsoft Corporation",
-  "00:03:FF": "Microsoft Corporation",
-
-  // Intel
-  "00:1B:21": "Intel Corporation",
-  "AC:DE:48": "Intel Corporation",
-  "00:13:02": "Intel Corporation",
-  "00:15:17": "Intel Corporation",
-  "00:16:76": "Intel Corporation",
-  "00:19:D1": "Intel Corporation",
-  "00:1E:67": "Intel Corporation",
-  "00:21:6A": "Intel Corporation",
-  "00:24:D7": "Intel Corporation",
-
-  // Apple
-  "B4:2E:99": "Apple Inc",
-  "F0:18:98": "Apple Inc",
-  "00:03:93": "Apple Inc",
-  "00:05:02": "Apple Inc",
-  "00:0A:27": "Apple Inc",
-  "00:0A:95": "Apple Inc",
-  "00:0D:93": "Apple Inc",
-  "00:11:24": "Apple Inc",
-  "00:14:51": "Apple Inc",
-  "00:16:CB": "Apple Inc",
-  "00:17:F2": "Apple Inc",
-  "00:19:E3": "Apple Inc",
-  "00:1B:63": "Apple Inc",
-  "00:1E:C2": "Apple Inc",
-  "00:21:E9": "Apple Inc",
-  "00:23:12": "Apple Inc",
-  "00:23:DF": "Apple Inc",
-  "00:25:00": "Apple Inc",
-  "00:25:4B": "Apple Inc",
-  "00:25:BC": "Apple Inc",
-  "00:26:08": "Apple Inc",
-  "00:26:4A": "Apple Inc",
-  "00:26:B0": "Apple Inc",
-  "00:26:BB": "Apple Inc",
-
-  // Dell
-  "00:14:22": "Dell Inc",
-  "00:1A:A0": "Dell Inc",
-  "00:21:9B": "Dell Inc",
-  "00:23:AE": "Dell Inc",
-  "00:24:E8": "Dell Inc",
-  "00:25:64": "Dell Inc",
-  "00:26:B9": "Dell Inc",
-  "B0:83:FE": "Dell Inc",
-  "D0:67:E5": "Dell Inc",
-  "F0:1F:AF": "Dell Inc",
-
-  // HP/HPE
-  "00:10:83": "Hewlett Packard Enterprise",
-  "00:11:0A": "Hewlett Packard Enterprise",
-  "00:13:21": "Hewlett Packard Enterprise",
-  "00:15:60": "Hewlett Packard Enterprise",
-  "00:16:35": "Hewlett Packard Enterprise",
-  "00:17:08": "Hewlett Packard Enterprise",
-  "00:18:71": "Hewlett Packard Enterprise",
-  "00:19:BB": "Hewlett Packard Enterprise",
-  "00:1A:4B": "Hewlett Packard Enterprise",
-  "00:1B:78": "Hewlett Packard Enterprise",
-  "00:1C:C4": "Hewlett Packard Enterprise",
-  "00:1E:0B": "Hewlett Packard Enterprise",
-  "00:1F:29": "Hewlett Packard Enterprise",
-  "00:21:5A": "Hewlett Packard Enterprise",
-  "00:22:64": "Hewlett Packard Enterprise",
-  "00:23:7D": "Hewlett Packard Enterprise",
-  "00:24:81": "Hewlett Packard Enterprise",
-  "00:25:B3": "Hewlett Packard Enterprise",
-  "00:26:55": "Hewlett Packard Enterprise",
-
-  // Virtualization
-  "00:16:3E": "Xensource (Citrix)",
-  "08:00:27": "PCS Systemtechnik GmbH (VirtualBox)",
-  "52:54:00": "QEMU/KVM",
-  "00:1C:42": "Parallels",
-
-  // Raspberry Pi
-  "DC:A6:32": "Raspberry Pi Foundation",
-  "B8:27:EB": "Raspberry Pi Foundation",
-  "E4:5F:01": "Raspberry Pi Foundation",
-
-  // Network Equipment
-  "00:04:96": "Extreme Networks",
-  "00:E0:2B": "Extreme Networks",
-  "00:01:30": "Foundry Networks",
-  "00:E0:52": "Foundry Networks",
-  "00:A0:C9": "Intel Corporation",
-  "00:E0:81": "Tyan Computer",
-  "00:20:AF": "3Com Corporation",
-  "00:50:04": "3Com Corporation",
-  "00:60:08": "3Com Corporation",
-  "00:60:97": "3Com Corporation",
-  "00:A0:24": "3Com Corporation",
-
-  // Juniper
-  "00:05:85": "Juniper Networks",
-  "00:12:1E": "Juniper Networks",
-  "00:17:CB": "Juniper Networks",
-  "00:19:E2": "Juniper Networks",
-  "00:1B:C0": "Juniper Networks",
-  "00:1D:B5": "Juniper Networks",
-  "00:21:59": "Juniper Networks",
-  "00:22:83": "Juniper Networks",
-  "00:23:9C": "Juniper Networks",
-  "00:24:DC": "Juniper Networks",
-  "00:26:88": "Juniper Networks",
-  "2C:6B:F5": "Juniper Networks",
-  "3C:61:04": "Juniper Networks",
-  "5C:5E:AB": "Juniper Networks",
-  "84:18:88": "Juniper Networks",
-  "84:B5:9C": "Juniper Networks",
-  "9C:CC:83": "Juniper Networks",
-
-  // Arista
-  "00:1C:73": "Arista Networks",
-  "28:99:3A": "Arista Networks",
-  "44:4C:A8": "Arista Networks",
-  "50:08:00": "Arista Networks",
-
-  // Fortinet
-  "00:09:0F": "Fortinet",
-  "90:6C:AC": "Fortinet",
-
-  // Palo Alto
-  "00:1B:17": "Palo Alto Networks",
-  "8C:EA:1B": "Palo Alto Networks",
-
-  // Ubiquiti
-  "00:15:6D": "Ubiquiti Networks",
-  "04:18:D6": "Ubiquiti Networks",
-  "24:A4:3C": "Ubiquiti Networks",
-  "68:72:51": "Ubiquiti Networks",
-  "78:8A:20": "Ubiquiti Networks",
-  "80:2A:A8": "Ubiquiti Networks",
-  "B4:FB:E4": "Ubiquiti Networks",
-  "DC:9F:DB": "Ubiquiti Networks",
-  "E8:DE:27": "Ubiquiti Networks",
-  "F0:9F:C2": "Ubiquiti Networks",
-  "FC:EC:DA": "Ubiquiti Networks",
-}
-
+// the bundled prefix table lives once, in lib/oui-vendors: the copy that used
+// to sit here was a strict subset, so this panel silently missed 40 prefixes
+// the OUI Lookup tool resolved.
 export function lookupOUI(mac: string): OUIResult {
-  // Extract first 3 octets (OUI)
-  const cleanMac = mac.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()
-  if (cleanMac.length < 6) {
-    return {
-      mac,
-      oui: "",
-      vendor: "",
-      found: false,
-    }
+  const parsed = parseMacInput(mac)
+  if (!parsed) {
+    return { mac, oui: "", vendor: "", found: false }
   }
-
-  const oui = `${cleanMac.slice(0, 2)}:${cleanMac.slice(2, 4)}:${cleanMac.slice(4, 6)}`
-  const vendor = ouiDatabase[oui] || ""
-
-  return {
-    mac,
-    oui,
-    vendor,
-    found: !!vendor,
-  }
+  const vendor = lookupLocal(parsed.oui)
+  return { mac, oui: parsed.ouiFormatted, vendor: vendor ?? "", found: vendor !== null }
 }
 
 // OUI (Organizationally Unique Identifier) lookup
@@ -1321,25 +1147,8 @@ export function generateSolicitedNodeMulticast(ipv6: string): string {
   return solicitedNodeMulticast(ipv6)
 }
 
+// single implementation lives in lib/ipv6-address; this only strips the prefix
+// length the old signature accepted
 export function generateEUI64FromMAC(mac: string, prefix: string): string {
-  // Remove separators and convert to uppercase
-  const cleanMac = mac.replace(/[^0-9A-Fa-f]/g, "").toUpperCase()
-  if (cleanMac.length !== 12) {
-    throw new Error("Invalid MAC address")
-  }
-
-  // Split MAC into two halves and insert FFFE
-  const firstHalf = cleanMac.slice(0, 6)
-  const secondHalf = cleanMac.slice(6)
-
-  // Flip the universal/local bit (7th bit of first octet)
-  const firstOctet = Number.parseInt(firstHalf.slice(0, 2), 16)
-  const flippedOctet = (firstOctet ^ 0x02).toString(16).padStart(2, "0")
-
-  const eui64 = (flippedOctet + firstHalf.slice(2) + "FFFE" + secondHalf).toLowerCase()
-  const iidGroups = [eui64.slice(0, 4), eui64.slice(4, 8), eui64.slice(8, 12), eui64.slice(12, 16)]
-
-  // expand so compressed prefixes like "2001:db8::" contribute proper zero groups
-  const prefixGroups = expandIPv6(prefix.split("/")[0]).split(":").slice(0, 4)
-  return compressIPv6([...prefixGroups, ...iidGroups].join(":"))
+  return eui64Address(prefix.split("/")[0], mac, 64)
 }

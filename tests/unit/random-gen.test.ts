@@ -38,8 +38,11 @@ describe("randomInt is uniform, not folded", () => {
   })
 
   it("refuses nonsense bounds", () => {
-    expect(() => randomInt(5, 1)).toThrow()
-    expect(() => randomInt(0.5, 3)).toThrow()
+    // matched on message: a bare toThrow() also accepted the "size must be
+    // positive" that leaks out of uniformIndex once the bounds check is gone,
+    // so the bounds check could be deleted outright
+    expect(() => randomInt(5, 1)).toThrow(/max must be >= min/)
+    expect(() => randomInt(0.5, 3)).toThrow(/bounds must be integers/)
   })
 
   it("covers the full 32-bit range without overflowing", () => {

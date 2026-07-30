@@ -11,12 +11,12 @@ import { FileText, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CORS_SAFELISTED_RESPONSE_HEADERS } from "@/lib/browser-limits"
 import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
-import type { HeaderAnalysis } from "./http-headers/header-report"
-import { HeaderReport } from "./http-headers/header-report"
+import type { HeaderAnalysis } from "./header-report"
+import { HeaderReport } from "./header-report"
 
 // one chunk per acquisition method; only the open tab is fetched and mounted
-const PastePanel = lazy(() => import("./http-headers/paste"))
-const RelayPanel = lazy(() => import("./http-headers/relay"))
+const PastePanel = lazy(() => import("./paste"))
+const RelayPanel = lazy(() => import("./relay"))
 
 const TABS = ["paste", "relay"] as const
 

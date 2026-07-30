@@ -11,14 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Download, Globe, Network } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
-import { compressIPv6, expandIPv6, isValidIPv6 } from "@/lib/network-utils"
-import {
-  classifyIPv6,
-  eui64Address,
-  ipv6NetworkPrefix,
-  linkLocalFromMac,
-  solicitedNode,
-} from "@/lib/ipv6-address"
+import { compressIPv6, expandIPv6, ipv6NetworkPrefix, isValidIPv6 } from "@/lib/network-utils"
+import { classifyIPv6, eui64Address, linkLocalFromMac, solicitedNode } from "@/lib/ipv6-address"
 import { downloadTextFile, dateStamp } from "@/lib/download"
 import type { PanelProps } from "@/lib/tool-panel"
 

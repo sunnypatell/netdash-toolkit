@@ -200,6 +200,29 @@ describe("dkim (rfc 6376)", () => {
     expect(analyzeDkim("s1", { status: 3, answers: [] })).toBeNull()
     expect(analyzeDkim("s1", transportFailure)).toBeNull()
   })
+
+  it("returns nothing for a failure status that still carries answers", () => {
+    // both inputs above have answers: [], so the right half of
+    // `failure || answers.length === 0` decided them and the failure check was
+    // never load-bearing. doh resolvers do answer SERVFAIL and NXDOMAIN with a
+    // populated Answer array (cname chains, soa-bearing negatives), and feeding
+    // those to the tag parser reports a live key on a domain that has none
+    const nxdomainWithCname: DnsResponse = {
+      status: 3,
+      answers: [answer(DNS_TYPE.TXT, '"v=DKIM1; k=rsa; p=abc"')],
+    }
+    expect(analyzeDkim("s1", nxdomainWithCname)).toBeNull()
+
+    const servfailWithAnswer: DnsResponse = {
+      status: 2,
+      answers: [answer(DNS_TYPE.TXT, '"v=DKIM1; k=rsa; p=abc"')],
+    }
+    expect(analyzeDkim("s1", servfailWithAnswer)).toBeNull()
+
+    // and the same record with a clean status is still read, so the guard is
+    // rejecting the status rather than the record
+    expect(analyzeDkim("s1", txt("v=DKIM1; k=rsa; p=abc"))?.valid).toBe(true)
+  })
 })
 
 describe("dmarc (rfc 7489)", () => {
@@ -334,6 +357,28 @@ describe("scoring", () => {
       scoreEmailAuth({ ...base, dkim: [live] }) - 15
     )
   })
+
+  it("pins the dkim weights below the 100 clamp, where they are visible", () => {
+    // with p=reject the total lands exactly on Math.min(score, 100), so raising
+    // the enforcement weight from 15 to anything larger was invisible: both the
+    // full-run total and the testing-vs-live difference still came out right.
+    // p=none drops the base to 63 and leaves headroom for the clamp to matter
+    const relaxed = {
+      ...base,
+      dmarc: analyzeDmarc(txt("v=DMARC1; p=none; rua=mailto:a@example.com")),
+    }
+    const testing = analyzeDkim("s1", txt("v=DKIM1; k=rsa; t=y; p=abc"))!
+    const live = analyzeDkim("s1", txt("v=DKIM1; k=rsa; p=abc"))!
+
+    expect(scoreEmailAuth(relaxed)).toBe(63) // 20 mx + 30 spf + 13 dmarc
+    expect(scoreEmailAuth({ ...relaxed, dkim: [testing] })).toBe(78) // + 15 present
+    expect(scoreEmailAuth({ ...relaxed, dkim: [live] })).toBe(93) // + 15 enforced
+  })
+
+  it("never exceeds 100", () => {
+    const live = analyzeDkim("s1", txt("v=DKIM1; k=rsa; p=abc"))!
+    expect(scoreEmailAuth({ ...base, dkim: [live] })).toBe(100)
+  })
 })
 
 describe("doh transport", () => {
@@ -362,6 +407,43 @@ describe("doh transport", () => {
     })
     expect(response.error).toBeUndefined()
     expect(analyzeSpf(response).found).toBe(true)
+  })
+
+  it("treats a non-2xx resolver as a failure, not as a dns answer", async () => {
+    // a resolver that 500s still returns a json body. without the status check
+    // that body is read as a Status: 0 answer, so an outage reads as "no spf
+    // record" and the backup resolver is never tried. both failure tests use a
+    // rejected promise, which lands in the catch instead
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ Status: 0, Answer: [] }),
+      } as unknown as Response)
+      .mockResolvedValueOnce(json({ Status: 0, Answer: [answer(DNS_TYPE.TXT, '"v=spf1 -all"')] }))
+
+    const response = await queryDns("example.com", "TXT", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolvers: ["https://a.test/dns-query", "https://b.test/dns-query"],
+    })
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(response.resolver).toBe("https://b.test/dns-query")
+    expect(analyzeSpf(response).found).toBe(true)
+  })
+
+  it("reports the http status when every resolver answers non-2xx", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ Status: 0, Answer: [] }),
+    } as unknown as Response)
+    const response = await queryDns("example.com", "TXT", {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolvers: ["https://a.test/dns-query"],
+    })
+    expect(response.error).toMatch(/HTTP 503/)
+    expect(response.answers).toEqual([])
   })
 
   it("reports an error when every resolver fails", async () => {
@@ -428,5 +510,39 @@ describe("full run", () => {
     expect(result.incomplete).toBe(true)
     expect(result.spf.lookupFailed).toBe(true)
     expect(result.overallScore).toBe(0)
+  })
+
+  // the test above rejects every request, so all four disjuncts of `incomplete`
+  // are true at once and any one of them could be deleted unnoticed. each of
+  // these fails exactly one lookup.
+  it.each([
+    ["mx", "MX:example.com"],
+    ["spf", "TXT:example.com"],
+    ["dmarc", "TXT:_dmarc.example.com"],
+    ["dkim", "TXT:selector1._domainkey.example.com"],
+  ])("marks the result incomplete when only the %s lookup fails", async (_which, failingKey) => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      const params = new URL(url).searchParams
+      const key = `${params.get("type")}:${params.get("name")}`
+      if (key === failingKey) throw new Error("blocked")
+      return { ok: true, status: 200, json: async () => ({ Status: 0, Answer: [] }) } as Response
+    })
+    const result = await runEmailDiagnostics("example.com", {
+      selectors: ["selector1"],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      resolvers: ["https://resolver.test/dns-query"],
+    })
+    expect(result.incomplete).toBe(true)
+  })
+
+  it("is complete when every lookup answers, even with nothing configured", () => {
+    // the negative side: `incomplete` must not just always be true
+    return runEmailDiagnostics("example.com", {
+      selectors: ["selector1"],
+      fetchImpl: respond({}) as unknown as typeof fetch,
+      resolvers: ["https://resolver.test/dns-query"],
+    }).then((result) => {
+      expect(result.incomplete).toBe(false)
+    })
   })
 })

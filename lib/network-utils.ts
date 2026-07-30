@@ -204,12 +204,25 @@ export function expandIPv6(ip: string): string {
   )
 }
 
+// rfc 5952 s5: an address that embeds an ipv4 address keeps the dotted quad.
+// scoped to ::ffff:0:0/96 only. the deprecated ipv4-compatible ::/96 also
+// contains :: and ::1, which must never render as ::0.0.0.0 or ::0.0.0.1.
+function ipv4MappedText(groups: readonly string[]): string | null {
+  if (!groups.slice(0, 5).every((g) => g === "0000") || groups[5] !== "ffff") return null
+  const high = Number.parseInt(groups[6], 16)
+  const low = Number.parseInt(groups[7], 16)
+  return `::ffff:${intToIpv4((((high << 16) >>> 0) | low) >>> 0)}`
+}
+
 export function compressIPv6(ip: string): string {
   const { address: expanded, zone } = splitIPv6Zone(expandIPv6(ip))
   const suffix = zone === undefined ? "" : `%${zone}`
 
   // Find the longest sequence of consecutive zero groups
   const groups = expanded.split(":")
+
+  const mapped = ipv4MappedText(groups)
+  if (mapped) return mapped + suffix
   let longestZeroStart = -1
   let longestZeroLength = 0
   let currentZeroStart = -1
@@ -275,36 +288,40 @@ export function solicitedNodeMulticast(ip: string): string {
   if (!Number.isInteger(upper) || !Number.isInteger(lower)) {
     throw new Error("Invalid IPv6 address")
   }
-  return `ff02::1:ff${upper.toString(16).padStart(2, "0")}:${lower.toString(16).padStart(4, "0")}`
+  // upper is padded because it is the low byte of the group "ff" + XX, not a
+  // leading zero; lower is a whole group, so rfc 5952 4.1 forbids padding it
+  return `ff02::1:ff${upper.toString(16).padStart(2, "0")}:${lower.toString(16)}`
+}
+
+// zero the host bits and return the expanded 8-group network address
+export function ipv6NetworkPrefix(address: string, prefixLength: number): string {
+  if (!Number.isInteger(prefixLength) || prefixLength < 0 || prefixLength > 128) {
+    throw new Error("Invalid prefix length. Enter a value between 0 and 128.")
+  }
+
+  const groups = expandIPv6(splitIPv6Zone(address).address)
+    .split(":")
+    .map((group) => Number.parseInt(group, 16))
+
+  return groups
+    .map((group, index) => {
+      const bitsRemaining = prefixLength - index * 16
+      if (bitsRemaining >= 16) return group
+      if (bitsRemaining <= 0) return 0
+      return group & (0xffff - ((1 << (16 - bitsRemaining)) - 1))
+    })
+    .map((group) => group.toString(16).padStart(4, "0"))
+    .join(":")
 }
 
 export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
-  if (prefix < 0 || prefix > 128) {
-    throw new Error("Invalid prefix length")
-  }
-
   const { address, zone } = splitIPv6Zone(ip)
   const expanded = expandIPv6(address)
   const groups = expanded.split(":").map((g) => Number.parseInt(g, 16))
 
-  // Calculate network address by zeroing host bits
-  const networkGroups = [...groups]
-  const hostBits = 128 - prefix
-  let bitsToZero = hostBits
-
-  for (let i = 7; i >= 0 && bitsToZero > 0; i--) {
-    if (bitsToZero >= 16) {
-      networkGroups[i] = 0
-      bitsToZero -= 16
-    } else {
-      const mask = (0xffff << bitsToZero) & 0xffff
-      networkGroups[i] = networkGroups[i] & mask
-      bitsToZero = 0
-    }
-  }
-
-  const network = networkGroups.map((g) => g.toString(16).padStart(4, "0")).join(":")
+  const network = ipv6NetworkPrefix(address, prefix)
   const compressed = compressIPv6(network)
+  const hostBits = 128 - prefix
 
   // Determine address type
   const firstGroup = groups[0]

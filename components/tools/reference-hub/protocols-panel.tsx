@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { IP_PROTOCOL_NUMBERS } from "@/lib/reference/protocol-numbers"
 import { filterRows } from "@/lib/reference/search"
 import type { ProtocolNumberEntry } from "@/lib/reference/types"
-import { ReferenceTable, type ReferenceColumn } from "./reference-table"
+import { ReferenceTable, searchableText, type ReferenceColumn } from "../shared/reference-table"
 
 const columns: ReferenceColumn<ProtocolNumberEntry>[] = [
   {
@@ -40,20 +40,18 @@ const columns: ReferenceColumn<ProtocolNumberEntry>[] = [
 
 export function ProtocolsPanel({ searchTerm }: { searchTerm: string }) {
   const rows = useMemo(
-    () =>
-      filterRows(IP_PROTOCOL_NUMBERS, searchTerm, (row) =>
-        columns.map((column) => column.text(row))
-      ),
+    () => filterRows(IP_PROTOCOL_NUMBERS, searchTerm, (row) => searchableText(columns, row)),
     [searchTerm]
   )
 
   return (
     <ReferenceTable
       title="IP Protocol Numbers"
-      description="Values for the IPv4 protocol field and the IPv6 next header field, from the IANA protocol numbers registry"
+      description={`Values for the IPv4 protocol field and the IPv6 next header field, from the IANA protocol numbers registry (${rows.length} shown)`}
       rows={rows}
       columns={columns}
       rowKey={(row) => String(row.number)}
+      maxHeight="h-[500px]"
     />
   )
 }

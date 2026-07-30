@@ -3,11 +3,10 @@ import {
   classifyIPv6,
   eui64Address,
   eui64InterfaceId,
-  ipv6NetworkPrefix,
   linkLocalFromMac,
   solicitedNode,
 } from "@/lib/ipv6-address"
-import { compressIPv6, expandIPv6 } from "@/lib/network-utils"
+import { compressIPv6, expandIPv6, ipv6NetworkPrefix } from "@/lib/network-utils"
 
 describe("rfc 4291 address types", () => {
   it.each([

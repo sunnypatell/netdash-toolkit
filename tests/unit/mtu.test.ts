@@ -49,10 +49,14 @@ describe("encapsulation overheads", () => {
     expect(byId("mpls")).toBe(4) // rfc 3032 s2.1
   })
 
-  it("never puts an IPsec ESP tunnel below its arithmetic floor", () => {
-    // aes-gcm floor is 20 + 8 + 8 iv + 2 trailer + 16 icv = 54 (rfc 4106 s3, s6)
+  it("quotes the worst case for an IPsec ESP tunnel, padding included", () => {
+    // a floor check let esp-cbc drop the 15 bytes of block padding and stay green.
+    // aes-gcm: 20 outer ipv4 + 8 esp + 8 iv + 2 trailer + 16 icv + 3 pad
+    expect(byId("esp-gcm")).toBe(57)
+    // aes-cbc + hmac-sha1-96: 20 + 8 + 16 iv + 2 + 12 icv + 15 pad to the block
+    expect(byId("esp-cbc")).toBe(73)
+    // the floors those worst cases sit above (rfc 4106 s3, s6; rfc 4303 s2.3)
     expect(byId("esp-gcm")!).toBeGreaterThanOrEqual(54)
-    // aes-cbc with hmac-sha1-96 floor is 20 + 8 + 16 iv + 2 + 12 icv = 58
     expect(byId("esp-cbc")!).toBeGreaterThanOrEqual(58)
   })
 

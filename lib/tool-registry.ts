@@ -297,10 +297,11 @@ export const tools: ToolDefinition[] = [
     icon: AlertTriangle,
     category: "ip-tools",
     features: ["Multi-source parsing", "Conflict detection", "Remediation tips"],
+    // does i/o, but nothing third-party receives your input: the browser path is
+    // paste-only and the arp read is a local system call behind isElectron()
     runtime: {
       offline: false,
-      thirdParty: ["your local network (desktop only)"],
-      desktopOnly: ["ARP scanning of the local network"],
+      desktopOnly: ["reading the local ARP cache"],
     },
     load: () =>
       import("@/components/tools/conflict-checker").then((m) => ({ default: m.ConflictChecker })),
@@ -919,38 +920,4 @@ export function searchTools(query: string): ToolDefinition[] {
     .filter((r) => r.score > 0)
     .sort((a, b) => b.score - a.score || a.tool.label.localeCompare(b.tool.label))
     .map((r) => r.tool)
-}
-
-export function getProjectItemLabel(type: ProjectItemType): string {
-  const labels: Record<ProjectItemType, string> = {
-    subnet: "Subnet Calculation",
-    vlsm: "VLSM Plan",
-    vlan: "VLAN Configuration",
-    acl: "Access Control List",
-    dns: "DNS Lookup",
-    route: "Route Entry",
-    routing: "Routing Configuration",
-    mtu: "MTU Calculation",
-    ipv6: "IPv6 Address",
-    conflict: "Conflict Check",
-    oui: "OUI Lookup",
-    "port-scan": "Port Scan",
-    wireless: "Wireless Config",
-    cable: "Cable Calculation",
-    "wifi-qr": "WiFi QR Code",
-    "ip-converter": "IP Conversion",
-    "ip-range": "IP Range",
-    "random-gen": "Random Generation",
-    bandwidth: "Bandwidth Calculation",
-    "ssl-check": "SSL/TLS Check",
-    whois: "WHOIS Lookup",
-    "email-diag": "Email Diagnostics",
-    other: "Other",
-  }
-  return labels[type] || "Unknown"
-}
-
-export function getProjectItemIcon(type: ProjectItemType): LucideIcon {
-  const tool = tools.find((t) => t.projectItemType === type)
-  return tool?.icon || Info
 }

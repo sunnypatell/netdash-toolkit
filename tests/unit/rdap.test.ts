@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   classifyStatus,
   cleanQuery,
   detectQueryType,
+  fetchRdap,
   flattenEntities,
   normalizeStatus,
   parseJCard,
   parseRdapError,
   redactedFieldNames,
   selfLink,
+  type LookupType,
   type RDAPEntity,
 } from "@/lib/rdap"
 
@@ -138,6 +140,89 @@ describe("parseRdapError (rfc 9083 6)", () => {
   it("passes other statuses through with the http code", () => {
     expect(parseRdapError(500, null, "x.com")).toMatchObject({ noService: false })
     expect(parseRdapError(429, null, "x.com").message).toMatch(/HTTP 429/)
+  })
+
+  it("calls 501 and 400 a missing service, not a failed lookup", () => {
+    // the branch that separates "this registry publishes no rdap" from "the
+    // request went wrong" had no test, so deleting it changed nothing
+    expect(parseRdapError(501, null, "AS64496")).toMatchObject({ noService: true })
+    expect(parseRdapError(400, null, "AS64496")).toMatchObject({ noService: true })
+    expect(parseRdapError(500, null, "AS64496")).toMatchObject({ noService: false })
+  })
+})
+
+// nothing in the repo ever observed the request fetchRdap sends, so the whole
+// url it builds was unasserted: RDAP_PATHS.asn could stop being the rfc 9224
+// "autnum" segment and every asn lookup would 404 with the suite still green.
+describe("the request fetchRdap actually sends", () => {
+  const ok = (body: unknown) =>
+    ({ ok: true, status: 200, json: async () => body }) as unknown as Response
+
+  function stubFetch(response: Response) {
+    // the generic is explicit so mock.calls is a typed tuple; inferring it
+    // through the async signature yields a zero-length tuple that cannot be indexed
+    const spy = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => response)
+    const original = globalThis.fetch
+    globalThis.fetch = spy as unknown as typeof fetch
+    return { spy, restore: () => (globalThis.fetch = original) }
+  }
+
+  it.each([
+    ["domain", "example.com", "https://rdap.org/domain/example.com"],
+    ["ip", "192.0.2.1", "https://rdap.org/ip/192.0.2.1"],
+    // rfc 9224 names the autonomous-system path segment "autnum", not "asn"
+    ["asn", "64496", "https://rdap.org/autnum/64496"],
+  ] as Array<[LookupType, string, string]>)(
+    "asks rdap.org for a %s at %s",
+    async (type, query, url) => {
+      const { spy, restore } = stubFetch(ok({ objectClassName: type }))
+      try {
+        await fetchRdap(type, query)
+        expect(spy).toHaveBeenCalledTimes(1)
+        expect(spy.mock.calls[0][0]).toBe(url)
+        expect(spy.mock.calls[0][1]).toMatchObject({
+          headers: { Accept: "application/rdap+json" },
+        })
+      } finally {
+        restore()
+      }
+    }
+  )
+
+  it("percent-encodes a query rather than splicing it into the path", async () => {
+    const { spy, restore } = stubFetch(ok({}))
+    try {
+      await fetchRdap("domain", "a b/../c")
+      expect(spy.mock.calls[0][0]).toBe("https://rdap.org/domain/a%20b%2F..%2Fc")
+    } finally {
+      restore()
+    }
+  })
+
+  it("throws the parsed registry message on a non-2xx answer", async () => {
+    const notFound = {
+      ok: false,
+      status: 404,
+      json: async () => ({ title: "Not found" }),
+    } as unknown as Response
+    const { restore } = stubFetch(notFound)
+    try {
+      await expect(fetchRdap("domain", "nope.invalid")).rejects.toThrow(/404/)
+    } finally {
+      restore()
+    }
+  })
+
+  it("reports the server that answered, from the self link", async () => {
+    const { restore } = stubFetch(
+      ok({ links: [{ rel: "self", href: "https://rdap.verisign.com/com/v1/domain/EXAMPLE.COM" }] })
+    )
+    try {
+      const result = await fetchRdap("domain", "example.com")
+      expect(result.authoritativeUrl).toBe("https://rdap.verisign.com/com/v1/domain/EXAMPLE.COM")
+    } finally {
+      restore()
+    }
   })
 })
 

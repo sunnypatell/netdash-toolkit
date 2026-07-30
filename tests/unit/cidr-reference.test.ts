@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { CIDR_TABLE, COMMON_CIDR_TABLE, usableHostsForPrefix } from "@/lib/cidr-reference"
+import { CIDR_TABLE, COMMON_CIDR_TABLE } from "@/lib/cidr-reference"
+import { usableHostsFor } from "@/lib/mask-convert"
 import { ipv4ToInt, netmaskToPrefix } from "@/lib/network-utils"
 
 // a reference table is only worth anything if every column agrees with every
@@ -29,15 +30,15 @@ describe("cidr reference table", () => {
 
   it("counts usable hosts per rfc 3021 at the boundaries", () => {
     // rfc 3021: a /31 has 2 usable addresses on a point-to-point link
-    expect(usableHostsForPrefix(31)).toBe(2)
+    expect(usableHostsFor(31)).toBe(2)
     // a /32 host route is one address, and it is usable
-    expect(usableHostsForPrefix(32)).toBe(1)
+    expect(usableHostsFor(32)).toBe(1)
     // everything /30 and shorter loses the network and broadcast addresses
-    expect(usableHostsForPrefix(30)).toBe(2)
-    expect(usableHostsForPrefix(24)).toBe(254)
-    expect(usableHostsForPrefix(16)).toBe(65534)
-    expect(usableHostsForPrefix(8)).toBe(16777214)
-    expect(usableHostsForPrefix(0)).toBe(4294967294)
+    expect(usableHostsFor(30)).toBe(2)
+    expect(usableHostsFor(24)).toBe(254)
+    expect(usableHostsFor(16)).toBe(65534)
+    expect(usableHostsFor(8)).toBe(16777214)
+    expect(usableHostsFor(0)).toBe(4294967294)
   })
 
   it("prints the masks a network engineer would recognise", () => {

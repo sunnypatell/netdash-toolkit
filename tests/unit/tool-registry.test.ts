@@ -16,20 +16,32 @@ import {
 
 const repoRoot = join(__dirname, "../..")
 const toolsDir = join(repoRoot, "components/tools")
+
+// directories under components/tools that hold components shared by several
+// tools rather than a tool of their own, so they have no registry entry
+const SHARED_DIRS = new Set(["shared"])
+
 const sourceOf = (slug: string) => {
   // the one slug whose file name differs from its url segment
   const fileName = slug === "wifi-qr" ? "wifi-qr-generator" : slug
+  const parts: string[] = []
+
   const path = join(toolsDir, `${fileName}.tsx`)
-  if (existsSync(path)) return readFileSync(path, "utf8")
+  if (existsSync(path)) parts.push(readFileSync(path, "utf8"))
 
   // a tool split into one file per panel keeps its slug as a directory with an
-  // index.tsx; the whole directory is the tool's source for these assertions
+  // index.tsx; the whole directory is the tool's source for these assertions.
+  // both are read, never one or the other: while a shell and its panel directory
+  // coexisted, returning on the shell hid all 24 panel files from the offline and
+  // projectItemType checks below, including the panels that call fetch.
   const dir = join(toolsDir, fileName)
-  if (!existsSync(dir)) return null
-  return readdirSync(dir)
-    .filter((f) => f.endsWith(".tsx"))
-    .map((f) => readFileSync(join(dir, f), "utf8"))
-    .join("\n")
+  if (existsSync(dir)) {
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith(".tsx")) parts.push(readFileSync(join(dir, f), "utf8"))
+    }
+  }
+
+  return parts.length > 0 ? parts.join("\n") : null
 }
 
 // network-testing is a grab-bag: tools import pure constants from it as well
@@ -93,15 +105,30 @@ describe("tool registry", () => {
   })
 
   it("leaves no orphaned tool component outside the registry", () => {
-    // network-analyzer was unreachable for months because nothing caught this
+    // network-analyzer was unreachable for months because nothing caught this,
+    // and a directory of panels can go orphaned the same way a single file can
     const registered = new Set(
       tools.map((t) => (t.slug === "wifi-qr" ? "wifi-qr-generator" : t.slug))
     )
-    const onDisk = readdirSync(toolsDir)
-      .filter((f) => f.endsWith(".tsx"))
-      .map((f) => f.replace(/\.tsx$/, ""))
-    const orphans = onDisk.filter((f) => !registered.has(f))
+    const onDisk = readdirSync(toolsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() || entry.name.endsWith(".tsx"))
+      .map((entry) => entry.name.replace(/\.tsx$/, ""))
+    const orphans = onDisk.filter((name) => !registered.has(name) && !SHARED_DIRS.has(name))
     expect(orphans, `unreachable tool components: ${orphans.join(", ")}`).toEqual([])
+  })
+
+  it("gives every tool exactly one shape on disk", () => {
+    // a tool is <slug>.tsx when it has no panels and <slug>/index.tsx when it
+    // does. two agents once shipped both conventions, which left six tools with
+    // a shell file beside a panel directory of the same name: the specifier
+    // resolved to the file, so sourceOf below never read the panels and the
+    // offline and projectItemType assertions silently skipped them.
+    const both = tools
+      .map((t) => (t.slug === "wifi-qr" ? "wifi-qr-generator" : t.slug))
+      .filter(
+        (name) => existsSync(join(toolsDir, `${name}.tsx`)) && existsSync(join(toolsDir, name))
+      )
+    expect(both, `both a file and a directory: ${both.join(", ")}`).toEqual([])
   })
 
   it("only declares projectItemType when the tool actually saves to a project", () => {
@@ -132,13 +159,15 @@ describe("tool registry", () => {
     expect(mismatches, mismatches.join("; ")).toEqual([])
   })
 
-  it("names the third-party hosts for every non-offline tool", () => {
-    // a tool that leaves the device must be able to tell the user where to
+  it("says where the data goes for every non-offline tool", () => {
+    // a tool that does i/o must be able to tell the user what that i/o is.
+    // usually that means naming third-party hosts, but a desktop-only local
+    // system call (conflict-checker reading the arp cache) reaches no third
+    // party at all, so declaring the capability is the honest disclosure there.
     for (const tool of tools.filter((t) => t.runtime?.offline === false)) {
-      expect(
-        tool.runtime?.thirdParty?.length,
-        `${tool.slug} lists no destinations`
-      ).toBeGreaterThan(0)
+      const disclosed =
+        (tool.runtime?.thirdParty?.length ?? 0) + (tool.runtime?.desktopOnly?.length ?? 0)
+      expect(disclosed, `${tool.slug} does i/o but discloses no destination`).toBeGreaterThan(0)
     }
   })
 

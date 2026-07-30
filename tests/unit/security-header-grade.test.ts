@@ -222,6 +222,53 @@ describe("gradeBlock", () => {
     expect(grade.effectiveCount).toBe(grade.scoredCount)
   })
 
+  // only 0 -> F and 100 -> A+ were pinned, so every threshold between them was
+  // free to move: turning the B arm into D, or widening A+ down to 65, changed
+  // nothing the suite could see. these pin both sides of all five thresholds.
+  describe("the grade ladder", () => {
+    const EFFECTIVE: Record<string, string> = {
+      "content-security-policy": "default-src 'self'", // 25
+      "strict-transport-security": "max-age=63072000; includeSubDomains; preload", // 20
+      "x-frame-options": "DENY", // 15
+      "x-content-type-options": "nosniff", // 10
+      "referrer-policy": "strict-origin-when-cross-origin", // 10
+      "permissions-policy": "geolocation=(), camera=()", // 10
+      "cross-origin-opener-policy": "same-origin", // 10
+    }
+    const gradeOf = (keys: string[]) =>
+      gradeBlock(
+        parseResponseBlocks(
+          ["HTTP/2 200", ...keys.map((k) => `${k}: ${EFFECTIVE[k]}`)].join("\n")
+        )[0]
+      )
+    const CSP = "content-security-policy"
+    const HSTS = "strict-transport-security"
+    const XFO = "x-frame-options"
+    const NOSNIFF = "x-content-type-options"
+    const REF = "referrer-policy"
+    const PERMS = "permissions-policy"
+    const COOP = "cross-origin-opener-policy"
+
+    it.each([
+      [100, "A+", [CSP, HSTS, XFO, NOSNIFF, REF, PERMS, COOP]],
+      [90, "A+", [CSP, HSTS, XFO, NOSNIFF, REF, PERMS]],
+      [85, "A", [CSP, HSTS, NOSNIFF, REF, PERMS, COOP]],
+      [80, "A", [CSP, HSTS, XFO, NOSNIFF, REF]],
+      [75, "B", [CSP, HSTS, NOSNIFF, REF, PERMS]],
+      [70, "B", [CSP, HSTS, XFO, NOSNIFF]],
+      [65, "C", [CSP, HSTS, NOSNIFF, REF]],
+      [60, "C", [CSP, HSTS, XFO]],
+      [55, "D", [CSP, HSTS, NOSNIFF]],
+      [50, "D", [CSP, XFO, NOSNIFF]],
+      [45, "F", [CSP, HSTS]],
+      [25, "F", [CSP]],
+    ] as Array<[number, string, string[]]>)("grades %i%% as %s", (score, letter, keys) => {
+      const grade = gradeOf(keys)
+      expect(grade.score, keys.join(" + ")).toBe(score)
+      expect(grade.grade, `${score}%`).toBe(letter)
+    })
+  })
+
   it("does not count the deprecated xss filter either way", () => {
     const absent = gradeBlock(parseResponseBlocks("HTTP/2 200\nx-content-type-options: nosniff")[0])
     const present = gradeBlock(

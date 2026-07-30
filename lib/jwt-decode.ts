@@ -203,7 +203,7 @@ export function inspectJwt(token: string, now: number = Date.now()): JwtInspecti
 }
 
 // d/h/m/s, never drops the seconds field - a token with 40s left must not read "0m"
-export function formatDuration(ms: number): string {
+export function formatTokenLifetime(ms: number): string {
   const total = Math.floor(Math.abs(ms) / 1000)
   const days = Math.floor(total / 86400)
   const hours = Math.floor((total % 86400) / 3600)
@@ -221,13 +221,13 @@ export function formatDuration(ms: number): string {
 export function timeClaimLabel(time: JwtTimeClaims): string {
   switch (time.state) {
     case "expired":
-      return `Expired ${formatDuration(time.msUntilExpiry ?? 0)} ago`
+      return `Expired ${formatTokenLifetime(time.msUntilExpiry ?? 0)} ago`
     case "not-yet-valid":
-      return `Not valid for another ${formatDuration(time.msUntilValid ?? 0)}`
+      return `Not valid for another ${formatTokenLifetime(time.msUntilValid ?? 0)}`
     case "active":
       return time.msUntilExpiry === null
         ? "Within its nbf window (no exp)"
-        : `Within time window - expires in ${formatDuration(time.msUntilExpiry)}`
+        : `Within time window - expires in ${formatTokenLifetime(time.msUntilExpiry)}`
     case "no-time-claims":
       return "No exp or nbf claim - no expiry to check"
   }

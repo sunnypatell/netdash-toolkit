@@ -335,7 +335,7 @@ describe("generateSolicitedNodeMulticast", () => {
   it("delegates to the shared network-utils implementation", () => {
     expect(generateSolicitedNodeMulticast("2001:db8::1:ff:fe00:1234")).toBe("ff02::1:ff00:1234")
     // the old local copy sliced raw text and returned "ff02::1:ff:f1" here
-    expect(generateSolicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:0001")
+    expect(generateSolicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:1")
   })
 })
 

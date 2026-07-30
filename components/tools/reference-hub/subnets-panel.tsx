@@ -5,7 +5,7 @@ import { COMMON_SUBNETS } from "@/lib/reference/common-subnets"
 import { filterRows } from "@/lib/reference/search"
 import { subnetMaskFor } from "@/lib/reference/subnet-masks"
 import type { CommonSubnetEntry } from "@/lib/reference/types"
-import { ReferenceTable, type ReferenceColumn } from "./reference-table"
+import { ReferenceTable, searchableText, type ReferenceColumn } from "../shared/reference-table"
 
 interface SubnetRow extends CommonSubnetEntry {
   mask: string
@@ -58,17 +58,18 @@ const columns: ReferenceColumn<SubnetRow>[] = [
 
 export function SubnetsPanel({ searchTerm }: { searchTerm: string }) {
   const rows = useMemo(
-    () => filterRows(rowsWithMasks, searchTerm, (row) => columns.map((column) => column.text(row))),
+    () => filterRows(rowsWithMasks, searchTerm, (row) => searchableText(columns, row)),
     [searchTerm]
   )
 
   return (
     <ReferenceTable
       title="Common Subnet Sizes"
-      description="Prefix lengths you actually deploy, with the size they give you"
+      description={`Prefix lengths you actually deploy, with the size they give you (${rows.length} shown)`}
       rows={rows}
       columns={columns}
       rowKey={(row) => `/${row.prefix}`}
+      maxHeight="h-[500px]"
     />
   )
 }

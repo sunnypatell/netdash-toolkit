@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { COMMON_PORTS } from "@/lib/reference/ports"
 import { filterRows } from "@/lib/reference/search"
 import type { PortEntry } from "@/lib/reference/types"
-import { ReferenceTable, type ReferenceColumn } from "./reference-table"
+import { ReferenceTable, searchableText, type ReferenceColumn } from "../shared/reference-table"
 
 const columns: ReferenceColumn<PortEntry>[] = [
   {
@@ -51,17 +51,18 @@ const columns: ReferenceColumn<PortEntry>[] = [
 
 export function PortsPanel({ searchTerm }: { searchTerm: string }) {
   const rows = useMemo(
-    () => filterRows(COMMON_PORTS, searchTerm, (row) => columns.map((column) => column.text(row))),
+    () => filterRows(COMMON_PORTS, searchTerm, (row) => searchableText(columns, row)),
     [searchTerm]
   )
 
   return (
     <ReferenceTable
       title="Common Port Numbers"
-      description="Well-known and frequently used TCP/UDP ports, with the registered IANA service name"
+      description={`Well-known and frequently used TCP/UDP ports, with the registered IANA service name (${rows.length} shown)`}
       rows={rows}
       columns={columns}
       rowKey={(row) => String(row.port)}
+      maxHeight="h-[500px]"
     />
   )
 }

@@ -17,11 +17,11 @@ import { isElectron, electronNetwork } from "@/lib/electron"
 import { pageIsHttps } from "@/lib/browser-limits"
 import { probePortOverHttp, serviceNameFor, summarizeStates } from "@/lib/port-probe"
 import { dateStamp, downloadTextFile } from "@/lib/download"
-import { ScanHistory, ScanResults, type ScanSession } from "./port-scanner/scan-results"
+import { ScanHistory, ScanResults, type ScanSession } from "./scan-results"
 
 // one chunk per port-selection mode
-const CommonPortsPanel = lazy(() => import("./port-scanner/common"))
-const CustomPortsPanel = lazy(() => import("./port-scanner/custom"))
+const CommonPortsPanel = lazy(() => import("./common"))
+const CustomPortsPanel = lazy(() => import("./custom"))
 
 const TABS = ["common", "custom"] as const
 

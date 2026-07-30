@@ -5,7 +5,9 @@
 //      biases the first (2^32 % n) characters, so draws land in the rejection
 //      zone are thrown away instead of folded.
 //   2. entropy quoted from the charset that was actually used, after exclusions.
-// crypto.getRandomValues only. no Math.random anywhere in this repo.
+// crypto.getRandomValues only in this file. Math.random exists
+// elsewhere (lorem text, a cache-buster, a dns query id) but never for a
+// security-relevant draw.
 
 export interface PasswordOptions {
   length: number

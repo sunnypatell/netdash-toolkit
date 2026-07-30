@@ -67,25 +67,6 @@ export function eui64InterfaceId(mac: string): string {
   return `${flipped}${octets[1]}:${octets[2]}ff:fe${octets[3]}:${octets[4]}${octets[5]}`
 }
 
-export function ipv6NetworkPrefix(address: string, prefixLength: number): string {
-  if (!Number.isInteger(prefixLength) || prefixLength < 0 || prefixLength > 128) {
-    throw new Error("Invalid prefix length. Enter a value between 0 and 128.")
-  }
-
-  const groups = expandIPv6(address)
-    .split(":")
-    .map((group) => Number.parseInt(group, 16))
-
-  const masked = groups.map((group, index) => {
-    const bitsRemaining = prefixLength - index * 16
-    if (bitsRemaining >= 16) return group
-    if (bitsRemaining <= 0) return 0
-    return group & (0xffff - ((1 << (16 - bitsRemaining)) - 1))
-  })
-
-  return masked.map((group) => group.toString(16).padStart(4, "0")).join(":")
-}
-
 // an eui-64 interface identifier is 64 bits wide, so it needs a /64 or shorter
 export function eui64Address(networkPrefix: string, mac: string, prefixLength: number): string {
   if (prefixLength > 64) {
@@ -99,7 +80,6 @@ export function linkLocalFromMac(mac: string): string {
   return eui64Address("fe80::", mac, 64)
 }
 
-// the shared helper zero-pads the last group; rfc 5952 4.1 forbids leading zeros
 export function solicitedNode(address: string): string {
-  return compressIPv6(solicitedNodeMulticast(address))
+  return solicitedNodeMulticast(address)
 }

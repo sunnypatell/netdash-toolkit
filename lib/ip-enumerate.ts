@@ -1,5 +1,5 @@
 import { cidrToRange, intToIpv4, prefixToMaskInt, prefixToNetmask } from "@/lib/network-utils"
-import { usableHostsForPrefix } from "@/lib/cidr-reference"
+import { usableHostsFor } from "@/lib/mask-convert"
 
 export interface RangeSummary {
   cidr: string
@@ -35,7 +35,7 @@ export function summarizeRange(cidr: string): RangeSummary {
     firstUsable: intToIpv4(hasNetworkAndBroadcast ? start + 1 : start),
     lastUsable: intToIpv4(hasNetworkAndBroadcast ? end - 1 : end),
     totalAddresses: end - start + 1,
-    usableHosts: usableHostsForPrefix(prefix),
+    usableHosts: usableHostsFor(prefix),
     hasNetworkAndBroadcast,
   }
 }

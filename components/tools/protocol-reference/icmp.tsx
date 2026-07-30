@@ -2,16 +2,20 @@
 
 import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
-import { DataTable, searchableText, type DataColumn } from "@/components/tools/reference-table"
+import {
+  ReferenceTable,
+  searchableText,
+  type ReferenceColumn,
+} from "@/components/tools/shared/reference-table"
 import { ICMP_TYPES } from "@/lib/reference/icmp"
 import type { ICMPTypeEntry } from "@/lib/reference/icmp"
 import { filterRows } from "@/lib/reference/search"
 
-const columns: DataColumn<ICMPTypeEntry>[] = [
+const columns: ReferenceColumn<ICMPTypeEntry>[] = [
   {
     key: "type",
     header: "Type",
-    headerClassName: "w-20 p-2 text-left font-medium",
+    headClassName: "w-20",
     text: (row) => String(row.type),
     cell: (row) => (
       <Badge variant="secondary" className="font-mono">
@@ -22,7 +26,7 @@ const columns: DataColumn<ICMPTypeEntry>[] = [
   {
     key: "name",
     header: "IANA Name",
-    cellClassName: "p-2 font-medium",
+    cellClassName: "font-medium",
     text: (row) => `${row.name} ${row.commonName ?? ""}`.trim(),
     cell: (row) => (
       <span>
@@ -38,13 +42,13 @@ const columns: DataColumn<ICMPTypeEntry>[] = [
   {
     key: "description",
     header: "Description",
-    cellClassName: "text-muted-foreground p-2",
+    cellClassName: "text-muted-foreground whitespace-normal",
     text: (row) => row.description,
   },
   {
     key: "status",
     header: "Status",
-    headerClassName: "w-28 p-2 text-left font-medium",
+    headClassName: "w-28",
     text: (row) => (row.deprecated ? "Deprecated" : "Current"),
     cell: (row) =>
       row.deprecated ? (
@@ -56,7 +60,7 @@ const columns: DataColumn<ICMPTypeEntry>[] = [
   {
     key: "rfc",
     header: "RFC",
-    headerClassName: "w-28 p-2 text-left font-medium",
+    headClassName: "w-28",
     text: (row) => row.rfc,
     cell: (row) => <Badge variant="outline">{row.rfc}</Badge>,
   },
@@ -69,7 +73,7 @@ export function ICMPPanel({ searchTerm }: { searchTerm: string }) {
   )
 
   return (
-    <DataTable
+    <ReferenceTable
       title="ICMP Message Types"
       description="ICMP for IPv4, with the registry's own wording. Deprecated types are marked rather than dropped."
       rows={rows}

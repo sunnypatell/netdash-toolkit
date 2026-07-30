@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Binary, AlertTriangle, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
-import { DataTable, type DataColumn } from "@/components/tools/reference-table"
+import { ReferenceTable, type ReferenceColumn } from "@/components/tools/shared/reference-table"
 import { maskInfo, parseMaskInput } from "@/lib/mask-convert"
 import { SUBNET_MASKS } from "@/lib/reference/subnet-masks"
 import { COMMON_SUBNETS } from "@/lib/reference/common-subnets"
@@ -20,36 +20,35 @@ const PRESETS = [8, 16, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 
 const USE_CASE_BY_PREFIX = new Map(COMMON_SUBNETS.map((entry) => [entry.prefix, entry.useCase]))
 
-const columns: DataColumn<SubnetMaskEntry>[] = [
+const columns: ReferenceColumn<SubnetMaskEntry>[] = [
   {
     key: "prefix",
     header: "CIDR",
-    headerClassName: "w-20 p-2 text-left font-medium",
+    headClassName: "w-20",
     text: (row) => `/${row.prefix}`,
     cell: (row) => <Badge variant="secondary">/{row.prefix}</Badge>,
   },
   {
     key: "mask",
     header: "Subnet Mask",
-    cellClassName: "p-2 font-mono",
+    cellClassName: "font-mono",
     text: (row) => row.mask,
   },
   {
     key: "wildcard",
     header: "Wildcard",
-    cellClassName: "p-2 font-mono",
+    cellClassName: "font-mono",
     text: (row) => row.wildcard,
   },
   {
     key: "hosts",
     header: "Usable Hosts",
-    cellClassName: "p-2",
     text: (row) => row.usableHosts.toLocaleString(),
   },
   {
     key: "use",
     header: "Typical Use",
-    cellClassName: "text-muted-foreground p-2",
+    cellClassName: "text-muted-foreground whitespace-normal",
     text: (row) => USE_CASE_BY_PREFIX.get(row.prefix) ?? "",
   },
 ]
@@ -190,7 +189,7 @@ export function SubnetMaskConverter() {
         </Card>
       </div>
 
-      <DataTable
+      <ReferenceTable
         title="Every Prefix Length"
         description="Mask, wildcard and usable host count for /0 through /32"
         rows={SUBNET_MASKS}
