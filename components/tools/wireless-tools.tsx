@@ -1061,21 +1061,21 @@ export function WirelessTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Radio className="h-5 w-5" />
+                  <Radio className="h-5 w-5" aria-hidden="true" />
                   Channel Selection
                 </CardTitle>
                 <CardDescription>Choose optimal channels to minimize interference</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label>Frequency Band</Label>
+                  <Label htmlFor="wireless-band">Frequency Band</Label>
                   <Select
                     value={wirelessConfig.band}
                     onValueChange={(value) =>
                       setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" | "6" }))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="wireless-band">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1087,14 +1087,14 @@ export function WirelessTools() {
                 </div>
 
                 <div>
-                  <Label>Channel Width</Label>
+                  <Label htmlFor="wireless-channel-width">Channel Width</Label>
                   <Select
                     value={wirelessConfig.bandwidth}
                     onValueChange={(value) =>
                       setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="wireless-channel-width">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -1114,7 +1114,7 @@ export function WirelessTools() {
                 </div>
 
                 <Alert>
-                  <Info className="h-4 w-4" />
+                  <Info className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
                     <strong>2.4 GHz:</strong> Use channels 1, 6, 11 to avoid overlap.{" "}
                     <strong>5 GHz:</strong> More channels available with less congestion.{" "}
@@ -1124,7 +1124,7 @@ export function WirelessTools() {
 
                 {wirelessConfig.band === "6" && (
                   <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-                    <Info className="h-4 w-4 text-blue-600" />
+                    <Info className="h-4 w-4 text-blue-600" aria-hidden="true" />
                     <AlertDescription className="text-blue-800 dark:text-blue-200">
                       <strong>6GHz Band Requirements:</strong> Only WiFi 6E (802.11ax) and WiFi 7
                       (802.11be) devices can connect. Legacy devices will not see this network. 320
@@ -1140,10 +1140,10 @@ export function WirelessTools() {
                 <CardTitle>Channel Recommendations</CardTitle>
                 <CardDescription>Based on interference analysis and best practices</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4" aria-live="polite">
                 <div>
                   <div className="mb-2 flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
                     <span className="font-medium">Recommended Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1162,7 +1162,7 @@ export function WirelessTools() {
 
                 <div>
                   <div className="mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" aria-hidden="true" />
                     <span className="font-medium">Acceptable Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1181,7 +1181,7 @@ export function WirelessTools() {
 
                 <div>
                   <div className="mb-2 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
                     <span className="font-medium">Avoid These Channels</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1220,9 +1220,15 @@ export function WirelessTools() {
                           : "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
                     }`}
                   >
-                    <div className="mb-2 flex items-center justify-between">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <span className="text-foreground font-medium">Channel {channel.channel}</span>
-                      <div className="flex gap-1">
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {/* text badge so "recommended" is not carried by the green tint alone */}
+                        {channel.recommended && (
+                          <Badge variant="outline" className="text-xs">
+                            Recommended
+                          </Badge>
+                        )}
                         <Badge
                           variant={
                             channel.interference === "low"
@@ -1257,7 +1263,7 @@ export function WirelessTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
+                  <Calculator className="h-5 w-5" aria-hidden="true" />
                   WiFi Capacity Calculator
                 </CardTitle>
                 <CardDescription>
@@ -1267,14 +1273,14 @@ export function WirelessTools() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>WiFi Standard</Label>
+                    <Label htmlFor="wireless-capacity-standard">WiFi Standard</Label>
                     <Select
                       value={wirelessConfig.mode}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, mode: value as any }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-capacity-standard">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1286,14 +1292,14 @@ export function WirelessTools() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Frequency Band</Label>
+                    <Label htmlFor="wireless-capacity-band">Frequency Band</Label>
                     <Select
                       value={wirelessConfig.band}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, band: value as "2.4" | "5" | "6" }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-capacity-band">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1307,14 +1313,14 @@ export function WirelessTools() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Channel Width</Label>
+                    <Label htmlFor="wireless-capacity-channel-width">Channel Width</Label>
                     <Select
                       value={wirelessConfig.bandwidth}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, bandwidth: value as any }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-capacity-channel-width">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1333,8 +1339,9 @@ export function WirelessTools() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Max Concurrent Clients</Label>
+                    <Label htmlFor="wireless-capacity-max-clients">Max Concurrent Clients</Label>
                     <Input
+                      id="wireless-capacity-max-clients"
                       value={wirelessConfig.maxClients}
                       onChange={(e) =>
                         setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))
@@ -1345,7 +1352,7 @@ export function WirelessTools() {
                 </div>
 
                 <Alert>
-                  <Info className="h-4 w-4" />
+                  <Info className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
                     Real-world performance is typically 50-70% of theoretical maximum due to
                     overhead, interference, and protocol limitations.
@@ -1355,6 +1362,7 @@ export function WirelessTools() {
             </Card>
 
             <div className="space-y-4">
+              {/* ResultCard already marks its own content aria-live, so no wrapper here */}
               <ResultCard
                 title="WiFi Performance Analysis"
                 data={[
@@ -1407,43 +1415,49 @@ export function WirelessTools() {
                   <h4 className="mb-3 font-semibold">Client Density Recommendations</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Light Usage (Email, Web): 50-100 clients/AP</span>
+                      <Checkbox aria-labelledby="wireless-density-light" />
+                      <span id="wireless-density-light" className="text-sm">
+                        Light Usage (Email, Web): 50-100 clients/AP
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Medium Usage (Video, VoIP): 25-50 clients/AP</span>
+                      <Checkbox aria-labelledby="wireless-density-medium" />
+                      <span id="wireless-density-medium" className="text-sm">
+                        Medium Usage (Video, VoIP): 25-50 clients/AP
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">
+                      <Checkbox aria-labelledby="wireless-density-heavy" />
+                      <span id="wireless-density-heavy" className="text-sm">
                         Heavy Usage (Streaming, Gaming): 15-25 clients/AP
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">High Density (Conference): 100+ clients/AP</span>
+                      <Checkbox aria-labelledby="wireless-density-high" />
+                      <span id="wireless-density-high" className="text-sm">
+                        High Density (Conference): 100+ clients/AP
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div>
                   <h4 className="mb-3 font-semibold">Bandwidth Requirements</h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span>Email/Web Browsing:</span>
-                      <span className="font-mono">1-5 Mbps</span>
+                      <span className="font-mono break-all">1-5 Mbps</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span>Video Conferencing:</span>
-                      <span className="font-mono">2-10 Mbps</span>
+                      <span className="font-mono break-all">2-10 Mbps</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span>HD Video Streaming:</span>
-                      <span className="font-mono">5-25 Mbps</span>
+                      <span className="font-mono break-all">5-25 Mbps</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between gap-2">
                       <span>4K Video Streaming:</span>
-                      <span className="font-mono">25-50 Mbps</span>
+                      <span className="font-mono break-all">25-50 Mbps</span>
                     </div>
                   </div>
                 </div>
@@ -1457,7 +1471,7 @@ export function WirelessTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-5 w-5" aria-hidden="true" />
                   WiFi Configuration
                 </CardTitle>
                 <CardDescription>Generate wireless access point configuration</CardDescription>
@@ -1465,9 +1479,9 @@ export function WirelessTools() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="ssid">SSID Name</Label>
+                    <Label htmlFor="wireless-ssid">SSID Name</Label>
                     <Input
-                      id="ssid"
+                      id="wireless-ssid"
                       value={wirelessConfig.ssid}
                       onChange={(e) =>
                         setWirelessConfig((prev) => ({ ...prev, ssid: e.target.value }))
@@ -1476,14 +1490,14 @@ export function WirelessTools() {
                     />
                   </div>
                   <div>
-                    <Label>Security Type</Label>
+                    <Label htmlFor="wireless-security">Security Type</Label>
                     <Select
                       value={wirelessConfig.security}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, security: value as any }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-security">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1500,14 +1514,14 @@ export function WirelessTools() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Channel</Label>
+                    <Label htmlFor="wireless-channel">Channel</Label>
                     <Select
                       value={wirelessConfig.channel}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, channel: value }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-channel">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1523,14 +1537,14 @@ export function WirelessTools() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Transmit Power (%)</Label>
+                    <Label htmlFor="wireless-power">Transmit Power (%)</Label>
                     <Select
                       value={wirelessConfig.power}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, power: value }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-power">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1545,14 +1559,14 @@ export function WirelessTools() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>WiFi Standard</Label>
+                    <Label htmlFor="wireless-mode">WiFi Standard</Label>
                     <Select
                       value={wirelessConfig.mode}
                       onValueChange={(value) =>
                         setWirelessConfig((prev) => ({ ...prev, mode: value as any }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="wireless-mode">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1564,8 +1578,9 @@ export function WirelessTools() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Max Clients</Label>
+                    <Label htmlFor="wireless-config-max-clients">Max Clients</Label>
                     <Input
+                      id="wireless-config-max-clients"
                       value={wirelessConfig.maxClients}
                       onChange={(e) =>
                         setWirelessConfig((prev) => ({ ...prev, maxClients: e.target.value }))
@@ -1577,8 +1592,9 @@ export function WirelessTools() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Beacon Interval (ms)</Label>
+                    <Label htmlFor="wireless-beacon-interval">Beacon Interval (ms)</Label>
                     <Input
+                      id="wireless-beacon-interval"
                       value={wirelessConfig.beaconInterval}
                       onChange={(e) =>
                         setWirelessConfig((prev) => ({ ...prev, beaconInterval: e.target.value }))
@@ -1587,8 +1603,9 @@ export function WirelessTools() {
                     />
                   </div>
                   <div>
-                    <Label>DTIM Period</Label>
+                    <Label htmlFor="wireless-dtim-period">DTIM Period</Label>
                     <Input
+                      id="wireless-dtim-period"
                       value={wirelessConfig.dtimPeriod}
                       onChange={(e) =>
                         setWirelessConfig((prev) => ({ ...prev, dtimPeriod: e.target.value }))
@@ -1600,12 +1617,15 @@ export function WirelessTools() {
 
                 <div className="flex items-center space-x-2">
                   <Checkbox
+                    id="wireless-hide-ssid"
                     checked={wirelessConfig.hidden}
                     onCheckedChange={(checked) =>
                       setWirelessConfig((prev) => ({ ...prev, hidden: !!checked }))
                     }
                   />
-                  <Label>Hide SSID (Not recommended for security)</Label>
+                  <Label htmlFor="wireless-hide-ssid">
+                    Hide SSID (Not recommended for security)
+                  </Label>
                 </div>
               </CardContent>
             </Card>
@@ -1619,6 +1639,7 @@ export function WirelessTools() {
                 <Textarea
                   value={generateWirelessConfig()}
                   readOnly
+                  aria-label="Generated wireless configuration"
                   className="min-h-[400px] font-mono text-sm"
                 />
                 <div className="mt-4 flex space-x-2">
@@ -1627,11 +1648,11 @@ export function WirelessTools() {
                     variant="outline"
                     className="flex-1"
                   >
-                    <Copy className="mr-2 h-4 w-4" />
+                    <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
                     Copy Config
                   </Button>
                   <Button onClick={exportConfig} variant="outline" className="flex-1">
-                    <Download className="mr-2 h-4 w-4" />
+                    <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                     Export
                   </Button>
                 </div>
@@ -1644,7 +1665,7 @@ export function WirelessTools() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="h-5 w-5" aria-hidden="true" />
                 Wireless Security Best Practices
               </CardTitle>
               <CardDescription>
@@ -1659,7 +1680,7 @@ export function WirelessTools() {
                     <div className="space-y-3">
                       <div className="rounded-lg border border-green-200 bg-green-50 p-3">
                         <div className="mb-1 flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
                           <span className="font-medium">WPA3 (Recommended)</span>
                         </div>
                         <p className="text-muted-foreground text-sm">
@@ -1669,7 +1690,7 @@ export function WirelessTools() {
                       </div>
                       <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
                         <div className="mb-1 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                          <AlertTriangle className="h-4 w-4 text-yellow-600" aria-hidden="true" />
                           <span className="font-medium">WPA2 (Acceptable)</span>
                         </div>
                         <p className="text-muted-foreground text-sm">
@@ -1679,7 +1700,7 @@ export function WirelessTools() {
                       </div>
                       <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                         <div className="mb-1 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-red-600" />
+                          <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
                           <span className="font-medium">WEP (Avoid)</span>
                         </div>
                         <p className="text-muted-foreground text-sm">
@@ -1748,46 +1769,66 @@ export function WirelessTools() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">WPA3 or WPA2 enabled</span>
+                      <Checkbox aria-labelledby="wireless-check-wpa" />
+                      <span id="wireless-check-wpa" className="text-sm">
+                        WPA3 or WPA2 enabled
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Strong password configured</span>
+                      <Checkbox aria-labelledby="wireless-check-password" />
+                      <span id="wireless-check-password" className="text-sm">
+                        Strong password configured
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Default admin credentials changed</span>
+                      <Checkbox aria-labelledby="wireless-check-admin-creds" />
+                      <span id="wireless-check-admin-creds" className="text-sm">
+                        Default admin credentials changed
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">WPS disabled</span>
+                      <Checkbox aria-labelledby="wireless-check-wps" />
+                      <span id="wireless-check-wps" className="text-sm">
+                        WPS disabled
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Firmware up to date</span>
+                      <Checkbox aria-labelledby="wireless-check-firmware" />
+                      <span id="wireless-check-firmware" className="text-sm">
+                        Firmware up to date
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Guest network separated</span>
+                      <Checkbox aria-labelledby="wireless-check-guest" />
+                      <span id="wireless-check-guest" className="text-sm">
+                        Guest network separated
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Management interface secured</span>
+                      <Checkbox aria-labelledby="wireless-check-mgmt" />
+                      <span id="wireless-check-mgmt" className="text-sm">
+                        Management interface secured
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Logging enabled</span>
+                      <Checkbox aria-labelledby="wireless-check-logging" />
+                      <span id="wireless-check-logging" className="text-sm">
+                        Logging enabled
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Regular security audits</span>
+                      <Checkbox aria-labelledby="wireless-check-audits" />
+                      <span id="wireless-check-audits" className="text-sm">
+                        Regular security audits
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Checkbox />
-                      <span className="text-sm">Rogue AP monitoring</span>
+                      <Checkbox aria-labelledby="wireless-check-rogue-ap" />
+                      <span id="wireless-check-rogue-ap" className="text-sm">
+                        Rogue AP monitoring
+                      </span>
                     </div>
                   </div>
                 </div>

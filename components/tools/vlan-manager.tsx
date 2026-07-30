@@ -381,6 +381,7 @@ export function VLANManager() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                 <Input
                   type="number"
+                  aria-label="New VLAN ID"
                   placeholder="VLAN ID"
                   value={newVlan.id || ""}
                   onChange={(e) =>
@@ -388,22 +389,25 @@ export function VLANManager() {
                   }
                 />
                 <Input
+                  aria-label="New VLAN name"
                   placeholder="VLAN Name"
                   value={newVlan.name}
                   onChange={(e) => setNewVlan({ ...newVlan, name: e.target.value })}
                 />
                 <Input
+                  aria-label="New VLAN purpose"
                   placeholder="Purpose"
                   value={newVlan.purpose}
                   onChange={(e) => setNewVlan({ ...newVlan, purpose: e.target.value })}
                 />
                 <Input
+                  aria-label="New VLAN description"
                   placeholder="Description"
                   value={newVlan.description}
                   onChange={(e) => setNewVlan({ ...newVlan, description: e.target.value })}
                 />
                 <Button onClick={addVLAN} disabled={!newVlan.id || !newVlan.name}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                   Add VLAN
                 </Button>
               </div>
@@ -411,9 +415,9 @@ export function VLANManager() {
               <div className="space-y-4">
                 {vlans.map((vlan) => (
                   <Card key={vlan.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="mb-2 flex items-center space-x-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                           <Badge variant={isReservedVLAN(vlan.id) ? "destructive" : "secondary"}>
                             VLAN {vlan.id}
                           </Badge>
@@ -425,10 +429,13 @@ export function VLANManager() {
                         )}
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
-                            <Label className="text-sm">Subnets:</Label>
+                            <Label htmlFor={`vlan-${vlan.id}-subnet`} className="text-sm">
+                              Subnets:
+                            </Label>
                             <Input
+                              id={`vlan-${vlan.id}-subnet`}
                               placeholder="Add subnet (e.g., 192.168.1.0/24)"
-                              className="flex-1"
+                              className="min-w-0 flex-1"
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") {
                                   const input = e.target as HTMLInputElement
@@ -445,7 +452,7 @@ export function VLANManager() {
                               <Badge
                                 key={index}
                                 variant="outline"
-                                className="cursor-pointer"
+                                className="cursor-pointer break-all"
                                 onClick={() => removeSubnetFromVLAN(vlan.id, index)}
                               >
                                 {subnet} ×
@@ -454,8 +461,14 @@ export function VLANManager() {
                           </div>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => removeVLAN(vlan.id)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeVLAN(vlan.id)}
+                        className="shrink-0"
+                        aria-label={`Delete VLAN ${vlan.id} ${vlan.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </div>
                   </Card>
@@ -474,11 +487,13 @@ export function VLANManager() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
                 <Input
+                  aria-label="New port interface name"
                   placeholder="Interface name"
                   value={newPort.name}
                   onChange={(e) => setNewPort({ ...newPort, name: e.target.value })}
                 />
                 <Input
+                  aria-label="New port description"
                   placeholder="Description"
                   value={newPort.description}
                   onChange={(e) => setNewPort({ ...newPort, description: e.target.value })}
@@ -495,7 +510,7 @@ export function VLANManager() {
                     })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="New port mode">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -511,7 +526,7 @@ export function VLANManager() {
                       setNewPort({ ...newPort, accessVlan: Number.parseInt(value) })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="New port access VLAN">
                       <SelectValue placeholder="Access VLAN" />
                     </SelectTrigger>
                     <SelectContent>
@@ -525,6 +540,7 @@ export function VLANManager() {
                 ) : (
                   <>
                     <Input
+                      aria-label="New port allowed VLANs"
                       placeholder="Allowed VLANs (e.g., 10,20,30-35)"
                       value={newPort.allowedVlans}
                       onChange={(e) => setNewPort({ ...newPort, allowedVlans: e.target.value })}
@@ -535,7 +551,7 @@ export function VLANManager() {
                         setNewPort({ ...newPort, nativeVlan: Number.parseInt(value) })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="New port native VLAN">
                         <SelectValue placeholder="Native VLAN" />
                       </SelectTrigger>
                       <SelectContent>
@@ -550,7 +566,7 @@ export function VLANManager() {
                 )}
 
                 <Button onClick={addPort} disabled={!newPort.name}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                   Add Port
                 </Button>
               </div>
@@ -559,21 +575,21 @@ export function VLANManager() {
                 {ports.map((port, index) => (
                   <div
                     key={index}
-                    className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
+                    className="bg-muted/50 flex items-center justify-between gap-2 rounded-lg p-3"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <Badge variant={port.mode === "trunk" ? "secondary" : "outline"}>
                           {port.mode}
                         </Badge>
-                        <span className="font-mono text-sm">{port.name}</span>
+                        <span className="font-mono text-sm break-all">{port.name}</span>
                         {port.description && (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-muted-foreground text-sm wrap-break-word">
                             - {port.description}
                           </span>
                         )}
                       </div>
-                      <div className="text-muted-foreground mt-1 text-xs">
+                      <div className="text-muted-foreground mt-1 text-xs break-all">
                         {port.mode === "access" && `Access VLAN: ${port.accessVlan}`}
                         {port.mode === "trunk" && (
                           <>
@@ -583,8 +599,14 @@ export function VLANManager() {
                         )}
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => removePort(index)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removePort(index)}
+                      className="shrink-0"
+                      aria-label={`Delete port ${port.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 ))}
@@ -605,25 +627,25 @@ export function VLANManager() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Label>Vendor:</Label>
+              <div className="flex flex-wrap items-center gap-3">
+                <Label htmlFor="vlan-config-vendor">Vendor:</Label>
                 <Select
                   value={selectedVendor}
                   onValueChange={(value: "cisco-ios" | "aruba-cx") => setSelectedVendor(value)}
                 >
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger id="vlan-config-vendor" className="w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="cisco-ios">
                       <div className="flex items-center space-x-2">
-                        <Router className="h-4 w-4" />
+                        <Router className="h-4 w-4" aria-hidden="true" />
                         <span>Cisco IOS</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="aruba-cx">
                       <div className="flex items-center space-x-2">
-                        <Network className="h-4 w-4" />
+                        <Network className="h-4 w-4" aria-hidden="true" />
                         <span>Aruba CX</span>
                       </div>
                     </SelectItem>
@@ -636,9 +658,10 @@ export function VLANManager() {
               </div>
 
               {generatedConfig && (
-                <div className="space-y-2">
-                  <Label>Generated Configuration:</Label>
+                <div className="space-y-2" aria-live="polite">
+                  <Label htmlFor="vlan-generated-config">Generated Configuration:</Label>
                   <Textarea
+                    id="vlan-generated-config"
                     value={generatedConfig}
                     readOnly
                     className="min-h-[400px] font-mono text-sm"
@@ -672,16 +695,22 @@ export function VLANManager() {
                       return (
                         <div
                           key={vlan.id}
-                          className="bg-muted/50 flex items-center justify-between rounded p-2"
+                          className="bg-muted/50 flex items-center justify-between gap-2 rounded p-2"
                         >
-                          <span className="text-sm">
+                          <span className="min-w-0 text-sm wrap-break-word">
                             VLAN {vlan.id} - {vlan.name}
                           </span>
-                          {validation.isValid ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-red-600" />
-                          )}
+                          {/* the icon colour alone carried pass/fail; name it for screen readers */}
+                          <span className="shrink-0">
+                            {validation.isValid ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
+                            )}
+                            <span className="sr-only">
+                              {validation.isValid ? "Valid" : "Has issues"}
+                            </span>
+                          </span>
                         </div>
                       )
                     })}
@@ -699,14 +728,19 @@ export function VLANManager() {
                       return (
                         <div
                           key={index}
-                          className="bg-muted/50 flex items-center justify-between rounded p-2"
+                          className="bg-muted/50 flex items-center justify-between gap-2 rounded p-2"
                         >
-                          <span className="font-mono text-sm">{port.name}</span>
-                          {validation.isValid ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-red-600" />
-                          )}
+                          <span className="min-w-0 font-mono text-sm break-all">{port.name}</span>
+                          <span className="shrink-0">
+                            {validation.isValid ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-red-600" aria-hidden="true" />
+                            )}
+                            <span className="sr-only">
+                              {validation.isValid ? "Valid" : "Has issues"}
+                            </span>
+                          </span>
                         </div>
                       )
                     })}

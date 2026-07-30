@@ -882,494 +882,541 @@ export function ACLGenerator() {
       >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="standard" className="flex items-center gap-2">
-            <Network className="h-4 w-4" />
+            <Network className="h-4 w-4" aria-hidden="true" />
             Standard ACL
           </TabsTrigger>
           <TabsTrigger value="extended" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
+            <Settings className="h-4 w-4" aria-hidden="true" />
             Extended ACL
           </TabsTrigger>
         </TabsList>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>ACL Configuration</CardTitle>
-                <CardDescription>
-                  {aclType === "standard"
-                    ? "Standard ACLs filter based on source IP addresses only (1-99, 1300-1999)"
-                    : "Extended ACLs filter based on source, destination, protocol, and ports (100-199, 2000-2699)"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="acl-name">ACL Name/Number</Label>
-                    <Input
-                      id="acl-name"
-                      value={aclName}
-                      onChange={(e) => setAclName(e.target.value)}
-                      placeholder={aclType === "standard" ? "10" : "101"}
-                    />
+        {/* one panel keyed to the active type: without it the selected tab's
+            aria-controls pointed at an element that does not exist */}
+        <TabsContent value={aclType} className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>ACL Configuration</CardTitle>
+                  <CardDescription>
+                    {aclType === "standard"
+                      ? "Standard ACLs filter based on source IP addresses only (1-99, 1300-1999)"
+                      : "Extended ACLs filter based on source, destination, protocol, and ports (100-199, 2000-2699)"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="acl-name">ACL Name/Number</Label>
+                      <Input
+                        id="acl-name"
+                        value={aclName}
+                        onChange={(e) => setAclName(e.target.value)}
+                        placeholder={aclType === "standard" ? "10" : "101"}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="acl-platform">Platform</Label>
+                      <Select value={platform} onValueChange={setPlatform}>
+                        <SelectTrigger id="acl-platform">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cisco-ios">Cisco IOS</SelectItem>
+                          <SelectItem value="juniper-junos">Juniper JunOS</SelectItem>
+                          <SelectItem value="paloalto-panos">Palo Alto PAN-OS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Platform</Label>
-                    <Select value={platform} onValueChange={setPlatform}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cisco-ios">Cisco IOS</SelectItem>
-                        <SelectItem value="juniper-junos">Juniper JunOS</SelectItem>
-                        <SelectItem value="paloalto-panos">Palo Alto PAN-OS</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <Button onClick={loadSampleRules} variant="outline" className="flex-1">
-                    Load Sample Rules
-                  </Button>
-                  <Button onClick={validateAllRules} variant="outline" className="flex-1">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Validate Rules
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Rules
                   <div className="flex space-x-2">
-                    <Badge variant="secondary">{currentRules.length} rules</Badge>
-                    <Button
-                      onClick={aclType === "standard" ? addStandardRule : addExtendedRule}
-                      size="sm"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Rule
+                    <Button onClick={loadSampleRules} variant="outline" className="flex-1">
+                      Load Sample Rules
+                    </Button>
+                    <Button onClick={validateAllRules} variant="outline" className="flex-1">
+                      <CheckCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Validate Rules
                     </Button>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="max-h-96 space-y-4 overflow-y-auto">
-                  {currentRules.map((rule, index) => {
-                    const validation = validationResults[index]
-                    return (
-                      <div key={rule.id} className="space-y-3 rounded-lg border p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="outline">Rule {index + 1}</Badge>
-                            {validation && (
-                              <>
-                                {validation.isValid ? (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                ) : (
-                                  <AlertCircle className="h-4 w-4 text-red-600" />
-                                )}
-                              </>
-                            )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    Rules
+                    <div className="flex space-x-2">
+                      <Badge variant="secondary">{currentRules.length} rules</Badge>
+                      <Button
+                        onClick={aclType === "standard" ? addStandardRule : addExtendedRule}
+                        size="sm"
+                      >
+                        <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Add Rule
+                      </Button>
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-96 space-y-4 overflow-y-auto">
+                    {currentRules.map((rule, index) => {
+                      const validation = validationResults[index]
+                      return (
+                        <div key={rule.id} className="space-y-3 rounded-lg border p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline">Rule {index + 1}</Badge>
+                              {validation && (
+                                <>
+                                  {validation.isValid ? (
+                                    <CheckCircle
+                                      className="h-4 w-4 text-green-600"
+                                      role="img"
+                                      aria-label={`Rule ${index + 1} is valid`}
+                                    />
+                                  ) : (
+                                    <AlertCircle
+                                      className="h-4 w-4 text-red-600"
+                                      role="img"
+                                      aria-label={`Rule ${index + 1} has errors`}
+                                    />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() =>
+                                aclType === "standard"
+                                  ? deleteStandardRule(rule.id)
+                                  : deleteExtendedRule(rule.id)
+                              }
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive h-8 w-8 p-0"
+                              aria-label={`Delete rule ${index + 1}`}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
                           </div>
-                          <Button
-                            onClick={() =>
-                              aclType === "standard"
-                                ? deleteStandardRule(rule.id)
-                                : deleteExtendedRule(rule.id)
-                            }
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive h-8 w-8 p-0"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
 
-                        {validation && !validation.isValid && (
-                          <Alert variant="destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{validation.errors.join(", ")}</AlertDescription>
-                          </Alert>
-                        )}
+                          {validation && !validation.isValid && (
+                            <Alert variant="destructive">
+                              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                              <AlertDescription>{validation.errors.join(", ")}</AlertDescription>
+                            </Alert>
+                          )}
 
-                        {validation && validation.warnings.length > 0 && (
-                          <Alert>
-                            <AlertCircle className="h-4 w-4" />
-                            <AlertDescription>{validation.warnings.join(", ")}</AlertDescription>
-                          </Alert>
-                        )}
+                          {validation && validation.warnings.length > 0 && (
+                            <Alert>
+                              <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                              <AlertDescription>{validation.warnings.join(", ")}</AlertDescription>
+                            </Alert>
+                          )}
 
-                        {aclType === "standard" ? (
-                          // Standard ACL Rule Form
-                          <TabsContent value="standard" className="mt-0 space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label>Action</Label>
-                                <Select
-                                  value={rule.action}
-                                  onValueChange={(value) =>
-                                    updateStandardRule(rule.id, "action", value)
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="permit">Permit</SelectItem>
-                                    <SelectItem value="deny">Deny</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Source Network</Label>
-                                <Input
-                                  value={(rule as StandardACLRule).sourceNetwork}
-                                  onChange={(e) =>
-                                    updateStandardRule(rule.id, "sourceNetwork", e.target.value)
-                                  }
-                                  placeholder="192.168.1.0/24, host 1.1.1.1, or any"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <Label>Description</Label>
-                              <Input
-                                value={rule.description || ""}
-                                onChange={(e) =>
-                                  updateStandardRule(rule.id, "description", e.target.value)
-                                }
-                                placeholder="Rule description"
-                              />
-                            </div>
-                          </TabsContent>
-                        ) : (
-                          // Extended ACL Rule Form
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label>Action</Label>
-                                <Select
-                                  value={rule.action}
-                                  onValueChange={(value) =>
-                                    updateExtendedRule(rule.id, "action", value)
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="permit">Permit</SelectItem>
-                                    <SelectItem value="deny">Deny</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Protocol</Label>
-                                <Select
-                                  value={(rule as ExtendedACLRule).protocol}
-                                  onValueChange={(value) =>
-                                    updateExtendedRule(rule.id, "protocol", value)
-                                  }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="ip">IP (Any)</SelectItem>
-                                    <SelectItem value="tcp">TCP</SelectItem>
-                                    <SelectItem value="udp">UDP</SelectItem>
-                                    <SelectItem value="icmp">ICMP</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label>Source Network</Label>
-                                <Input
-                                  value={(rule as ExtendedACLRule).sourceNetwork}
-                                  onChange={(e) =>
-                                    updateExtendedRule(rule.id, "sourceNetwork", e.target.value)
-                                  }
-                                  placeholder="10.0.0.0/24, host 1.1.1.1, or any"
-                                />
-                              </div>
-                              <div>
-                                <Label>Destination Network</Label>
-                                <Input
-                                  value={(rule as ExtendedACLRule).destNetwork}
-                                  onChange={(e) =>
-                                    updateExtendedRule(rule.id, "destNetwork", e.target.value)
-                                  }
-                                  placeholder="192.168.1.0/24, host 1.1.1.1, or any"
-                                />
-                              </div>
-                            </div>
-
-                            {((rule as ExtendedACLRule).protocol === "tcp" ||
-                              (rule as ExtendedACLRule).protocol === "udp") && (
+                          {aclType === "standard" ? (
+                            // Standard ACL Rule Form
+                            // plain div, not TabsContent: one per rule row duplicated its radix id
+                            <div className="mt-0 space-y-3">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <Label>Destination Port</Label>
-                                  <div className="flex gap-1">
-                                    <Select
-                                      value={(rule as ExtendedACLRule).destPortOperator || "eq"}
-                                      onValueChange={(value) =>
-                                        updateExtendedRule(rule.id, "destPortOperator", value)
-                                      }
-                                    >
-                                      <SelectTrigger className="w-20">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="eq">eq</SelectItem>
-                                        <SelectItem value="gt">gt</SelectItem>
-                                        <SelectItem value="lt">lt</SelectItem>
-                                        <SelectItem value="neq">neq</SelectItem>
-                                        <SelectItem value="range">range</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                    <Input
-                                      value={
-                                        (rule as ExtendedACLRule).destPortOperator === "range"
-                                          ? (rule as ExtendedACLRule).destPortRange || ""
-                                          : (rule as ExtendedACLRule).destPort || ""
-                                      }
-                                      onChange={(e) =>
-                                        updateExtendedRule(
-                                          rule.id,
+                                  <Label htmlFor={`acl-std-action-${rule.id}`}>Action</Label>
+                                  <Select
+                                    value={rule.action}
+                                    onValueChange={(value) =>
+                                      updateStandardRule(rule.id, "action", value)
+                                    }
+                                  >
+                                    <SelectTrigger id={`acl-std-action-${rule.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="permit">Permit</SelectItem>
+                                      <SelectItem value="deny">Deny</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label htmlFor={`acl-std-source-${rule.id}`}>
+                                    Source Network
+                                  </Label>
+                                  <Input
+                                    id={`acl-std-source-${rule.id}`}
+                                    value={(rule as StandardACLRule).sourceNetwork}
+                                    onChange={(e) =>
+                                      updateStandardRule(rule.id, "sourceNetwork", e.target.value)
+                                    }
+                                    placeholder="192.168.1.0/24, host 1.1.1.1, or any"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <Label htmlFor={`acl-std-description-${rule.id}`}>
+                                  Description
+                                </Label>
+                                <Input
+                                  id={`acl-std-description-${rule.id}`}
+                                  value={rule.description || ""}
+                                  onChange={(e) =>
+                                    updateStandardRule(rule.id, "description", e.target.value)
+                                  }
+                                  placeholder="Rule description"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            // Extended ACL Rule Form
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label htmlFor={`acl-ext-action-${rule.id}`}>Action</Label>
+                                  <Select
+                                    value={rule.action}
+                                    onValueChange={(value) =>
+                                      updateExtendedRule(rule.id, "action", value)
+                                    }
+                                  >
+                                    <SelectTrigger id={`acl-ext-action-${rule.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="permit">Permit</SelectItem>
+                                      <SelectItem value="deny">Deny</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label htmlFor={`acl-ext-protocol-${rule.id}`}>Protocol</Label>
+                                  <Select
+                                    value={(rule as ExtendedACLRule).protocol}
+                                    onValueChange={(value) =>
+                                      updateExtendedRule(rule.id, "protocol", value)
+                                    }
+                                  >
+                                    <SelectTrigger id={`acl-ext-protocol-${rule.id}`}>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="ip">IP (Any)</SelectItem>
+                                      <SelectItem value="tcp">TCP</SelectItem>
+                                      <SelectItem value="udp">UDP</SelectItem>
+                                      <SelectItem value="icmp">ICMP</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <Label htmlFor={`acl-ext-source-${rule.id}`}>
+                                    Source Network
+                                  </Label>
+                                  <Input
+                                    id={`acl-ext-source-${rule.id}`}
+                                    value={(rule as ExtendedACLRule).sourceNetwork}
+                                    onChange={(e) =>
+                                      updateExtendedRule(rule.id, "sourceNetwork", e.target.value)
+                                    }
+                                    placeholder="10.0.0.0/24, host 1.1.1.1, or any"
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`acl-ext-dest-${rule.id}`}>
+                                    Destination Network
+                                  </Label>
+                                  <Input
+                                    id={`acl-ext-dest-${rule.id}`}
+                                    value={(rule as ExtendedACLRule).destNetwork}
+                                    onChange={(e) =>
+                                      updateExtendedRule(rule.id, "destNetwork", e.target.value)
+                                    }
+                                    placeholder="192.168.1.0/24, host 1.1.1.1, or any"
+                                  />
+                                </div>
+                              </div>
+
+                              {((rule as ExtendedACLRule).protocol === "tcp" ||
+                                (rule as ExtendedACLRule).protocol === "udp") && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <Label htmlFor={`acl-ext-dest-port-${rule.id}`}>
+                                      Destination Port
+                                    </Label>
+                                    <div className="flex gap-1">
+                                      <Select
+                                        value={(rule as ExtendedACLRule).destPortOperator || "eq"}
+                                        onValueChange={(value) =>
+                                          updateExtendedRule(rule.id, "destPortOperator", value)
+                                        }
+                                      >
+                                        {/* operator has no visible label of its own */}
+                                        <SelectTrigger
+                                          className="w-20"
+                                          id={`acl-ext-dest-port-operator-${rule.id}`}
+                                          aria-label={`Destination port operator for rule ${index + 1}`}
+                                        >
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="eq">eq</SelectItem>
+                                          <SelectItem value="gt">gt</SelectItem>
+                                          <SelectItem value="lt">lt</SelectItem>
+                                          <SelectItem value="neq">neq</SelectItem>
+                                          <SelectItem value="range">range</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <Input
+                                        id={`acl-ext-dest-port-${rule.id}`}
+                                        value={
                                           (rule as ExtendedACLRule).destPortOperator === "range"
-                                            ? "destPortRange"
-                                            : "destPort",
-                                          e.target.value
-                                        )
-                                      }
-                                      placeholder={
-                                        (rule as ExtendedACLRule).destPortOperator === "range"
-                                          ? "80-90"
-                                          : "443"
-                                      }
-                                      className="flex-1"
-                                    />
+                                            ? (rule as ExtendedACLRule).destPortRange || ""
+                                            : (rule as ExtendedACLRule).destPort || ""
+                                        }
+                                        onChange={(e) =>
+                                          updateExtendedRule(
+                                            rule.id,
+                                            (rule as ExtendedACLRule).destPortOperator === "range"
+                                              ? "destPortRange"
+                                              : "destPort",
+                                            e.target.value
+                                          )
+                                        }
+                                        placeholder={
+                                          (rule as ExtendedACLRule).destPortOperator === "range"
+                                            ? "80-90"
+                                            : "443"
+                                        }
+                                        className="flex-1"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`acl-ext-established-${rule.id}`}
+                                        checked={(rule as ExtendedACLRule).established || false}
+                                        onCheckedChange={(checked) =>
+                                          updateExtendedRule(rule.id, "established", !!checked)
+                                        }
+                                      />
+                                      <Label
+                                        htmlFor={`acl-ext-established-${rule.id}`}
+                                        className="text-sm"
+                                      >
+                                        Established
+                                      </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`acl-ext-log-${rule.id}`}
+                                        checked={(rule as ExtendedACLRule).log || false}
+                                        onCheckedChange={(checked) =>
+                                          updateExtendedRule(rule.id, "log", !!checked)
+                                        }
+                                      />
+                                      <Label htmlFor={`acl-ext-log-${rule.id}`} className="text-sm">
+                                        Log
+                                      </Label>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`established-${rule.id}`}
-                                      checked={(rule as ExtendedACLRule).established || false}
-                                      onCheckedChange={(checked) =>
-                                        updateExtendedRule(rule.id, "established", !!checked)
-                                      }
-                                    />
-                                    <Label htmlFor={`established-${rule.id}`} className="text-sm">
-                                      Established
-                                    </Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`log-${rule.id}`}
-                                      checked={(rule as ExtendedACLRule).log || false}
-                                      onCheckedChange={(checked) =>
-                                        updateExtendedRule(rule.id, "log", !!checked)
-                                      }
-                                    />
-                                    <Label htmlFor={`log-${rule.id}`} className="text-sm">
-                                      Log
-                                    </Label>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                              )}
 
-                            {(rule as ExtendedACLRule).protocol === "icmp" && (
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <Label>ICMP Type</Label>
-                                  <Input
-                                    value={(rule as ExtendedACLRule).icmpType || ""}
-                                    onChange={(e) =>
-                                      updateExtendedRule(rule.id, "icmpType", e.target.value)
-                                    }
-                                    placeholder="8 (echo)"
-                                  />
+                              {(rule as ExtendedACLRule).protocol === "icmp" && (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <Label htmlFor={`acl-ext-icmp-type-${rule.id}`}>
+                                      ICMP Type
+                                    </Label>
+                                    <Input
+                                      id={`acl-ext-icmp-type-${rule.id}`}
+                                      value={(rule as ExtendedACLRule).icmpType || ""}
+                                      onChange={(e) =>
+                                        updateExtendedRule(rule.id, "icmpType", e.target.value)
+                                      }
+                                      placeholder="8 (echo)"
+                                    />
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`acl-ext-icmp-code-${rule.id}`}>
+                                      ICMP Code
+                                    </Label>
+                                    <Input
+                                      id={`acl-ext-icmp-code-${rule.id}`}
+                                      value={(rule as ExtendedACLRule).icmpCode || ""}
+                                      onChange={(e) =>
+                                        updateExtendedRule(rule.id, "icmpCode", e.target.value)
+                                      }
+                                      placeholder="0"
+                                    />
+                                  </div>
                                 </div>
-                                <div>
-                                  <Label>ICMP Code</Label>
-                                  <Input
-                                    value={(rule as ExtendedACLRule).icmpCode || ""}
-                                    onChange={(e) =>
-                                      updateExtendedRule(rule.id, "icmpCode", e.target.value)
-                                    }
-                                    placeholder="0"
-                                  />
-                                </div>
-                              </div>
-                            )}
+                              )}
 
-                            <div>
-                              <Label>Description</Label>
-                              <Input
-                                value={rule.description || ""}
-                                onChange={(e) =>
-                                  updateExtendedRule(rule.id, "description", e.target.value)
-                                }
-                                placeholder="Rule description"
-                              />
+                              <div>
+                                <Label htmlFor={`acl-ext-description-${rule.id}`}>
+                                  Description
+                                </Label>
+                                <Input
+                                  id={`acl-ext-description-${rule.id}`}
+                                  value={rule.description || ""}
+                                  onChange={(e) =>
+                                    updateExtendedRule(rule.id, "description", e.target.value)
+                                  }
+                                  placeholder="Rule description"
+                                />
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5" />
-                  <span>Generated Configuration</span>
-                </CardTitle>
-                <CardDescription>
-                  Copy this {aclType} ACL configuration to your{" "}
-                  {platform === "cisco-ios"
-                    ? "Cisco IOS"
-                    : platform === "juniper-junos"
-                      ? "Juniper JunOS"
-                      : "Palo Alto PAN-OS"}{" "}
-                  device
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={generateACL()}
-                  readOnly
-                  className="min-h-[400px] font-mono text-sm"
-                />
-                <div className="mt-4 flex space-x-2">
-                  <Button onClick={copyToClipboard} variant="outline" className="flex-1">
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button onClick={exportACL} variant="outline" className="flex-1">
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
-                  <SaveToProject
-                    itemType="acl"
-                    itemName={`ACL ${aclName} (${aclType})`}
-                    itemData={{
-                      aclName,
-                      aclType,
-                      platform,
-                      rules: aclType === "standard" ? standardRules : extendedRules,
-                      generatedConfig: generateACL(),
-                    }}
-                    toolSource="ACL Generator"
-                    className="flex-1"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {aclType === "standard" ? "Standard ACL" : "Extended ACL"} Reference
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {aclType === "standard" ? (
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <h4 className="mb-2 font-semibold">Standard ACL Numbers</h4>
-                      <div className="text-muted-foreground space-y-1 text-sm">
-                        <p>
-                          • <strong>1-99:</strong> Standard IP ACLs
-                        </p>
-                        <p>
-                          • <strong>1300-1999:</strong> Extended standard IP ACLs
-                        </p>
-                        <p>
-                          • <strong>Best Practice:</strong> Apply close to destination
-                        </p>
-                        <p>
-                          • <strong>Filters:</strong> Source IP addresses only
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="grid grid-cols-2 gap-4 font-medium">
-                        <span>Syntax</span>
-                        <span>Example</span>
-                      </div>
-                      <Separator />
-                      <div className="grid grid-cols-2 gap-4">
-                        <span className="font-mono">any</span>
-                        <span>All addresses</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <span className="font-mono">host x.x.x.x</span>
-                        <span>Single host</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <span className="font-mono">x.x.x.x y.y.y.y</span>
-                        <span>Network + wildcard</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <h4 className="mb-2 font-semibold">Extended ACL Numbers</h4>
-                      <div className="text-muted-foreground space-y-1 text-sm">
-                        <p>
-                          • <strong>100-199:</strong> Extended IP ACLs
-                        </p>
-                        <p>
-                          • <strong>2000-2699:</strong> Extended extended IP ACLs
-                        </p>
-                        <p>
-                          • <strong>Best Practice:</strong> Apply close to source
-                        </p>
-                        <p>
-                          • <strong>Filters:</strong> Source, destination, protocol, ports
-                        </p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {[
-                        { port: "22", service: "SSH" },
-                        { port: "23", service: "Telnet" },
-                        { port: "25", service: "SMTP" },
-                        { port: "53", service: "DNS" },
-                        { port: "80", service: "HTTP" },
-                        { port: "110", service: "POP3" },
-                        { port: "143", service: "IMAP" },
-                        { port: "443", service: "HTTPS" },
-                        { port: "993", service: "IMAPS" },
-                        { port: "995", service: "POP3S" },
-                      ].map(({ port, service }) => (
-                        <div key={port} className="flex justify-between">
-                          <span className="font-mono">{port}</span>
-                          <span className="text-muted-foreground">{service}</span>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" aria-hidden="true" />
+                    <span>Generated Configuration</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Copy this {aclType} ACL configuration to your{" "}
+                    {platform === "cisco-ios"
+                      ? "Cisco IOS"
+                      : platform === "juniper-junos"
+                        ? "Juniper JunOS"
+                        : "Palo Alto PAN-OS"}{" "}
+                    device
+                  </CardDescription>
+                </CardHeader>
+                <CardContent aria-live="polite">
+                  <Textarea
+                    value={generateACL()}
+                    readOnly
+                    aria-label={`Generated ${aclType} ACL configuration`}
+                    className="min-h-[400px] font-mono text-sm"
+                  />
+                  <div className="mt-4 flex space-x-2">
+                    <Button onClick={copyToClipboard} variant="outline" className="flex-1">
+                      <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Copy
+                    </Button>
+                    <Button onClick={exportACL} variant="outline" className="flex-1">
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Export
+                    </Button>
+                    <SaveToProject
+                      itemType="acl"
+                      itemName={`ACL ${aclName} (${aclType})`}
+                      itemData={{
+                        aclName,
+                        aclType,
+                        platform,
+                        rules: aclType === "standard" ? standardRules : extendedRules,
+                        generatedConfig: generateACL(),
+                      }}
+                      toolSource="ACL Generator"
+                      className="flex-1"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {aclType === "standard" ? "Standard ACL" : "Extended ACL"} Reference
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {aclType === "standard" ? (
+                    <div className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <h4 className="mb-2 font-semibold">Standard ACL Numbers</h4>
+                        <div className="text-muted-foreground space-y-1 text-sm">
+                          <p>
+                            • <strong>1-99:</strong> Standard IP ACLs
+                          </p>
+                          <p>
+                            • <strong>1300-1999:</strong> Extended standard IP ACLs
+                          </p>
+                          <p>
+                            • <strong>Best Practice:</strong> Apply close to destination
+                          </p>
+                          <p>
+                            • <strong>Filters:</strong> Source IP addresses only
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="grid grid-cols-2 gap-4 font-medium">
+                          <span>Syntax</span>
+                          <span>Example</span>
+                        </div>
+                        <Separator />
+                        <div className="grid grid-cols-2 gap-4">
+                          <span className="font-mono break-all">any</span>
+                          <span>All addresses</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <span className="font-mono break-all">host x.x.x.x</span>
+                          <span>Single host</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <span className="font-mono break-all">x.x.x.x y.y.y.y</span>
+                          <span>Network + wildcard</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <h4 className="mb-2 font-semibold">Extended ACL Numbers</h4>
+                        <div className="text-muted-foreground space-y-1 text-sm">
+                          <p>
+                            • <strong>100-199:</strong> Extended IP ACLs
+                          </p>
+                          <p>
+                            • <strong>2000-2699:</strong> Extended extended IP ACLs
+                          </p>
+                          <p>
+                            • <strong>Best Practice:</strong> Apply close to source
+                          </p>
+                          <p>
+                            • <strong>Filters:</strong> Source, destination, protocol, ports
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {[
+                          { port: "22", service: "SSH" },
+                          { port: "23", service: "Telnet" },
+                          { port: "25", service: "SMTP" },
+                          { port: "53", service: "DNS" },
+                          { port: "80", service: "HTTP" },
+                          { port: "110", service: "POP3" },
+                          { port: "143", service: "IMAP" },
+                          { port: "443", service: "HTTPS" },
+                          { port: "993", service: "IMAPS" },
+                          { port: "995", service: "POP3S" },
+                        ].map(({ port, service }) => (
+                          <div key={port} className="flex justify-between">
+                            <span className="font-mono break-all">{port}</span>
+                            <span className="text-muted-foreground">{service}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        </TabsContent>
       </Tabs>
     </div>
   )

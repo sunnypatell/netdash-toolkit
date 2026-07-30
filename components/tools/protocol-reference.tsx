@@ -129,7 +129,7 @@ export function ProtocolReference() {
       </Card>
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="protocols">IP Protocol Numbers</TabsTrigger>
           <TabsTrigger value="icmp">ICMP Types</TabsTrigger>
           <TabsTrigger value="unreachable">ICMP Unreachable Codes</TabsTrigger>

@@ -496,12 +496,13 @@ export function ReferenceHub() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
+            <Search className="h-5 w-5" aria-hidden="true" />
             Search
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Input
+            aria-label="Search across all references"
             placeholder="Search across all references..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -586,8 +587,9 @@ export function ReferenceHub() {
                               size="sm"
                               className="h-5 w-5 p-0"
                               onClick={() => copyToClipboard(port.port.toString())}
+                              aria-label={`Copy port ${port.port}`}
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3 w-3" aria-hidden="true" />
                             </Button>
                           </div>
                         </TableCell>
@@ -641,8 +643,9 @@ export function ReferenceHub() {
                               size="sm"
                               className="h-5 w-5 p-0"
                               onClick={() => copyToClipboard(range.range)}
+                              aria-label={`Copy range ${range.range}`}
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3 w-3" aria-hidden="true" />
                             </Button>
                           </div>
                         </TableCell>
@@ -695,8 +698,9 @@ export function ReferenceHub() {
                               size="sm"
                               className="h-5 w-5 p-0"
                               onClick={() => copyToClipboard(range.range)}
+                              aria-label={`Copy IPv6 range ${range.range}`}
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3 w-3" aria-hidden="true" />
                             </Button>
                           </div>
                         </TableCell>
@@ -758,8 +762,9 @@ export function ReferenceHub() {
                               size="sm"
                               className="h-5 w-5 p-0"
                               onClick={() => copyToClipboard(row.mask)}
+                              aria-label={`Copy subnet mask ${row.mask}`}
                             >
-                              <Copy className="h-3 w-3" />
+                              <Copy className="h-3 w-3" aria-hidden="true" />
                             </Button>
                           </div>
                         </TableCell>

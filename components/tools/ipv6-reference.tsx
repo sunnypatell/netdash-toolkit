@@ -16,7 +16,7 @@ export function IPv6Reference() {
       />
 
       <Tabs defaultValue="types" className="space-y-6">
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="types">Address Types</TabsTrigger>
           <TabsTrigger value="special">Special Addresses</TabsTrigger>
           <TabsTrigger value="format">Format Rules</TabsTrigger>
@@ -179,17 +179,19 @@ export function IPv6Reference() {
                   <p className="text-muted-foreground text-sm">
                     Full format (8 groups of 4 hex digits)
                   </p>
-                  <p className="mt-2 font-mono text-sm">2001:0db8:0000:0000:0000:0000:0000:0001</p>
+                  <p className="mt-2 font-mono text-sm break-all">
+                    2001:0db8:0000:0000:0000:0000:0000:0001
+                  </p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-muted-foreground text-sm">Leading zeros removed</p>
-                  <p className="mt-2 font-mono text-sm">2001:db8:0:0:0:0:0:1</p>
+                  <p className="mt-2 font-mono text-sm break-all">2001:db8:0:0:0:0:0:1</p>
                 </div>
                 <div className="rounded-lg border p-4">
                   <p className="text-muted-foreground text-sm">
                     Consecutive zeros compressed (:: once)
                   </p>
-                  <p className="mt-2 font-mono text-sm">2001:db8::1</p>
+                  <p className="mt-2 font-mono text-sm break-all">2001:db8::1</p>
                 </div>
               </CardContent>
             </Card>

@@ -760,7 +760,7 @@ export function RoutingTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Router className="h-5 w-5" />
+                  <Router className="h-5 w-5" aria-hidden="true" />
                   OSPF Configuration
                 </CardTitle>
                 <CardDescription>Generate comprehensive OSPF router configuration</CardDescription>
@@ -791,9 +791,9 @@ export function RoutingTools() {
                   </div>
                 </div>
 
-                <div>
+                <div role="group" aria-labelledby="ospf-networks-label">
                   <div className="mb-2 flex items-center justify-between">
-                    <Label>Network Statements</Label>
+                    <Label id="ospf-networks-label">Network Statements</Label>
                     <Button size="sm" variant="outline" onClick={() => addNetwork("ospf")}>
                       Add Network
                     </Button>
@@ -801,6 +801,7 @@ export function RoutingTools() {
                   {ospfConfig.networks.map((network, index) => (
                     <div key={index} className="mb-2 grid grid-cols-3 gap-2">
                       <Input
+                        aria-label={`Network ${index + 1} address`}
                         placeholder="192.168.1.0"
                         value={network.address}
                         onChange={(e) => {
@@ -810,6 +811,7 @@ export function RoutingTools() {
                         }}
                       />
                       <Input
+                        aria-label={`Network ${index + 1} wildcard mask`}
                         placeholder="0.0.0.255"
                         value={network.wildcardMask}
                         onChange={(e) => {
@@ -819,6 +821,7 @@ export function RoutingTools() {
                         }}
                       />
                       <Input
+                        aria-label={`Network ${index + 1} area`}
                         placeholder="0"
                         value={network.area}
                         onChange={(e) => {
@@ -834,39 +837,44 @@ export function RoutingTools() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="ospf-redistribute-static"
                       checked={ospfConfig.redistributeStatic}
                       onCheckedChange={(checked) =>
                         setOspfConfig((prev) => ({ ...prev, redistributeStatic: !!checked }))
                       }
                     />
-                    <Label>Redistribute Static Routes</Label>
+                    <Label htmlFor="ospf-redistribute-static">Redistribute Static Routes</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="ospf-redistribute-connected"
                       checked={ospfConfig.redistributeConnected}
                       onCheckedChange={(checked) =>
                         setOspfConfig((prev) => ({ ...prev, redistributeConnected: !!checked }))
                       }
                     />
-                    <Label>Redistribute Connected Routes</Label>
+                    <Label htmlFor="ospf-redistribute-connected">
+                      Redistribute Connected Routes
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="ospf-default-originate"
                       checked={ospfConfig.defaultOriginate}
                       onCheckedChange={(checked) =>
                         setOspfConfig((prev) => ({ ...prev, defaultOriginate: !!checked }))
                       }
                     />
-                    <Label>Default Information Originate</Label>
+                    <Label htmlFor="ospf-default-originate">Default Information Originate</Label>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="space-y-4">
+            <div className="space-y-4" aria-live="polite">
               {(ospfIssues.errors.length > 0 || ospfIssues.warnings.length > 0) && (
                 <Alert variant={ospfIssues.errors.length ? "destructive" : "default"}>
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription className="space-y-1 text-sm">
                     <strong>
                       {ospfIssues.errors.length > 0
@@ -903,6 +911,7 @@ export function RoutingTools() {
                 <CardContent>
                   <div className="relative">
                     <Textarea
+                      aria-label="Generated OSPF configuration"
                       value={ospfConfigText}
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
@@ -919,7 +928,7 @@ export function RoutingTools() {
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                       Export Config
                     </Button>
                   </div>
@@ -929,7 +938,7 @@ export function RoutingTools() {
           </div>
 
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
               <strong>OSPF Best Practices:</strong> Use area 0 as backbone, configure router-id
               manually, and use passive-interface for networks that don't need OSPF neighbors.
@@ -942,7 +951,7 @@ export function RoutingTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Network className="h-5 w-5" />
+                  <Network className="h-5 w-5" aria-hidden="true" />
                   EIGRP Configuration
                 </CardTitle>
                 <CardDescription>
@@ -975,9 +984,9 @@ export function RoutingTools() {
                   </div>
                 </div>
 
-                <div>
+                <div role="group" aria-labelledby="eigrp-networks-label">
                   <div className="mb-2 flex items-center justify-between">
-                    <Label>Network Statements</Label>
+                    <Label id="eigrp-networks-label">Network Statements</Label>
                     <Button size="sm" variant="outline" onClick={() => addNetwork("eigrp")}>
                       Add Network
                     </Button>
@@ -985,6 +994,7 @@ export function RoutingTools() {
                   {eigrpConfig.networks.map((network, index) => (
                     <div key={index} className="mb-2 grid grid-cols-2 gap-2">
                       <Input
+                        aria-label={`Network ${index + 1} address`}
                         placeholder="192.168.1.0"
                         value={network.address}
                         onChange={(e) => {
@@ -994,6 +1004,7 @@ export function RoutingTools() {
                         }}
                       />
                       <Input
+                        aria-label={`Network ${index + 1} wildcard mask`}
                         placeholder="0.0.0.255"
                         value={network.wildcardMask}
                         onChange={(e) => {
@@ -1008,14 +1019,14 @@ export function RoutingTools() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Variance</Label>
+                    <Label htmlFor="eigrp-variance">Variance</Label>
                     <Select
                       value={eigrpConfig.variance}
                       onValueChange={(value) =>
                         setEigrpConfig((prev) => ({ ...prev, variance: value }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="eigrp-variance">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1027,14 +1038,14 @@ export function RoutingTools() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Maximum Paths</Label>
+                    <Label htmlFor="eigrp-maximum-paths">Maximum Paths</Label>
                     <Select
                       value={eigrpConfig.maximumPaths}
                       onValueChange={(value) =>
                         setEigrpConfig((prev) => ({ ...prev, maximumPaths: value }))
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="eigrp-maximum-paths">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1051,39 +1062,44 @@ export function RoutingTools() {
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="eigrp-redistribute-static"
                       checked={eigrpConfig.redistributeStatic}
                       onCheckedChange={(checked) =>
                         setEigrpConfig((prev) => ({ ...prev, redistributeStatic: !!checked }))
                       }
                     />
-                    <Label>Redistribute Static Routes</Label>
+                    <Label htmlFor="eigrp-redistribute-static">Redistribute Static Routes</Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="eigrp-redistribute-connected"
                       checked={eigrpConfig.redistributeConnected}
                       onCheckedChange={(checked) =>
                         setEigrpConfig((prev) => ({ ...prev, redistributeConnected: !!checked }))
                       }
                     />
-                    <Label>Redistribute Connected Routes</Label>
+                    <Label htmlFor="eigrp-redistribute-connected">
+                      Redistribute Connected Routes
+                    </Label>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Checkbox
+                      id="eigrp-auto-summary"
                       checked={eigrpConfig.autoSummary}
                       onCheckedChange={(checked) =>
                         setEigrpConfig((prev) => ({ ...prev, autoSummary: !!checked }))
                       }
                     />
-                    <Label>Auto-Summary (Not Recommended)</Label>
+                    <Label htmlFor="eigrp-auto-summary">Auto-Summary (Not Recommended)</Label>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="space-y-4">
+            <div className="space-y-4" aria-live="polite">
               {(eigrpIssues.errors.length > 0 || eigrpIssues.warnings.length > 0) && (
                 <Alert variant={eigrpIssues.errors.length ? "destructive" : "default"}>
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription className="space-y-1 text-sm">
                     <strong>
                       {eigrpIssues.errors.length > 0
@@ -1121,6 +1137,7 @@ export function RoutingTools() {
                 <CardContent>
                   <div className="relative">
                     <Textarea
+                      aria-label="Generated EIGRP configuration"
                       value={eigrpConfigText}
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
@@ -1137,7 +1154,7 @@ export function RoutingTools() {
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                       Export Config
                     </Button>
                   </div>
@@ -1147,7 +1164,7 @@ export function RoutingTools() {
           </div>
 
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
               <strong>EIGRP Best Practices:</strong> Disable auto-summary, use same AS number on all
               routers, and configure authentication for security.
@@ -1160,28 +1177,31 @@ export function RoutingTools() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-5 w-5" aria-hidden="true" />
                   Static Route Configuration
                 </CardTitle>
                 <CardDescription>
                   Generate multiple static routes with advanced options
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4" role="group" aria-labelledby="static-routes-label">
                 <div className="flex items-center justify-between">
-                  <Label>Static Routes</Label>
+                  <Label id="static-routes-label">Static Routes</Label>
                   <Button size="sm" variant="outline" onClick={addStaticRoute}>
                     Add Route
                   </Button>
                 </div>
 
                 {staticRoutes.map((route, index) => (
-                  <Card key={index} className="p-4">
+                  <Card key={index} className="p-4" role="group" aria-label={`Route ${index + 1}`}>
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label className="text-sm">Destination</Label>
+                          <Label htmlFor={`static-route-${index}-destination`} className="text-sm">
+                            Destination
+                          </Label>
                           <Input
+                            id={`static-route-${index}-destination`}
                             placeholder="192.168.2.0"
                             value={route.destination}
                             onChange={(e) => {
@@ -1192,8 +1212,11 @@ export function RoutingTools() {
                           />
                         </div>
                         <div>
-                          <Label className="text-sm">Subnet Mask</Label>
+                          <Label htmlFor={`static-route-${index}-mask`} className="text-sm">
+                            Subnet Mask
+                          </Label>
                           <Input
+                            id={`static-route-${index}-mask`}
                             placeholder="255.255.255.0"
                             value={route.mask}
                             onChange={(e) => {
@@ -1207,8 +1230,11 @@ export function RoutingTools() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label className="text-sm">Next Hop IP</Label>
+                          <Label htmlFor={`static-route-${index}-next-hop`} className="text-sm">
+                            Next Hop IP
+                          </Label>
                           <Input
+                            id={`static-route-${index}-next-hop`}
                             placeholder="192.168.1.1"
                             value={route.nextHop}
                             onChange={(e) => {
@@ -1219,8 +1245,11 @@ export function RoutingTools() {
                           />
                         </div>
                         <div>
-                          <Label className="text-sm">Or Exit Interface</Label>
+                          <Label htmlFor={`static-route-${index}-interface`} className="text-sm">
+                            Or Exit Interface
+                          </Label>
                           <Input
+                            id={`static-route-${index}-interface`}
                             placeholder="GigabitEthernet0/0"
                             value={route.interface}
                             onChange={(e) => {
@@ -1234,7 +1263,12 @@ export function RoutingTools() {
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <Label className="text-sm">Admin Distance</Label>
+                          <Label
+                            htmlFor={`static-route-${index}-admin-distance`}
+                            className="text-sm"
+                          >
+                            Admin Distance
+                          </Label>
                           <Select
                             value={route.adminDistance}
                             onValueChange={(value) => {
@@ -1243,7 +1277,7 @@ export function RoutingTools() {
                               setStaticRoutes(newRoutes)
                             }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger id={`static-route-${index}-admin-distance`}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -1256,8 +1290,11 @@ export function RoutingTools() {
                           </Select>
                         </div>
                         <div>
-                          <Label className="text-sm">Track Object</Label>
+                          <Label htmlFor={`static-route-${index}-track`} className="text-sm">
+                            Track Object
+                          </Label>
                           <Input
+                            id={`static-route-${index}-track`}
                             placeholder="100"
                             value={route.track}
                             onChange={(e) => {
@@ -1270,8 +1307,11 @@ export function RoutingTools() {
                       </div>
 
                       <div>
-                        <Label className="text-sm">Description</Label>
+                        <Label htmlFor={`static-route-${index}-description`} className="text-sm">
+                          Description
+                        </Label>
                         <Input
+                          id={`static-route-${index}-description`}
                           placeholder="Route to branch office"
                           value={route.description}
                           onChange={(e) => {
@@ -1284,6 +1324,7 @@ export function RoutingTools() {
 
                       <div className="flex items-center space-x-2">
                         <Checkbox
+                          id={`static-route-${index}-permanent`}
                           checked={route.permanent}
                           onCheckedChange={(checked) => {
                             const newRoutes = [...staticRoutes]
@@ -1291,7 +1332,9 @@ export function RoutingTools() {
                             setStaticRoutes(newRoutes)
                           }}
                         />
-                        <Label className="text-sm">Permanent Route</Label>
+                        <Label htmlFor={`static-route-${index}-permanent`} className="text-sm">
+                          Permanent Route
+                        </Label>
                       </div>
                     </div>
                   </Card>
@@ -1299,10 +1342,10 @@ export function RoutingTools() {
               </CardContent>
             </Card>
 
-            <div className="space-y-4">
+            <div className="space-y-4" aria-live="polite">
               {(staticIssues.errors.length > 0 || staticIssues.warnings.length > 0) && (
                 <Alert variant={staticIssues.errors.length ? "destructive" : "default"}>
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription className="space-y-1 text-sm">
                     <strong>
                       {staticIssues.errors.length > 0
@@ -1340,6 +1383,7 @@ export function RoutingTools() {
                 <CardContent>
                   <div className="relative">
                     <Textarea
+                      aria-label="Generated static route commands"
                       value={staticConfigText}
                       readOnly
                       className="min-h-[300px] font-mono text-sm"
@@ -1356,7 +1400,7 @@ export function RoutingTools() {
                       variant="outline"
                       className="flex-1"
                     >
-                      <Download className="mr-2 h-4 w-4" />
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                       Export Routes
                     </Button>
                   </div>
@@ -1366,7 +1410,7 @@ export function RoutingTools() {
           </div>
 
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="h-4 w-4" aria-hidden="true" />
             <AlertDescription>
               <strong>Static Route Tips:</strong> Use 0.0.0.0 0.0.0.0 for default routes, higher AD
               for backup routes, and track objects for high availability.
@@ -1385,7 +1429,7 @@ export function RoutingTools() {
             <CardContent>
               <div className="space-y-4">
                 <Alert>
-                  <Info className="h-4 w-4" />
+                  <Info className="h-4 w-4" aria-hidden="true" />
                   <AlertDescription>
                     Administrative Distance (AD) determines route preference. Lower values are
                     preferred. When multiple routes to the same destination exist, the route with
@@ -1459,7 +1503,7 @@ export function RoutingTools() {
                       </div>
                     </div>
                     <div className="bg-muted/50 mt-4 rounded-lg p-3">
-                      <p className="font-mono text-sm">
+                      <p className="font-mono text-sm break-all">
                         spanning-tree vlan [vlan-id] priority [priority]
                       </p>
                     </div>

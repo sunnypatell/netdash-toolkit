@@ -221,23 +221,26 @@ export function VLSMPlanner() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <Input
+                  aria-label="New subnet name"
                   placeholder="Subnet name"
                   value={newReqName}
                   onChange={(e) => setNewReqName(e.target.value)}
                 />
                 <Input
                   type="number"
+                  aria-label="New subnet hosts needed"
                   placeholder="Hosts needed"
                   value={newReqHosts}
                   onChange={(e) => setNewReqHosts(e.target.value)}
                 />
                 <Input
+                  aria-label="New subnet description"
                   placeholder="Description (optional)"
                   value={newReqDesc}
                   onChange={(e) => setNewReqDesc(e.target.value)}
                 />
                 <Button onClick={addRequirement} disabled={!newReqName || !newReqHosts}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
                   Add
                 </Button>
               </div>
@@ -250,12 +253,14 @@ export function VLSMPlanner() {
                   >
                     <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
                       <Input
+                        aria-label={`Name for subnet ${req.name || req.id}`}
                         value={req.name}
                         onChange={(e) => updateRequirement(req.id, "name", e.target.value)}
                         placeholder="Subnet name"
                       />
                       <Input
                         type="number"
+                        aria-label={`Hosts needed for subnet ${req.name || req.id}`}
                         value={req.hostsRequired}
                         onChange={(e) =>
                           updateRequirement(
@@ -267,13 +272,19 @@ export function VLSMPlanner() {
                         placeholder="Hosts needed"
                       />
                       <Input
+                        aria-label={`Description for subnet ${req.name || req.id}`}
                         value={req.description || ""}
                         onChange={(e) => updateRequirement(req.id, "description", e.target.value)}
                         placeholder="Description"
                       />
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => removeRequirement(req.id)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeRequirement(req.id)}
+                      aria-label={`Remove subnet requirement ${req.name || req.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
                 ))}
@@ -298,14 +309,15 @@ export function VLSMPlanner() {
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     {plan.success ? (
-                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
                     ) : (
-                      <AlertCircle className="h-5 w-5 text-red-600" />
+                      <AlertCircle className="h-5 w-5 text-red-600" aria-hidden="true" />
                     )}
                     <span>VLSM Plan Summary</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                {/* recalculating replaces these figures in place with no other cue */}
+                <CardContent aria-live="polite">
                   {plan.success ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                       <div className="text-center">
@@ -364,19 +376,19 @@ export function VLSMPlanner() {
                           <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
                             <div>
                               <span className="text-muted-foreground">Network:</span>
-                              <div className="font-mono">{allocation.network}</div>
+                              <div className="font-mono break-all">{allocation.network}</div>
                             </div>
                             <div>
                               <span className="text-muted-foreground">First Host:</span>
-                              <div className="font-mono">{allocation.firstHost}</div>
+                              <div className="font-mono break-all">{allocation.firstHost}</div>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Last Host:</span>
-                              <div className="font-mono">{allocation.lastHost}</div>
+                              <div className="font-mono break-all">{allocation.lastHost}</div>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Broadcast:</span>
-                              <div className="font-mono">{allocation.broadcast}</div>
+                              <div className="font-mono break-all">{allocation.broadcast}</div>
                             </div>
                           </div>
                         </div>
