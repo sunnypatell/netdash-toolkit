@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, GoogleAuthProvider } from "firebase/auth"
-import { getFirestore } from "firebase/firestore"
+import { initializeFirestore } from "firebase/firestore"
 
 // Firebase configuration using environment variables
 const firebaseConfig = {
@@ -26,7 +26,11 @@ const app = isFirebaseConfigured()
 
 // Export Firebase services (will be null if not configured)
 export const auth = app ? getAuth(app) : null
-export const db = app ? getFirestore(app) : null
+// ignoreUndefinedProperties: Project carries optional sharing fields
+// (sharedWith, isShared, ownerEmail), and firestore rejects an undefined value
+// outright. every save of a project with an unset optional field used to throw
+// and the error was swallowed, so cloud sync silently never happened.
+export const db = app ? initializeFirestore(app, { ignoreUndefinedProperties: true }) : null
 export const googleProvider = app ? new GoogleAuthProvider() : null
 
 // Configure Google provider for better UX

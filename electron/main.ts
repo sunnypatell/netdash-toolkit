@@ -92,7 +92,11 @@ function createWindow(): void {
     mainWindow.webContents.openDevTools({ mode: "detach" })
   } else {
     // Load from local static server
-    mainWindow.loadURL(`http://127.0.0.1:${STATIC_PORT}`)
+    // load over localhost, not 127.0.0.1: firebase auth's authorized-domain
+    // list contains "localhost" and treats the literal ip as a different
+    // origin, so google sign-in failed with auth/unauthorized-domain in the
+    // desktop app. the server still binds to 127.0.0.1 only.
+    mainWindow.loadURL(`http://localhost:${STATIC_PORT}`)
   }
 
   // Handle external links

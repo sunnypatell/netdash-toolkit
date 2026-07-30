@@ -21,10 +21,13 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   isConfigured: boolean
-  signInWithGoogle: () => Promise<void>
-  signInWithEmail: (email: string, password: string) => Promise<void>
-  signUpWithEmail: (email: string, password: string) => Promise<void>
-  resetPassword: (email: string) => Promise<void>
+  // resolve to true on success. callers used to branch on the `error`
+  // state right after awaiting, which is the value captured in their own
+  // render closure, so a failed sign-in looked like a success.
+  signInWithGoogle: () => Promise<boolean>
+  signInWithEmail: (email: string, password: string) => Promise<boolean>
+  signUpWithEmail: (email: string, password: string) => Promise<boolean>
+  resetPassword: (email: string) => Promise<boolean>
   signOut: () => Promise<void>
   error: string | null
   clearError: () => void
@@ -171,10 +174,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<boolean> => {
     if (!auth || !googleProvider) {
       setError("Firebase authentication is not configured")
-      return
+      return false
     }
 
     try {
@@ -190,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Account linking error:", linkError)
         }
       }
+      return true
     } catch (error) {
       const authError = error as AuthError
 
@@ -203,13 +207,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       console.error("Sign in error:", error)
       setError(getAuthErrorMessage(authError))
+      return false
     }
   }
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
     if (!auth) {
       setError("Firebase authentication is not configured")
-      return
+      return false
     }
 
     try {
@@ -225,17 +230,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Account linking error:", linkError)
         }
       }
+      return true
     } catch (error) {
       const authError = error as AuthError
       console.error("Email sign in error:", error)
       setError(getAuthErrorMessage(authError))
+      return false
     }
   }
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
     if (!auth) {
       setError("Firebase authentication is not configured")
-      return
+      return false
     }
 
     try {
@@ -246,21 +253,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError(
           `This email is already registered with ${methods[0]}. Please sign in with that method first, then link your accounts.`
         )
-        return
+        return false
       }
 
       await createUserWithEmailAndPassword(auth, email, password)
+      return true
     } catch (error) {
       const authError = error as AuthError
       console.error("Email sign up error:", error)
       setError(getAuthErrorMessage(authError))
+      return false
     }
   }
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = async (email: string): Promise<boolean> => {
     if (!auth) {
       setError("Firebase authentication is not configured")
-      return
+      return false
     }
 
     try {
@@ -274,10 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         handleCodeInApp: false,
       }
       await sendPasswordResetEmail(auth, email, actionCodeSettings)
+      return true
     } catch (error) {
       const authError = error as AuthError
       console.error("Password reset error:", error)
       setError(getAuthErrorMessage(authError))
+      return false
     }
   }
 

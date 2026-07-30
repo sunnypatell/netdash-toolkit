@@ -24,6 +24,7 @@ import { useAuth } from "./auth-context"
 import { updateUserIndex, subscribeToSharedProjects } from "@/lib/sharing"
 import type { ShareEntry, ProjectShare, Permission } from "@/types/sharing"
 import type { ProjectItemType } from "@/lib/tool-registry"
+import { toast } from "sonner"
 
 // Types for project items
 export interface ProjectItem {
@@ -109,6 +110,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Track projects being deleted to prevent listener from restoring them
   const deletingIdsRef = useRef<Set<string>>(new Set())
+  // the snapshot callback below outlives the render that created it, so it
+  // must read projects through a ref rather than the captured array
+  const localProjectsRef = useRef<Project[]>([])
 
   // Load projects from localStorage on initial mount
   useEffect(() => {
@@ -126,6 +130,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Save to localStorage whenever projects change (and not syncing from cloud)
   useEffect(() => {
+    localProjectsRef.current = projects
     if (!loading) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
@@ -192,7 +197,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
 
         // Find local-only projects to upload
-        const localOnlyProjects = projects.filter((p) => !cloudProjectIds.has(p.id))
+        const localOnlyProjects = localProjectsRef.current.filter((p) => !cloudProjectIds.has(p.id))
 
         // Upload local-only projects to cloud with owner info
         if (localOnlyProjects.length > 0 && user.email) {
@@ -206,6 +211,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
               })
             } catch (error) {
               console.error("Failed to upload local project to cloud:", error)
+              toast.error(`Could not upload "${project.name}" to the cloud`)
             }
           })
         }
@@ -220,7 +226,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setSyncing(false)
       },
       (error) => {
+        // a rules rejection or offline client used to be console-only, so the
+        // ui just showed stale local data with no hint that sync was dead
         console.error("Firestore sync error:", error)
+        toast.error("Cloud sync stopped", { description: error.message })
         setSyncing(false)
       }
     )
@@ -273,13 +282,24 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       try {
         const projectRef = doc(db, "users", user.uid, "projects", project.id)
-        await setDoc(projectRef, {
-          ...project,
-          ownerId: project.ownerId || user.uid,
-          ownerEmail: project.ownerEmail || user.email,
-        })
+        // merge so a save never wipes sharing state the local copy has not
+        // loaded (sharedWith, isShared), which a full overwrite would drop
+        await setDoc(
+          projectRef,
+          {
+            ...project,
+            ownerId: project.ownerId || user.uid,
+            ownerEmail: project.ownerEmail || user.email,
+          },
+          { merge: true }
+        )
       } catch (error) {
+        // this used to be console-only, so a rejected write looked like a
+        // successful save and the project simply never appeared on other devices
         console.error("Failed to save project to cloud:", error)
+        toast.error("Could not sync project to the cloud", {
+          description: error instanceof Error ? error.message : "Your local copy is still saved.",
+        })
       }
     },
     [syncEnabled, user]

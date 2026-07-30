@@ -65,6 +65,8 @@ export function UserMenu() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  // client-side validation messages; auth errors come from the context
+  const [localError, setLocalError] = useState<string | null>(null)
 
   // Don't show anything if Firebase is not configured
   if (!isConfigured) {
@@ -84,6 +86,7 @@ export function UserMenu() {
     setPassword("")
     setConfirmPassword("")
     setResetSent(false)
+    setLocalError(null)
     clearError()
   }
 
@@ -94,9 +97,9 @@ export function UserMenu() {
 
   const handleGoogleSignIn = async () => {
     setIsSubmitting(true)
-    await signInWithGoogle()
+    const ok = await signInWithGoogle()
     setIsSubmitting(false)
-    if (!error) {
+    if (ok) {
       setDialogOpen(false)
       resetForm()
     }
@@ -107,9 +110,9 @@ export function UserMenu() {
     if (!email || !password) return
 
     setIsSubmitting(true)
-    await signInWithEmail(email, password)
+    const ok = await signInWithEmail(email, password)
     setIsSubmitting(false)
-    if (!error) {
+    if (ok) {
       setDialogOpen(false)
       resetForm()
     }
@@ -120,17 +123,20 @@ export function UserMenu() {
     if (!email || !password || !confirmPassword) return
 
     if (password !== confirmPassword) {
+      setLocalError("Passwords do not match.")
       return
     }
 
     if (password.length < 6) {
+      setLocalError("Password must be at least 6 characters.")
       return
     }
+    setLocalError(null)
 
     setIsSubmitting(true)
-    await signUpWithEmail(email, password)
+    const ok = await signUpWithEmail(email, password)
     setIsSubmitting(false)
-    if (!error) {
+    if (ok) {
       setDialogOpen(false)
       resetForm()
     }
@@ -141,9 +147,10 @@ export function UserMenu() {
     if (!email) return
 
     setIsSubmitting(true)
-    await resetPassword(email)
+    const ok = await resetPassword(email)
     setIsSubmitting(false)
-    if (!error) {
+    // only claim the mail went out when it actually did
+    if (ok) {
       setResetSent(true)
     }
   }
@@ -177,10 +184,10 @@ export function UserMenu() {
             </DialogDescription>
           </DialogHeader>
 
-          {error && (
+          {(error || localError) && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || localError}</AlertDescription>
             </Alert>
           )}
 
