@@ -11,6 +11,7 @@ import * as path from "path"
 import * as http from "http"
 import handler from "serve-handler"
 import { registerNetworkHandlers } from "./network/handlers"
+import { appOrigins, decideNavigation, isPermissionAllowed } from "./navigation"
 
 // ============================================================================
 // CONSTANTS
@@ -99,16 +100,34 @@ function createWindow(): void {
     mainWindow.loadURL(`http://localhost:${STATIC_PORT}`)
   }
 
-  // Handle external links
+  const allowedOrigins = appOrigins({ isDev, staticPort: STATIC_PORT })
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      // Don't open our local server externally
-      if (!url.includes("127.0.0.1") && !url.includes("localhost")) {
-        shell.openExternal(url)
-      }
-    }
+    const decision = decideNavigation(url, allowedOrigins)
+    if (decision.action === "external") shell.openExternal(decision.url)
     return { action: "deny" }
   })
+
+  // setWindowOpenHandler only sees window.open and target=_blank. without this,
+  // a location.href assignment or a plain anchor click navigates the window to a
+  // remote origin, and preload.js (which exposes portScan, arpScan and friends)
+  // runs for every navigation in this webContents.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const decision = decideNavigation(url, allowedOrigins)
+    if (decision.action === "allow") return
+    event.preventDefault()
+    if (decision.action === "external") shell.openExternal(decision.url)
+  })
+
+  mainWindow.webContents.on("will-attach-webview", (event) => {
+    event.preventDefault()
+  })
+
+  const session = mainWindow.webContents.session
+  session.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(isPermissionAllowed(permission))
+  })
+  session.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission))
 
   mainWindow.on("closed", () => {
     mainWindow = null
