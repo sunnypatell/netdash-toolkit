@@ -11,19 +11,19 @@
   --card-foreground: #475569;
   --popover: #ffffff;
   --popover-foreground: #475569;
-  --primary: #059669;
+  --primary: #047857;
   --primary-foreground: #ffffff;
   --secondary: #10b981;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #0f172a;
   --muted: #ecfeff;
   --muted-foreground: #475569;
   --accent: #10b981;
-  --accent-foreground: #ffffff;
-  --destructive: #ff4d4d;
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #e5e7eb;
-  --input: #f1f5f9;
-  --ring: rgba(5, 150, 105, 0.5);
+  --input: #7f8fa3;
+  --ring: #047857;
   --chart-1: #059669;
   --chart-2: #10b981;
   --chart-3: #4b5563;
@@ -32,12 +32,12 @@
   --radius: 0.5rem;
   --sidebar: #f1f5f9;
   --sidebar-foreground: #475569;
-  --sidebar-primary: #059669;
+  --sidebar-primary: #047857;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #10b981;
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #e5e7eb;
-  --sidebar-ring: rgba(5, 150, 105, 0.5);
+  --sidebar-ring: #047857;
   --font-inter: "Inter", sans-serif;
   --font-jetbrains-mono: "JetBrains Mono", monospace;
 }
@@ -53,16 +53,16 @@
   --primary: #10b981;
   --primary-foreground: #0f172a;
   --secondary: #059669;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #0f172a;
   --muted: #334155;
-  --muted-foreground: #94a3b8;
+  --muted-foreground: #a3b0c0;
   --accent: #10b981;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --accent-foreground: #0f172a;
+  --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #334155;
-  --input: #1e293b;
-  --ring: rgba(16, 185, 129, 0.5);
+  --input: #64748b;
+  --ring: #10b981;
   --chart-1: #10b981;
   --chart-2: #059669;
   --chart-3: #64748b;
@@ -73,9 +73,9 @@
   --sidebar-primary: #334155;
   --sidebar-primary-foreground: #f1f5f9;
   --sidebar-accent: #10b981;
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #334155;
-  --sidebar-ring: rgba(16, 185, 129, 0.5);
+  --sidebar-ring: #10b981;
   --font-inter: "Inter", sans-serif;
   --font-jetbrains-mono: "JetBrains Mono", monospace;
 }
@@ -123,7 +123,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground;
