@@ -1,0 +1,20 @@
+{
+  "name": "docs",
+  "type": "module",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "node scripts/generate-tool-pages.mjs && astro dev",
+    "start": "node scripts/generate-tool-pages.mjs && astro dev",
+    "build": "node scripts/generate-tool-pages.mjs && astro build && node scripts/check-links.mjs",
+    "generate": "node scripts/generate-tool-pages.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.37.6",
+    "astro": "^5.6.1",
+    "sharp": "^0.34.2"
+  }
+}

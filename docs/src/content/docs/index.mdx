@@ -1,0 +1,68 @@
+---
+title: NetDash Toolkit
+description: Documentation for NetDash Toolkit, a 48-tool network engineering dashboard that runs in a browser and ships as a desktop app with real ICMP, traceroute and TCP scanning.
+template: splash
+hero:
+  tagline: 48 network engineering tools. 36 of them never touch the network. The other 12 tell you exactly which hosts they contact before they contact them.
+  actions:
+    - text: Start here
+      link: /docs/getting-started/introduction/
+      icon: right-arrow
+      variant: primary
+    - text: Open the app
+      link: /
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components"
+
+## What this is
+
+NetDash Toolkit is a static Next.js app: subnet math, VLSM planning, ACL and VLAN config generation, DNS lookups, TLS inspection, and a pile of developer utilities. There is no backend. The web build is a static export served from a CDN, and the desktop build serves that same export from a loopback HTTP server on `127.0.0.1:17890`, which means the docs you are reading work with the network unplugged.
+
+The desktop build also does things a browser physically cannot: real ICMP ping, a system traceroute, and TCP connect scanning. Those pages explain the mechanism rather than hand-waving it.
+
+<CardGrid stagger>
+  <Card title="48 tools, 36 offline" icon="setting">
+    Every tool declares its runtime in the registry. A test asserts the declaration matches what the
+    code actually does, so the offline count cannot quietly become a lie.
+  </Card>
+  <Card title="No backend" icon="approve-check">
+    `output: "export"` means there is no server to send your input to. The tools that do leave the
+    device name their hosts up front.
+  </Card>
+  <Card title="Honest about limits" icon="warning">
+    A browser cannot send ICMP, cannot read arbitrary response headers cross-origin, and cannot
+    fetch `http://` from an HTTPS page. The docs say so instead of pretending otherwise.
+  </Card>
+  <Card title="Verifiable builds" icon="github">
+    Releases carry SLSA Build L3 provenance, GitHub attestations, a CycloneDX SBOM, and SHA-256
+    checksums. MIT licensed.
+  </Card>
+</CardGrid>
+
+## Where to go next
+
+<CardGrid>
+  <LinkCard
+    title="Quick start"
+    description="Open a tool, understand the offline badge, save a result."
+    href="/docs/getting-started/quick-start/"
+  />
+  <LinkCard
+    title="All 48 tools"
+    description="Every tool by category, generated from the app's own registry."
+    href="/docs/tools/"
+  />
+  <LinkCard
+    title="What a browser cannot do"
+    description="Why ping is an HTTPS round trip, and why a missing header is not an absent header."
+    href="/docs/diagnostics/browser-limits/"
+  />
+  <LinkCard
+    title="What leaves your device"
+    description="Per-capability data handling, derived from the tool registry."
+    href="/docs/privacy/what-leaves-your-device/"
+  />
+</CardGrid>

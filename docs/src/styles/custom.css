@@ -1,0 +1,79 @@
+/* NetDash Toolkit - Starlight theme.
+   fonts and accents are read from app/layout.tsx and app/globals.css so the docs
+   and the app agree. no webfont is downloaded: this build also ships inside the
+   desktop app, where there is no network to fetch one from. */
+
+:root {
+  /* app/layout.tsx loads Inter and JetBrains Mono via next/font and exposes them
+	   as --font-inter / --font-jetbrains-mono. named first, system stack after. */
+  --sl-font:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", sans-serif;
+  --sl-font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* light: --primary #047857 from app/globals.css. the palette was re-picked for
+   WCAG 1.4.3, so do not "brighten" these without re-running the contrast gate. */
+:root[data-theme="light"] {
+  --sl-color-accent-low: #d1fae5;
+  --sl-color-accent: #047857;
+  --sl-color-accent-high: #064e3b;
+}
+
+/* dark: --primary #10b981 from the .dark block in app/globals.css */
+:root[data-theme="dark"] {
+  --sl-color-accent-low: #064e3b;
+  --sl-color-accent: #10b981;
+  --sl-color-accent-high: #a7f3d0;
+}
+
+/* app/globals.css sets --radius: 0.5rem */
+.expressive-code pre,
+.starlight-aside,
+.sl-link-card {
+  border-radius: 0.5rem;
+}
+
+.expressive-code pre {
+  border: 1px solid var(--sl-color-hairline-shade);
+}
+
+/* overflow is ignored on display: table per CSS 2.1 17.5, so a wide table
+   overflows the page instead of scrolling. display: block restores it. */
+table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.5rem;
+}
+
+table th {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.sl-link-card {
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sl-link-card:hover {
+  transform: translateY(-2px);
+}
+
+/* respect prefers-reduced-motion (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  .sl-link-card {
+    transition: none;
+  }
+  .sl-link-card:hover {
+    transform: none;
+  }
+}
+
+.hero {
+  padding-block: 3rem;
+}

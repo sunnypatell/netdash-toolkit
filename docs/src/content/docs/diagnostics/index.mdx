@@ -1,0 +1,31 @@
+---
+title: How the diagnostics work
+description: The mechanisms behind NetDash Toolkit's network diagnostics, what the web platform makes impossible, and which capabilities exist only in the desktop build.
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components"
+
+Four pages on what the numbers actually measure. If you only read one, read the first.
+
+<CardGrid>
+  <LinkCard
+    title="What a browser cannot do"
+    description="Mixed content, the CORS-safelisted response headers, opaque responses, and why ping is an HTTPS round trip."
+    href="/docs/diagnostics/browser-limits/"
+  />
+  <LinkCard
+    title="DNS over HTTPS"
+    description="What DoH gives you, what it does not, and why the DNSSEC indicator is a resolver's claim."
+    href="/docs/diagnostics/dns-over-https/"
+  />
+  <LinkCard
+    title="Desktop-only capabilities"
+    description="ICMP, traceroute, TCP connect scanning and ARP, and how each is actually implemented."
+    href="/docs/diagnostics/desktop-capabilities/"
+  />
+  <LinkCard
+    title="Address math, walked through"
+    description="RFC 5952 compression, modified EUI-64, solicited-node multicast and MTU overhead, with worked numbers."
+    href="/docs/diagnostics/address-math/"
+  />
+</CardGrid>

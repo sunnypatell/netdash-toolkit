@@ -141,11 +141,42 @@ Open [http://localhost:3000](http://localhost:3000) to access NetDash.
 ### Production Build
 
 ```bash
-# Create optimized production build
+# Create optimized production build (builds the docs site first)
 pnpm build
+
+# App only, skipping the docs build
+pnpm build:app
 
 # Start production server
 pnpm start
+```
+
+<br />
+
+---
+
+<br />
+
+## Documentation
+
+Full documentation lives at **[netdash-toolkit.vercel.app/docs](https://netdash-toolkit.vercel.app/docs/)**, and ships inside the desktop app too, so it works with no network connection.
+
+| Guide                                                                                                 | What it covers                                                                               |
+| ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [Getting started](https://netdash-toolkit.vercel.app/docs/getting-started/introduction/)              | what the project is, the browser vs desktop split, quick start                               |
+| [Tools](https://netdash-toolkit.vercel.app/docs/tools/)                                               | all 48 tools by category, generated from `lib/tool-registry.ts`                              |
+| [How the diagnostics work](https://netdash-toolkit.vercel.app/docs/diagnostics/browser-limits/)       | why browser "ping" is an HTTPS round trip, what CORS hides, what DoH does and does not prove |
+| [Privacy and data handling](https://netdash-toolkit.vercel.app/docs/privacy/what-leaves-your-device/) | every outbound request, per capability                                                       |
+| [Self-hosting and desktop](https://netdash-toolkit.vercel.app/docs/self-hosting/releases/)            | local dev, the Electron build, and how to verify a download                                  |
+| [Contributing](https://netdash-toolkit.vercel.app/docs/contributing/tests-and-gates/)                 | the two vitest projects, the axe gate, the contrast gate                                     |
+
+The docs are an [Astro Starlight](https://starlight.astro.build/) site in `docs/`, a separate pnpm project with its own lockfile. `pnpm build:docs` builds it into `public/docs/`, which `next build` then emits to `out/docs/`.
+
+```bash
+# work on the docs with live reload at http://localhost:4321/docs/
+cd docs
+pnpm install
+pnpm dev
 ```
 
 <br />

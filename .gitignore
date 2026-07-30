@@ -19,6 +19,15 @@ package-lock.json
 /.next/
 /out/
 
+# docs build artifact: astro output copied here by `pnpm build:docs`,
+# then emitted to out/docs/ by next's public/ passthrough
+/public/docs/
+
+# docs subproject build output. also listed in docs/.gitignore, but prettier
+# only reads the root ignore file and would otherwise check generated html.
+/docs/dist/
+/docs/.astro/
+
 # production
 /build
 

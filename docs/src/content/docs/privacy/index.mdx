@@ -1,0 +1,21 @@
+---
+title: Privacy and data handling
+description: What NetDash Toolkit sends off your device, per capability, and what an optional account stores.
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components"
+
+Two pages. The first covers every outbound request the app can make. The second covers the one optional feature that stores anything.
+
+<CardGrid>
+  <LinkCard
+    title="What leaves your device"
+    description="Every host the app can contact, which tool contacts it, and what it receives."
+    href="/docs/privacy/what-leaves-your-device/"
+  />
+  <LinkCard
+    title="Accounts and saved projects"
+    description="Firebase Auth and Firestore, both optional, used only for saved projects."
+    href="/docs/privacy/accounts-and-projects/"
+  />
+</CardGrid>

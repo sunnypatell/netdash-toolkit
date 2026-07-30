@@ -1,0 +1,26 @@
+---
+title: Self-hosting and desktop
+description: Run NetDash Toolkit locally, build the Electron desktop app, and verify a downloaded release.
+---
+
+import { CardGrid, LinkCard } from "@astrojs/starlight/components"
+
+The app is a static export with no backend, so hosting it is a file copy. Building the desktop app and verifying a release are the parts worth documenting.
+
+<CardGrid>
+  <LinkCard
+    title="Local development"
+    description="Dev server, the build scripts, and where the docs fit into the output."
+    href="/docs/self-hosting/local-development/"
+  />
+  <LinkCard
+    title="Building the desktop app"
+    description="How the Electron shell serves the static export, and how to package it."
+    href="/docs/self-hosting/desktop-build/"
+  />
+  <LinkCard
+    title="Releases and verification"
+    description="SLSA Build L3 provenance, SBOM, checksums, and the commands that check them."
+    href="/docs/self-hosting/releases/"
+  />
+</CardGrid>
