@@ -249,7 +249,7 @@ jobs:
       # the generator's (skipped) upload-assets job statically declares
       # contents: write; reusable-workflow permission validation happens
       # before if: conditions evaluate, so the caller must grant it.
-      contents: write
+      contents: write # granted for the generator's skipped upload-assets job
     # the generator MUST be referenced by a full semver tag (not a sha): the
     # build fails otherwise, because slsa-verifier validates the trusted
     # builder's ref against official release tags.
@@ -472,7 +472,7 @@ jobs:
     # casks track stable releases only
     if: ${{ !contains(github.ref_name, '-') }}
     permissions:
-      contents: write
+      contents: write # commit the cask bump back to main
     steps:
       - name: Harden runner (egress audit)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -491,7 +491,7 @@ jobs:
       # this checkout intentionally keeps credentials: the job's entire
       # purpose is committing the cask bump back to main.
       - name: Checkout main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.0 # zizmor: ignore[artipacked]
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 # zizmor: ignore[artipacked]
         with:
           ref: main
 

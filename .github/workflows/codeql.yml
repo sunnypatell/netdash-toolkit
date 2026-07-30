@@ -24,9 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      actions: read
+      actions: read # the `actions` language pack reads workflow files
       contents: read
-      security-events: write
+      security-events: write # upload the analysis to code scanning
     strategy:
       fail-fast: false
       matrix:

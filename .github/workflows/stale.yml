@@ -8,14 +8,19 @@ on:
 permissions:
   contents: read
 
+# a manual run during the daily cron would double-label the same issues
+concurrency:
+  group: stale
+  cancel-in-progress: false
+
 jobs:
   stale:
     name: Mark and close stale issues/PRs
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      issues: write
-      pull-requests: write
+      issues: write # label and close stale issues
+      pull-requests: write # label and close stale prs
     steps:
       - name: Harden runner (egress audit)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0

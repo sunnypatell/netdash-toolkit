@@ -6,11 +6,12 @@
  * @license MIT
  */
 
-import { app, BrowserWindow, ipcMain, shell, Menu, dialog, nativeTheme } from "electron"
+import { app, BrowserWindow, ipcMain, session, shell, Menu, dialog, nativeTheme } from "electron"
 import * as path from "path"
 import * as http from "http"
 import handler from "serve-handler"
 import { registerNetworkHandlers } from "./network/handlers"
+import { CONTENT_SECURITY_POLICY } from "./csp"
 import { appOrigins, decideNavigation, isPermissionAllowed } from "./navigation"
 
 // ============================================================================
@@ -63,6 +64,32 @@ function stopStaticServer(): void {
 // ============================================================================
 
 let mainWindow: BrowserWindow | null = null
+
+function applyContentSecurityPolicy(allowedOrigins: string[]): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    let origin: string | null = null
+    try {
+      origin = new URL(details.url).origin
+    } catch {
+      origin = null
+    }
+
+    // only the app's own documents get the policy. rewriting headers on the
+    // third-party api responses the tools fetch would change nothing and would
+    // mean parsing every response in the main process.
+    if (!origin || !allowedOrigins.includes(origin)) {
+      callback({})
+      return
+    }
+
+    const headers: Record<string, string | string[]> = { ...details.responseHeaders }
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === "content-security-policy") delete headers[key]
+    }
+    headers["Content-Security-Policy"] = [CONTENT_SECURITY_POLICY]
+    callback({ responseHeaders: headers })
+  })
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -123,11 +150,12 @@ function createWindow(): void {
     event.preventDefault()
   })
 
-  const session = mainWindow.webContents.session
-  session.setPermissionRequestHandler((_wc, permission, callback) => {
+  // named to avoid shadowing the imported `session`, which the csp helper uses
+  const windowSession = mainWindow.webContents.session
+  windowSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(isPermissionAllowed(permission))
   })
-  session.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission))
+  windowSession.setPermissionCheckHandler((_wc, permission) => isPermissionAllowed(permission))
 
   mainWindow.on("closed", () => {
     mainWindow = null
@@ -249,6 +277,12 @@ if (!gotTheLock) {
         app.quit()
         return
       }
+    }
+
+    // next dev serves eval-based sourcemaps and an hmr websocket, so the policy
+    // ships with the packaged build only
+    if (!isDev) {
+      applyContentSecurityPolicy(appOrigins({ isDev, staticPort: STATIC_PORT }))
     }
 
     createWindow()

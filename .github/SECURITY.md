@@ -125,6 +125,66 @@ NetDash Toolkit implements several security measures:
 - **No Desktop Telemetry**: The desktop app makes no update checks or analytics calls. (The hosted web app at netdash-toolkit.vercel.app uses Vercel Analytics for anonymous page metrics; cloud sync via Firebase is opt-in and user-initiated.)
 - **Renderer Isolation**: The Electron renderer runs with `nodeIntegration` disabled and `contextIsolation` enabled, with a minimal preload bridge for the networking IPC
 - **Supply-Chain Hardening**: CI actions are pinned to commit SHAs, runners are egress-audited, releases ship SLSA provenance, and CodeQL + OpenSSF Scorecard + dependency review run continuously
+- **Content Security Policy**: both builds send one; the two directives it cannot tighten, and why, are spelled out below
+
+### Content Security Policy
+
+both builds send the same directives. the web build sends them from `vercel.json`; the desktop build sends them from `session.defaultSession.webRequest.onHeadersReceived` in `electron/main.ts`, on responses from the app's own origin only, and only in packaged builds (the dev renderer needs `eval` for source maps and a websocket for hot reload). the renderer bundle is the same static export in both, so `'self'` is the only thing that differs: `https://netdash-toolkit.vercel.app` on the web, `http://localhost:17890` on the desktop.
+
+```
+default-src 'self';
+script-src 'self' 'unsafe-inline' https://apis.google.com https://accounts.google.com;
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: https:;
+font-src 'self' data:;
+connect-src 'self' https: http:;
+frame-src https://*.firebaseapp.com https://accounts.google.com;
+worker-src 'self' blob:;
+object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+what it stops: plugin content (`object-src 'none'`), base-tag hijacking (`base-uri 'self'`), being framed by another site (`frame-ancestors 'none'`, alongside `X-Frame-Options: DENY`), cross-origin form posts (`form-action 'self'`), and script from any origin other than this one, `apis.google.com` and `accounts.google.com`.
+
+what it does not stop, stated with the reason rather than left implied:
+
+- **inline script runs.** a Next static export inlines its hydration script and has no per-request nonce, so `script-src` has to allow `'unsafe-inline'`; that is the ceiling for this build, not a preference. `'unsafe-eval'` is not allowed, so the policy still blocks the `eval`-based half of that class.
+- **`connect-src` permits any `https:` or `http:` origin,** because 4 tools fetch a host the user types: the network tester (RTT and throughput), the browser port scanner, the ping and traceroute browser fallback, and the TLS trust probe in the SSL checker. an allowlist would break those tools in production without stopping anything, so what `connect-src` actually buys here is narrow: `ws:`, `wss:`, `data:` and `blob:` connections are blocked, nothing else. a stricter version is possible on the desktop build alone, by routing those 4 browser fallbacks through the existing preload bridge, which is not done today.
+- **`img-src` permits any `https:` origin,** because a signed-in user can point their profile photo URL at any host.
+
+- **a fixed allowlist could not have covered `rdap.org` anyway.** it is an RFC 9224 bootstrap redirector: every whois lookup is redirected to whichever registry or RIR is authoritative, and CSP checks each redirect hop, so the allowlist would have to name every registry RDAP server that exists.
+
+### What the App Contacts
+
+beyond the host a user types into those tools, the app contacts 10 fixed third-party hosts, each of them also declared per tool in the UI before the tool runs.
+
+<!-- egress:app:start -->
+
+| host                              | what it is                    | reached from                                       |
+| --------------------------------- | ----------------------------- | -------------------------------------------------- |
+| `cloudflare-dns.com`              | DNS over HTTPS                | `lib/network-testing.ts`, `lib/email-auth.ts`      |
+| `dns.google`                      | DNS over HTTPS                | `lib/network-testing.ts`, `lib/email-auth.ts`      |
+| `dns.quad9.net`                   | DNS over HTTPS                | `lib/network-testing.ts`                           |
+| `doh.opendns.com`                 | DNS over HTTPS                | `lib/network-testing.ts`                           |
+| `dns.adguard-dns.com`             | DNS over HTTPS                | `lib/network-testing.ts`                           |
+| `rdap.org`                        | whois bootstrap redirector    | `lib/rdap.ts`, `components/tools/whois-lookup.tsx` |
+| `api.maclookup.app`               | MAC vendor lookup             | `lib/oui-vendors.ts`                               |
+| `api.certspotter.com`             | certificate transparency logs | `lib/cert-transparency.ts`                         |
+| `observatory-api.mdn.mozilla.net` | Mozilla's header scan         | `components/tools/security-headers/`               |
+| `api.hackertarget.com`            | header relay, unaffiliated    | `lib/http-relay.ts`                                |
+
+<!-- egress:app:end -->
+
+`api.hackertarget.com` is the one that deserves a second sentence: it is an unaffiliated relay that can add, drop or rewrite anything it returns, which is why every tool that uses it labels its output as unverified rather than grading it.
+
+signing in adds the Firebase SDK's own hosts, reached only when cloud sync is configured and the user signs in:
+
+<!-- egress:sdk:start -->
+
+`identitytoolkit.googleapis.com`, `securetoken.googleapis.com`, `firestore.googleapis.com`
+
+<!-- egress:sdk:end -->
+
+this table is not maintained by hand. `tests/unit/csp.test.ts` re-derives the host list from the source tree on every CI run, and fails if the code contacts a host this table does not list, if the table lists a host the code no longer contacts, or if the count in the sentence above stops matching the table.
 
 ### Acknowledgments
 

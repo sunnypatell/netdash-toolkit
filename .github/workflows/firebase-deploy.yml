@@ -23,9 +23,11 @@ jobs:
     name: Deploy Firestore Rules
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # secrets can't be used directly in `if:`, so surface presence via env
+    # secrets can't be used directly in `if:`, so surface presence as a boolean.
+    # the value itself stays out of the job env: only the deploy step below needs
+    # it, and a job-level env hands it to every step including third-party ones.
     env:
-      GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      HAS_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
       - name: Harden runner (egress audit)
         uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
@@ -38,11 +40,11 @@ jobs:
       # service account with the firebase rules admin role, download its json
       # key, and add it as the FIREBASE_SERVICE_ACCOUNT repo secret.
       - name: Skip notice (no service account configured)
-        if: env.GCP_SA_KEY == ''
+        if: env.HAS_SERVICE_ACCOUNT != 'true'
         run: echo "::notice::FIREBASE_SERVICE_ACCOUNT not set - skipping firestore rules deploy. add the secret to enable."
 
       - name: Checkout repository
-        if: env.GCP_SA_KEY != ''
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -50,7 +52,7 @@ jobs:
       # pinned to a release sha; authenticates via GCP_SA_KEY (service
       # account json), the non-deprecated method.
       - name: Deploy to Firebase
-        if: env.GCP_SA_KEY != ''
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
         uses: w9jds/firebase-action@af97ff3f81136bba7d9048915ba5f05ba42a551d # v15.24.0
         with:
           args: deploy --only firestore:rules
