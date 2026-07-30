@@ -69,8 +69,15 @@ function rules(expected) {
   ])
 
   return [
-    // "48 tools", "48-tool dashboard", "all 48 tools"
-    ["a total tool count", /\b(\d+)[ -]tools?\b/g, new Set([expected.total])],
+    // "48 tools", "48-tool dashboard", "all 48 tools".
+    // "tool files" is a different unit (tools are directories now, so files
+    // outnumber tools), and "N tools whose ..." is a subset by construction.
+    // both produced false positives that failed the build.
+    [
+      "a total tool count",
+      /\b(\d+)[ -]tools?\b(?!\s+(?:files?|whose)\b)/g,
+      new Set([expected.total]),
+    ],
     // "36 of the 48 tools", "11 of the 48". the denominator has to be the tool
     // count for this to be about tools at all: "0 of 100" is a header score.
     [

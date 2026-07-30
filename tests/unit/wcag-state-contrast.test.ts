@@ -132,11 +132,12 @@ describe("1.4.11 state indicators", () => {
 // none of it is large text: the call sites are text-sm and text-xs, so the floor
 // is 4.5:1 rather than 3:1.
 describe("1.4.3 --destructive as a foreground", () => {
+  // all six now clear the floor. one value could not: a red dark enough for the
+  // light surfaces was too dark for the dark ones, so --destructive is per theme
+  // (#b91c1c light, #f87171 dark) and --destructive-foreground follows it.
   const PASSING: Array<[keyof typeof themes, string]> = [
     ["light", "background"],
     ["light", "popover"],
-  ]
-  const FAILING: Array<[keyof typeof themes, string]> = [
     ["light", "card"],
     ["dark", "background"],
     ["dark", "card"],
@@ -149,20 +150,6 @@ describe("1.4.3 --destructive as a foreground", () => {
       r,
       `--destructive on --${surface} in ${theme} is ${r.toFixed(2)}:1`
     ).toBeGreaterThanOrEqual(4.5)
-  })
-
-  // recorded rather than skipped, for the same reason as the menu highlight
-  // above: the number is checked on every run, and darkening --destructive
-  // fails this and prompts the conformance record to be updated rather than
-  // leaving a stale "partially supports" behind.
-  it.each(FAILING)("%s: error text on --%s is a known open gap under 4.5:1", (theme, surface) => {
-    const r = ratio(hex(theme, "destructive"), hex(theme, surface))
-    expect(
-      r,
-      `--destructive on --${surface} in ${theme} is now ${r.toFixed(2)}:1. if this reached 4.5:1, promote 1.4.3 in docs/src/content/docs/accessibility-conformance.md and move this row into the passing list.`
-    ).toBeLessThan(4.5)
-    // and not arbitrarily bad: below 3:1 it stops being legible at all
-    expect(r).toBeGreaterThan(2.9)
   })
 
   // the message colour is the whole message, so it may not composite against

@@ -68,6 +68,12 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ["muted-foreground", "muted"],
   ["muted-foreground", "background"],
   ["muted-foreground", "card"],
+  // --destructive is not only a fill: `text-destructive` draws every validation
+  // message and error alert, so it has to clear 4.5:1 as a foreground on every
+  // surface it lands on. checking it only as a background missed four of six.
+  ["destructive", "background"],
+  ["destructive", "card"],
+  ["destructive", "popover"],
   // the sidebar carries its own token family and needs the same floor
   ["sidebar-foreground", "sidebar"],
   ["sidebar-primary-foreground", "sidebar-primary"],
