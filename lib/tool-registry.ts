@@ -50,13 +50,7 @@ import {
 
 // Tool category definitions
 export type ToolCategory =
-  | "calculators"
-  | "ip-tools"
-  | "network"
-  | "diagnostics"
-  | "generators"
-  | "reference"
-  | "devtools"
+  "calculators" | "ip-tools" | "network" | "diagnostics" | "generators" | "reference" | "devtools"
 
 // Project item types for saving to projects
 export type ProjectItemType =
