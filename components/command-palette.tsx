@@ -3,7 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
-import { Clock, Cloud, CornerDownLeft, FolderOpen, Home, Info, Search } from "lucide-react"
+import {
+  BookOpen,
+  Clock,
+  Cloud,
+  CornerDownLeft,
+  FolderOpen,
+  Home,
+  Info,
+  Search,
+} from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import {
   categories,
@@ -55,13 +64,17 @@ export function ShortcutHint({ className }: { className?: string }) {
 const RECENTS_KEY = "netdash-recent-tools"
 const RECENTS_MAX = 6
 
-const pages: Array<{ href: string; label: string; icon: LucideIcon }> = [
+// external: the docs are static astro output under public/, so the router has
+// never heard of them and has to be bypassed
+const pages: Array<{ href: string; label: string; icon: LucideIcon; external?: boolean }> = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/about", label: "About", icon: Info },
+  { href: "/docs/", label: "Docs", icon: BookOpen, external: true },
 ]
 
-function readRecents(): ToolDefinition[] {
+// exported so the dashboard can show the same list; one store, one reader
+export function readRecents(): ToolDefinition[] {
   try {
     const raw = localStorage.getItem(RECENTS_KEY)
     if (!raw) return []
@@ -135,9 +148,10 @@ export function CommandPalette() {
   )
 
   const goTo = useCallback(
-    (href: string) => {
+    (href: string, external?: boolean) => {
       setOpen(false)
-      router.push(href)
+      if (external) window.location.href = href
+      else router.push(href)
     },
     [router]
   )
@@ -198,7 +212,7 @@ export function CommandPalette() {
                   <Command.Item
                     key={page.href}
                     value={page.href}
-                    onSelect={() => goTo(page.href)}
+                    onSelect={() => goTo(page.href, page.external)}
                     className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
                   >
                     <Icon className="size-4 shrink-0 opacity-70" aria-hidden="true" />

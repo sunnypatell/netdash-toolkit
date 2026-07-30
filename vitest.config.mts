@@ -11,6 +11,10 @@ export default defineConfig({
   // tsconfig sets jsx: preserve for next, so tests need their own transform
   plugins: [react()],
   test: {
+    // ci runners are utc, where local time equals utc and no day is 23 or 25
+    // hours long, so every assertion about local-clock and dst behaviour passed
+    // for free. a zone with dst makes those tests mean what they say.
+    env: { TZ: "America/Toronto" },
     projects: [
       {
         extends: true,

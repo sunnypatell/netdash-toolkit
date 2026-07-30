@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { openCommandPalette } from "@/components/command-palette"
 import {
   Network,
+  BookOpen,
   ChevronLeft,
   ChevronDown,
   ChevronRight,
@@ -38,6 +39,10 @@ const standalonePages = [
   { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/about", label: "About", icon: Info },
 ]
+
+// the docs are static astro output under public/, not a next route, so this one
+// has to be a real navigation rather than a Link
+const DOCS_URL = "/docs/"
 
 const GROUPS_KEY = "netdash-sidebar-groups"
 
@@ -211,7 +216,7 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
 
               {query ? (
                 <div className="space-y-1 pt-1">
-                  <p className="text-muted-foreground px-2 py-1 text-[11px]" aria-live="polite">
+                  <p className="text-muted-foreground px-2 py-1 text-xs" aria-live="polite">
                     {matches.length} {matches.length === 1 ? "match" : "matches"}
                   </p>
                   {matches.map((tool) => {
@@ -297,7 +302,7 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
                           <span className="min-w-0 flex-1 truncate text-left">
                             {category.label}
                           </span>
-                          <span className="text-muted-foreground tabular text-[11px]">
+                          <span className="text-muted-foreground tabular text-xs">
                             {categoryTools.length}
                           </span>
                           {isExpanded ? (
@@ -356,6 +361,17 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
                         onNavigate={handleNavigate}
                       />
                     ))}
+                    <a
+                      href={DOCS_URL}
+                      aria-label={showLabels ? undefined : "Docs"}
+                      className={cn(
+                        rowClass(false),
+                        showLabels ? "pl-2" : "justify-center pr-0 pl-0"
+                      )}
+                    >
+                      <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+                      {showLabels && <span className="min-w-0 flex-1 truncate">Docs</span>}
+                    </a>
                   </div>
                 </>
               )}

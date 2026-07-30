@@ -1,13 +1,13 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowRight, Cloud, CornerDownLeft, Search, Star, WifiOff, X } from "lucide-react"
-import { ShortcutHint, openCommandPalette } from "@/components/command-palette"
+import { ArrowRight, Clock, Cloud, CornerDownLeft, Search, Star, WifiOff, X } from "lucide-react"
+import { ShortcutHint, readRecents } from "@/components/command-palette"
 import {
   categories,
   categoryLabelOf,
@@ -34,7 +34,7 @@ const SEARCH_ID = "tool-search"
 function RuntimeMark({ tool }: { tool: ToolDefinition }) {
   if (isOffline(tool)) return null
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
       <Cloud className="size-3" aria-hidden="true" />
       Sends data
     </span>
@@ -74,7 +74,7 @@ function ToolTile({ tool, showCategory }: { tool: ToolDefinition; showCategory?:
         </span>
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 empty:mt-0">
           {showCategory && (
-            <span className="text-muted-foreground text-[11px]">{categoryLabelOf(tool)}</span>
+            <span className="text-muted-foreground text-xs">{categoryLabelOf(tool)}</span>
           )}
           <RuntimeMark tool={tool} />
         </span>
@@ -113,11 +113,43 @@ function FilterChip({
   )
 }
 
+function SectionHeading({
+  icon: Icon,
+  title,
+  hint,
+  count,
+  filled,
+}: {
+  icon: ToolDefinition["icon"]
+  title: string
+  hint: string
+  count: number
+  filled?: boolean
+}) {
+  return (
+    <div className="border-border flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2">
+      <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+        <Icon className={cn("text-primary size-4", filled && "fill-current")} aria-hidden="true" />
+        {title}
+      </h2>
+      <span className="text-muted-foreground flex-1 text-xs">{hint}</span>
+      <span className="text-muted-foreground tabular text-xs">{count}</span>
+    </div>
+  )
+}
+
 export function Dashboard() {
   const router = useRouter()
   const [query, setQuery] = useState("")
   const [runtime, setRuntime] = useState<RuntimeFilter>("all")
   const [category, setCategory] = useState<CategoryFilter>("all")
+  const [recents, setRecents] = useState<ToolDefinition[]>([])
+
+  // localStorage is not readable during the static render, so the list arrives
+  // after mount; a first-time visitor never sees the section at all
+  useEffect(() => {
+    setRecents(readRecents())
+  }, [])
 
   const searching = query.trim().length > 0
 
@@ -145,7 +177,14 @@ export function Dashboard() {
       .filter((s) => s.items.length > 0)
   }, [searching, category, byRuntime])
 
-  const quickStart = useMemo(() => popularTools.filter(byRuntime), [byRuntime])
+  const recentList = useMemo(() => recents.filter(byRuntime), [recents, byRuntime])
+
+  // a tool you opened yesterday outranks a tool that is popular in general, so
+  // the two lists stay complementary rather than showing the same tile twice
+  const quickStart = useMemo(() => {
+    const seen = new Set(recentList.map((t) => t.slug))
+    return popularTools.filter((t) => byRuntime(t) && !seen.has(t.slug))
+  }, [byRuntime, recentList])
 
   const visibleCount = searching
     ? results.length
@@ -184,10 +223,10 @@ export function Dashboard() {
             </h1>
             <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed text-pretty sm:text-base">
               <span className="text-foreground font-medium">
-                {offlineCount} of the {tools.length} run entirely in your browser
+                {offlineCount} of the {tools.length} run offline
               </span>{" "}
-              and never send what you type anywhere. The other {networkCount} query DNS, TLS, WHOIS
-              or vendor lookups, and each one names the host it contacts before it sends.
+              and never leave your browser. The other {networkCount} query DNS, TLS, WHOIS or vendor
+              lookups, and each one names the host it contacts before it sends.
             </p>
           </div>
 
@@ -208,7 +247,7 @@ export function Dashboard() {
                 placeholder="Search by name or keyword"
                 className="h-11 pr-3 pl-9 text-sm sm:pr-44"
               />
-              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 items-center gap-1.5 text-[11px] sm:flex">
+              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 hidden -translate-y-1/2 items-center gap-1.5 text-xs sm:flex">
                 {searching ? (
                   <>
                     <CornerDownLeft className="size-3" aria-hidden="true" />
@@ -221,23 +260,49 @@ export function Dashboard() {
             </div>
           </form>
 
+          {/* a second search button 40px under a search box is not a second
+              route in, it is the same one twice. the pair that earns the space
+              is "start using it" and "tell me what it is". */}
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={openCommandPalette} aria-keyshortcuts="Meta+K Control+K">
-              <Search className="size-3.5" aria-hidden="true" />
-              Jump to a tool
-            </Button>
-            <Button size="sm" variant="outline" asChild>
+            <Button size="sm" asChild>
               <Link href={`/tools/${leadTool.slug}`}>
                 Open {leadTool.title}
                 <ArrowRight className="size-3.5" aria-hidden="true" />
               </Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/about">How it works</Link>
             </Button>
           </div>
         </div>
       </section>
 
       <section className="space-y-5">
+        {/* category leads: what a tool does is the axis people browse by. runtime
+            is a real filter but a niche one, and ranking it first put a privacy
+            taxonomy above the job the visitor came to do. */}
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="eyebrow mr-1">Category</span>
+            <FilterChip
+              active={category === "all"}
+              onClick={() => setCategory("all")}
+              count={tools.length}
+            >
+              Everything
+            </FilterChip>
+            {categories.map((c) => (
+              <FilterChip
+                key={c.id}
+                active={category === c.id}
+                onClick={() => setCategory(c.id)}
+                count={tools.filter((t) => t.category === c.id).length}
+              >
+                {c.label}
+              </FilterChip>
+            ))}
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             <span className="eyebrow mr-1">Runtime</span>
             <FilterChip
@@ -263,27 +328,6 @@ export function Dashboard() {
               <Cloud className="size-3" aria-hidden="true" />
               Sends data
             </FilterChip>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="eyebrow mr-1">Category</span>
-            <FilterChip
-              active={category === "all"}
-              onClick={() => setCategory("all")}
-              count={tools.length}
-            >
-              Everything
-            </FilterChip>
-            {categories.map((c) => (
-              <FilterChip
-                key={c.id}
-                active={category === c.id}
-                onClick={() => setCategory(c.id)}
-                count={tools.filter((t) => t.category === c.id).length}
-              >
-                {c.label}
-              </FilterChip>
-            ))}
           </div>
         </div>
 
@@ -330,18 +374,33 @@ export function Dashboard() {
           )
         ) : (
           <>
+            {/* the palette already remembered what you opened; the page you
+                actually land on a week later never showed it */}
+            {category === "all" && recentList.length > 0 && (
+              <div className="space-y-3">
+                <SectionHeading
+                  icon={Clock}
+                  title="Pick up where you left off"
+                  hint="From this browser, most recent first"
+                  count={recentList.length}
+                />
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {recentList.map((tool) => (
+                    <ToolTile key={tool.slug} tool={tool} showCategory />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {category === "all" && quickStart.length > 0 && (
               <div className="space-y-3">
-                <div className="border-border flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2">
-                  <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                    <Star className="text-primary size-4 fill-current" aria-hidden="true" />
-                    Start here
-                  </h2>
-                  <span className="text-muted-foreground flex-1 text-xs">
-                    The ones people open first
-                  </span>
-                  <span className="text-muted-foreground tabular text-xs">{quickStart.length}</span>
-                </div>
+                <SectionHeading
+                  icon={Star}
+                  filled
+                  title="Start here"
+                  hint="The ones people open first"
+                  count={quickStart.length}
+                />
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {quickStart.map((tool) => (
                     <ToolTile key={tool.slug} tool={tool} showCategory />
@@ -350,26 +409,21 @@ export function Dashboard() {
               </div>
             )}
 
-            {sections.map(({ category: c, items }) => {
-              const Icon = c.icon
-              return (
-                <div key={c.id} className="space-y-3">
-                  <div className="border-border flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b pb-2">
-                    <h2 className="text-foreground flex items-center gap-2 text-sm font-semibold">
-                      <Icon className="text-primary size-4" aria-hidden="true" />
-                      {c.label}
-                    </h2>
-                    <span className="text-muted-foreground flex-1 text-xs">{c.description}</span>
-                    <span className="text-muted-foreground tabular text-xs">{items.length}</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {items.map((tool) => (
-                      <ToolTile key={tool.slug} tool={tool} />
-                    ))}
-                  </div>
+            {sections.map(({ category: c, items }) => (
+              <div key={c.id} className="space-y-3">
+                <SectionHeading
+                  icon={c.icon}
+                  title={c.label}
+                  hint={c.description}
+                  count={items.length}
+                />
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {items.map((tool) => (
+                    <ToolTile key={tool.slug} tool={tool} />
+                  ))}
                 </div>
-              )
-            })}
+              </div>
+            ))}
 
             {sections.length === 0 && (
               <div className="border-border rounded-lg border border-dashed p-6 text-center sm:p-8">

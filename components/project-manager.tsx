@@ -82,6 +82,11 @@ import {
 } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
 import { ShareProjectDialog } from "@/components/ui/share-project-dialog"
+import { tools } from "@/lib/tool-registry"
+
+// the registry only carries projectItemType when a tool actually renders
+// SaveToProject, so this number cannot over-promise
+const SAVE_CAPABLE_COUNT = tools.filter((t) => t.projectItemType).length
 
 // Helper to format dates
 const formatDate = (timestamp: number) => {
@@ -211,7 +216,7 @@ export function ProjectManager() {
   // Create a new project
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) {
-      toast.error("Name required", { description: "Please enter a project name" })
+      toast.error("Name required", { description: "Enter a project name" })
       return
     }
 
@@ -273,7 +278,7 @@ export function ProjectManager() {
   // Add item to project
   const handleAddItem = async () => {
     if (!currentProject || !newItemName.trim()) {
-      toast.error("Name required", { description: "Please enter an item name" })
+      toast.error("Name required", { description: "Enter an item name" })
       return
     }
 
@@ -360,32 +365,36 @@ export function ProjectManager() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <FolderOpen className="text-primary h-6 w-6" />
-          <div>
-            <h1 className="text-2xl font-bold">Project Manager</h1>
-            <p className="text-muted-foreground text-sm">
-              Organize and save your network configurations
-            </p>
-          </div>
+      {/* matches the heading shape the other standalone pages use, rather than
+          being the one page with its own scale */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <p className="eyebrow">Projects</p>
+          <h1 className="flex items-center gap-3 text-3xl font-semibold text-balance sm:text-4xl">
+            <FolderOpen className="text-primary size-7 shrink-0" aria-hidden="true" />
+            Saved work
+          </h1>
+          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+            Group calculations and generated configs so you can come back to them.{" "}
+            {SAVE_CAPABLE_COUNT} tools save straight into a project; anything else can be added by
+            hand.
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           {syncEnabled ? (
             <Badge variant="outline" className="text-green-600">
-              <Cloud className="mr-1 h-3 w-3" />
-              {syncing ? "Syncing..." : "Cloud Sync"}
+              <Cloud className="mr-1 h-3 w-3" aria-hidden="true" />
+              {syncing ? "Syncing" : "Cloud sync on"}
             </Badge>
           ) : isConfigured ? (
             <Button variant="outline" size="sm" onClick={signInWithGoogle}>
-              <Cloud className="mr-2 h-4 w-4" />
-              Enable Cloud Sync
+              <Cloud className="mr-2 h-4 w-4" aria-hidden="true" />
+              Turn on cloud sync
             </Button>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
-              <CloudOff className="mr-1 h-3 w-3" />
-              Local Storage
+              <CloudOff className="mr-1 h-3 w-3" aria-hidden="true" />
+              Saved in this browser
             </Badge>
           )}
         </div>

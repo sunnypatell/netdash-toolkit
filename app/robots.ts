@@ -11,7 +11,9 @@ export default function robots(): MetadataRoute.Robots {
       // signed-in only, nothing crawlable, and the auth handler is not a page
       disallow: ["/projects/", "/auth/"],
     },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    // the docs site is a separate astro build with its own sitemap, so both have
+    // to be advertised or its 29 pages are discoverable by nothing
+    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/docs/sitemap-index.xml`],
     host: canonical("/"),
   }
 }

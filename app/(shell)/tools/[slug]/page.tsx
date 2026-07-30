@@ -24,8 +24,8 @@ export async function generateMetadata({
   // stated per tool rather than globally, because roughly a quarter of them do
   // leave the device and the card should not imply otherwise
   const privacy = isOffline(tool)
-    ? "Runs entirely in your browser."
-    : "Sends your input to a third-party service, only when you ask it to."
+    ? "Runs offline; nothing you type leaves your browser."
+    : "Sends data to a third-party host, and only when you ask it to."
 
   return {
     title: tool.title,

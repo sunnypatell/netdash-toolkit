@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Github, Linkedin } from "@/components/icons/brand-icons"
 import {
+  BookOpen,
   ExternalLink,
   Globe,
   GitCommit,
@@ -22,6 +23,11 @@ import {
 } from "lucide-react"
 import changelogData from "@/data/changelog.json"
 import { categories, isOffline, offlineToolCount, tools } from "@/lib/tool-registry"
+import { REPO_URL } from "@/lib/site"
+
+// docs are static astro output copied into public/, not a next route
+const DOCS_URL = "/docs/"
+const RELEASES_URL = `${REPO_URL}/releases/latest`
 
 const changelog = changelogData.releases
 const offlineCount = offlineToolCount()
@@ -87,9 +93,9 @@ export function About() {
         <p className="text-muted-foreground max-w-3xl leading-relaxed text-pretty">
           {tools.length} network engineering utilities in one static site: subnetting, addressing,
           config generation, diagnostics, reference tables and a handful of everyday developer
-          tools. There is no backend. {offlineCount} of the {tools.length} tools do all their work
-          in the browser tab, and the remaining {networkTools.length} name the host they contact
-          before they send anything.
+          tools. There is no backend. {offlineCount} of the {tools.length} tools run offline and
+          never leave your browser, and the remaining {networkTools.length} name the host they
+          contact before they send anything.
         </p>
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="gap-1">
@@ -98,7 +104,7 @@ export function About() {
           </Badge>
           <Badge variant="outline" className="gap-1">
             <Cloud className="size-3" aria-hidden="true" />
-            {networkTools.length} make requests
+            {networkTools.length} send data
           </Badge>
           <Badge variant="outline">{categories.length} categories</Badge>
           <Badge variant="outline">WCAG 2.2 AA</Badge>
@@ -110,7 +116,7 @@ export function About() {
         <CardHeader>
           <CardTitle className="text-lg">Where your input goes</CardTitle>
           <CardDescription>
-            The full list, not a summary. Anything not on it never leaves the tab.
+            The full list, not a summary. Anything not on it never leaves your browser.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -154,6 +160,16 @@ export function About() {
               </tbody>
             </table>
           </div>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            <a
+              href={`${DOCS_URL}privacy/what-leaves-your-device/`}
+              className="text-foreground focus-visible:ring-ring focus-visible:ring-offset-background rounded underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              What leaves your device
+            </a>{" "}
+            in the docs breaks the same list down by capability, names who operates each host, and
+            says what it receives.
+          </p>
         </CardContent>
       </Card>
 
@@ -203,6 +219,21 @@ export function About() {
             <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
               In the browser, the ping tool measures an HTTPS round trip. That is a useful
               reachability signal, but it is not ICMP and the tool says so.
+            </p>
+            {/* the app names the desktop build in ten places and linked it in none */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
+                  <Monitor className="size-4" aria-hidden="true" />
+                  Download for macOS, Windows or Linux
+                  <ExternalLink className="size-3" aria-hidden="true" />
+                </a>
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+              Builds are ad-hoc signed rather than notarized, so macOS asks before opening one. The
+              release notes carry SHA-256 checksums and build provenance if you want to check what
+              you downloaded.
             </p>
           </CardContent>
         </Card>
@@ -336,6 +367,12 @@ export function About() {
             want to check any of the claims above.
           </p>
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <a href={DOCS_URL}>
+                <BookOpen className="size-4" aria-hidden="true" />
+                Docs
+              </a>
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <a href="https://www.sunnypatel.net/" target="_blank" rel="noopener noreferrer">
                 <Globe className="size-4" aria-hidden="true" />
