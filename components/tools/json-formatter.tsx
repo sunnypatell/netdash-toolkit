@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -227,7 +226,10 @@ export function JSONFormatter() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* the card title is the visible label, so the control carries its own name */}
             <Textarea
+              id="json-input"
+              aria-label="JSON input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder='{"key": "value"}'
@@ -267,7 +269,7 @@ export function JSONFormatter() {
                   Indent:
                 </Label>
                 <Select value={indentSize} onValueChange={setIndentSize}>
-                  <SelectTrigger className="w-20">
+                  <SelectTrigger id="indent" className="w-20">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -281,6 +283,8 @@ export function JSONFormatter() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
+              id="json-output"
+              aria-label="Formatted JSON output"
               value={output}
               readOnly
               placeholder="Formatted JSON will appear here..."

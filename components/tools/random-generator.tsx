@@ -334,9 +334,9 @@ export function RandomGenerator() {
             </div>
 
             <div>
-              <Label>Address Type</Label>
+              <Label htmlFor="ip-type">Address Type</Label>
               <Select value={ipType} onValueChange={(v) => setIpType(v as IPType)}>
-                <SelectTrigger>
+                <SelectTrigger id="ip-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,9 +388,9 @@ export function RandomGenerator() {
             </div>
 
             <div>
-              <Label>MAC Type</Label>
+              <Label htmlFor="mac-type">MAC Type</Label>
               <Select value={macType} onValueChange={(v) => setMacType(v as MACType)}>
-                <SelectTrigger>
+                <SelectTrigger id="mac-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -403,9 +403,9 @@ export function RandomGenerator() {
             </div>
 
             <div>
-              <Label>Format</Label>
+              <Label htmlFor="mac-format">Format</Label>
               <Select value={macFormat} onValueChange={(v) => setMacFormat(v as typeof macFormat)}>
-                <SelectTrigger>
+                <SelectTrigger id="mac-format">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -464,9 +464,9 @@ export function RandomGenerator() {
             </div>
 
             <div>
-              <Label>Address Type</Label>
+              <Label htmlFor="ipv6-type">Address Type</Label>
               <Select value={ipv6Type} onValueChange={(v) => setIpv6Type(v as typeof ipv6Type)}>
-                <SelectTrigger>
+                <SelectTrigger id="ipv6-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

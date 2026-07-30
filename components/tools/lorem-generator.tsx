@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Copy, FileText, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { copyText } from "@/lib/clipboard"
@@ -256,36 +256,38 @@ export function LoremGenerator() {
             <CardDescription>Customize the generated text</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>Generate</Label>
-              <Tabs value={mode} onValueChange={(v) => setMode(v as GenerateMode)}>
-                <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={mode} onValueChange={(v) => setMode(v as GenerateMode)} className="gap-6">
+              <div className="space-y-2">
+                <Label id="generate-mode-label">Generate</Label>
+                <TabsList aria-labelledby="generate-mode-label" className="grid w-full grid-cols-3">
                   <TabsTrigger value="paragraphs">Paragraphs</TabsTrigger>
                   <TabsTrigger value="sentences">Sentences</TabsTrigger>
                   <TabsTrigger value="words">Words</TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>
-                  {mode === "paragraphs"
-                    ? "Paragraphs"
-                    : mode === "sentences"
-                      ? "Sentences"
-                      : "Words"}
-                </Label>
-                <Badge variant="outline">{count}</Badge>
               </div>
-              <Slider
-                value={[count]}
-                onValueChange={([v]) => setCount(v)}
-                min={1}
-                max={getMaxCount()}
-                step={1}
-              />
-            </div>
+
+              {/* the count slider is what each mode tab controls - its ceiling changes with mode */}
+              <TabsContent value={mode} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {mode === "paragraphs"
+                      ? "Paragraphs"
+                      : mode === "sentences"
+                        ? "Sentences"
+                        : "Words"}
+                  </Label>
+                  <Badge variant="outline">{count}</Badge>
+                </div>
+                <Slider
+                  value={[count]}
+                  onValueChange={([v]) => setCount(v)}
+                  min={1}
+                  max={getMaxCount()}
+                  step={1}
+                  aria-label={`Number of ${mode} to generate`}
+                />
+              </TabsContent>
+            </Tabs>
 
             <div className="flex items-center space-x-2">
               <input

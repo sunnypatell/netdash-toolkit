@@ -377,89 +377,92 @@ export function PortReference() {
         description="Quick reference for common network ports and services"
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Search Ports
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="search">Search by port number or service</Label>
-            <Input
-              id="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="80, HTTPS, database..."
-              className="max-w-md"
-            />
-          </div>
+      <Tabs value={category} onValueChange={setCategory} className="gap-4 sm:gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search Ports
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="search">Search by port number or service</Label>
+              <Input
+                id="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="80, HTTPS, database..."
+                className="max-w-md"
+              />
+            </div>
 
-          <Tabs value={category} onValueChange={setCategory}>
-            <TabsList className="h-auto flex-wrap">
+            <TabsList aria-label="Filter ports by category" className="h-auto flex-wrap">
               {CATEGORIES.map((cat) => (
                 <TabsTrigger key={cat.id} value={cat.id}>
                   {cat.label}
                 </TabsTrigger>
               ))}
             </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {filteredPorts.length} Port{filteredPorts.length !== 1 ? "s" : ""} Found
-          </CardTitle>
-          <CardDescription>
-            {category === "all"
-              ? "All categories"
-              : CATEGORIES.find((c) => c.id === category)?.label}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-2 text-left font-medium">Port</th>
-                  <th className="p-2 text-left font-medium">Protocol</th>
-                  <th className="p-2 text-left font-medium">Service</th>
-                  <th className="p-2 text-left font-medium">Description</th>
-                  <th className="p-2 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPorts.map((port) => (
-                  <tr key={port.port + port.protocol} className="hover:bg-muted/50 border-b">
-                    <td className="p-2">
-                      <Badge variant="secondary" className="font-mono">
-                        {port.port}
-                      </Badge>
-                    </td>
-                    <td className="p-2">
-                      <Badge variant="outline">{port.protocol}</Badge>
-                    </td>
-                    <td className="p-2 font-medium">{port.service}</td>
-                    <td className="text-muted-foreground p-2">{port.description}</td>
-                    <td className="p-2">
-                      <CopyButton value={port.port.toString()} size="sm" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        {/* the filtered table is the panel the selected category tab controls */}
+        <TabsContent value={category}>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {filteredPorts.length} Port{filteredPorts.length !== 1 ? "s" : ""} Found
+              </CardTitle>
+              <CardDescription>
+                {category === "all"
+                  ? "All categories"
+                  : CATEGORIES.find((c) => c.id === category)?.label}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="p-2 text-left font-medium">Port</th>
+                      <th className="p-2 text-left font-medium">Protocol</th>
+                      <th className="p-2 text-left font-medium">Service</th>
+                      <th className="p-2 text-left font-medium">Description</th>
+                      <th className="p-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPorts.map((port) => (
+                      <tr key={port.port + port.protocol} className="hover:bg-muted/50 border-b">
+                        <td className="p-2">
+                          <Badge variant="secondary" className="font-mono">
+                            {port.port}
+                          </Badge>
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="outline">{port.protocol}</Badge>
+                        </td>
+                        <td className="p-2 font-medium">{port.service}</td>
+                        <td className="text-muted-foreground p-2">{port.description}</td>
+                        <td className="p-2">
+                          <CopyButton value={port.port.toString()} size="sm" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          {filteredPorts.length === 0 && (
-            <div className="flex h-32 items-center justify-center">
-              <p className="text-muted-foreground">No ports match your search</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {filteredPorts.length === 0 && (
+                <div className="flex h-32 items-center justify-center">
+                  <p className="text-muted-foreground">No ports match your search</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Card>
         <CardHeader>

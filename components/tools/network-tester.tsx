@@ -97,6 +97,10 @@ export function NetworkTester() {
   const [ipv6Address, setIpv6Address] = useState("2001:db8::1")
   const [macForEUI64, setMacForEUI64] = useState("00:11:22:33:44:55")
   const [ipv6Prefix, setIpv6Prefix] = useState("2001:db8::/64")
+  const [multicastResult, setMulticastResult] = useState<string | null>(null)
+  const [multicastError, setMulticastError] = useState<string | null>(null)
+  const [eui64Result, setEui64Result] = useState<string | null>(null)
+  const [eui64Error, setEui64Error] = useState<string | null>(null)
 
   const runRTTTest = async () => {
     if (!rttUrl) return
@@ -460,12 +464,12 @@ export function NetworkTester() {
                   />
                 </div>
                 <div>
-                  <Label>Method</Label>
+                  <Label htmlFor="rtt-method">Method</Label>
                   <Select
                     value={rttMethod}
                     onValueChange={(value: "HEAD" | "GET" | "ICMP") => setRttMethod(value)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="rtt-method">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -506,7 +510,16 @@ export function NetworkTester() {
                 )}
               </Button>
 
-              {renderRTTResults()}
+              {/* live region so results are announced when the async test lands */}
+              <div aria-live="polite" aria-busy={activeTest === "rtt"} className="space-y-4">
+                {rttResults.length > 0 ? (
+                  renderRTTResults()
+                ) : (
+                  <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                    Enter a URL and start the test - median, jitter and packet loss appear here.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -569,57 +582,69 @@ export function NetworkTester() {
                     <Activity className="h-4 w-4 animate-spin" />
                     <span>Running {activeTest.split("-")[1]} test...</span>
                   </div>
-                  <Progress value={50} className="w-full" />
+                  <Progress
+                    value={50}
+                    className="w-full"
+                    aria-label={`${activeTest.split("-")[1]} test progress`}
+                  />
                 </div>
               )}
 
-              {throughputResults.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="font-semibold">Recent Results</h4>
-                  {throughputResults.map((result, index) => (
-                    <Card key={index} className="p-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          {result.success ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <AlertCircle className="h-4 w-4 text-red-600" />
-                          )}
-                          <span className="font-mono text-sm">{result.url}</span>
-                          <Badge
-                            variant={result.direction === "download" ? "secondary" : "outline"}
-                          >
-                            {result.direction}
-                          </Badge>
+              <div aria-live="polite" aria-busy={!!activeTest?.startsWith("throughput")}>
+                {throughputResults.length === 0 && (
+                  <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                    Enter a test URL, then run a download or upload test - throughput, bytes
+                    transferred and duration appear here.
+                  </p>
+                )}
+                {throughputResults.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="font-semibold">Recent Results</h4>
+                    {throughputResults.map((result, index) => (
+                      <Card key={index} className="p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            {result.success ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className="font-mono text-sm">{result.url}</span>
+                            <Badge
+                              variant={result.direction === "download" ? "secondary" : "outline"}
+                            >
+                              {result.direction}
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
 
-                      {result.success ? (
-                        <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
-                          <div>
-                            <span className="text-muted-foreground">Throughput:</span>
-                            <div className="font-mono font-semibold">
-                              {formatThroughput(result.throughputMbps)}
+                        {result.success ? (
+                          <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                            <div>
+                              <span className="text-muted-foreground">Throughput:</span>
+                              <div className="font-mono font-semibold">
+                                {formatThroughput(result.throughputMbps)}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Data Transferred:</span>
+                              <div className="font-mono">
+                                {formatBytes(result.bytesTransferred, { decimals: 2 })}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Duration:</span>
+                              <div className="font-mono">{formatDuration(result.durationMs)}</div>
                             </div>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Data Transferred:</span>
-                            <div className="font-mono">
-                              {formatBytes(result.bytesTransferred, { decimals: 2 })}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Duration:</span>
-                            <div className="font-mono">{formatDuration(result.durationMs)}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm text-red-600">{result.error}</div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              )}
+                        ) : (
+                          <div className="text-sm text-red-600">{result.error}</div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -647,9 +672,9 @@ export function NetworkTester() {
                   />
                 </div>
                 <div>
-                  <Label>Record Type</Label>
+                  <Label htmlFor="dns-record-type">Record Type</Label>
                   <Select value={dnsRecordType} onValueChange={setDnsRecordType}>
-                    <SelectTrigger>
+                    <SelectTrigger id="dns-record-type">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -666,9 +691,9 @@ export function NetworkTester() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Provider</Label>
+                  <Label htmlFor="dns-provider">Provider</Label>
                   <Select value={dnsProvider} onValueChange={setDnsProvider}>
-                    <SelectTrigger>
+                    <SelectTrigger id="dns-provider">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -701,7 +726,16 @@ export function NetworkTester() {
                 </div>
               </div>
 
-              {renderDNSResults()}
+              <div aria-live="polite" aria-busy={activeTest === "dns"} className="space-y-4">
+                {dnsResults.length > 0 ? (
+                  renderDNSResults()
+                ) : (
+                  <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                    Enter a domain, pick a record type and provider, then run the query - records
+                    and TTLs appear here.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -730,8 +764,12 @@ export function NetworkTester() {
                   />
                 </div>
                 <div>
-                  <Label>Protocol Stack</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <Label id="protocol-stack-label">Protocol Stack</Label>
+                  <div
+                    role="group"
+                    aria-labelledby="protocol-stack-label"
+                    className="mt-2 flex flex-wrap gap-2"
+                  >
                     {Object.keys(protocolOverheads).map((protocol) => (
                       <Badge
                         key={protocol}
@@ -756,6 +794,13 @@ export function NetworkTester() {
               <Button onClick={calculateMTUOverhead} className="w-full">
                 Calculate MTU
               </Button>
+
+              {!mtuCalculation && (
+                <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                  Set a link MTU, pick the protocols in the path, then calculate - the payload MTU
+                  and per-header breakdown appear here.
+                </p>
+              )}
 
               {mtuCalculation && (
                 <Card className="p-4">
@@ -821,17 +866,27 @@ export function NetworkTester() {
               <CardDescription>Look up MAC address vendor information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex space-x-2">
-                <Input
-                  placeholder="00:11:22:33:44:55"
-                  value={macAddress}
-                  onChange={(e) => setMacAddress(e.target.value)}
-                  className="flex-1"
-                />
-                <Button onClick={performOUILookup} disabled={!macAddress}>
-                  Lookup
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="oui-mac">MAC Address</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="oui-mac"
+                    placeholder="00:11:22:33:44:55"
+                    value={macAddress}
+                    onChange={(e) => setMacAddress(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button onClick={performOUILookup} disabled={!macAddress}>
+                    Lookup
+                  </Button>
+                </div>
               </div>
+
+              {!ouiResult && (
+                <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                  Enter a MAC address to look up its OUI and vendor.
+                </p>
+              )}
 
               {ouiResult && (
                 <Card className="p-4">
@@ -871,27 +926,49 @@ export function NetworkTester() {
               <CardDescription>IPv6 address manipulation and generation tools</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
+              <div className="space-y-2">
                 <h4 className="mb-3 font-semibold">Solicited-Node Multicast</h4>
+                <Label htmlFor="ipv6-address">IPv6 Address</Label>
                 <div className="flex space-x-2">
                   <Input
+                    id="ipv6-address"
                     placeholder="2001:db8::1"
                     value={ipv6Address}
                     onChange={(e) => setIpv6Address(e.target.value)}
                     className="flex-1"
+                    aria-invalid={multicastError !== null}
                   />
                   <Button
                     onClick={() => {
                       try {
-                        const multicast = generateSolicitedNodeMulticast(ipv6Address)
-                        alert(`Solicited-node multicast: ${multicast}`)
-                      } catch (error) {
-                        alert("Invalid IPv6 address")
+                        setMulticastResult(generateSolicitedNodeMulticast(ipv6Address))
+                        setMulticastError(null)
+                      } catch {
+                        setMulticastResult(null)
+                        setMulticastError(
+                          "Not a valid IPv6 address. Try a full or compressed form such as 2001:db8::1."
+                        )
                       }
                     }}
                   >
                     Generate
                   </Button>
+                </div>
+
+                {multicastError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{multicastError}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div aria-live="polite">
+                  {multicastResult && (
+                    <div className="bg-muted/50 rounded-md border p-3">
+                      <p className="text-muted-foreground text-xs">Solicited-node multicast</p>
+                      <p className="font-mono text-sm break-all">{multicastResult}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -901,35 +978,58 @@ export function NetworkTester() {
                 <h4 className="mb-3 font-semibold">EUI-64 from MAC</h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <Label>MAC Address</Label>
+                    <Label htmlFor="eui64-mac">MAC Address</Label>
                     <Input
+                      id="eui64-mac"
                       placeholder="00:11:22:33:44:55"
                       value={macForEUI64}
                       onChange={(e) => setMacForEUI64(e.target.value)}
+                      aria-invalid={eui64Error !== null}
                     />
                   </div>
                   <div>
-                    <Label>IPv6 Prefix</Label>
+                    <Label htmlFor="eui64-prefix">IPv6 Prefix</Label>
                     <Input
+                      id="eui64-prefix"
                       placeholder="2001:db8::/64"
                       value={ipv6Prefix}
                       onChange={(e) => setIpv6Prefix(e.target.value)}
+                      aria-invalid={eui64Error !== null}
                     />
                   </div>
                 </div>
                 <Button
                   onClick={() => {
                     try {
-                      const eui64 = generateEUI64FromMAC(macForEUI64, ipv6Prefix)
-                      alert(`EUI-64 address: ${eui64}`)
-                    } catch (error) {
-                      alert("Invalid MAC address or prefix")
+                      setEui64Result(generateEUI64FromMAC(macForEUI64, ipv6Prefix))
+                      setEui64Error(null)
+                    } catch {
+                      setEui64Result(null)
+                      setEui64Error(
+                        "Could not build an EUI-64 address. Check the MAC address and the IPv6 prefix."
+                      )
                     }
                   }}
                   className="mt-4 w-full"
                 >
                   Generate EUI-64
                 </Button>
+
+                {eui64Error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{eui64Error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div aria-live="polite">
+                  {eui64Result && (
+                    <div className="bg-muted/50 mt-4 rounded-md border p-3">
+                      <p className="text-muted-foreground text-xs">EUI-64 address</p>
+                      <p className="font-mono text-sm break-all">{eui64Result}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

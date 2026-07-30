@@ -113,9 +113,9 @@ export function DataUnitConverter() {
               />
             </div>
             <div>
-              <Label>Unit</Label>
+              <Label htmlFor="unit">Unit</Label>
               <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger>
+                <SelectTrigger id="unit">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -185,7 +185,11 @@ export function DataUnitConverter() {
                 <ResultRow key={info.label} info={info} />
               ))}
             </div>
-          ) : null}
+          ) : (
+            <p className="text-muted-foreground py-8 text-center">
+              Enter a valid value to see binary units
+            </p>
+          )}
         </CardContent>
       </Card>
 

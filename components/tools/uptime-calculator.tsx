@@ -138,9 +138,9 @@ export function UptimeCalculator() {
             </div>
 
             <div>
-              <Label>Time Period</Label>
+              <Label htmlFor="period">Time Period</Label>
               <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-                <SelectTrigger>
+                <SelectTrigger id="period">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

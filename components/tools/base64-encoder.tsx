@@ -102,103 +102,121 @@ export function Base64Encoder() {
         description="Encode and decode Base64 strings and files"
       />
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Base64 Converter</CardTitle>
-              <CardDescription>Convert between text and Base64 encoding</CardDescription>
-            </div>
-            <Tabs value={mode} onValueChange={(v) => setMode(v as "encode" | "decode")}>
-              <TabsList>
+      <Tabs value={mode} onValueChange={(v) => setMode(v as "encode" | "decode")}>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Base64 Converter</CardTitle>
+                <CardDescription>Convert between text and Base64 encoding</CardDescription>
+              </div>
+              <TabsList aria-label="Conversion direction">
                 <TabsTrigger value="encode">Encode</TabsTrigger>
                 <TabsTrigger value="decode">Decode</TabsTrigger>
               </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="input">{mode === "encode" ? "Plain Text" : "Base64 String"}</Label>
-                <Badge variant="outline">{input.length} chars</Badge>
-              </div>
-              <Textarea
-                id="input"
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value)
-                  setFileInput(null)
-                }}
-                placeholder={
-                  mode === "encode" ? "Enter text to encode..." : "Enter Base64 to decode..."
-                }
-                className="h-48 resize-none font-mono"
-              />
-              {mode === "encode" && (
-                <div className="flex gap-2">
-                  <Input
-                    type="file"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                    id="file-upload"
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* one panel keyed to the active mode, so the tab's aria-controls always resolves */}
+            <TabsContent value={mode} className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="input">
+                      {mode === "encode" ? "Plain Text" : "Base64 String"}
+                    </Label>
+                    <Badge variant="outline">{input.length} chars</Badge>
+                  </div>
+                  <Textarea
+                    id="input"
+                    value={input}
+                    onChange={(e) => {
+                      setInput(e.target.value)
+                      setFileInput(null)
+                    }}
+                    placeholder={
+                      mode === "encode" ? "Enter text to encode..." : "Enter Base64 to decode..."
+                    }
+                    className="h-48 resize-none font-mono"
                   />
+                  {mode === "encode" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="file-upload">Or encode a file</Label>
+                      <Input
+                        type="file"
+                        onChange={handleFileChange}
+                        className="cursor-pointer"
+                        id="file-upload"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                <div className="flex flex-col items-center justify-center gap-4 py-4 lg:py-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={swapContent}
+                    disabled={!output}
+                    aria-label={
+                      mode === "encode"
+                        ? "Move output into input and switch to decode"
+                        : "Move output into input and switch to encode"
+                    }
+                  >
+                    {mode === "encode" ? (
+                      <ArrowRight className="h-4 w-4" />
+                    ) : (
+                      <ArrowLeft className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-2 lg:col-start-2 lg:row-start-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="output">
+                      {mode === "encode" ? "Base64 String" : "Plain Text"}
+                    </Label>
+                    <Badge variant="outline">{output.length} chars</Badge>
+                  </div>
+                  <Textarea
+                    id="output"
+                    value={output}
+                    readOnly
+                    placeholder="Output will appear here..."
+                    className="bg-muted/50 h-48 resize-none font-mono"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(output)}
+                      disabled={!output}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={downloadOutput} disabled={!output}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clear}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
-            </div>
-
-            <div className="flex flex-col items-center justify-center gap-4 py-4 lg:py-0">
-              <Button variant="outline" size="sm" onClick={swapContent} disabled={!output}>
-                {mode === "encode" ? (
-                  <ArrowRight className="h-4 w-4" />
-                ) : (
-                  <ArrowLeft className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            <div className="space-y-2 lg:col-start-2 lg:row-start-1">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="output">{mode === "encode" ? "Base64 String" : "Plain Text"}</Label>
-                <Badge variant="outline">{output.length} chars</Badge>
-              </div>
-              <Textarea
-                id="output"
-                value={output}
-                readOnly
-                placeholder="Output will appear here..."
-                className="bg-muted/50 h-48 resize-none font-mono"
-              />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(output)}
-                  disabled={!output}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </Button>
-                <Button variant="outline" size="sm" onClick={downloadOutput} disabled={!output}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-                <Button variant="outline" size="sm" onClick={clear}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+            </TabsContent>
+          </CardContent>
+        </Card>
+      </Tabs>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>

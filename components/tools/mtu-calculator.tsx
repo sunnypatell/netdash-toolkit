@@ -134,9 +134,9 @@ export function MTUCalculator() {
             </div>
 
             <div>
-              <Label>IP Version</Label>
+              <Label htmlFor="ip-version">IP Version</Label>
               <Select value={ipVersion} onValueChange={setIpVersion}>
-                <SelectTrigger>
+                <SelectTrigger id="ip-version">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -147,9 +147,9 @@ export function MTUCalculator() {
             </div>
 
             <div>
-              <Label>Transport Protocol</Label>
+              <Label htmlFor="transport">Transport Protocol</Label>
               <Select value={transport} onValueChange={setTransport}>
-                <SelectTrigger>
+                <SelectTrigger id="transport">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,10 +166,16 @@ export function MTUCalculator() {
                 {protocols.map((protocol, index) => (
                   <div key={protocol.name} className="flex items-center space-x-2">
                     <Checkbox
+                      id={`protocol-${index}`}
                       checked={protocol.enabled}
                       onCheckedChange={() => toggleProtocol(index)}
                     />
-                    <span className="flex-1 text-sm">{protocol.name}</span>
+                    <Label
+                      htmlFor={`protocol-${index}`}
+                      className="flex-1 cursor-pointer text-sm font-normal"
+                    >
+                      {protocol.name}
+                    </Label>
                     <Badge variant="secondary">{protocol.overhead} bytes</Badge>
                   </div>
                 ))}

@@ -161,12 +161,12 @@ export function NetworkCalculator() {
                     />
                   </div>
                   <div>
-                    <Label>Unit</Label>
+                    <Label htmlFor="distance-unit">Unit</Label>
                     <Select
                       value={distanceUnit}
                       onValueChange={(v) => setDistanceUnit(v as "km" | "mi")}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="distance-unit">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -178,9 +178,9 @@ export function NetworkCalculator() {
                 </div>
 
                 <div>
-                  <Label>Medium</Label>
+                  <Label htmlFor="medium">Medium</Label>
                   <Select value={medium} onValueChange={(v) => setMedium(v as typeof medium)}>
-                    <SelectTrigger>
+                    <SelectTrigger id="medium">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

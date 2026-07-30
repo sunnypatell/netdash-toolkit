@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RefreshCw, AlertTriangle, ArrowRightLeft } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
@@ -186,44 +186,49 @@ export function IPConverter() {
             <CardDescription>Enter an IP address in any supported format</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label>Input Format</Label>
-              <Tabs
-                value={inputFormat}
-                onValueChange={(v) => setInputFormat(v as typeof inputFormat)}
-              >
-                <TabsList className="mt-2 grid w-full grid-cols-4">
+            <Tabs
+              value={inputFormat}
+              onValueChange={(v) => setInputFormat(v as typeof inputFormat)}
+              className="gap-4"
+            >
+              <div>
+                <Label id="input-format-label">Input Format</Label>
+                <TabsList
+                  aria-labelledby="input-format-label"
+                  className="mt-2 grid w-full grid-cols-4"
+                >
                   <TabsTrigger value="dotted">Dotted</TabsTrigger>
                   <TabsTrigger value="decimal">Decimal</TabsTrigger>
                   <TabsTrigger value="binary">Binary</TabsTrigger>
                   <TabsTrigger value="hex">Hex</TabsTrigger>
                 </TabsList>
-              </Tabs>
-            </div>
+              </div>
 
-            <div>
-              <Label htmlFor="ip-input">
-                {inputFormat === "dotted" && "Dotted Decimal (e.g., 192.168.1.1)"}
-                {inputFormat === "decimal" && "Decimal Integer (e.g., 3232235777)"}
-                {inputFormat === "binary" && "Binary (e.g., 11000000.10101000.00000001.00000001)"}
-                {inputFormat === "hex" && "Hexadecimal (e.g., 0xC0A80101)"}
-              </Label>
-              <Input
-                id="ip-input"
-                value={ipInput}
-                onChange={(e) => setIpInput(e.target.value)}
-                placeholder={
-                  inputFormat === "dotted"
-                    ? "192.168.1.1"
-                    : inputFormat === "decimal"
-                      ? "3232235777"
-                      : inputFormat === "binary"
-                        ? "11000000.10101000.00000001.00000001"
-                        : "0xC0A80101"
-                }
-                className="font-mono"
-              />
-            </div>
+              {/* the field each format tab controls, so the tab's aria-controls resolves */}
+              <TabsContent value={inputFormat}>
+                <Label htmlFor="ip-input">
+                  {inputFormat === "dotted" && "Dotted Decimal (e.g., 192.168.1.1)"}
+                  {inputFormat === "decimal" && "Decimal Integer (e.g., 3232235777)"}
+                  {inputFormat === "binary" && "Binary (e.g., 11000000.10101000.00000001.00000001)"}
+                  {inputFormat === "hex" && "Hexadecimal (e.g., 0xC0A80101)"}
+                </Label>
+                <Input
+                  id="ip-input"
+                  value={ipInput}
+                  onChange={(e) => setIpInput(e.target.value)}
+                  placeholder={
+                    inputFormat === "dotted"
+                      ? "192.168.1.1"
+                      : inputFormat === "decimal"
+                        ? "3232235777"
+                        : inputFormat === "binary"
+                          ? "11000000.10101000.00000001.00000001"
+                          : "0xC0A80101"
+                  }
+                  className="font-mono"
+                />
+              </TabsContent>
+            </Tabs>
 
             {!result && ipInput.trim() && (
               <Alert variant="destructive">

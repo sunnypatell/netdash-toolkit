@@ -125,159 +125,171 @@ export function URLEncoder() {
         description="Encode, decode, and build URLs with query parameters"
       />
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <CardTitle>URL Tool</CardTitle>
-              <CardDescription>Encode/decode URL components or build URLs</CardDescription>
-            </div>
-            <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
-              <TabsList>
+      <Tabs value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <CardTitle>URL Tool</CardTitle>
+                <CardDescription>Encode/decode URL components or build URLs</CardDescription>
+              </div>
+              <TabsList aria-label="URL tool mode">
                 <TabsTrigger value="encode">Encode</TabsTrigger>
                 <TabsTrigger value="decode">Decode</TabsTrigger>
                 <TabsTrigger value="build">Build URL</TabsTrigger>
               </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {mode !== "build" ? (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="input">{mode === "encode" ? "Plain Text" : "URL Encoded"}</Label>
-                  <Badge variant="outline">{input.length} chars</Badge>
-                </div>
-                <Textarea
-                  id="input"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={
-                    mode === "encode"
-                      ? "Enter text to URL encode..."
-                      : "Enter URL-encoded string..."
-                  }
-                  className="h-32 resize-none font-mono"
-                />
-                {mode === "decode" && input.includes("http") && (
-                  <Button variant="outline" size="sm" onClick={parseUrl}>
-                    Parse URL into Builder
-                  </Button>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="output">{mode === "encode" ? "URL Encoded" : "Plain Text"}</Label>
-                  <Badge variant="outline">{output.length} chars</Badge>
-                </div>
-                <Textarea
-                  id="output"
-                  value={output}
-                  readOnly
-                  placeholder="Output will appear here..."
-                  className="bg-muted/50 h-32 resize-none font-mono"
-                />
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(output)}
-                    disabled={!output}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={clear}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear
-                  </Button>
-                </div>
-              </div>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="baseUrl">Base URL</Label>
-                <Input
-                  id="baseUrl"
-                  value={baseUrl}
-                  onChange={(e) => setBaseUrl(e.target.value)}
-                  placeholder="https://example.com/path"
-                  className="font-mono"
-                />
-              </div>
+          </CardHeader>
+          <CardContent>
+            {/* one panel keyed to the active mode, so the tab's aria-controls always resolves */}
+            <TabsContent value={mode} className="space-y-4">
+              {mode !== "build" ? (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="input">
+                        {mode === "encode" ? "Plain Text" : "URL Encoded"}
+                      </Label>
+                      <Badge variant="outline">{input.length} chars</Badge>
+                    </div>
+                    <Textarea
+                      id="input"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={
+                        mode === "encode"
+                          ? "Enter text to URL encode..."
+                          : "Enter URL-encoded string..."
+                      }
+                      className="h-32 resize-none font-mono"
+                    />
+                    {mode === "decode" && input.includes("http") && (
+                      <Button variant="outline" size="sm" onClick={parseUrl}>
+                        Parse URL into Builder
+                      </Button>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Query Parameters</Label>
-                  <Button variant="outline" size="sm" onClick={addParam}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Parameter
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {params.map((param, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        value={param.key}
-                        onChange={(e) => updateParam(index, "key", e.target.value)}
-                        placeholder="Key"
-                        className="flex-1 font-mono"
-                      />
-                      <span className="text-muted-foreground">=</span>
-                      <Input
-                        value={param.value}
-                        onChange={(e) => updateParam(index, "value", e.target.value)}
-                        placeholder="Value"
-                        className="flex-1 font-mono"
-                      />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="output">
+                        {mode === "encode" ? "URL Encoded" : "Plain Text"}
+                      </Label>
+                      <Badge variant="outline">{output.length} chars</Badge>
+                    </div>
+                    <Textarea
+                      id="output"
+                      value={output}
+                      readOnly
+                      placeholder="Output will appear here..."
+                      className="bg-muted/50 h-32 resize-none font-mono"
+                    />
+                    <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => removeParam(index)}
-                        disabled={params.length === 1}
+                        onClick={() => copyToClipboard(output)}
+                        disabled={!output}
                       >
-                        <X className="h-4 w-4" />
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={clear}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear
                       </Button>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="baseUrl">Base URL</Label>
+                    <Input
+                      id="baseUrl"
+                      value={baseUrl}
+                      onChange={(e) => setBaseUrl(e.target.value)}
+                      placeholder="https://example.com/path"
+                      className="font-mono"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Generated URL</Label>
-                <div className="bg-muted/50 rounded-lg border p-3">
-                  <p className="font-mono text-sm break-all">{output || "Enter a base URL..."}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(output)}
-                    disabled={!output}
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy URL
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={clear}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Query Parameters</Label>
+                      <Button variant="outline" size="sm" onClick={addParam}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Parameter
+                      </Button>
+                    </div>
 
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
+                    <div className="space-y-2">
+                      {params.map((param, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={param.key}
+                            onChange={(e) => updateParam(index, "key", e.target.value)}
+                            placeholder="Key"
+                            className="flex-1 font-mono"
+                            aria-label={`Parameter ${index + 1} name`}
+                          />
+                          <span className="text-muted-foreground">=</span>
+                          <Input
+                            value={param.value}
+                            onChange={(e) => updateParam(index, "value", e.target.value)}
+                            placeholder="Value"
+                            className="flex-1 font-mono"
+                            aria-label={`Parameter ${index + 1} value`}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeParam(index)}
+                            disabled={params.length === 1}
+                            aria-label={`Remove parameter ${index + 1}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Generated URL</Label>
+                    <div className="bg-muted/50 rounded-lg border p-3">
+                      <p className="font-mono text-sm break-all">
+                        {output || "Enter a base URL..."}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(output)}
+                        disabled={!output}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy URL
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={clear}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+          </CardContent>
+        </Card>
+      </Tabs>
 
       <Card>
         <CardHeader>

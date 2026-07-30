@@ -238,9 +238,9 @@ export function DNSTools() {
               />
             </div>
             <div>
-              <Label>Record Type</Label>
+              <Label htmlFor="dns-record-type">Record Type</Label>
               <Select value={dnsRecordType} onValueChange={setDnsRecordType}>
-                <SelectTrigger>
+                <SelectTrigger id="dns-record-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -257,9 +257,9 @@ export function DNSTools() {
               </Select>
             </div>
             <div>
-              <Label>DNS Provider</Label>
+              <Label htmlFor="dns-provider">DNS Provider</Label>
               <Select value={dnsProvider} onValueChange={setDnsProvider}>
-                <SelectTrigger>
+                <SelectTrigger id="dns-provider">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -389,7 +389,17 @@ export function DNSTools() {
             </Button>
           </div>
 
-          {renderDNSResults()}
+          {/* live region so results are announced when the async query lands */}
+          <div aria-live="polite" aria-busy={activeQuery}>
+            {dnsResults.length > 0 ? (
+              renderDNSResults()
+            ) : (
+              <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                Enter a domain name, pick a record type and provider, then run the query - records,
+                TTLs and response times appear here.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
