@@ -243,8 +243,10 @@ export function ShareProjectDialog({
 
           {/* Current shares */}
           <div className="space-y-2">
-            <Label>People with access</Label>
-            <ScrollArea className="h-[220px] rounded-md border">
+            {/* not a Label: there is no form control to bind to, and the thing it
+                names is the focusable scroll region */}
+            <p className="text-sm leading-none font-medium">People with access</p>
+            <ScrollArea aria-label="People with access" className="h-[220px] rounded-md border">
               <div className="space-y-1 p-2">
                 {/* Owner */}
                 <div className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md p-2">

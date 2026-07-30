@@ -48,6 +48,7 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const passwordMismatch = !!newPassword && !!confirmPassword && newPassword !== confirmPassword
 
   // UI state
   const [loading, setLoading] = useState(false)
@@ -231,15 +232,15 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="profile" className="gap-1">
+            <TabsTrigger value="profile" className="gap-1" aria-label="Profile">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="email" className="gap-1">
+            <TabsTrigger value="email" className="gap-1" aria-label="Email">
               <Mail className="h-4 w-4" />
               <span className="hidden sm:inline">Email</span>
             </TabsTrigger>
-            <TabsTrigger value="password" className="gap-1">
+            <TabsTrigger value="password" className="gap-1" aria-label="Password">
               <KeyRound className="h-4 w-4" />
               <span className="hidden sm:inline">Password</span>
             </TabsTrigger>
@@ -296,8 +297,8 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
 
           <TabsContent value="email" className="mt-4 space-y-4">
             <div className="space-y-2">
-              <Label>Current Email</Label>
-              <Input value={user?.email || ""} disabled className="bg-muted" />
+              <Label htmlFor="current-email">Current Email</Label>
+              <Input id="current-email" value={user?.email || ""} disabled className="bg-muted" />
             </div>
 
             <Separator />
@@ -388,9 +389,17 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                       setConfirmPassword(e.target.value)
                       resetState()
                     }}
+                    aria-invalid={passwordMismatch}
+                    aria-describedby={passwordMismatch ? "confirmPasswordGoogle-error" : undefined}
                   />
-                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-destructive text-xs">Passwords do not match</p>
+                  {passwordMismatch && (
+                    <p
+                      id="confirmPasswordGoogle-error"
+                      role="status"
+                      className="text-destructive text-xs"
+                    >
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
 
@@ -447,9 +456,17 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
                       setConfirmPassword(e.target.value)
                       resetState()
                     }}
+                    aria-invalid={passwordMismatch}
+                    aria-describedby={passwordMismatch ? "confirmPassword-error" : undefined}
                   />
-                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-destructive text-xs">Passwords do not match</p>
+                  {passwordMismatch && (
+                    <p
+                      id="confirmPassword-error"
+                      role="status"
+                      className="text-destructive text-xs"
+                    >
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
 

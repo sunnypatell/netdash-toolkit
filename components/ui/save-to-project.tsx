@@ -114,8 +114,8 @@ export function SaveToProject({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label>Configuration Name</Label>
-            <Input value={itemName} disabled className="bg-muted" />
+            <Label htmlFor="configuration-name">Configuration Name</Label>
+            <Input id="configuration-name" value={itemName} disabled className="bg-muted" />
           </div>
 
           {!createNew ? (

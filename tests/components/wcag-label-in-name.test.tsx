@@ -4,6 +4,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
+import { settled } from "./settle"
 
 // wcag 2.2 sc 2.5.3 label in name, level a:
 // https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html
@@ -72,7 +73,7 @@ const CONTROLS = [
   .map((selector) => `${selector}[aria-label]`)
   .join(", ")
 
-// open findings recorded in docs/accessibility-conformance.md, in files owned by
+// open findings recorded in docs/src/content/docs/accessibility-conformance.md, in files owned by
 // other workstreams. matched rather than counted, so a fix elsewhere does not
 // break this suite: an entry that stops matching simply stops being used.
 // the dns-tools "Clear cache" / "Clear DNS cache" mismatch was the only entry
@@ -112,6 +113,9 @@ describe("2.5.3 label in name", () => {
           <Tool />
         </Providers>
       )
+      // this suite ran synchronously until now, so on the 19 tools whose panels
+      // are lazy it inspected the tab strip: 6 of reference-hub's 61 buttons
+      await settled(container, slug)
       const mismatches = mismatchesIn(container).filter(
         (m) => !KNOWN_OPEN.some((known) => known.visible === m.visible && known.name === m.name)
       )

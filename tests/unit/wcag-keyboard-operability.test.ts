@@ -68,19 +68,35 @@ describe("2.1.1 keyboard", () => {
 
   // a native button fires on Enter and on Space. anything claiming role="button"
   // has to reproduce both, or it is only half operable.
+  //
+  // the first version of this asserted `handlesEnter && !handlesSpace`, which let
+  // the worse case straight through: an element with role="button", tabIndex={0}
+  // and no key handler at all is not operable by keyboard by any key, and it also
+  // satisfies the role-plus-tab-stop test above. every branch is reported now.
   it("every element that claims role=button handles Space as well as Enter", () => {
+    const NAMES_ENTER = /"Enter"/
+    const NAMES_SPACE = /" "|"Space"|"Spacebar"/
     const offenders: string[] = []
     for (const [file, source] of SOURCES) {
       for (const tag of htmlTags(source)) {
         if (INTERACTIVE_TAGS.has(tag.name)) continue
         if (!/role\s*=\s*"button"/.test(tag.attributes)) continue
         const line = source.slice(0, tag.index).split("\n").length
-        // the handler is usually an inline arrow on the same tag
-        const handlesEnter = /"Enter"/.test(tag.attributes)
-        const handlesSpace = /" "|"Space"|"Spacebar"/.test(tag.attributes)
-        if (handlesEnter && !handlesSpace) {
-          offenders.push(`${file}:${line}: handles Enter but not Space`)
+        if (!/on(?:KeyDown|KeyUp|KeyPress)\s*=/.test(tag.attributes)) {
+          offenders.push(`${file}:${line}: role="button" with no key handler at all`)
+          continue
         }
+        // the handler is usually an inline arrow on the same tag. when it is a
+        // reference instead, the keys are named somewhere in the same file, so
+        // fall back to the file rather than guessing.
+        const scope = NAMES_ENTER.test(tag.attributes) || NAMES_SPACE.test(tag.attributes)
+        const text = scope ? tag.attributes : source
+        const handlesEnter = NAMES_ENTER.test(text)
+        const handlesSpace = NAMES_SPACE.test(text)
+        if (handlesEnter && handlesSpace) continue
+        offenders.push(
+          `${file}:${line}: handles ${handlesEnter ? "Enter but not Space" : handlesSpace ? "Space but not Enter" : "neither Enter nor Space"}`
+        )
       }
     }
     expect(offenders, `role="button" without Space handling:\n${offenders.join("\n")}`).toEqual([])

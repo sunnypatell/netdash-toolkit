@@ -129,6 +129,49 @@ it("defines the same colour tokens in both themes", () => {
 // `ring-destructive/20`, which seven primitives used for the aria-invalid state.
 // an invalid-state ring identifies a control's state, so 1.4.11 binds it exactly
 // as it binds the focus ring. matching any ring colour token, not one name.
+// the colour segment has to admit digits and brackets: `[a-z-]+` matched
+// `ring-ring/50` and `ring-destructive/20` but not `ring-red-500/50`, which is
+// the form tailwind's own palette produces, nor an arbitrary alpha like
+// `ring-primary/[0.5]` or an arbitrary colour like `ring-[#f00]/50`.
+const RING_ALPHA = () =>
+  new RegExp(
+    `(?:ring|outline)-(?:\\[[^\\]\\s]+\\]|[a-z0-9-]+)\\${"/"}(?:\\[[^\\]\\s]+\\]|\\d+%?)`,
+    "g"
+  )
+
+function ringAlphaOffenders(source: string): string[] {
+  return [...source.matchAll(RING_ALPHA())].map((m) => m[0])
+}
+
+// a scanner that matches nothing passes forever, so prove it fires first. the
+// literals are assembled at runtime so tailwind does not scan this file and emit
+// the very utilities the scan exists to forbid.
+it("the ring scan actually matches every shape a translucent ring is written in", () => {
+  const alpha = "/"
+  const known = [
+    `ring-ring${alpha}50`,
+    `ring-destructive${alpha}20`,
+    `ring-red-500${alpha}50`,
+    `outline-blue-600${alpha}50`,
+    `focus-visible:ring-primary${alpha}[0.5]`,
+    `ring-[#ff0000]${alpha}50`,
+    `outline-ring${alpha}50`,
+  ]
+  for (const literal of known) {
+    expect(ringAlphaOffenders(literal), `${literal} slipped past the scan`).toHaveLength(1)
+  }
+  // opaque rings and non-ring alphas must not be swept in
+  for (const fine of [
+    "ring-offset-2",
+    "ring-2 ring-ring",
+    "focus-visible:ring-[3px]",
+    "outline-none",
+  ]) {
+    expect(ringAlphaOffenders(fine), fine).toEqual([])
+  }
+  expect(ringAlphaOffenders("hover:bg-primary/90")).toEqual([])
+})
+
 it("2.4.7 and 1.4.11: no ring is drawn at partial alpha", () => {
   const roots = ["components", "app"]
   const offenders: string[] = []
@@ -138,10 +181,8 @@ it("2.4.7 and 1.4.11: no ring is drawn at partial alpha", () => {
       if (!/\.(tsx|ts|css)$/.test(rel)) continue
       scanned++
       const file = join(root, rel)
-      for (const m of readFileSync(file, "utf8").matchAll(
-        new RegExp(`(?:ring|outline)-[a-z-]+\\${"/"}(\\d+)`, "g")
-      )) {
-        offenders.push(`${file}: ${m[0]}`)
+      for (const hit of ringAlphaOffenders(readFileSync(file, "utf8"))) {
+        offenders.push(`${file}: ${hit}`)
       }
     }
   }

@@ -61,17 +61,37 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
   // outline-none removes the indicator; something has to put one back, or the
   // control has no visible focus state at all. a background swap counts: that is
   // how menus indicate roving focus, and 2.4.7 does not prescribe a form.
-  it("every primitive that clears its outline restores a focus indicator", () => {
+  //
+  // this was asserted per file, which is the wrong granularity and let a real
+  // failure through: components/ui/tabs.tsx cleared the outline on TabsContent,
+  // a genuine tab stop because radix gives the active panel tabIndex={0}, while
+  // TabsTrigger further up the same file supplied the indicator that made the
+  // file look compliant. the unit is the class expression that reaches one
+  // element, so cn() and cva() calls are read as a whole and nothing else.
+  it("every element that clears its outline restores a focus indicator", () => {
     const primitives = FILES.filter((f) => f.startsWith(join("components", "ui")))
     expect(primitives.length).toBeGreaterThan(20)
 
+    const RESTORES = new RegExp(`(?:${FOCUS_PREFIX}|peer-focus-visible:)(?:${INDICATOR}|bg)-`)
     const offenders: string[] = []
     for (const file of primitives) {
       const source = readFileSync(file, "utf8")
-      const clears = /outline-none|outline-hidden/.test(source)
-      if (!clears) continue
-      const restores = new RegExp(`(?:${FOCUS_PREFIX})(?:${INDICATOR}|bg)-`).test(source)
-      if (!restores) offenders.push(file)
+      for (const group of classExpressions(source)) {
+        if (!/outline-none|outline-hidden/.test(group.classes)) continue
+        if (RESTORES.test(group.classes)) continue
+        // radix focuses this container programmatically with tabIndex={-1} when
+        // the dialog opens. it is not in the tab order, so there is no keyboard
+        // focus movement onto it for 2.4.7 to bind. recorded rather than waived.
+        if (
+          file === join("components", "ui", "dialog.tsx") &&
+          group.classes.includes("bg-background")
+        ) {
+          continue
+        }
+        offenders.push(
+          `${file}:${source.slice(0, group.index).split("\n").length}: ${group.classes.slice(0, 90)}`
+        )
+      }
     }
     expect(
       offenders,
@@ -79,3 +99,37 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
     ).toEqual([])
   })
 })
+
+/**
+ * every class expression that lands on a single element: a `cn(...)` or `cva(...)`
+ * call read as one unit, plus any standalone `className="..."`. tailwind literals
+ * are split across arguments constantly, so a per-literal read reports Input,
+ * whose indicator sits in the second argument of the same call, as bare.
+ */
+function classExpressions(source: string): Array<{ index: number; classes: string }> {
+  const out: Array<{ index: number; classes: string }> = []
+  const consumed: Array<[number, number]> = []
+  for (const call of source.matchAll(/\b(?:cn|cva)\s*\(/g)) {
+    const open = call.index + call[0].length - 1
+    let depth = 0
+    let end = open
+    for (let i = open; i < source.length; i++) {
+      if (source[i] === "(") depth++
+      else if (source[i] === ")") {
+        depth--
+        if (depth === 0) {
+          end = i
+          break
+        }
+      }
+    }
+    const body = source.slice(open, end)
+    consumed.push([open, end])
+    out.push({ index: open, classes: [...body.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].join(" ") })
+  }
+  for (const m of source.matchAll(/className\s*=\s*"([^"]*)"/g)) {
+    if (consumed.some(([a, b]) => m.index > a && m.index < b)) continue
+    out.push({ index: m.index, classes: m[1] })
+  }
+  return out
+}

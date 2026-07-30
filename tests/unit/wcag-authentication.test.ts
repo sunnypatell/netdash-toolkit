@@ -106,10 +106,16 @@ describe("3.3.8 accessible authentication (minimum)", () => {
 })
 
 describe("1.3.5 / 3.3.8: credential fields declare their purpose", () => {
+  // matched on the whole attribute list rather than on `type="password"`. a
+  // visibility toggle writes the type as an expression, `type={show ? "text" :
+  // "password"}`, and a literal match drops that field out of this gate entirely
+  // while it is still the field a password manager has to fill.
+  const CREDENTIAL_FIELD = /password/i
+
   it.each(AUTH_SURFACES)("%s labels every password field for autofill", (file) => {
     const source = readFileSync(file, "utf8")
     const missing = inputTags(source)
-      .filter((tag) => /type\s*=\s*"password"/.test(tag.attributes))
+      .filter((tag) => CREDENTIAL_FIELD.test(tag.attributes))
       .filter((tag) => !/autoComplete\s*=/.test(tag.attributes))
       .map((tag) => `${file}:${tag.line}`)
 

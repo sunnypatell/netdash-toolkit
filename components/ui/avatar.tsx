@@ -15,10 +15,18 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
   )
 }
 
-function AvatarImage({ className, ...props }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+function AvatarImage({
+  className,
+  // an <img> with no alt attribute at all is an unlabelled image (1.1.1). an
+  // avatar sits next to the name it belongs to, so empty alt is the right
+  // default; a caller with no adjacent name passes its own.
+  alt = "",
+  ...props
+}: React.ComponentProps<typeof AvatarPrimitive.Image>) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
+      alt={alt}
       className={cn("aspect-square size-full", className)}
       {...props}
     />

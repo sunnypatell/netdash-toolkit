@@ -23,17 +23,26 @@ export function PasteParser({ onDataParsed }: PasteParserProps) {
     (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]
   >([])
   const [isLoading, setIsLoading] = useState(false)
+  const [parseError, setParseError] = useState<string | null>(null)
 
   const handleParse = async () => {
     if (!inputText.trim()) return
 
     setIsLoading(true)
+    setParseError(null)
     try {
       const data = autoParseNetworkData(inputText)
       setParsedData(data)
       onDataParsed(data)
+      // an empty result is a failure the user can act on, not a silent no-op
+      if (data.length === 0) {
+        setParseError(
+          "Nothing recognisable in that input. Expected CSV, ping, traceroute or ARP output."
+        )
+      }
     } catch (error) {
       console.error("Parsing error:", error)
+      setParseError("That input could not be parsed. Expected CSV, ping, traceroute or ARP output.")
     } finally {
       setIsLoading(false)
     }
@@ -135,12 +144,18 @@ Vlan    Mac Address       Type        Ports
                   type="file"
                   accept=".csv,.txt"
                   onChange={handleFileUpload}
-                  className="sr-only"
+                  className="peer sr-only"
                   id="file-upload"
                   aria-describedby="file-upload-description"
                 />
+                {/* the input is the tab stop and it is clipped, so the ring is
+                    painted on the visible control instead (2.4.7) */}
                 <label htmlFor="file-upload">
-                  <Button variant="outline" asChild>
+                  <Button
+                    variant="outline"
+                    asChild
+                    className="peer-focus-visible:ring-ring peer-focus-visible:ring-[3px] peer-focus-visible:outline-1"
+                  >
                     <span>Choose File</span>
                   </Button>
                 </label>
@@ -156,8 +171,15 @@ Vlan    Mac Address       Type        Ports
             {isLoading ? "Parsing..." : "Parse Data"}
           </Button>
 
+          {parseError && (
+            <p role="alert" className="text-destructive text-sm">
+              {parseError}
+            </p>
+          )}
+
+          {/* 4.1.3: the result arrives after an async action with no focus move */}
           {parsedData.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2" role="status">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Parsed Results</span>
                 <Badge variant="secondary">{parsedData.length} entries</Badge>

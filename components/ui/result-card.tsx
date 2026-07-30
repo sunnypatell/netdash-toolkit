@@ -77,7 +77,12 @@ export function ResultCard({
             {description && <p className="text-muted-foreground mt-1 text-sm">{description}</p>}
           </div>
           {badges && (
-            <div className="flex shrink-0 flex-wrap justify-end gap-1" aria-label="Result tags">
+            // a roleless div cannot carry a name; group can
+            <div
+              role="group"
+              aria-label="Result tags"
+              className="flex shrink-0 flex-wrap justify-end gap-1"
+            >
               {badges.map((badge, index) => (
                 <Badge key={index} variant={badge.variant || "secondary"}>
                   {badge.label}

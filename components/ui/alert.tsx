@@ -9,8 +9,12 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "bg-card text-card-foreground",
+        // the description used to be drawn at 90% alpha, which took it from
+        // 4.41:1 to 4.00:1 on --card in the light theme and from 3.03:1 to
+        // 2.64:1 in the dark. the token is opaque now; it is still short of the
+        // 4.5:1 floor, which is recorded as a gap rather than hidden here.
         destructive:
-          "text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive/90",
+          "text-destructive bg-card [&>svg]:text-current *:data-[slot=alert-description]:text-destructive",
       },
     },
     defaultVariants: {
@@ -27,8 +31,10 @@ function Alert({
   return (
     <div
       data-slot="alert"
-      // only errors interrupt the screen reader; informational alerts stay passive
-      role={variant === "destructive" ? "alert" : undefined}
+      // only errors interrupt; everything else announces politely. the default
+      // variant carried no role at all, so every "saved", "email sent" and
+      // "shared" confirmation mounted silent while its error twin spoke (4.1.3).
+      role={variant === "destructive" ? "alert" : "status"}
       className={cn(alertVariants({ variant }), className)}
       {...props}
     />

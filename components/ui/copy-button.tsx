@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { copyText } from "@/lib/clipboard"
 
 interface CopyButtonProps {
   value: string
@@ -15,14 +16,13 @@ interface CopyButtonProps {
 export function CopyButton({ value, className, variant = "ghost", size = "sm" }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
+  // copyText, not navigator.clipboard directly: the helper carries the
+  // execCommand fallback for non-secure contexts, and 22 tools reach the
+  // clipboard through this button
   const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error("Failed to copy:", err)
-    }
+    if (!(await copyText(value))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }, [value])
 
   return (

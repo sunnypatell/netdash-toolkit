@@ -36,6 +36,21 @@ function Providers({ children }: { children: React.ReactNode }) {
 
 const LIVE_REGION = '[role="status"], [role="alert"], [role="log"], [aria-live]'
 
+// the Alert primitive became a live region in its own right so that success
+// confirmations announce (4.1.3). that must not be allowed to satisfy the
+// requirement below on a tool's behalf: a static "this runs in your browser"
+// notice mounted with the tool announces nothing when a result later arrives,
+// and counting it would turn a real gate into a green light.
+const RESULT_REGION = ['[role="status"]', '[role="alert"]', '[role="log"]', "[aria-live]"].join(
+  ", "
+)
+
+function resultRegions(container: HTMLElement): Element[] {
+  return [...container.querySelectorAll(RESULT_REGION)].filter(
+    (el) => !el.matches("[data-slot=alert]")
+  )
+}
+
 afterEach(cleanup)
 
 describe("4.1.3 status messages: async tools announce their results", () => {
@@ -60,7 +75,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
         `${slug} rendered ${nodes} nodes, so its lazy panel never resolved`
       ).toBeGreaterThan(MIN_RENDERED_NODES)
 
-      const regions = container.querySelectorAll(LIVE_REGION)
+      const regions = resultRegions(container)
       expect(
         regions.length,
         `${slug} does network i/o but renders no role="status", role="alert" or aria-live, ` +
@@ -92,6 +107,32 @@ describe("4.1.3 status messages: async tools announce their results", () => {
 })
 
 describe("3.3.1 error identification: every message is reachable from its field", () => {
+  // the two scans below inspect the resting tree, and the resting tree of a tool
+  // nobody has typed into holds no invalid field at all: measured across all 48,
+  // zero carry aria-invalid="true" on mount and six render any aria-describedby.
+  // so the aria-invalid scan is a regression guard rather than evidence, and the
+  // evidence for 3.3.1 is the two driven cases at the bottom of this file. this
+  // records the number so it cannot quietly fall to zero and take the
+  // describedby scan with it.
+  it("the resting scan still has something to inspect", async () => {
+    let withDescribedBy = 0
+    for (const tool of tools) {
+      const Tool = (await tool.load()).default
+      const { container } = render(
+        <Providers>
+          <Tool />
+        </Providers>
+      )
+      await settle(container)
+      if (container.querySelector("[aria-describedby]")) withDescribedBy++
+      cleanup()
+    }
+    expect(
+      withDescribedBy,
+      "no tool renders an aria-describedby at rest, so the scan below asserts nothing"
+    ).toBeGreaterThanOrEqual(5)
+  }, 120000)
+
   // aria-describedby naming an id that no element carries is silently dropped by
   // assistive technology, which looks identical to no association at all. the
   // relay panels legitimately point at an id rendered by a sibling lazy chunk, so

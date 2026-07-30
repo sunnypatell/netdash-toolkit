@@ -34,19 +34,25 @@ export function RuntimeBadge({ tool }: { tool: ToolDefinition }) {
 // reads it before triggering a request, not after.
 export function RuntimeDisclosure({ tool }: { tool: ToolDefinition }) {
   const runtime = tool.runtime
-  if (!runtime || runtime.offline) return null
+  // an offline tool can still have a desktop-only capability: conflict-checker
+  // makes no request in the browser and reads the local arp cache on the
+  // desktop. gating the whole disclosure on `offline === false` hid that.
+  const desktopOnly = runtime?.desktopOnly?.length ? runtime.desktopOnly : null
+  if (!runtime || (runtime.offline && !desktopOnly)) return null
 
   return (
     <div className="text-muted-foreground space-y-1 text-xs">
-      <p>
-        <Cloud className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
-        What you enter is sent to <strong>{runtime.thirdParty?.join(", ")}</strong>. Requests only
-        happen when you ask for them.
-      </p>
-      {runtime.desktopOnly && runtime.desktopOnly.length > 0 && (
+      {runtime.offline === false && (
+        <p>
+          <Cloud className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
+          What you enter is sent to <strong>{runtime.thirdParty?.join(", ")}</strong>. Requests only
+          happen when you ask for them.
+        </p>
+      )}
+      {desktopOnly && (
         <p>
           <Monitor className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
-          The desktop app adds {runtime.desktopOnly.join(", ")}, which a browser cannot do at all.
+          The desktop app adds {desktopOnly.join(", ")}, which a browser cannot do at all.
         </p>
       )}
     </div>

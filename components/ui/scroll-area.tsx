@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils"
 function ScrollArea({
   className,
   children,
+  // the viewport is the element that takes focus, so a name belongs on it
+  // rather than on the root a screen reader never lands on
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
 }: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
   return (
@@ -22,6 +26,9 @@ function ScrollArea({
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
         tabIndex={0}
+        role={ariaLabel || ariaLabelledBy ? "group" : undefined}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         className="focus-visible:ring-ring size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
       >
         {children}

@@ -3,7 +3,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
 // several wcag 2.2 criteria are claimed Not Applicable in
-// docs/accessibility-conformance.md. an unverified "n/a" is the easiest way for a
+// docs/src/content/docs/accessibility-conformance.md. an unverified "n/a" is the easiest way for a
 // conformance claim to rot, because the day someone adds a <video> the claim
 // silently becomes false. each n/a below is asserted from the source instead, so
 // introducing the content that makes a criterion apply fails this suite and
@@ -84,22 +84,75 @@ describe("criteria claimed Not Applicable", () => {
     expect(hits(/<blink|<marquee|animate-(?:ping|bounce)\b/g)).toEqual([])
   })
 
+  // 1.4.13 content on hover or focus:
+  // https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html
+  //
+  // this criterion was recorded as not applicable on the grounds that nothing
+  // shows content on hover. that stopped being true without anything noticing:
+  // components/tools/color-converter.tsx puts a `title` on each preset swatch,
+  // and a native title tooltip is not dismissible, not hoverable, and does not
+  // appear on keyboard focus at all, so it meets none of the three conditions.
+  // capped at the one known instance rather than asserted to zero, because
+  // removing it is the tool workstream's call and a silent second one is what
+  // this exists to prevent.
+  it("1.4.13: no new title-attribute tooltip appears", () => {
+    const tag =
+      /<([a-z][a-z0-9]*)(\s(?:[^<>"'{}]|"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\})*)?\/?>/g
+    const tooltips: string[] = []
+    for (const [file, source] of SOURCES) {
+      for (const m of source.matchAll(tag)) {
+        // <title> inside an svg is an accessible name, not a tooltip
+        if (m[1] === "title" || m[1] === "svg") continue
+        if (!/\btitle\s*=/.test(m[2] ?? "")) continue
+        tooltips.push(`${file}:${source.slice(0, m.index).split("\n").length}: <${m[1]} title=...>`)
+      }
+    }
+    expect(
+      tooltips.length,
+      `a title attribute renders a tooltip that cannot be dismissed, hovered, or reached by keyboard:\n${tooltips.join("\n")}`
+    ).toBeLessThanOrEqual(1)
+  })
+
   // 2.1.4 character key shortcuts:
   // https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html
   // a single printable character bound with no modifier and no way to switch it
   // off is a failure. the command palette's bare "/" was the one instance and it
   // was removed; every remaining single-character binding must be modifier-
   // guarded, which takes it out of the criterion's scope.
+  //
+  // the first version of this matched the receiver by name, `e.key`, so renaming
+  // the handler's parameter to `event` hid the same shortcut from it. the
+  // receiver is not part of the failure, so it is not part of the pattern any
+  // more. a `key` destructured out of the event, `({ key }) => key === "/"`, is
+  // matched only inside a keyboard context, because a bare `key === "u"`
+  // otherwise catches unrelated code such as the regex tester's flag toggle.
   it("2.1.4: every single-character shortcut is modifier-guarded", () => {
+    const WITH_RECEIVER = /\b[A-Za-z_$][\w$]*\.key\s*===\s*"(\S)"/g
+    const DESTRUCTURED = /(?<![.\w$])key\s*===\s*"(\S)"/g
+    const KEYBOARD_CONTEXT =
+      /KeyboardEvent|on(?:KeyDown|KeyUp|KeyPress)|["']keydown["']|["']keyup["']/
     const unguarded: string[] = []
     for (const [file, source] of SOURCES) {
-      // e.key === "x" where x is one printable character
-      for (const m of source.matchAll(/e\.key\s*===\s*"(\S)"/g)) {
-        const line = source.slice(0, m.index).split("\n").length
-        // the guard sits in the same condition, so look at the enclosing line
-        const statement = source.slice(m.index, source.indexOf("\n", m.index + m[0].length))
-        if (/metaKey|ctrlKey|altKey/.test(statement)) continue
-        unguarded.push(`${file}:${line}: e.key === "${m[1]}"`)
+      const seen = new Set<number>()
+      for (const [pattern, needsContext] of [
+        [WITH_RECEIVER, false],
+        [DESTRUCTURED, true],
+      ] as const) {
+        for (const m of source.matchAll(pattern)) {
+          if (seen.has(m.index)) continue
+          seen.add(m.index)
+          if (
+            needsContext &&
+            !KEYBOARD_CONTEXT.test(source.slice(Math.max(0, m.index - 400), m.index))
+          ) {
+            continue
+          }
+          const line = source.slice(0, m.index).split("\n").length
+          // the guard sits in the same condition, so look at the enclosing line
+          const statement = source.slice(m.index, source.indexOf("\n", m.index + m[0].length))
+          if (/metaKey|ctrlKey|altKey/.test(statement)) continue
+          unguarded.push(`${file}:${line}: ${m[0]}`)
+        }
       }
     }
     expect(

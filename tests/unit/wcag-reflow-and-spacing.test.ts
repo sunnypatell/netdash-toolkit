@@ -84,7 +84,11 @@ describe("1.4.4 resize text", () => {
   // 48 tools at once. everywhere else is a loose ceiling rather than an exact
   // count: those files are under active rewrite and an exact number would report
   // a different figure every few minutes without any of it being a regression.
-  const pxTypePattern = /text-\[\d+px\]/g
+  //
+  // the tailwind utility is not the only way to pin type: `style={{ fontSize:
+  // "10px" }}` does exactly the same thing and the first version of this scan did
+  // not see it, so both spellings are matched.
+  const pxTypePattern = /text-\[\d+(?:\.\d+)?px\]|fontSize:\s*["'`]?\d+(?:\.\d+)?(?:px)?["'`]?/g
 
   it("no shared primitive pins type in px", () => {
     const inPrimitives = hits(pxTypePattern).filter((hit) =>

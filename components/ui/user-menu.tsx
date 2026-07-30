@@ -63,6 +63,7 @@ export function UserMenu() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const passwordMismatch = !!password && !!confirmPassword && password !== confirmPassword
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
   // client-side validation messages; auth errors come from the context
@@ -370,9 +371,17 @@ export function UserMenu() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                    aria-invalid={passwordMismatch}
+                    aria-describedby={passwordMismatch ? "confirm-password-error" : undefined}
                   />
-                  {password && confirmPassword && password !== confirmPassword && (
-                    <p className="text-destructive text-xs">Passwords do not match</p>
+                  {passwordMismatch && (
+                    <p
+                      id="confirm-password-error"
+                      role="status"
+                      className="text-destructive text-xs"
+                    >
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
                 <Button
@@ -477,10 +486,12 @@ export function UserMenu() {
           {syncEnabled && (
             <span className="pointer-events-none absolute -top-1 -right-1">
               {syncing ? (
-                <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                <Loader2 className="h-3 w-3 animate-spin text-blue-500" aria-hidden="true" />
               ) : (
-                <Cloud className="h-3 w-3 text-green-500" />
+                <Cloud className="h-3 w-3 text-green-500" aria-hidden="true" />
               )}
+              {/* the glyph and its colour were the whole message */}
+              <span className="sr-only">{syncing ? "Syncing" : "Synced"}</span>
             </span>
           )}
         </button>

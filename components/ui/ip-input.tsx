@@ -109,8 +109,10 @@ export function IPInput({
           <Badge
             variant={isValid ? "secondary" : "destructive"}
             className="absolute top-1/2 right-2 -translate-y-1/2 transform text-xs"
-            aria-label={`Address type: ${addressType}`}
           >
+            {/* aria prohibits aria-label on a roleless span, so the label is
+                discarded rather than read. sr-only text survives. */}
+            <span className="sr-only">Address type: </span>
             {addressType}
           </Badge>
         )}

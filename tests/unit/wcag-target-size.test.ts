@@ -15,7 +15,7 @@ import { twMerge } from "tailwind-merge"
 // this only reports a control whose classes *pin* a dimension under 24px. a
 // control sized by its content is left alone rather than guessed at, so the
 // suite under-reports rather than crying wolf. the limit is stated in
-// docs/accessibility-conformance.md rather than assumed away here.
+// docs/src/content/docs/accessibility-conformance.md rather than assumed away here.
 
 const MINIMUM_PX = 24
 
