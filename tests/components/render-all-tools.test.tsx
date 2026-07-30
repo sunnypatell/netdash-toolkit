@@ -4,6 +4,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
+import { MIN_RENDERED_NODES, settle } from "./settle"
 
 // mounts all 48 tools for real. a tool that throws on mount, imports something
 // missing, or crashes in a provider fails here in seconds, which is the cheap
@@ -37,11 +38,16 @@ describe("every registered tool mounts", () => {
       const Tool = mod.default
       expect(Tool, `${slug} exported no component`).toBeTypeOf("function")
 
-      render(
+      const { container } = render(
         <Providers>
           <Tool />
         </Providers>
       )
+
+      // lazy panels resolve after the first paint, so a synchronous assertion
+      // here would only ever see the tab strip
+      const nodes = await settle(container)
+      expect(nodes, `${slug} rendered only ${nodes} nodes`).toBeGreaterThan(MIN_RENDERED_NODES)
 
       // something must actually be on screen; an empty mount is a broken tool
       expect(document.body.textContent?.trim().length ?? 0).toBeGreaterThan(0)
@@ -63,11 +69,12 @@ describe("tool accessibility basics", () => {
   it.each(tools.map((t) => [t.slug, t] as const))("%s exposes a heading", async (slug, tool) => {
     const mod = await tool.load()
     const Tool = mod.default
-    render(
+    const { container } = render(
       <Providers>
         <Tool />
       </Providers>
     )
+    await settle(container)
     // every tool page needs a heading for screen-reader navigation
     const headings = screen.queryAllByRole("heading")
     expect(headings.length, `${slug} renders no heading`).toBeGreaterThan(0)
