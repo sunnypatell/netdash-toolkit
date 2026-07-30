@@ -455,7 +455,7 @@ export const tools: ToolDefinition[] = [
     features: ["Certificate info", "Expiry check", "Chain validation"],
     runtime: {
       offline: false,
-      thirdParty: ["www.ssllabs.com", "api.certspotter.com"],
+      thirdParty: ["the host you enter", "api.certspotter.com"],
     },
     load: () => import("@/components/tools/ssl-checker").then((m) => ({ default: m.SSLChecker })),
     keywords: ["ssl", "tls", "certificate", "https", "security"],
@@ -470,7 +470,7 @@ export const tools: ToolDefinition[] = [
     features: ["Domain info", "IP ownership", "Registrar data"],
     runtime: {
       offline: false,
-      thirdParty: ["rdap.org", "api.hackertarget.com"],
+      thirdParty: ["rdap.org and whichever registry it redirects to"],
     },
     load: () => import("@/components/tools/whois-lookup").then((m) => ({ default: m.WhoisLookup })),
     keywords: ["whois", "domain", "registration", "ownership", "registrar"],
@@ -544,7 +544,7 @@ export const tools: ToolDefinition[] = [
     features: ["IEEE OUI database", "Vendor identification", "MAC analysis"],
     runtime: {
       offline: false,
-      thirdParty: ["maclookup.app", "api.macvendors.com"],
+      thirdParty: ["api.maclookup.app"],
     },
     load: () => import("@/components/tools/oui-lookup").then((m) => ({ default: m.OUILookup })),
     keywords: ["oui", "mac", "vendor", "manufacturer", "ieee"],
@@ -561,7 +561,7 @@ export const tools: ToolDefinition[] = [
     features: ["Header analysis", "Security score", "Category sorting"],
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "api.allorigins.win"],
+      thirdParty: ["the URL you enter", "api.hackertarget.com"],
     },
     load: () => import("@/components/tools/http-headers").then((m) => ({ default: m.HTTPHeaders })),
     keywords: ["http", "headers", "response", "security", "web"],
@@ -577,7 +577,7 @@ export const tools: ToolDefinition[] = [
     popular: true,
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "api.allorigins.win"],
+      thirdParty: ["the URL you enter", "api.hackertarget.com", "observatory-api.mdn.mozilla.net"],
     },
     load: () =>
       import("@/components/tools/security-headers").then((m) => ({ default: m.SecurityHeaders })),
@@ -593,7 +593,7 @@ export const tools: ToolDefinition[] = [
     features: ["Redirect chain", "HTTPS upgrade", "Loop detection"],
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter"],
+      thirdParty: ["the URL you enter", "api.hackertarget.com"],
     },
     load: () =>
       import("@/components/tools/redirect-checker").then((m) => ({ default: m.RedirectChecker })),
