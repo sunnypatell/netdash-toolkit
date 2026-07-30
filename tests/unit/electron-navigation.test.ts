@@ -103,6 +103,19 @@ describe("permissions", () => {
   it("denies openExternal as a permission, since navigation decides that", () => {
     expect(isPermissionAllowed("openExternal")).toBe(false)
   })
+
+  it("allows the clipboard write every copy button depends on", () => {
+    expect(isPermissionAllowed("clipboard-sanitized-write")).toBe(true)
+  })
+
+  // the handler is an allow-list, so a permission electron introduces later is
+  // refused by default rather than granted until someone notices
+  it.each(["a-permission-that-does-not-exist-yet", "display-capture", "window-management"])(
+    "refuses %s, an unknown or future permission",
+    (permission) => {
+      expect(isPermissionAllowed(permission)).toBe(false)
+    }
+  )
 })
 
 // the wiring is as load-bearing as the policy: a perfect decision function that

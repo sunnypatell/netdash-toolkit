@@ -42,21 +42,15 @@ export function decideNavigation(rawUrl: string, allowedOrigins: string[]): Navi
 // permissions the app has no feature that needs. the web build already sends
 // Permissions-Policy: camera=(), microphone=(), geolocation=(), so the desktop
 // build should not be weaker than the website.
-const DENIED_PERMISSIONS = new Set([
-  "camera",
-  "media",
-  "geolocation",
-  "notifications",
-  "midi",
-  "midiSysex",
-  "hid",
-  "serial",
-  "usb",
-  "idle-detection",
-  "clipboard-read",
-  "openExternal",
+// an allow-list, not a deny-list. a deny-list grants anything electron adds in a
+// future version until someone remembers to deny it, which is the wrong default
+// for a window whose preload can reach the network directly.
+const ALLOWED_PERMISSIONS = new Set([
+  // every tool has copy buttons; chromium consults this for
+  // navigator.clipboard.writeText
+  "clipboard-sanitized-write",
 ])
 
 export function isPermissionAllowed(permission: string): boolean {
-  return !DENIED_PERMISSIONS.has(permission)
+  return ALLOWED_PERMISSIONS.has(permission)
 }
