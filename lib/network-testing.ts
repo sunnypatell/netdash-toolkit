@@ -1,6 +1,11 @@
 // Network testing utilities for RTT, throughput, and connectivity
 
-import { compressIPv6, expandIPv6 } from "@/lib/network-utils"
+import * as dnsPacket from "@dnsquery/dns-packet"
+import {
+  toString as wireTypeToString,
+  toType as wireTypeToType,
+} from "@dnsquery/dns-packet/types.js"
+import { compressIPv6, expandIPv6, solicitedNodeMulticast } from "@/lib/network-utils"
 
 // DNS Cache implementation with TTL support
 interface DNSCacheEntry {
@@ -9,6 +14,9 @@ interface DNSCacheEntry {
   minTTL: number
 }
 
+// map iteration order is insertion order, so "least recently used" only holds
+// if every read re-inserts its key. get() below does that; without it the
+// eviction policy was plain fifo.
 class DNSCache {
   private cache: Map<string, DNSCacheEntry> = new Map()
   private maxSize: number = 100
@@ -37,6 +45,10 @@ class DNSCache {
 
     this.hits++
 
+    // touch: move to the most-recently-used end of the map
+    this.cache.delete(key)
+    this.cache.set(key, entry)
+
     // Return cached result with updated metadata
     return {
       ...entry.result,
@@ -56,15 +68,18 @@ class DNSCache {
       3600
     )
 
-    // Enforce max cache size with LRU-like eviction
+    const key = this.getCacheKey(domain, recordType, provider)
+    // re-setting an existing key keeps its old position, so drop it first
+    this.cache.delete(key)
+
+    // Enforce max cache size by evicting the least recently used entry
     if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value
-      if (oldestKey) {
-        this.cache.delete(oldestKey)
+      const lruKey = this.cache.keys().next().value
+      if (lruKey) {
+        this.cache.delete(lruKey)
       }
     }
 
-    const key = this.getCacheKey(domain, recordType, provider)
     this.cache.set(key, {
       result,
       expiresAt: Date.now() + minTTL * 1000,
@@ -652,62 +667,69 @@ export async function queryDNSOverHTTPS(
         throw new Error("Invalid domain name format")
       }
 
-      const recordTypeCode = getRecordTypeCode(recordType)
-      if (recordTypeCode === undefined) {
-        throw new Error(`Invalid record type: ${recordType}`)
-      }
-
       const startTime = performance.now()
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 15000)
 
-      let response: Response
       let normalized: NormalizedDNSResponse
 
-      if (providerConfig.format === "json") {
-        const urlObject = new URL(providerConfig.url)
-        urlObject.searchParams.set("name", domain)
-        urlObject.searchParams.set("type", recordType.toUpperCase())
+      try {
+        if (providerConfig.format === "json") {
+          // json providers take the type by name, so an exotic type is the
+          // resolver's call to make rather than something to reject up front
+          const urlObject = new URL(providerConfig.url)
+          urlObject.searchParams.set("name", domain)
+          urlObject.searchParams.set("type", recordType.toUpperCase())
 
-        response = await fetch(urlObject.toString(), {
-          headers: {
-            Accept: "application/dns-json",
-            "User-Agent": "NetworkToolbox/1.0 DNS-Client",
-            "Cache-Control": "no-cache",
-          },
-          signal: controller.signal,
-        })
+          const response = await fetch(urlObject.toString(), {
+            headers: {
+              Accept: "application/dns-json",
+              "User-Agent": "NetworkToolbox/1.0 DNS-Client",
+              "Cache-Control": "no-cache",
+            },
+            signal: controller.signal,
+          })
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+
+          const data = await response.json()
+          normalized = normalizeJsonDnsResponse(data, domain)
+        } else {
+          const recordTypeCode = getRecordTypeCode(recordType)
+          if (recordTypeCode === undefined) {
+            throw new Error(
+              `${provider} needs a wire-format query and record type ${recordType.toUpperCase()} has no known type code`
+            )
+          }
+
+          const wireQuery = buildDnsQueryMessage(domain, recordTypeCode)
+          const encodedQuery = encodeDnsQuery(wireQuery)
+          const urlObject = new URL(providerConfig.url)
+          urlObject.searchParams.set("dns", encodedQuery)
+
+          const response = await fetch(urlObject.toString(), {
+            headers: {
+              Accept: "application/dns-message",
+              "User-Agent": "NetworkToolbox/1.0 DNS-Client",
+              "Cache-Control": "no-cache",
+            },
+            signal: controller.signal,
+          })
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+
+          const buffer = new Uint8Array(await response.arrayBuffer())
+          normalized = parseDnsMessage(buffer)
         }
-
-        const data = await response.json()
-        normalized = normalizeJsonDnsResponse(data, domain)
-      } else {
-        const wireQuery = buildDnsQueryMessage(domain, recordTypeCode)
-        const encodedQuery = encodeDnsQuery(wireQuery)
-        const urlObject = new URL(providerConfig.url)
-        urlObject.searchParams.set("dns", encodedQuery)
-
-        response = await fetch(urlObject.toString(), {
-          headers: {
-            Accept: "application/dns-message",
-            "User-Agent": "NetworkToolbox/1.0 DNS-Client",
-            "Cache-Control": "no-cache",
-          },
-          signal: controller.signal,
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-        }
-
-        const buffer = new Uint8Array(await response.arrayBuffer())
-        normalized = parseDnsMessage(buffer)
+      } finally {
+        // this only ran on the success path before, leaking a timer per error
+        clearTimeout(timeoutId)
       }
 
-      clearTimeout(timeoutId)
       const responseTime = performance.now() - startTime
 
       if (normalized.Status !== 0) {
@@ -826,85 +848,87 @@ function normalizeJsonDnsResponse(data: any, fallbackDomain: string): Normalized
   }
 }
 
+// dns-packet's tables predate the svcb family; everything else comes from there
+const EXTRA_RECORD_TYPE_CODES: Record<string, number> = {
+  SVCB: 64,
+  HTTPS: 65,
+}
+
+// undefined means "no known type code", which only blocks wire-format providers
 function getRecordTypeCode(type: string): number | undefined {
-  const codes: Record<string, number> = {
-    A: 1,
-    NS: 2,
-    CNAME: 5,
-    SOA: 6,
-    PTR: 12,
-    MX: 15,
-    TXT: 16,
-    AAAA: 28,
-    SRV: 33,
+  const name = type.trim().toUpperCase()
+  if (!name) return undefined
+
+  if (EXTRA_RECORD_TYPE_CODES[name] !== undefined) {
+    return EXTRA_RECORD_TYPE_CODES[name]
   }
 
-  return codes[type.toUpperCase()]
+  // rfc 3597 numeric escapes, plus the "UNKNOWN_n" spelling dns-packet decodes to
+  const numeric = name.match(/^(?:TYPE|UNKNOWN_)(\d{1,5})$/)
+  if (numeric) {
+    const code = Number(numeric[1])
+    return code <= 0xffff ? code : undefined
+  }
+
+  const code = wireTypeToType(name)
+  return code === 0 ? undefined : code
+}
+
+// Helper function to get record type name from number
+function getRecordTypeName(type: number): string {
+  const extra = Object.keys(EXTRA_RECORD_TYPE_CODES).find(
+    (name) => EXTRA_RECORD_TYPE_CODES[name] === type
+  )
+  if (extra) return extra
+
+  const name = wireTypeToString(type)
+  return name.startsWith("UNKNOWN_") ? `TYPE${type}` : name
 }
 
 export function buildDnsQueryMessage(domain: string, recordType: number): Uint8Array {
-  const labels = trimTrailingDot(domain)
+  const name = trimTrailingDot(domain)
     .split(".")
     .map((label) => label.trim())
     .filter(Boolean)
+    .join(".")
 
-  const questionLength = labels.reduce((sum, label) => sum + 1 + label.length, 0) + 1 + 4
-  const optLength = 11 // root name + type + udp size + extended ttl + rdlen
-  const message = new Uint8Array(12 + questionLength + optLength)
-  const view = new DataView(message.buffer)
-
-  const id = Math.floor(Math.random() * 0xffff)
-  view.setUint16(0, id)
-  view.setUint16(2, 0x0100) // recursion desired
-  view.setUint16(4, 1) // QDCOUNT
-  view.setUint16(6, 0) // ANCOUNT
-  view.setUint16(8, 0) // NSCOUNT
-  view.setUint16(10, 1) // ARCOUNT (edns0 opt rr)
-
-  let offset = 12
-  for (const label of labels) {
-    message[offset] = label.length
-    for (let i = 0; i < label.length; i++) {
-      message[offset + 1 + i] = label.charCodeAt(i)
-    }
-    offset += label.length + 1
-  }
-
-  message[offset++] = 0
-  view.setUint16(offset, recordType)
-  view.setUint16(offset + 2, 1) // Class IN
-  offset += 4
-
-  // edns0 opt rr (rfc 6891): 4096-byte payload size, do bit requests dnssec records
-  message[offset++] = 0 // root name
-  view.setUint16(offset, 41) // TYPE OPT
-  view.setUint16(offset + 2, 4096) // requested udp payload size
-  view.setUint32(offset + 4, 0x00008000) // extended rcode 0, version 0, do bit
-  view.setUint16(offset + 8, 0) // rdlen
-
-  return message
+  return dnsPacket.encode({
+    type: "query",
+    id: Math.floor(Math.random() * 0xffff),
+    flags: dnsPacket.RECURSION_DESIRED,
+    // round-trip through dns-packet's own table so unnamed types stay numeric
+    questions: [{ type: wireTypeToString(recordType), name }],
+    // edns0 opt rr (rfc 6891): 4096-byte payload size, do bit requests dnssec records
+    additionals: [
+      {
+        type: "OPT",
+        name: ".",
+        udpPayloadSize: 4096,
+        flags: dnsPacket.DNSSEC_OK,
+      } as unknown as dnsPacket.Answer,
+    ],
+  })
 }
 
-function encodeDnsQuery(bytes: Uint8Array): string {
-  if (typeof window !== "undefined" && typeof window.btoa === "function") {
+function bytesToBase64(bytes: Uint8Array): string {
+  if (typeof btoa === "function") {
     let binary = ""
     for (const byte of bytes) {
       binary += String.fromCharCode(byte)
     }
-    return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
+    return btoa(binary)
   }
 
   const nodeBuffer = typeof globalThis !== "undefined" ? (globalThis as any).Buffer : undefined
   if (nodeBuffer) {
-    return nodeBuffer
-      .from(bytes)
-      .toString("base64")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/g, "")
+    return nodeBuffer.from(bytes).toString("base64")
   }
 
   throw new Error("Base64 encoding not available in this environment")
+}
+
+function encodeDnsQuery(bytes: Uint8Array): string {
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
 }
 
 export function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
@@ -912,276 +936,141 @@ export function parseDnsMessage(message: Uint8Array): NormalizedDNSResponse {
     throw new Error("DNS response too short")
   }
 
-  const view = new DataView(message.buffer, message.byteOffset, message.byteLength)
-  const flags = view.getUint16(2)
-  const qdCount = view.getUint16(4)
-  const anCount = view.getUint16(6)
+  const decoded = dnsPacket.decode(message)
 
-  let offset = 12
-
-  for (let i = 0; i < qdCount; i++) {
-    const question = readDomainName(message, offset)
-    offset = question.nextOffset + 4 // skip type and class
-  }
-
-  const answers: NormalizedDNSAnswer[] = []
-
-  for (let i = 0; i < anCount; i++) {
-    const nameResult = readDomainName(message, offset)
-    offset = nameResult.nextOffset
-
-    if (offset + 10 > message.length) {
-      break
-    }
-
-    const type = view.getUint16(offset)
-    const ttl = view.getUint32(offset + 4)
-    const rdlength = view.getUint16(offset + 8)
-    const rdataOffset = offset + 10
-    const rdataEnd = rdataOffset + rdlength
-
-    if (rdataEnd > message.length) {
-      break
-    }
-
-    const rdata = message.slice(rdataOffset, rdataEnd)
-    const dataString = formatRDataFromBytes(type, rdata, message, rdataOffset)
-
-    answers.push({
-      name: trimTrailingDot(nameResult.name),
-      type,
-      ttl,
-      data: dataString,
-    })
-
-    offset = rdataEnd
-  }
+  const answers: NormalizedDNSAnswer[] = (decoded.answers ?? []).map((answer) => ({
+    name: trimTrailingDot(answer.name ?? ""),
+    type: getRecordTypeCode(answer.type) ?? 255,
+    ttl: answer.ttl ?? 0,
+    data: formatAnswerData(answer),
+  }))
 
   return {
-    Status: flags & 0x000f,
-    AD: (flags & 0x0020) === 0x0020,
+    // decode() strips only the qr bit, so the rcode nibble is still in flags
+    Status: (decoded.flags ?? 0) & 0x000f,
+    AD: decoded.flag_ad === true,
     // tc bit: answer section was cut off, callers should flag incomplete results
-    truncated: (flags & 0x0200) === 0x0200,
+    truncated: decoded.flag_tc === true,
     Answer: answers,
   }
 }
 
-function readDomainName(
-  message: Uint8Array,
-  offset: number,
-  depth = 0
-): { name: string; nextOffset: number } {
-  if (depth > 10) {
-    throw new Error("DNS pointer recursion limit exceeded")
-  }
+const textDecoder = new TextDecoder()
 
-  const labels: string[] = []
-  let currentOffset = offset
-  let jumped = false
-  let nextOffset = offset
-
-  while (currentOffset < message.length) {
-    const length = message[currentOffset]
-    if (length === undefined) {
-      break
-    }
-
-    // Pointer
-    if ((length & 0xc0) === 0xc0) {
-      const pointer = ((length & 0x3f) << 8) | message[currentOffset + 1]
-      if (!jumped) {
-        nextOffset = currentOffset + 2
-      }
-      const pointed = readDomainName(message, pointer, depth + 1)
-      labels.push(pointed.name)
-      currentOffset += 2
-      jumped = true
-      break
-    }
-
-    if (length === 0) {
-      currentOffset += 1
-      if (!jumped) {
-        nextOffset = currentOffset
-      }
-      break
-    }
-
-    const end = currentOffset + 1 + length
-    if (end > message.length) {
-      break
-    }
-
-    const labelBytes = message.slice(currentOffset + 1, end)
-    labels.push(String.fromCharCode(...labelBytes))
-    currentOffset = end
-    if (!jumped) {
-      nextOffset = currentOffset
-    }
-  }
-
-  const name = labels.filter(Boolean).join(".")
-  return { name, nextOffset }
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
-function formatRDataFromBytes(
-  type: number,
-  rdata: Uint8Array,
-  message: Uint8Array,
-  rdataOffset: number
-): string {
-  switch (type) {
-    case 1: // A
-      return Array.from(rdata).join(".")
-    case 28: // AAAA
-      return ipv6FromBytes(rdata)
-    case 2: // NS
-    case 5: // CNAME
-    case 12: // PTR
-      return readDomainName(message, rdataOffset).name
-    case 15: {
-      // MX
-      if (rdata.length < 3) {
-        return ""
-      }
-      const preference = (rdata[0] << 8) | rdata[1]
-      const exchange = readDomainName(message, rdataOffset + 2).name
-      return `${preference} ${exchange}`
+function quoteTxtString(value: string): string {
+  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
+}
+
+// each character-string stays its own quoted token: a multi-string txt record is
+// semantically a list, and joining them changes what spf/dkim parsers would see
+function formatTxtStrings(data: dnsPacket.TxtData): string {
+  const parts = Array.isArray(data) ? data : [data]
+  return parts
+    .map((part) => quoteTxtString(typeof part === "string" ? part : textDecoder.decode(part)))
+    .join(" ")
+}
+
+function formatAnswerData(answer: dnsPacket.Answer): string {
+  const data = answer.data as unknown
+
+  switch (answer.type) {
+    case "A":
+    case "CNAME":
+    case "DNAME":
+    case "NS":
+    case "PTR":
+      return trimTrailingDot(String(data))
+    case "AAAA":
+      // the underlying ip codec compresses the *first* zero run, not the
+      // longest, so its output is not rfc 5952 canonical
+      return compressIPv6(String(data))
+    case "MX": {
+      const mx = data as dnsPacket.MxData
+      return `${mx.preference ?? 0} ${trimTrailingDot(mx.exchange)}`
     }
-    case 16: {
-      // TXT
-      const chunks: string[] = []
-      let index = 0
-      while (index < rdata.length) {
-        const length = rdata[index]
-        index += 1
-        const end = Math.min(index + length, rdata.length)
-        const textBytes = rdata.slice(index, end)
-        chunks.push(`"${String.fromCharCode(...textBytes)}"`)
-        index = end
-      }
-      return chunks.join(" ")
+    case "SOA": {
+      const soa = data as dnsPacket.SoaData
+      return [
+        trimTrailingDot(soa.mname),
+        trimTrailingDot(soa.rname),
+        soa.serial ?? 0,
+        soa.refresh ?? 0,
+        soa.retry ?? 0,
+        soa.expire ?? 0,
+        soa.minimum ?? 0,
+      ].join(" ")
     }
-    case 33: {
-      // SRV
-      if (rdata.length < 7) {
-        return ""
-      }
-      const priority = (rdata[0] << 8) | rdata[1]
-      const weight = (rdata[2] << 8) | rdata[3]
-      const port = (rdata[4] << 8) | rdata[5]
-      const target = readDomainName(message, rdataOffset + 6).name
-      return `${priority} ${weight} ${port} ${target}`
+    case "SRV": {
+      const srv = data as dnsPacket.SrvData
+      return `${srv.priority ?? 0} ${srv.weight ?? 0} ${srv.port ?? 0} ${trimTrailingDot(srv.target)}`
+    }
+    case "TXT":
+      return formatTxtStrings(data as dnsPacket.TxtData)
+    case "CAA": {
+      const caa = data as dnsPacket.CaaData
+      return `${caa.flags ?? 0} ${caa.tag} ${quoteTxtString(caa.value)}`
+    }
+    case "DS": {
+      const ds = data as dnsPacket.DigestData
+      return `${ds.keyTag} ${ds.algorithm} ${ds.digestType} ${toHex(ds.digest)}`
+    }
+    case "DNSKEY": {
+      const key = data as dnsPacket.DNSKeyData
+      // protocol field is always 3 (rfc 4034 2.1.2) and dns-packet drops it
+      return `${key.flags} 3 ${key.algorithm} ${bytesToBase64(key.key as unknown as Uint8Array)}`
+    }
+    case "HINFO": {
+      const hinfo = data as dnsPacket.HInfoData
+      return `${quoteTxtString(hinfo.cpu)} ${quoteTxtString(hinfo.os)}`
     }
     default:
-      return Array.from(rdata)
-        .map((byte) => byte.toString(16).padStart(2, "0"))
-        .join("")
+      return data instanceof Uint8Array ? toHex(data) : String(data ?? "")
   }
-}
-
-function ipv6FromBytes(bytes: Uint8Array): string {
-  if (bytes.length !== 16) {
-    return Array.from(bytes)
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("")
-  }
-
-  const groups = []
-  for (let i = 0; i < 16; i += 2) {
-    groups.push(((bytes[i] << 8) | bytes[i + 1]).toString(16))
-  }
-
-  let bestStart = -1
-  let bestLength = 0
-  let currentStart = -1
-  let currentLength = 0
-
-  for (let i = 0; i < groups.length; i++) {
-    if (groups[i] === "0") {
-      if (currentStart === -1) {
-        currentStart = i
-      }
-      currentLength++
-      if (currentLength > bestLength) {
-        bestStart = currentStart
-        bestLength = currentLength
-      }
-    } else {
-      currentStart = -1
-      currentLength = 0
-    }
-  }
-
-  if (bestLength > 1) {
-    const compressed: string[] = []
-    let i = 0
-    while (i < groups.length) {
-      if (i === bestStart) {
-        compressed.push("")
-        i += bestLength
-        if (i >= groups.length) {
-          compressed.push("")
-        }
-      } else {
-        compressed.push(groups[i].replace(/^0+/, "") || "0")
-        i++
-      }
-    }
-    let result = compressed.join(":")
-    result = result.replace(/:{3,}/, "::")
-    if (result.startsWith(":")) {
-      result = `:${result}`
-    }
-    if (result.endsWith(":")) {
-      result = `${result}:`
-    }
-    return result
-  }
-
-  return groups.map((group) => group.replace(/^0+/, "") || "0").join(":")
 }
 
 function trimTrailingDot(value: string): string {
   return value.endsWith(".") ? value.slice(0, -1) : value
 }
 
+// leading underscores are legal in srv/dmarc/dkim/tlsa owner names, and the old
+// regex rejected them before a query could even be built
+const DOMAIN_LABEL = /^_?[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
+
 // Helper function to validate domain names
 function isValidDomain(domain: string): boolean {
-  const domainRegex =
-    /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
-  return domainRegex.test(domain) && domain.length <= 253
+  const name = trimTrailingDot(domain)
+  if (!name || name.length > 253) return false
+  return name.split(".").every((label) => label.length <= 63 && DOMAIN_LABEL.test(label))
 }
 
-// Helper function to get record type name from number
-function getRecordTypeName(type: number): string {
-  const types: Record<number, string> = {
-    1: "A",
-    2: "NS",
-    5: "CNAME",
-    6: "SOA",
-    12: "PTR",
-    15: "MX",
-    16: "TXT",
-    28: "AAAA",
-    33: "SRV",
-  }
-  return types[type] || `TYPE${type}`
-}
-
-// Helper function to format record data based on type
+// Helper function to format record data based on type (json provider payloads)
 function formatRecordData(data: string, type: number): string {
   switch (type) {
-    case 15: // MX
-      const parts = data.split(" ")
-      return parts.length >= 2 ? `${parts[0]} ${parts[1]}` : data
-    case 16: // TXT
-      return data.replace(/"/g, "") // Remove quotes from TXT records
-    case 33: // SRV
-      return data // SRV records are already formatted
+    case 15: {
+      // MX
+      const parts = data.trim().split(/\s+/)
+      return parts.length >= 2 ? `${parts[0]} ${trimTrailingDot(parts[1])}` : data
+    }
+    case 16:
+      // TXT
+      return normalizeJsonTxtData(data)
     default:
       return data
   }
+}
+
+// json resolvers hand back txt already quoted per character-string; stripping
+// the quotes (as this used to) collapses a multi-string record into one blob
+function normalizeJsonTxtData(data: string): string {
+  const quoted = data.match(/"(?:\\.|[^"\\])*"/g)
+  if (quoted && quoted.length > 0) {
+    return quoted.join(" ")
+  }
+  return quoteTxtString(data)
 }
 
 // MTU and header overhead calculation
@@ -1425,15 +1314,11 @@ export interface OUIResult {
 }
 
 // IPv6 utilities
-export function generateSolicitedNodeMulticast(ipv6: string): string {
-  // Extract last 24 bits of IPv6 address
-  const expanded = ipv6.includes("::") ? expandIPv6(ipv6) : ipv6
-  const groups = expanded.split(":")
-  const lastGroup = groups[groups.length - 1]
-  const secondLastGroup = groups[groups.length - 2]
 
-  const last24Bits = (secondLastGroup.slice(-2) + lastGroup).toLowerCase()
-  return `ff02::1:ff${last24Bits.slice(-6, -4)}:${last24Bits.slice(-4)}`
+// single implementation lives in network-utils; the local copy mis-sliced
+// unpadded groups. re-exported under the old name for existing importers.
+export function generateSolicitedNodeMulticast(ipv6: string): string {
+  return solicitedNodeMulticast(ipv6)
 }
 
 export function generateEUI64FromMAC(mac: string, prefix: string): string {

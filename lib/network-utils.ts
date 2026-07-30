@@ -26,14 +26,17 @@ export interface IPv6Result {
   isLinkLocal: boolean
   isMulticast: boolean
   solicitedNode?: string
+  zone?: string
 }
+
+// single octet grammar shared by ipv4ToInt and isValidIPv4 so the two never
+// disagree. leading zeros are rejected because "010" is ambiguously octal.
+const IPV4_OCTET = /^(?:0|[1-9]\d{0,2})$/
 
 // IPv4 utility functions
 export function ipv4ToInt(ip: string): number {
-  // digits-only per octet: Number("") is 0 and NaN compares false to
-  // everything, so "1.2.3." and "a.b.c.d" both slipped through the old check
   const parts = ip.split(".")
-  const nums = parts.map((p) => (/^\d{1,3}$/.test(p) ? Number(p) : NaN))
+  const nums = parts.map((p) => (IPV4_OCTET.test(p) ? Number(p) : NaN))
   if (parts.length !== 4 || nums.some((n) => !Number.isInteger(n) || n > 255)) {
     throw new Error("Invalid IPv4 address")
   }
@@ -146,42 +149,64 @@ export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
 }
 
 // IPv6 utility functions
+
+// rfc 4007 zone ids ("fe80::1%eth0") are part of the textual form: split them
+// off before any hex parsing, then re-attach so the zone survives round-trips
+export function splitIPv6Zone(ip: string): { address: string; zone?: string } {
+  const index = ip.indexOf("%")
+  if (index === -1) {
+    return { address: ip }
+  }
+  return { address: ip.slice(0, index), zone: ip.slice(index + 1) }
+}
+
 export function expandIPv6(ip: string): string {
-  // Remove any existing brackets
-  ip = ip.replace(/^\[|\]$/g, "")
+  const { address, zone } = splitIPv6Zone(ip.replace(/^\[|\]$/g, ""))
+  const suffix = zone === undefined ? "" : `%${zone}`
+  let core = address
 
   // rfc 4291 2.5.5 ipv4-embedded form ("::ffff:192.168.1.1"): convert the
   // trailing dotted quad into two hex groups so the rest of the pipeline
   // only ever sees 8 hex groups
-  const v4Match = ip.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  const v4Match = core.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
   if (v4Match) {
     const v4Int = ipv4ToInt(v4Match[2])
     const high = ((v4Int >>> 16) & 0xffff).toString(16)
     const low = (v4Int & 0xffff).toString(16)
-    ip = `${v4Match[1]}${high}:${low}`
+    core = `${v4Match[1]}${high}:${low}`
   }
 
-  // Handle :: expansion
-  if (ip.includes("::")) {
-    const parts = ip.split("::")
+  let groups: string[]
+
+  if (core.includes("::")) {
+    const parts = core.split("::")
     const left = parts[0] ? parts[0].split(":") : []
     const right = parts[1] ? parts[1].split(":") : []
     const missing = 8 - left.length - right.length
-
-    const expanded = [...left, ...Array(missing).fill("0000"), ...right]
-
-    return expanded.map((part) => part.padStart(4, "0")).join(":")
+    // unguarded this reached Array(-1) and threw a bare "Invalid array length"
+    if (missing < 0) {
+      throw new Error("Invalid IPv6 address: more than 8 groups")
+    }
+    groups = [...left, ...Array(missing).fill("0000"), ...right]
+  } else {
+    groups = core.split(":")
+    if (groups.length > 8) {
+      throw new Error("Invalid IPv6 address: more than 8 groups")
+    }
   }
 
-  // Just pad existing parts
-  return ip
-    .split(":")
-    .map((part) => part.padStart(4, "0"))
-    .join(":")
+  // rfc 5952 4.3 mandates lowercase hex
+  return (
+    groups
+      .map((part) => part.padStart(4, "0"))
+      .join(":")
+      .toLowerCase() + suffix
+  )
 }
 
 export function compressIPv6(ip: string): string {
-  const expanded = expandIPv6(ip)
+  const { address: expanded, zone } = splitIPv6Zone(expandIPv6(ip))
+  const suffix = zone === undefined ? "" : `%${zone}`
 
   // Find the longest sequence of consecutive zero groups
   const groups = expanded.split(":")
@@ -222,18 +247,35 @@ export function compressIPv6(ip: string): string {
       .map((g) => g.replace(/^0+/, "") || "0")
 
     if (before.length === 0 && after.length === 0) {
-      return "::"
+      return "::" + suffix
     } else if (before.length === 0) {
-      return "::" + after.join(":")
+      return "::" + after.join(":") + suffix
     } else if (after.length === 0) {
-      return before.join(":") + "::"
+      return before.join(":") + "::" + suffix
     } else {
-      return before.join(":") + "::" + after.join(":")
+      return before.join(":") + "::" + after.join(":") + suffix
     }
   }
 
   // No compression possible, just remove leading zeros
-  return groups.map((g) => g.replace(/^0+/, "") || "0").join(":")
+  return groups.map((g) => g.replace(/^0+/, "") || "0").join(":") + suffix
+}
+
+// solicited-node multicast per rfc 4291 2.7.1: ff02::1:ff00:0/104 with the low
+// 24 bits of the interface identifier appended. single source of truth - the
+// copies in lib/network-testing.ts and components/tools/ipv6-tools.tsx should
+// import this instead of re-deriving it.
+export function solicitedNodeMulticast(ip: string): string {
+  const groups = expandIPv6(splitIPv6Zone(ip).address).split(":")
+  if (groups.length !== 8) {
+    throw new Error("Invalid IPv6 address")
+  }
+  const upper = Number.parseInt(groups[6], 16) & 0xff
+  const lower = Number.parseInt(groups[7], 16) & 0xffff
+  if (!Number.isInteger(upper) || !Number.isInteger(lower)) {
+    throw new Error("Invalid IPv6 address")
+  }
+  return `ff02::1:ff${upper.toString(16).padStart(2, "0")}:${lower.toString(16).padStart(4, "0")}`
 }
 
 export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
@@ -241,7 +283,8 @@ export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
     throw new Error("Invalid prefix length")
   }
 
-  const expanded = expandIPv6(ip)
+  const { address, zone } = splitIPv6Zone(ip)
+  const expanded = expandIPv6(address)
   const groups = expanded.split(":").map((g) => Number.parseInt(g, 16))
 
   // Calculate network address by zeroing host bits
@@ -266,17 +309,13 @@ export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
   // Determine address type
   const firstGroup = groups[0]
   const isLoopback = expanded === "0000:0000:0000:0000:0000:0000:0000:0001"
-  const isLinkLocal = firstGroup === 0xfe80
+  // fe80::/10 spans fe80-febf; the old /16 check disagreed with isPrivate below
+  const isLinkLocal = (firstGroup & 0xffc0) === 0xfe80
   const isMulticast = (firstGroup & 0xff00) === 0xff00
-  const isPrivate = (firstGroup & 0xfe00) === 0xfc00 || (firstGroup & 0xffc0) === 0xfe80
+  const isPrivate = (firstGroup & 0xfe00) === 0xfc00 || isLinkLocal
 
   // Calculate solicited-node multicast for unicast addresses
-  let solicitedNode: string | undefined
-  if (!isMulticast && !isLoopback) {
-    const lastGroup = groups[7]
-    const secondLastGroup = groups[6]
-    solicitedNode = `ff02::1:ff${(secondLastGroup & 0xff).toString(16).padStart(2, "0")}:${lastGroup.toString(16).padStart(4, "0")}`
-  }
+  const solicitedNode = !isMulticast && !isLoopback ? solicitedNodeMulticast(expanded) : undefined
 
   return {
     network,
@@ -289,6 +328,7 @@ export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
     isLinkLocal,
     isMulticast,
     solicitedNode,
+    zone,
   }
 }
 
@@ -375,49 +415,50 @@ export function isValidIPv4(ip: string): boolean {
   const parts = ip.split(".")
   if (parts.length !== 4) return false
 
-  return parts.every((part) => {
-    if (part === "" || part.length > 3) return false
-    const num = Number.parseInt(part, 10)
-    return (
-      (!isNaN(num) && num >= 0 && num <= 255 && part === num.toString() && !part.startsWith("0")) ||
-      part === "0"
-    )
-  })
+  return parts.every((part) => IPV4_OCTET.test(part) && Number(part) <= 255)
 }
 
 export function isValidIPv6(ip: string): boolean {
   if (!ip || typeof ip !== "string") return false
 
+  const { address, zone } = splitIPv6Zone(ip)
+  // rfc 4007 zone id: interface name or index, must be present and printable
+  if (zone !== undefined && !/^[0-9A-Za-z._~-]+$/.test(zone)) return false
+
   try {
     // Basic IPv6 format validation
-    if (ip.includes(":::")) return false
-    if (ip.split("::").length > 2) return false
+    if (address.includes(":::")) return false
+    if (address.split("::").length > 2) return false
+    // a lone leading/trailing colon leaves an empty group that padStart hides
+    if (/^:[^:]/.test(address) || /[^:]:$/.test(address)) return false
 
-    const expanded = expandIPv6(ip)
-    const parts = expanded.split(":")
+    const parts = expandIPv6(address).split(":")
 
     if (parts.length !== 8) return false
 
-    return parts.every((part) => {
-      if (part.length !== 4) return false
-      return /^[0-9a-fA-F]{4}$/.test(part)
-    })
+    return parts.every((part) => /^[0-9a-f]{4}$/.test(part))
   } catch {
     return false
   }
 }
 
 export function isValidCIDR(cidr: string): boolean {
+  if (!cidr || typeof cidr !== "string") return false
+
   const parts = cidr.split("/")
   if (parts.length !== 2) return false
 
   const [ip, prefixStr] = parts
-  const prefix = Number.parseInt(prefixStr, 10)
+  // bare parseInt accepted "24abc" and "+24"
+  if (!/^\d{1,3}$/.test(prefixStr)) return false
+  const prefix = Number(prefixStr)
 
   if (isValidIPv4(ip)) {
-    return prefix >= 0 && prefix <= 32
-  } else if (isValidIPv6(ip)) {
-    return prefix >= 0 && prefix <= 128
+    return prefix <= 32
+  }
+  // a zone id scopes a single interface address, never a prefix
+  if (!ip.includes("%") && isValidIPv6(ip)) {
+    return prefix <= 128
   }
 
   return false

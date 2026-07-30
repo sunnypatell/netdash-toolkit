@@ -11,6 +11,8 @@ import {
   isValidIPv6,
   netmaskToPrefix,
   prefixToNetmask,
+  solicitedNodeMulticast,
+  splitIPv6Zone,
   summarizeCIDRs,
 } from "@/lib/network-utils"
 
@@ -179,6 +181,70 @@ describe("expandIPv6 / compressIPv6 (rfc 5952)", () => {
     expect(expandIPv6("::ffff:192.168.1.1")).toBe("0000:0000:0000:0000:0000:ffff:c0a8:0101")
     expect(isValidIPv6("::ffff:192.168.1.1")).toBe(true)
   })
+
+  it("lowercases hex per rfc 5952 4.3", () => {
+    expect(compressIPv6("2001:DB8::1")).toBe("2001:db8::1")
+    expect(compressIPv6("FE80:0:0:0:0:0:0:ABCD")).toBe("fe80::abcd")
+    expect(compressIPv6("2001:DB8:1:2:3:4:5:6")).toBe("2001:db8:1:2:3:4:5:6")
+    expect(expandIPv6("2001:DB8::1")).toBe("2001:0db8:0000:0000:0000:0000:0000:0001")
+  })
+
+  it("throws a clear error instead of RangeError past 8 groups", () => {
+    // 8 - left - right went negative and hit `new Array(-1)`
+    expect(() => expandIPv6("1:2:3:4:5:6:7:8:9::")).toThrow("more than 8 groups")
+    expect(() => expandIPv6("1:2:3:4:5:6:7:8:9")).toThrow("more than 8 groups")
+    expect(isValidIPv6("1:2:3:4:5:6:7:8:9::")).toBe(false)
+    expect(isValidIPv6("1:2:3:4:5:6:7:8:9")).toBe(false)
+  })
+})
+
+describe("ipv6 zone ids (rfc 4007)", () => {
+  it("splits a zone off the address", () => {
+    expect(splitIPv6Zone("fe80::1%eth0")).toEqual({ address: "fe80::1", zone: "eth0" })
+    expect(splitIPv6Zone("2001:db8::1")).toEqual({ address: "2001:db8::1" })
+  })
+
+  it("accepts a scoped address and preserves the zone through expand/compress", () => {
+    expect(isValidIPv6("fe80::1%eth0")).toBe(true)
+    expect(isValidIPv6("fe80::1%3")).toBe(true)
+    expect(expandIPv6("fe80::1%eth0")).toBe("fe80:0000:0000:0000:0000:0000:0000:0001%eth0")
+    expect(compressIPv6("fe80:0000:0000:0000:0000:0000:0000:0001%eth0")).toBe("fe80::1%eth0")
+  })
+
+  it("rejects an empty or malformed zone", () => {
+    expect(isValidIPv6("fe80::1%")).toBe(false)
+    expect(isValidIPv6("fe80::1%eth 0")).toBe(false)
+  })
+
+  it("keeps zone ids out of cidr prefixes", () => {
+    // a zone scopes one interface address, never a prefix
+    expect(isValidCIDR("fe80::1%eth0/64")).toBe(false)
+    expect(isValidCIDR("fe80::1/64")).toBe(true)
+  })
+
+  it("reports the zone on subnet results", () => {
+    const r = calculateIPv6Subnet("fe80::1%eth0", 64)
+    expect(r.zone).toBe("eth0")
+    expect(r.expanded).toBe("fe80:0000:0000:0000:0000:0000:0000:0001")
+    expect(r.isLinkLocal).toBe(true)
+  })
+})
+
+describe("solicitedNodeMulticast", () => {
+  it("takes the low 24 bits of the interface identifier", () => {
+    expect(solicitedNodeMulticast("2001:db8::1:ff:fe00:1234")).toBe("ff02::1:ff00:1234")
+    expect(solicitedNodeMulticast("2001:db8::a1b2:c3d4")).toBe("ff02::1:ffb2:c3d4")
+  })
+
+  it("pads unexpanded groups instead of mis-slicing them", () => {
+    // the copy in network-testing.ts sliced the raw text and produced
+    // "ff02::1:ff:f1" for this address
+    expect(solicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:0001")
+  })
+
+  it("ignores a zone id", () => {
+    expect(solicitedNodeMulticast("fe80::1%eth0")).toBe("ff02::1:ff00:0001")
+  })
 })
 
 describe("calculateIPv6Subnet", () => {
@@ -191,6 +257,28 @@ describe("calculateIPv6Subnet", () => {
   it("computes solicited-node multicast from the low 24 bits", () => {
     const r = calculateIPv6Subnet("2001:db8::1:ff:fe00:1234", 64)
     expect(r.solicitedNode).toBe("ff02::1:ff00:1234")
+  })
+
+  it("treats all of fe80::/10 as link-local, agreeing with isPrivate", () => {
+    // isLinkLocal used to test == 0xfe80 (a /16) while isPrivate masked /10,
+    // so fe90::1 came back isPrivate: true, isLinkLocal: false
+    for (const ip of ["fe80::1", "fe90::1", "feaf::1", "febf::1"]) {
+      const r = calculateIPv6Subnet(ip, 64)
+      expect({ ip, isLinkLocal: r.isLinkLocal, isPrivate: r.isPrivate }).toEqual({
+        ip,
+        isLinkLocal: true,
+        isPrivate: true,
+      })
+    }
+
+    const outside = calculateIPv6Subnet("fec0::1", 64)
+    expect(outside.isLinkLocal).toBe(false)
+    expect(outside.isPrivate).toBe(false)
+
+    // unique-local stays private but is not link-local
+    const ula = calculateIPv6Subnet("fd00::1", 64)
+    expect(ula.isPrivate).toBe(true)
+    expect(ula.isLinkLocal).toBe(false)
   })
 })
 
@@ -209,5 +297,35 @@ describe("validators", () => {
     expect(isValidCIDR("10.0.0.0/33")).toBe(false)
     expect(isValidCIDR("2001:db8::/64")).toBe(true)
     expect(isValidCIDR("2001:db8::/129")).toBe(false)
+  })
+
+  it("isValidCIDR rejects prefixes that bare parseInt accepted", () => {
+    expect(isValidCIDR("10.0.0.0/24abc")).toBe(false)
+    expect(isValidCIDR("10.0.0.0/+24")).toBe(false)
+    expect(isValidCIDR("10.0.0.0/ 24")).toBe(false)
+    expect(isValidCIDR("10.0.0.0/")).toBe(false)
+    expect(isValidCIDR("/24")).toBe(false)
+    expect(isValidCIDR("/+24")).toBe(false)
+    expect(isValidCIDR("10.0.0.0/0")).toBe(true)
+  })
+
+  it("ipv4ToInt and isValidIPv4 share one notion of validity", () => {
+    // "010" is ambiguously octal, so both reject leading-zero octets
+    for (const ip of ["010.1.1.1", "1.01.1.1", "00.0.0.0", "1.2.3.0256"]) {
+      expect(isValidIPv4(ip)).toBe(false)
+      expect(() => ipv4ToInt(ip)).toThrow("Invalid IPv4 address")
+    }
+
+    for (const ip of ["0.0.0.0", "10.0.0.1", "255.255.255.255"]) {
+      expect(isValidIPv4(ip)).toBe(true)
+      expect(() => ipv4ToInt(ip)).not.toThrow()
+    }
+  })
+
+  it("isValidIPv6 rejects dangling colons that padStart used to hide", () => {
+    expect(isValidIPv6("1:2:3:4:5:6:7:")).toBe(false)
+    expect(isValidIPv6(":1:2:3:4:5:6:7")).toBe(false)
+    expect(isValidIPv6("2001:db8::")).toBe(true)
+    expect(isValidIPv6("::1")).toBe(true)
   })
 })
