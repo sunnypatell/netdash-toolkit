@@ -127,6 +127,25 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* inter ships slashed-zero and straight-l alternates; both matter when the
+     ui is full of addresses, masks and version strings */
+  body {
+    font-feature-settings:
+      "cv05" 1,
+      "cv08" 1,
+      "ss01" 1;
+  }
+  /* headings tighten as they grow, so a 36px h1 does not read as loose as a 14px label */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.018em;
+  }
+  h1 {
+    letter-spacing: -0.028em;
   }
 }
 
@@ -136,5 +155,67 @@
      hidden silently clipped any wide child on mobile instead of letting it scroll */
   .tool-container {
     @apply space-y-4 overflow-x-auto sm:space-y-6;
+  }
+
+  /* digits that change in place (counts, octets, timers) must not reflow their
+     neighbours, so every numeric readout opts into fixed-width figures */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* section label: the small all-caps eyebrow above a group of content */
+  .eyebrow {
+    @apply text-muted-foreground text-xs font-medium tracking-[0.08em] uppercase;
+  }
+
+  /* faint engineering grid behind the dashboard masthead. drawn from --border so
+     it re-tints per theme, and masked so it fades out instead of ending on a seam */
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+    background-size: 32px 32px;
+    -webkit-mask-image: radial-gradient(120% 100% at 0% 0%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(120% 100% at 0% 0%, #000 0%, transparent 72%);
+    opacity: 0.5;
+  }
+}
+
+@layer utilities {
+  /* a dense nav that scrolls constantly should not carry a 15px platform
+     scrollbar; the thumb still uses --border so it stays visible in both themes */
+  .scrollbar-slim {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* wcag 2.3.3: honour the os setting globally rather than trusting 40+ call
+   sites to remember motion-safe. transitions collapse to instant, not removed,
+   so :hover and :focus-visible states still resolve. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .grid-backdrop {
+    -webkit-mask-image: none;
+    mask-image: none;
+    opacity: 0.35;
   }
 }

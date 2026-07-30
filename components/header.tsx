@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/ui/user-menu"
 import { Badge } from "@/components/ui/badge"
 import { Menu, Search } from "lucide-react"
-import { openCommandPalette } from "@/components/command-palette"
+import { openCommandPalette, useShortcutKey } from "@/components/command-palette"
 import changelog from "@/data/changelog.json"
 
 // Get latest version from changelog
@@ -17,6 +17,8 @@ interface HeaderProps {
 }
 
 export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
+  const shortcutKey = useShortcutKey()
+
   return (
     <header className="bg-card border-border supports-[backdrop-filter]:bg-card/95 sticky top-0 z-50 border-b px-3 py-3 backdrop-blur sm:px-4 sm:py-4 lg:px-6">
       <div className="flex items-center justify-between">
@@ -42,23 +44,26 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
               <Menu className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
-          <div className="flex items-center space-x-2">
-            <h1 className="text-foreground truncate text-base font-semibold sm:text-lg">
-              Network Toolbox
-            </h1>
-          </div>
+          {/* not an h1: every page already owns one, and two competing level-one
+              headings is not a hierarchy */}
+          <p className="text-foreground truncate text-base font-semibold sm:text-lg">
+            Network Toolbox
+          </p>
 
           {/* a shortcut nobody can see is a shortcut nobody uses */}
           <Button
             variant="outline"
             size="sm"
             onClick={openCommandPalette}
-            className="text-muted-foreground hidden items-center gap-2 sm:flex"
+            className="text-muted-foreground flex shrink-0 items-center gap-2"
+            aria-label="Search tools"
             aria-keyshortcuts="Meta+K Control+K"
           >
-            <Search className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="text-xs">Search tools</span>
-            <kbd className="bg-muted rounded border px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+            <Search className="size-3.5" aria-hidden="true" />
+            <span className="hidden text-xs sm:inline">Search tools</span>
+            <kbd className="bg-muted hidden rounded border px-1.5 py-0.5 text-[10px] sm:inline">
+              {shortcutKey}K
+            </kbd>
           </Button>
         </div>
 

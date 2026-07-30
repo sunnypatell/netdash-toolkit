@@ -1,18 +1,42 @@
 "use client"
 
 import { Suspense, lazy, useEffect, useMemo } from "react"
-import { Loader2 } from "lucide-react"
-import { getToolBySlug } from "@/lib/tool-registry"
+import { Badge } from "@/components/ui/badge"
+import { RuntimeBadge, RuntimeDisclosure } from "@/components/ui/runtime-badge"
+import { getToolBySlug, type ToolDefinition } from "@/lib/tool-registry"
 import { rememberToolVisit } from "@/components/command-palette"
 
-function ToolSkeleton() {
+// a spinner over a blank region tells you nothing while a chunk downloads. the
+// registry already knows the title, the purpose, the capabilities and whether
+// the tool leaves the device, so the placeholder says all four and matches the
+// real ToolHeader's geometry, which keeps the swap from jumping.
+function ToolSkeleton({ tool }: { tool: ToolDefinition }) {
+  const Icon = tool.icon
   return (
-    <div
-      className="flex min-h-[50vh] items-center justify-center"
-      role="status"
-      aria-label="Loading tool"
-    >
-      <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" aria-hidden="true" />
+    <div className="space-y-6" role="status" aria-live="polite">
+      <div className="flex items-start space-x-3">
+        <Icon className="text-primary mt-0.5 size-6 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 space-y-2">
+          <p className="text-xl font-bold sm:text-2xl">{tool.title}</p>
+          <p className="text-muted-foreground text-sm sm:text-base">{tool.description}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <RuntimeBadge tool={tool} />
+            {tool.features.map((feature) => (
+              <Badge key={feature} variant="outline" className="text-xs font-normal">
+                {feature}
+              </Badge>
+            ))}
+          </div>
+          <RuntimeDisclosure tool={tool} />
+        </div>
+      </div>
+
+      <div className="space-y-3" aria-hidden="true">
+        <div className="bg-muted h-28 animate-pulse rounded-lg" />
+        <div className="bg-muted h-40 animate-pulse rounded-lg" />
+      </div>
+
+      <span className="sr-only">Loading {tool.title}</span>
     </div>
   )
 }
@@ -27,18 +51,15 @@ export function ToolShell({ slug }: { slug: string }) {
     rememberToolVisit(slug)
   }, [slug])
 
-  const Tool = useMemo(() => {
-    const tool = getToolBySlug(slug)
-    if (!tool) return null
-    return lazy(tool.load)
-  }, [slug])
+  const tool = useMemo(() => getToolBySlug(slug), [slug])
+  const Tool = useMemo(() => (tool ? lazy(tool.load) : null), [tool])
 
   // unreachable in practice: dynamicParams=false 404s unknown slugs at the
   // router before this renders
-  if (!Tool) return null
+  if (!tool || !Tool) return null
 
   return (
-    <Suspense fallback={<ToolSkeleton />}>
+    <Suspense fallback={<ToolSkeleton tool={tool} />}>
       <Tool />
     </Suspense>
   )

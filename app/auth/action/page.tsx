@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2, CheckCircle, AlertCircle, KeyRound, Mail, ArrowLeft } from "lucide-react"
+import { SITE_NAME } from "@/lib/site"
+import { MODE_TITLES } from "./titles"
 
 type ActionMode = "resetPassword" | "verifyEmail" | "recoverEmail" | null
 
@@ -28,6 +30,12 @@ function AuthActionContent() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null)
+
+  // one route serves three purposes, so the static title in layout.tsx is
+  // narrowed here once ?mode= is known
+  useEffect(() => {
+    document.title = `${MODE_TITLES[mode ?? "invalid"] ?? MODE_TITLES.invalid} | ${SITE_NAME}`
+  }, [mode])
 
   // Verify the action code on mount
   useEffect(() => {
@@ -94,6 +102,8 @@ function AuthActionContent() {
   const goToApp = () => {
     router.push("/")
   }
+
+  const mismatch = Boolean(newPassword && confirmPassword && newPassword !== confirmPassword)
 
   // Loading state
   if (loading) {
@@ -222,12 +232,14 @@ function AuthActionContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <div role="status" aria-live="polite">
+              {error && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </div>
 
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div className="space-y-2">
@@ -235,13 +247,18 @@ function AuthActionContent() {
                 <Input
                   id="new-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="At least 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   minLength={6}
                   required
                   autoFocus
+                  aria-describedby="new-password-hint"
                 />
+                <p id="new-password-hint" className="text-muted-foreground text-xs">
+                  Must be at least 6 characters.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -249,13 +266,24 @@ function AuthActionContent() {
                 <Input
                   id="confirm-new-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Confirm your new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  aria-invalid={mismatch}
+                  aria-describedby={mismatch ? "confirm-new-password-error" : undefined}
                 />
-                {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                  <p className="text-destructive text-xs">Passwords do not match</p>
+                {/* status, not alert: this compares on every keystroke, so an
+                    assertive region would interrupt mid-password. */}
+                {mismatch && (
+                  <p
+                    id="confirm-new-password-error"
+                    className="text-destructive text-xs"
+                    role="status"
+                  >
+                    Passwords do not match
+                  </p>
                 )}
               </div>
 
@@ -282,7 +310,7 @@ function AuthActionContent() {
               <button
                 type="button"
                 onClick={goToApp}
-                className="text-muted-foreground hover:text-primary text-sm underline underline-offset-4"
+                className="text-muted-foreground hover:text-primary px-2 py-1 text-sm underline underline-offset-4"
               >
                 Cancel and return to app
               </button>

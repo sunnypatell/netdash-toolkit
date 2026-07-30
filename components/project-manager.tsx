@@ -508,7 +508,13 @@ export function ProjectManager() {
                         }}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(e) => e.key === "Enter" && setSelectedProject(project)}
+                        onKeyDown={(e) => {
+                          // a native button fires on both, and Space would scroll the page
+                          if (e.key !== "Enter" && e.key !== " ") return
+                          e.preventDefault()
+                          setSelectedProject(project)
+                          setSelectedSharedProject(null)
+                        }}
                         aria-label={`Select project: ${project.name}`}
                         aria-pressed={currentProject?.id === project.id}
                       >
@@ -563,7 +569,13 @@ export function ProjectManager() {
                       }}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => e.key === "Enter" && setSelectedSharedProject(project)}
+                      onKeyDown={(e) => {
+                        // a native button fires on both, and Space would scroll the page
+                        if (e.key !== "Enter" && e.key !== " ") return
+                        e.preventDefault()
+                        setSelectedSharedProject(project)
+                        setSelectedProject(null)
+                      }}
                       aria-label={`Select shared project: ${project.name}`}
                       aria-pressed={currentSharedProject?.id === project.id}
                     >

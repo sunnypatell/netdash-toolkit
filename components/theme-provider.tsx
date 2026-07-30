@@ -12,7 +12,8 @@ export function ThemeProvider({
   children: React.ReactNode
   [key: string]: unknown
 }) {
-  // Ensure consistent theming by defaulting to class-based dark mode
+  // disableTransitionOnChange is load-bearing, not cosmetic: the ui transitions
+  // colours on hover, and without it every one of those fires at once on toggle
   return (
     <Provider
       attribute="class"

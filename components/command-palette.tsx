@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
-import { Clock, CornerDownLeft, Search } from "lucide-react"
+import { Clock, Cloud, CornerDownLeft, FolderOpen, Home, Info, Search } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import {
   categories,
   categoryLabelOf,
   getToolBySlug,
+  isOffline,
   searchTools,
   tools,
   type ToolDefinition,
@@ -21,8 +23,43 @@ export function openCommandPalette() {
   document.dispatchEvent(new CustomEvent(OPEN_EVENT))
 }
 
+// resolved after mount, never during render: the server has no navigator and a
+// hardcoded "Ctrl" is wrong for half the audience
+export function useShortcutKey() {
+  const [key, setKey] = useState("Ctrl")
+  useEffect(() => {
+    const platform = navigator.platform || navigator.userAgent
+    if (/Mac|iPhone|iPad|iPod/i.test(platform)) setKey("⌘")
+  }, [])
+  return key
+}
+
+// the shortcut is the whole point of the palette, so it gets stated in plain
+// text wherever there is room rather than living only in a tooltip
+export function ShortcutHint({ className }: { className?: string }) {
+  const key = useShortcutKey()
+  return (
+    <span className={className}>
+      Press{" "}
+      <kbd className="bg-muted text-foreground rounded border px-1 py-px text-[0.625rem] font-medium">
+        {key}
+      </kbd>
+      <kbd className="bg-muted text-foreground ml-0.5 rounded border px-1 py-px text-[0.625rem] font-medium">
+        K
+      </kbd>{" "}
+      anywhere
+    </span>
+  )
+}
+
 const RECENTS_KEY = "netdash-recent-tools"
 const RECENTS_MAX = 6
+
+const pages: Array<{ href: string; label: string; icon: LucideIcon }> = [
+  { href: "/", label: "Dashboard", icon: Home },
+  { href: "/projects", label: "Projects", icon: FolderOpen },
+  { href: "/about", label: "About", icon: Info },
+]
 
 function readRecents(): ToolDefinition[] {
   try {
@@ -50,6 +87,9 @@ export function rememberToolVisit(slug: string) {
   }
 }
 
+const groupClass =
+  "text-muted-foreground [&_[cmdk-group-heading]]:bg-popover [&_[cmdk-group-heading]]:sticky [&_[cmdk-group-heading]]:top-0 [&_[cmdk-group-heading]]:z-10 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[0.6875rem] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[0.08em] [&_[cmdk-group-heading]]:uppercase"
+
 // 48 tools reachable only by scrolling a category tree, and search existed on
 // exactly one route. cmd+k works from anywhere.
 export function CommandPalette() {
@@ -59,22 +99,12 @@ export function CommandPalette() {
   const [recents, setRecents] = useState<ToolDefinition[]>([])
 
   useEffect(() => {
+    // sc 2.1.4: a bare "/" was bound here and met none of the three exceptions,
+    // so it was dropped. cmd/ctrl+k uses a modifier and is out of scope.
     const onKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null
-      const typing =
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable === true
-
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setOpen((v) => !v)
-        return
-      }
-      // "/" is a search convention, but never steal it mid-typing
-      if (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
-        e.preventDefault()
-        setOpen(true)
       }
     }
     const onOpenRequest = () => setOpen(true)
@@ -104,6 +134,20 @@ export function CommandPalette() {
     [router]
   )
 
+  const goTo = useCallback(
+    (href: string) => {
+      setOpen(false)
+      router.push(href)
+    },
+    [router]
+  )
+
+  const pageMatches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return []
+    return pages.filter((p) => p.label.toLowerCase().includes(q))
+  }, [query])
+
   return (
     <Command.Dialog
       open={open}
@@ -113,33 +157,55 @@ export function CommandPalette() {
       shouldFilter={false}
       className="bg-background/80 fixed inset-0 z-[100] backdrop-blur-sm"
     >
-      <div className="bg-popover text-popover-foreground mx-auto mt-[12vh] w-[92vw] max-w-xl overflow-hidden rounded-xl border shadow-2xl">
-        <div className="flex items-center gap-2 border-b px-3">
-          <Search className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
+      <div className="bg-popover text-popover-foreground border-border mx-auto mt-[10vh] flex max-h-[80vh] w-[92vw] max-w-xl flex-col overflow-hidden rounded-xl border shadow-2xl">
+        <div className="border-border flex items-center gap-2 border-b px-3">
+          <Search className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
           <Command.Input
             value={query}
             onValueChange={setQuery}
             placeholder={`Search ${tools.length} tools...`}
             className="placeholder:text-muted-foreground h-12 w-full bg-transparent text-sm outline-none"
           />
-          <kbd className="text-muted-foreground hidden rounded border px-1.5 py-0.5 text-[10px] sm:inline">
+          <kbd className="text-muted-foreground hidden shrink-0 rounded border px-1.5 py-0.5 text-[0.625rem] sm:inline">
             esc
           </kbd>
         </div>
 
-        <Command.List className="max-h-[60vh] overflow-x-hidden overflow-y-auto p-2">
-          <Command.Empty className="text-muted-foreground py-8 text-center text-sm">
-            No tool matches &quot;{query}&quot;.
+        <Command.List className="scrollbar-slim min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2">
+          <Command.Empty className="px-3 py-8 text-center">
+            <p className="text-foreground text-sm font-medium">
+              No tool matches &quot;{query}&quot;
+            </p>
+            <p className="text-muted-foreground mx-auto mt-1 max-w-xs text-xs leading-relaxed">
+              Names, descriptions and keywords are all searched, so cidr, vlsm, mtu, doh and oui
+              each resolve.
+            </p>
           </Command.Empty>
 
           {!query.trim() && recents.length > 0 && (
-            <Command.Group
-              heading="Recent"
-              className="text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs"
-            >
+            <Command.Group heading="Recent" className={groupClass}>
               {recents.map((tool) => (
                 <PaletteItem key={tool.slug} tool={tool} onSelect={go} icon={Clock} />
               ))}
+            </Command.Group>
+          )}
+
+          {pageMatches.length > 0 && (
+            <Command.Group heading="Pages" className={groupClass}>
+              {pageMatches.map((page) => {
+                const Icon = page.icon
+                return (
+                  <Command.Item
+                    key={page.href}
+                    value={page.href}
+                    onSelect={() => goTo(page.href)}
+                    className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
+                  >
+                    <Icon className="size-4 shrink-0 opacity-70" aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate">{page.label}</span>
+                  </Command.Item>
+                )
+              })}
             </Command.Group>
           )}
 
@@ -150,8 +216,8 @@ export function CommandPalette() {
               return (
                 <Command.Group
                   key={category.id}
-                  heading={category.label}
-                  className="text-muted-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs"
+                  heading={`${category.label} (${inCategory.length})`}
+                  className={groupClass}
                 >
                   {inCategory.map((tool) => (
                     <PaletteItem key={tool.slug} tool={tool} onSelect={go} />
@@ -165,6 +231,22 @@ export function CommandPalette() {
               <PaletteItem key={tool.slug} tool={tool} onSelect={go} showCategory />
             ))}
         </Command.List>
+
+        {/* a palette that never states its own keys stays a power feature */}
+        <div className="border-border text-muted-foreground hidden shrink-0 items-center gap-4 border-t px-3 py-2 text-[0.6875rem] sm:flex">
+          <span className="flex items-center gap-1">
+            <kbd className="bg-muted rounded border px-1 py-px">&uarr;</kbd>
+            <kbd className="bg-muted rounded border px-1 py-px">&darr;</kbd>
+            to move
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="bg-muted rounded border px-1 py-px">&crarr;</kbd>
+            to open
+          </span>
+          <span className="tabular ml-auto">
+            {query.trim() ? results.length : tools.length} tools
+          </span>
+        </div>
       </div>
     </Command.Dialog>
   )
@@ -178,7 +260,7 @@ function PaletteItem({
 }: {
   tool: ToolDefinition
   onSelect: (tool: ToolDefinition) => void
-  icon?: typeof Clock
+  icon?: LucideIcon
   showCategory?: boolean
 }) {
   const Icon = icon ?? tool.icon
@@ -186,15 +268,25 @@ function PaletteItem({
     <Command.Item
       value={tool.slug}
       onSelect={() => onSelect(tool)}
-      className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
+      className="data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground group flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm"
     >
-      <Icon className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden="true" />
-      <span className="text-foreground min-w-0 flex-1 truncate">{tool.label}</span>
+      <Icon className="size-4 shrink-0 opacity-70" aria-hidden="true" />
+      <span className="min-w-0 flex-1 truncate">{tool.label}</span>
+      {!isOffline(tool) && (
+        <span className="flex shrink-0 items-center gap-1 text-[0.6875rem] text-amber-700 group-data-[selected=true]:text-current dark:text-amber-400">
+          <Cloud className="size-3" aria-hidden="true" />
+          <span className="hidden sm:inline">Sends data</span>
+        </span>
+      )}
+      {/* text never rides on opacity here: the selected row is bright emerald, and
+          a faded label on it drops under 4.5:1 */}
       {showCategory && (
-        <span className="text-muted-foreground shrink-0 text-xs">{categoryLabelOf(tool)}</span>
+        <span className="text-muted-foreground shrink-0 text-xs group-data-[selected=true]:text-current">
+          {categoryLabelOf(tool)}
+        </span>
       )}
       <CornerDownLeft
-        className="text-muted-foreground hidden h-3 w-3 shrink-0 sm:block"
+        className="hidden size-3 shrink-0 opacity-0 group-data-[selected=true]:opacity-70 sm:block"
         aria-hidden="true"
       />
     </Command.Item>
