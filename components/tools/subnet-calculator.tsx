@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo } from "react"
+import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -9,7 +10,6 @@ import { Calculator, Download, Info } from "lucide-react"
 import { IPInput } from "@/components/ui/ip-input"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
-import type { ProjectItem } from "@/contexts/project-context"
 import { ResultCard } from "@/components/ui/result-card"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { downloadTextFile, dateStamp } from "@/lib/download"
@@ -21,54 +21,63 @@ import {
 } from "@/lib/network-utils"
 import type { IPv4Result, IPv6Result } from "@/lib/network-utils"
 
+// results are derived, not stored: a subnet is a pure function of an address and
+// a prefix, so there was nothing for a Calculate button to do that typing cannot.
+// the inputs live in the query string, which makes any result a shareable link.
+function computeIPv4(address: string, prefixText: string) {
+  if (!address.trim()) return { result: null, error: "" }
+  if (!isValidIPv4(address)) return { result: null, error: "Invalid IPv4 address" }
+  const prefix = Number.parseInt(prefixText, 10)
+  if (isNaN(prefix) || prefix < 0 || prefix > 32) {
+    return { result: null, error: "Invalid prefix length (must be 0-32)" }
+  }
+  try {
+    return { result: calculateIPv4Subnet(address, prefix), error: "" }
+  } catch (err) {
+    return { result: null, error: err instanceof Error ? err.message : "Calculation failed" }
+  }
+}
+
+function computeIPv6(address: string, prefixText: string) {
+  if (!address.trim()) return { result: null, error: "" }
+  if (!isValidIPv6(address)) return { result: null, error: "Invalid IPv6 address" }
+  const prefix = Number.parseInt(prefixText, 10)
+  if (isNaN(prefix) || prefix < 0 || prefix > 128) {
+    return { result: null, error: "Invalid prefix length (must be 0-128)" }
+  }
+  try {
+    return { result: calculateIPv6Subnet(address, prefix), error: "" }
+  } catch (err) {
+    return { result: null, error: err instanceof Error ? err.message : "Calculation failed" }
+  }
+}
+
 export function SubnetCalculator() {
-  const [ipv4Address, setIpv4Address] = useState("192.168.1.1")
-  const [ipv4Prefix, setIpv4Prefix] = useState("24")
-  const [ipv6Address, setIpv6Address] = useState("2001:db8::1")
-  const [ipv6Prefix, setIpv6Prefix] = useState("64")
-  const [ipv4Results, setIpv4Results] = useState<IPv4Result | null>(null)
-  const [ipv6Results, setIpv6Results] = useState<IPv6Result | null>(null)
-  const [error, setError] = useState<string>("")
+  const [query, setQuery] = useQueryStates(
+    {
+      tab: parseAsStringLiteral(["ipv4", "ipv6"] as const).withDefault("ipv4"),
+      ip: parseAsString.withDefault("192.168.1.1"),
+      prefix: parseAsString.withDefault("24"),
+      ip6: parseAsString.withDefault("2001:db8::1"),
+      prefix6: parseAsString.withDefault("64"),
+    },
+    // typing should not fill the back button with one entry per keystroke
+    { history: "replace" }
+  )
 
-  const calculateIPv4 = () => {
-    setError("")
-    try {
-      if (!isValidIPv4(ipv4Address)) {
-        throw new Error("Invalid IPv4 address")
-      }
+  const { tab, ip: ipv4Address, prefix: ipv4Prefix, ip6: ipv6Address, prefix6: ipv6Prefix } = query
 
-      const prefix = Number.parseInt(ipv4Prefix)
-      if (isNaN(prefix) || prefix < 0 || prefix > 32) {
-        throw new Error("Invalid prefix length (must be 0-32)")
-      }
+  const setIpv4Address = (value: string) => void setQuery({ ip: value })
+  const setIpv4Prefix = (value: string) => void setQuery({ prefix: value })
+  const setIpv6Address = (value: string) => void setQuery({ ip6: value })
+  const setIpv6Prefix = (value: string) => void setQuery({ prefix6: value })
 
-      const result = calculateIPv4Subnet(ipv4Address, prefix)
-      setIpv4Results(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Calculation failed")
-      setIpv4Results(null)
-    }
-  }
+  const ipv4 = useMemo(() => computeIPv4(ipv4Address, ipv4Prefix), [ipv4Address, ipv4Prefix])
+  const ipv6 = useMemo(() => computeIPv6(ipv6Address, ipv6Prefix), [ipv6Address, ipv6Prefix])
 
-  const calculateIPv6 = () => {
-    setError("")
-    try {
-      if (!isValidIPv6(ipv6Address)) {
-        throw new Error("Invalid IPv6 address")
-      }
-
-      const prefix = Number.parseInt(ipv6Prefix)
-      if (isNaN(prefix) || prefix < 0 || prefix > 128) {
-        throw new Error("Invalid prefix length (must be 0-128)")
-      }
-
-      const result = calculateIPv6Subnet(ipv6Address, prefix)
-      setIpv6Results(result)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Calculation failed")
-      setIpv6Results(null)
-    }
-  }
+  const ipv4Results = tab === "ipv4" ? ipv4.result : null
+  const ipv6Results = tab === "ipv6" ? ipv6.result : null
+  const error = tab === "ipv4" ? ipv4.error : ipv6.error
 
   const exportResults = (format: "json" | "csv") => {
     const results = ipv4Results || ipv6Results
@@ -104,24 +113,17 @@ export function SubnetCalculator() {
     return badges
   }
 
-  const handleLoadFromProject = (data: Record<string, unknown>, item: ProjectItem) => {
+  const handleLoadFromProject = (data: Record<string, unknown>) => {
     const input = data.input as { address: string; prefix: string } | undefined
     const version = data.version as string | undefined
-    const results = data.results as IPv4Result | IPv6Result | undefined
 
-    if (input && results) {
-      if (version === "ipv4") {
-        setIpv4Address(input.address)
-        setIpv4Prefix(input.prefix)
-        setIpv4Results(results as IPv4Result)
-        setIpv6Results(null)
-      } else if (version === "ipv6") {
-        setIpv6Address(input.address)
-        setIpv6Prefix(input.prefix)
-        setIpv6Results(results as IPv6Result)
-        setIpv4Results(null)
-      }
-      setError("")
+    // only the inputs are restored. the results recompute from them, so a saved
+    // item can never show a stale figure that no longer matches its own input.
+    if (!input) return
+    if (version === "ipv4") {
+      void setQuery({ tab: "ipv4", ip: input.address, prefix: input.prefix })
+    } else if (version === "ipv6") {
+      void setQuery({ tab: "ipv6", ip6: input.address, prefix6: input.prefix })
     }
   }
 
@@ -181,7 +183,11 @@ export function SubnetCalculator() {
         </Alert>
       )}
 
-      <Tabs defaultValue="ipv4" className="space-y-4 sm:space-y-6">
+      <Tabs
+        value={tab}
+        onValueChange={(v) => setQuery({ tab: v as "ipv4" | "ipv6" })}
+        className="space-y-4 sm:space-y-6"
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="ipv4" className="text-sm">
             IPv4 Calculator
@@ -216,12 +222,6 @@ export function SubnetCalculator() {
                   onChange={setIpv4Prefix}
                   ipVersion="ipv4"
                 />
-                <div className="flex items-end">
-                  <Button onClick={calculateIPv4} className="w-full">
-                    <Calculator className="mr-2 h-4 w-4" />
-                    Calculate
-                  </Button>
-                </div>
               </div>
 
               <Alert>
@@ -312,12 +312,6 @@ export function SubnetCalculator() {
                   onChange={setIpv6Prefix}
                   ipVersion="ipv6"
                 />
-                <div className="flex items-end">
-                  <Button onClick={calculateIPv6} className="w-full">
-                    <Calculator className="mr-2 h-4 w-4" />
-                    Calculate
-                  </Button>
-                </div>
               </div>
 
               <Alert>

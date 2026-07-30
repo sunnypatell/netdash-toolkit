@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
@@ -10,9 +11,11 @@ import { tools } from "@/lib/tool-registry"
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ProjectProvider>{children}</ProjectProvider>
-    </AuthProvider>
+    <NuqsTestingAdapter>
+      <AuthProvider>
+        <ProjectProvider>{children}</ProjectProvider>
+      </AuthProvider>
+    </NuqsTestingAdapter>
   )
 }
 

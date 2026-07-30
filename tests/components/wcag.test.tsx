@@ -1,6 +1,7 @@
 import { cleanup, render } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import axe from "axe-core"
+import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
@@ -27,9 +28,11 @@ const AXE_OPTIONS: axe.RunOptions = {
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ProjectProvider>{children}</ProjectProvider>
-    </AuthProvider>
+    <NuqsTestingAdapter>
+      <AuthProvider>
+        <ProjectProvider>{children}</ProjectProvider>
+      </AuthProvider>
+    </NuqsTestingAdapter>
   )
 }
 

@@ -7,6 +7,7 @@ import { ProjectProvider } from "@/contexts/project-context"
 import { Analytics } from "@vercel/analytics/react"
 import { Toaster } from "sonner"
 import { Suspense } from "react"
+import { NuqsAdapter } from "nuqs/adapters/next/app"
 import "./globals.css"
 
 const inter = Inter({
@@ -43,9 +44,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthProvider>
-              <ProjectProvider>{children}</ProjectProvider>
-            </AuthProvider>
+            <NuqsAdapter>
+              <AuthProvider>
+                <ProjectProvider>{children}</ProjectProvider>
+              </AuthProvider>
+            </NuqsAdapter>
             {/* the app had two toast systems and mounted neither, so every
                 "copied"/"saved"/"failed" message was silent. one system now. */}
             <Toaster richColors closeButton position="bottom-right" />
