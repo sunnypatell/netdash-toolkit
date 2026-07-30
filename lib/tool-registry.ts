@@ -624,7 +624,7 @@ export const tools: ToolDefinition[] = [
     popular: true,
     load: () =>
       import("@/components/tools/hash-generator").then((m) => ({ default: m.HashGenerator })),
-    keywords: ["hash", "sha256", "sha512", "md5", "checksum"],
+    keywords: ["hash", "sha256", "sha512", "sha1", "sha384", "checksum", "digest"],
   },
   {
     slug: "password-generator",
@@ -645,13 +645,13 @@ export const tools: ToolDefinition[] = [
     slug: "base64-encoder",
     label: "Base64 Encoder",
     title: "Base64 Encoder/Decoder",
-    description: "Encode and decode Base64 strings and files",
+    description: "Encode and decode Base64 text and files, in both RFC 4648 alphabets",
     icon: FileCode,
     category: "devtools",
-    features: ["Text encoding", "File encoding", "URL-safe"],
+    features: ["Text encoding", "File encoding", "URL-safe (RFC 4648 §5)"],
     load: () =>
       import("@/components/tools/base64-encoder").then((m) => ({ default: m.Base64Encoder })),
-    keywords: ["base64", "encode", "decode", "binary", "text"],
+    keywords: ["base64", "encode", "decode", "binary", "text", "url-safe", "base64url", "rfc4648"],
   },
   {
     slug: "url-encoder",
