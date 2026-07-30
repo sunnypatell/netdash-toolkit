@@ -369,12 +369,21 @@ export const tools: ToolDefinition[] = [
     description: "Test RTT, throughput, and connectivity to user-defined endpoints",
     icon: Activity,
     category: "diagnostics",
-    features: ["RTT measurement", "Throughput tests", "CORS-enabled"],
+    features: ["RTT measurement", "Throughput tests", "CORS-constrained"],
     popular: true,
     runtime: {
       offline: false,
-      thirdParty: ["the URL you enter", "DoH resolvers"],
-      desktopOnly: ["direct DNS queries"],
+      thirdParty: [
+        "the URL you enter",
+        "cloudflare-dns.com",
+        "dns.google",
+        "dns.quad9.net",
+        "doh.opendns.com",
+        "dns.adguard-dns.com",
+      ],
+      // the dns panel is always doh over fetch; the only preload call in this
+      // tool is ping, so icmp is the sole desktop-only capability
+      desktopOnly: ["real ICMP ping"],
     },
     load: () =>
       import("@/components/tools/network-tester").then((m) => ({ default: m.NetworkTester })),
