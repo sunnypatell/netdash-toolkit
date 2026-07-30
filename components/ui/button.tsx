@@ -32,25 +32,29 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentPropsWithoutRef<"button"> &
+type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot : "button"
+  }
 
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
-}
+// forwardRef is required, not cosmetic: radix triggers (DialogTrigger,
+// DropdownMenuTrigger, TooltipTrigger) pass a ref through asChild to manage
+// focus. without it react warned and the ref silently dropped, so those
+// dialogs never returned focus to their trigger on close.
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+
+    return (
+      <Comp
+        ref={ref}
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
 
 export { Button, buttonVariants }
