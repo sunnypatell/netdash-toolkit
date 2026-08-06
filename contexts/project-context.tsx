@@ -92,6 +92,30 @@ interface ProjectContextType {
 }
 
 const STORAGE_KEY = "netdash-projects"
+// ids the user deleted. persisted, because an in-flight snapshot that still
+// carries a deleted project used to re-upload it to firestore, and a refresh
+// then read it straight back. an in-memory guard cannot survive that refresh.
+const TOMBSTONE_KEY = "netdash-deleted-projects"
+
+function readTombstones(): Set<string> {
+  try {
+    const raw = localStorage.getItem(TOMBSTONE_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : []
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+function writeTombstones(ids: Set<string>) {
+  try {
+    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...ids]))
+  } catch {
+    // a full or blocked localStorage must not break deletion
+  }
+}
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
 
@@ -119,7 +143,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false)
   const syncEnabled = !!(user && isFirebaseConfigured() && db)
 
-  // Track projects being deleted to prevent listener from restoring them
+  // Track projects being deleted to prevent listener from restoring them.
+  // seeded from storage so a delete survives a reload while the cloud copy is
+  // still being removed.
   const deletingIdsRef = useRef<Set<string>>(new Set())
   // the snapshot callback below outlives the render that created it, so it
   // must read projects through a ref rather than the captured array
@@ -131,10 +157,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // Load projects from localStorage on initial mount
   useEffect(() => {
     try {
+      deletingIdsRef.current = readTombstones()
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
-        setProjects(Array.isArray(parsed) ? parsed : [])
+        const list: Project[] = Array.isArray(parsed) ? parsed : []
+        // a tombstoned project must never come back, whatever storage still holds
+        setProjects(list.filter((p) => !deletingIdsRef.current.has(p.id)))
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage:", error)
@@ -230,8 +259,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
         cloudIdsRef.current = cloudProjectIds
 
-        // Find local-only projects to upload
-        const localOnlyProjects = localProjectsRef.current.filter((p) => !cloudProjectIds.has(p.id))
+        // a deleted project is never local-only: uploading it is exactly how a
+        // delete used to undo itself
+        const tombstoned = deletingIdsRef.current
+        const localOnlyProjects = localProjectsRef.current.filter(
+          (p) => !cloudProjectIds.has(p.id) && !tombstoned.has(p.id)
+        )
+
+        // the cloud no longer has it, so the delete is confirmed and the
+        // tombstone can be retired rather than growing without bound
+        if (tombstoned.size > 0) {
+          let changed = false
+          for (const id of [...tombstoned]) {
+            if (!cloudProjectIds.has(id)) {
+              tombstoned.delete(id)
+              changed = true
+            }
+          }
+          if (changed) writeTombstones(tombstoned)
+        }
 
         // Upload local-only projects to cloud with owner info
         if (localOnlyProjects.length > 0 && user.email) {
@@ -254,6 +300,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         // Filter out any projects that are currently being deleted
         const mergedProjects = [...cloudProjects, ...localOnlyProjects]
           .filter((p) => !deletingIdsRef.current.has(p.id))
+          .filter((p, i, all) => all.findIndex((o) => o.id === p.id) === i)
           .sort((a, b) => b.updatedAt - a.updatedAt)
 
         setProjects(mergedProjects)
@@ -342,7 +389,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // Delete from Firestore
   const deleteFromCloud = useCallback(
     async (projectId: string): Promise<boolean> => {
-      if (!syncEnabled || !db || !user) return true // Local-only deletion is fine
+      // "no user" is not the same as "no cloud". if firebase is configured, the
+      // project may exist in firestore under an account whose auth has not
+      // resolved yet, and reporting success here deletes it locally while
+      // leaving the cloud copy to be restored by the next snapshot. that is the
+      // resurrection the user actually saw.
+      if (!isFirebaseConfigured() || !db) return true
+      if (!user) {
+        throw new Error("Not signed in yet, so the cloud copy could not be deleted. Try again.")
+      }
+      if (!syncEnabled) return true
 
       try {
         const projectRef = doc(db, "users", user.uid, "projects", projectId)
@@ -390,8 +446,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }
 
   const deleteProject = async (id: string): Promise<{ success: boolean; error?: string }> => {
-    // Add to deletion tracking to prevent listener from restoring
+    // written before the request, so a reload mid-delete still cannot resurrect it
     deletingIdsRef.current.add(id)
+    writeTombstones(deletingIdsRef.current)
 
     try {
       // Delete from cloud first (wait for completion)
@@ -405,8 +462,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       cloudIdsRef.current.delete(id)
       setProjects((prev) => prev.filter((p) => p.id !== id))
 
-      // Clean up tracking ref only on success
-      deletingIdsRef.current.delete(id)
+      // the tombstone is retired by the snapshot that confirms the cloud copy is
+      // gone, not here: clearing it now reopens the window an in-flight snapshot
+      // used to walk through
+      if (!syncEnabled) {
+        deletingIdsRef.current.delete(id)
+        writeTombstones(deletingIdsRef.current)
+      }
 
       return { success: true }
     } catch (error) {
@@ -414,10 +476,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       // But allow future deletion attempts
       console.error("Delete project failed:", error)
 
-      // Remove from tracking after a delay to allow retry
-      setTimeout(() => {
-        deletingIdsRef.current.delete(id)
-      }, 5000)
+      // the tombstone stays. dropping it on a timer was what let a failed delete
+      // reappear, and it is retired only when the cloud confirms the copy is gone
 
       return {
         success: false,
