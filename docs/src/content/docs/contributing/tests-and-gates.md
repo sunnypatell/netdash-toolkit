@@ -62,6 +62,26 @@ A second block asserts every tool exposes at least one heading, because a tool p
 
 The comment at the top states the intent plainly: this is the cheap rigorous substitute for clicking through 48 tools by hand. Adding a registry entry without a working component fails here in seconds.
 
+## The prerequisite every rendering gate depends on: `settle()`
+
+[`tests/components/settle.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/components/settle.ts) is not a test. It is the wait that decides whether every suite in `tests/components/` is looking at a tool or at an empty shell, and it is written up here because compressing its rationale into inline comments would lose the measurements that justify each constant.
+
+Fourteen tools render their tab panels through `React.lazy`. `@testing-library/react` renders synchronously, so a suite that asserts immediately after `render()` sees the tab strip and nothing else. Measured on `reference-hub`: **64 nodes and 6 buttons**, against 797 and 61 once the panel resolves. An axe run over that passes, and a pass over a shell is worse than no gate, because it reads as evidence.
+
+`settle()` ticks until the node count stops changing, then requires three properties at once before it returns:
+
+| Property                          | Constant             | Why the obvious version is not enough                                                                                                                                                                        |
+| --------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| the count repeated `STABLE_TICKS` | `STABLE_TICKS = 3`   | a lazy chunk holds the count still for several ticks before resolving; `network-tester` measures `[23, 23, 23, 23, 56, ...]` from cold, so one repeat is not evidence of anything                            |
+| the count is above a node floor   | `MIN_RENDERED_NODES` | a tool that renders almost nothing means the panel never resolved                                                                                                                                            |
+| no Suspense fallback is on screen | `pendingFallback()`  | the floor alone does not close it: `reference-hub`'s tab strip is 64 nodes, comfortably over a floor of 25, so on a slow machine two quiet ticks over a shell would satisfy both of the first two properties |
+
+The fallback check is therefore the property that actually closes the hole, and the other two are margin around it.
+
+`pendingFallback()` matches on a `data-panel-fallback` marker, which every lazy tool puts on its `Suspense` fallback. The text pattern beside it is only a backstop for anything unmarked, and it cannot be made reliable: `textContent` concatenates siblings with no separator, so `acl-generator`'s shell reads `"Extended ACLLoading panel..."` and there is no boundary for a regex to find. That was not theoretical. A never-resolving panel once let the mount gate pass while scanning a 27-node tab strip, just over the floor at the time. Every `PanelFallback` now opens with a leading space for exactly this reason, and [`tests/components/settle-detector.test.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/components/settle-detector.test.tsx) pins both the concatenated strings the detector must catch and the one it provably cannot, so the marker stays the thing new panels are held to.
+
+`settled()` is the shared wrapper: it calls `settle()` and then asserts the node floor and the absence of a fallback with failure messages naming the tool. It exists because each suite that grew its own version of this check grew a different one, and the 2.5.3 label-in-name suite had none at all, scanning 6 of `reference-hub`'s 61 buttons while reporting green.
+
 ## Gate 2: the axe accessibility gate
 
 [`tests/components/wcag.test.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/components/wcag.test.tsx) runs [axe-core](https://github.com/dequelabs/axe-core) against every tool, scoped to exactly the WCAG 2.2 AA tag set:

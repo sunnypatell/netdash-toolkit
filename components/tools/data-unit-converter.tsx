@@ -85,8 +85,7 @@ export function DataUnitConverter() {
   const { value, unit } = query
   const selected = findUnit(unit)
 
-  // a unit conversion is a pure function of a value and a unit, so there is
-  // nothing for a Convert button to do that typing has not already done
+  // pure function of value and unit, so there is nothing for a Convert button to do
   const conversions = useMemo(() => {
     const results = convertAll(Number.parseFloat(value), unit)
     return results === null ? null : new Map(results.map((r) => [r.unit.id, r]))

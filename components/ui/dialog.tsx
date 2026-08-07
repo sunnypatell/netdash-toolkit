@@ -61,8 +61,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            // -m-1 p-1 grows the 16px icon box to a 24x24 target for 2.5.8 while
-            // the negative margin keeps the glyph where top-4/right-4 put it
+            // -m-1 p-1 grows the 16px icon to a 24px target (2.5.8) without moving the glyph
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 -m-1 rounded-xs p-1 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon />

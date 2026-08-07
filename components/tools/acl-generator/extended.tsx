@@ -107,8 +107,7 @@ export function ExtendedACLPanel({
         >
           {rules.map((rule, index) => {
             const validation = validationResults[index]
-            // rule-level: the message lists every error the rule raised, so the fields
-            // that can raise one all point at it
+            // the message lists every error raised, so all the rule's fields point at it
             const ruleInvalid = Boolean(validation && !validation.isValid)
             const ruleDescribedBy = ruleInvalid ? `acl-rule-${index}-error` : undefined
             return (

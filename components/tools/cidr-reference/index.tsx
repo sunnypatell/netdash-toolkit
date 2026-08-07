@@ -16,9 +16,7 @@ const AllCIDRs = lazy(() => import("./all"))
 
 const TABS = ["common", "all"] as const
 
-// both cards are views over the one ipv4 registry table in lib/reference. the
-// copies that used to live here labelled the rfc 1918 blocks "Class A/B/C",
-// which reference-data.test.ts now forbids outright.
+// views over the one ipv4 registry table; local copies here mislabelled rfc 1918 as "Class A/B/C"
 const PRIVATE_RANGES = IPV4_SPECIAL_RANGES.filter((entry) => entry.rfc === "RFC 1918")
 const SPECIAL_RANGES = IPV4_SPECIAL_RANGES.filter((entry) => entry.rfc !== "RFC 1918")
 

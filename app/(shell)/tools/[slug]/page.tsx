@@ -3,8 +3,7 @@ import { ToolShell } from "@/components/tool-shell"
 import { getToolBySlug, isOffline, tools } from "@/lib/tool-registry"
 import { SITE_NAME, canonical } from "@/lib/site"
 
-// static export: every tool page is enumerated at build time; unknown slugs
-// fail the build instead of silently rendering nothing
+// static export: every tool page is enumerated at build time, so unknown slugs fail the build
 export const dynamicParams = false
 
 export function generateStaticParams() {
@@ -21,8 +20,7 @@ export async function generateMetadata({
   if (!tool) return {}
 
   const url = canonical(`/tools/${tool.slug}`)
-  // stated per tool rather than globally, because roughly a quarter of them do
-  // leave the device and the card should not imply otherwise
+  // stated per tool: roughly a quarter of them do leave the device, so the card must not imply otherwise
   const privacy = isOffline(tool)
     ? "Runs offline; nothing you type leaves your browser."
     : "Sends data to a third-party host, and only when you ask it to."

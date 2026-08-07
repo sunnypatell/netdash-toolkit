@@ -12,8 +12,7 @@ export function ThemeProvider({
   children: React.ReactNode
   [key: string]: unknown
 }) {
-  // disableTransitionOnChange is load-bearing, not cosmetic: the ui transitions
-  // colours on hover, and without it every one of those fires at once on toggle
+  // disableTransitionOnChange is load-bearing: the ui transitions colours on hover, so every one fires at once on toggle
   return (
     <Provider
       attribute="class"

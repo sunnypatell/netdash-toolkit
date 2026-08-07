@@ -16,9 +16,7 @@ interface IPInputProps {
   ipVersion?: "ipv4" | "ipv6" | "both"
   className?: string
   id?: string
-  // a caller that validates further up (a subnet pair that overlaps, a plan that
-  // will not fit) has an error this component cannot see. it renders that
-  // message itself and names its id here, so the field points at both.
+  // a caller validating further up renders its own message and names its id here, so the field points at both
   describedBy?: string
   invalid?: boolean
 }
@@ -41,8 +39,7 @@ export function IPInput({
   const inputId = id || generatedId
   const errorId = `${inputId}-error`
   const showsOwnError = !isValid && !!value
-  // both messages can be on screen at once, so both ids go on the field rather
-  // than one winning
+  // both messages can be on screen at once, so both ids go on the field
   const description = [showsOwnError ? errorId : null, describedBy].filter(Boolean).join(" ")
 
   const isPrefixInput = label?.toLowerCase().includes("prefix")
@@ -121,16 +118,13 @@ export function IPInput({
             variant={isValid ? "secondary" : "destructive"}
             className="absolute top-1/2 right-2 -translate-y-1/2 transform text-xs"
           >
-            {/* aria prohibits aria-label on a roleless span, so the label is
-                discarded rather than read. sr-only text survives. */}
+            {/* aria prohibits aria-label on a roleless span, so sr-only text carries the label instead */}
             <span className="sr-only">Address type: </span>
             {addressType}
           </Badge>
         )}
       </div>
-      {/* status, not alert: this validates on every keystroke, so an assertive
-          region would interrupt the screen reader mid-address. aria-invalid and
-          aria-describedby above still tie the message to the field. */}
+      {/* status, not alert: this validates on every keystroke, so assertive would interrupt mid-address */}
       {!isValid && value && (
         <p id={errorId} className="text-destructive text-sm" role="status">
           {isPrefixInput

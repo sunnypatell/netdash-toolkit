@@ -26,8 +26,7 @@ function PanelFallback() {
 }
 
 export function PingTraceroute() {
-  // both targets live in the query string so a setup is a shareable link. nothing
-  // is sent on arrival: each panel needs its button pressed.
+  // both targets go in the url, but each panel needs its button pressed
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("ping"),
@@ -43,8 +42,7 @@ export function PingTraceroute() {
     setIsNative(isElectron())
   }, [])
 
-  // the interfaces tab only exists in the desktop app, so a link to it has to fall
-  // back rather than select a trigger that was never rendered
+  // the interfaces tab is desktop-only, so a link to it must fall back to a rendered trigger
   const activeTab = tab === "interfaces" && !isNative ? "ping" : tab
 
   return (

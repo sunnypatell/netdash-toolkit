@@ -46,8 +46,7 @@ function PanelFallback() {
 }
 
 export function WhoisLookup() {
-  // the query lives in the url so a lookup is a shareable link, but arriving with
-  // ?q= set does not fetch: rdap is a third-party request and needs a button press
+  // the query goes in the url, but rdap is third-party so it needs a button press
   const [urlState, setUrlState] = useQueryStates(
     {
       q: parseAsString.withDefault(""),
@@ -58,8 +57,7 @@ export function WhoisLookup() {
   const { q: query, tab } = urlState
 
   const [lookupType, setLookupType] = useState<LookupType>("domain")
-  // what was actually asked, not what the box says now: editing the input after a
-  // lookup must not relabel the answer already on screen
+  // what was asked, not what the box says now: editing must not relabel the answer on screen
   const [lookedUp, setLookedUp] = useState("")
   const [status, setStatus] = useState<LookupStatus>("idle")
   const [error, setError] = useState<string | null>(null)
@@ -107,8 +105,7 @@ export function WhoisLookup() {
     }
   }, [query])
 
-  // the rdap response is the answer, so the export is that object verbatim rather
-  // than a re-rendering of the panels
+  // the rdap response is the answer, so the export is that object verbatim
   const answer = domainResult ?? ipResult ?? asnResult
   const exportAnswer = () => {
     if (!answer) return

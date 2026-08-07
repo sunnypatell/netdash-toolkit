@@ -1,10 +1,5 @@
-// input validation for the privileged handlers, kept pure so every rule can be
-// asserted without launching electron or touching the network.
-//
-// nothing here is a substitute for spawning without a shell and passing an
-// argument array. it is the layer that decides whether renderer input is a
-// plausible host, port or resolver at all, and it bounds the work a compromised
-// renderer can ask the main process to do.
+// pure so every rule is assertable without electron. not a substitute for spawning without a
+// shell: this layer decides what renderer input is plausible and bounds the work it can ask for.
 
 export type Validation<T> = { valid: true; sanitized: T } | { valid: false; error: string }
 
@@ -15,9 +10,8 @@ export const MAX_PORTS = 4096
 // and decimal by another
 const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/
 
-// an allow-list, not a blocklist: only the characters that can legally appear
-// in an rfc 1123 hostname, an ipv4 literal or an ipv6 literal survive. that
-// covers every shell metacharacter, quote, space and control byte at once.
+// allow-list of rfc 1123 hostname and ip literal characters, which excludes every shell
+// metacharacter, quote, space and control byte at once
 const DISALLOWED_CHARS = /[^A-Za-z0-9.:-]/
 
 const HOSTNAME = /^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-zA-Z0-9-]{1,63}(?<!-))*$/
@@ -68,10 +62,7 @@ export function isHostname(value: string): boolean {
   return HOSTNAME.test(value)
 }
 
-/**
- * Accepts an RFC 1123 hostname, an IPv4 literal or an IPv6 literal and nothing
- * else. Everything that reaches a command line or the resolver goes through here.
- */
+// everything reaching a command line or the resolver goes through here
 export function validateHost(host: unknown): Validation<string> {
   if (typeof host !== "string" || host.length === 0) {
     return { valid: false, error: "Host is required" }
@@ -96,9 +87,8 @@ export function validateHost(host: unknown): Validation<string> {
 
   if (isIpv4(trimmed)) return { valid: true, sanitized: trimmed }
 
-  // an all-numeric value that is not a dotted quad is not a hostname either, and
-  // inet_aton would read "010.0.0.1" as octal and "2130706433" as a packed
-  // address. reject rather than let two layers disagree about what it means.
+  // inet_aton reads "010.0.0.1" as octal and "2130706433" as packed, so reject all-numeric
+  // values outright rather than let two layers disagree about them
   if (/^[0-9.]+$/.test(trimmed)) {
     return { valid: false, error: "Ambiguous numeric address" }
   }
@@ -113,11 +103,7 @@ export function validatePort(port: unknown): port is number {
   return typeof port === "number" && Number.isInteger(port) && port >= 1 && port <= 65535
 }
 
-/**
- * Bounds and de-duplicates the port list. Duplicates matter: without the dedupe
- * a renderer could ask for the same port thousands of times and get thousands of
- * real TCP connections for it.
- */
+// the dedupe is the point: without it a renderer gets thousands of real connections to one port
 export function validatePorts(ports: unknown): Validation<number[]> {
   if (!Array.isArray(ports)) return { valid: false, error: "Ports must be an array" }
   if (ports.length === 0) return { valid: false, error: "At least one port is required" }
@@ -175,10 +161,7 @@ const WINDOWS_BINARIES: Record<string, string> = {
   arp: "ARP.EXE",
 }
 
-/**
- * First candidate that exists wins. On Windows the binary is addressed under
- * %SystemRoot% rather than by bare name so a poisoned PATH cannot substitute it.
- */
+// first candidate that exists wins; windows resolves under %SystemRoot% so PATH cannot be poisoned
 export function resolveCommandPath(
   command: string,
   platform: string,

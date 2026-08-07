@@ -15,8 +15,7 @@ interface ResultActionsProps {
   text: string
 }
 
-// the three async panels each produce a list of structured results; this is the
-// one copy-and-export pair they share, so all three label and datestamp alike
+// one copy-and-export pair for all three async panels, so they label and datestamp alike
 export function ResultActions({ kind, measurement, results, text }: ResultActionsProps) {
   const exportResults = () => {
     downloadTextFile(

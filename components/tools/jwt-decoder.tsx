@@ -57,8 +57,7 @@ function timeToneClasses(state: DecodedJwt["time"]["state"]) {
 
 export function JWTDecoder() {
   const [token, setToken] = useState("")
-  // countdown ticks every second; without it the remaining time was frozen at
-  // whatever it was when the token was pasted
+  // ticks the countdown; without it the remaining time froze at paste time
   const [now, setNow] = useState(() => Date.now())
 
   const result = useMemo(() => inspectJwt(token, now), [token, now])

@@ -16,9 +16,7 @@ interface CopyButtonProps {
 export function CopyButton({ value, className, variant = "ghost", size = "sm" }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
-  // copyText, not navigator.clipboard directly: the helper carries the
-  // execCommand fallback for non-secure contexts, and 22 tools reach the
-  // clipboard through this button
+  // copyText, not navigator.clipboard: it carries the execCommand fallback for non-secure contexts
   const handleCopy = useCallback(async () => {
     if (!(await copyText(value))) return
     setCopied(true)

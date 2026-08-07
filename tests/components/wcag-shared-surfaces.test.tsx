@@ -14,16 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-// tests/components/wcag.test.tsx runs axe over the 48 tool components and
-// nothing else, so the account dialog, the project save and load dialogs and the
-// paste parser never reach it: a defect on any of those sat outside every gate.
-// an unnamed tab is a rule axe already ships and would have reported here on the
-// first run. the rules were never wrong; they were never pointed at these
-// components.
-//
-// 1.1.1 on the avatar is asserted in tests/unit/wcag-non-text-content.ts
-// instead: radix mounts the underlying <img> only once the image loads, which
-// never happens in happy-dom, so a rendered assertion on it proves nothing.
+// the tool axe run covers tool components only, so these shared surfaces sat outside every gate
 
 const AXE_OPTIONS: axe.RunOptions = {
   runOnly: {
@@ -45,12 +36,7 @@ function Providers({ children }: { children: React.ReactNode }) {
 }
 
 async function violationsOf(root: HTMLElement) {
-  // radix's own focus guards are appended to body as siblings of the portal, so
-  // hideOthers() marks them aria-hidden while they keep tabindex=0. that trips
-  // aria-hidden-focus on markup this app does not own and cannot reach: the
-  // guards are opacity:0, pointer-events:none, and exist only to bounce focus
-  // back into the dialog. excluded by that attribute alone, so the rule still
-  // binds on every element the app actually renders.
+  // radix's focus guards are aria-hidden with tabindex=0, and this app neither owns nor can reach them
   const results = await axe.run(
     { include: [root], exclude: [["[data-radix-focus-guard]"]] } as unknown as HTMLElement,
     AXE_OPTIONS
@@ -107,13 +93,7 @@ const SURFACES: Array<[string, () => React.ReactElement]> = [
 
 afterEach(cleanup)
 
-// radix portals every dialog to document.body, which is outside the `container`
-// testing-library returns. scanning `container` therefore handed axe an empty
-// element for the account dialog and nothing but a trigger button for the two
-// project dialogs: an unlabelled input, an alt-less image and an unnamed button
-// inside DialogContent all passed. `baseElement` is document.body, so the
-// portalled content is in the scan, and the floor below makes an empty scan
-// impossible to mistake for a clean one again.
+// radix portals to body, so scanning `container` handed axe zero nodes; this floor makes that fail
 const MINIMUM_NODES: Record<string, number> = {
   "account settings dialog": 40,
   "paste parser": 5,
@@ -136,9 +116,7 @@ describe("wcag 2.2 aa: the shared surfaces the tool suite never renders", () => 
 })
 
 describe("4.1.2 name, role, value: names that survive a narrow viewport", () => {
-  // the three account tabs label themselves with `hidden sm:inline` text, which
-  // is display:none below 640px and therefore absent from the accessibility
-  // tree. an aria-label is what remains at every width.
+  // the tab labels are `hidden sm:inline`, so under 640px only the aria-label remains
   it("every account settings tab is named without relying on a breakpoint", () => {
     render(
       <Providers>
@@ -233,8 +211,7 @@ describe("3.3.1 / 4.1.3: the shared dialogs identify their own errors", () => {
     expect(message?.closest('[role="status"], [role="alert"], [aria-live]')).not.toBeNull()
   })
 
-  // the destructive variant already announced; the default variant carried no
-  // role at all, so every success confirmation was silent
+  // the destructive variant already announced; the default carried no role, so success was silent
   it("a non-destructive Alert is a polite live region", () => {
     const { container } = render(
       <Alert>

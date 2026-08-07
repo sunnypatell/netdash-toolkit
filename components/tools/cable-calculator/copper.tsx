@@ -226,7 +226,8 @@ export function CopperPanel({ embedded }: PanelProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4" aria-live="polite">
+        {/* ResultCard announces its own result; a wrapper here nests one region in another */}
+        <div className="space-y-4">
           {result ? (
             <>
               <ResultCard

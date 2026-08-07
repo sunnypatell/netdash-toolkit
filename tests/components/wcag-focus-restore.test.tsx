@@ -7,13 +7,7 @@ import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
 import { loadTool } from "@/lib/tool-loaders"
 
-// 2.4.3. a button that removes its own row unmounts itself, and the browser
-// then drops focus to <body>. deleting several rows is the normal task in
-// these editors, so a keyboard user was thrown to the top of the document on
-// every deletion, mid-list and with no announcement.
-//
-// axe cannot see this: the markup is correct both before and after. only
-// activating the control shows it.
+// 2.4.3: a self-removing button drops focus to <body>; axe cannot see it, the markup is fine
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -32,9 +26,7 @@ const SELF_REMOVING = [
   { slug: "acl-generator", label: /^Delete rule/ },
 ] as const
 
-// url-encoder/build.tsx and vlan-manager/ports.tsx carry the same anchor. neither
-// is reachable here: their tab is driven by url state the testing adapter does
-// not propagate on click, so a case for them would assert against an empty panel.
+// url-encoder and vlan-manager/ports match too, but sit behind a tab the adapter cannot switch
 
 afterEach(cleanup)
 

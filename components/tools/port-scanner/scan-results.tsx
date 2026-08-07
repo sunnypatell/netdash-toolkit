@@ -41,8 +41,7 @@ interface ScanResultsProps {
 
 export function ScanResults({ session, onExport }: ScanResultsProps) {
   const counts = summarizeStates(session.results)
-  // the state label goes in the paste too, so "blocked by browser" cannot be read
-  // back later as a fact about the host
+  // the state label goes in the paste, so "blocked by browser" cannot read as a fact about the host
   const resultsText = session.results
     .map((result) => [result.port, result.service, stateLabel(result.state)].join("\t"))
     .join("\n")

@@ -1,12 +1,5 @@
-// user-agent analysis for the parser tool.
-//
-// bowser (MIT, 7.9kB) owns browser/os/engine detection - the hand-rolled regex
-// stack it replaced called every iOS browser Safari, legacy Edge Chrome, and
-// tested /Samsung/i against UAs that only ever say "SM-S918B". ua-parser-js is
-// deliberately NOT used: v2 is AGPL-3.0 and this repo is MIT.
-//
-// bowser does not do bots, in-app webviews, or device models beyond Apple, and no
-// UA can separate Windows 10 from 11 or macOS >= 11. those live here.
+// bowser (MIT, 7.9kB) owns browser/os/engine detection; ua-parser-js v2 is AGPL-3.0 and this
+// repo is MIT. bots, in-app webviews and non-Apple device models are ours because bowser has none.
 
 import Bowser from "bowser"
 
@@ -158,15 +151,13 @@ const BOT_NAMES = [
   "wpscan",
 ]
 
-// "bot" must be followed by a delimiter, not whitespace: phone models like
-// "CUBOT NOTE 20" would otherwise classify as crawlers.
-// "archiver" has no leading \b because ia_archiver's underscore is a word char.
+// "bot" needs a delimiter or "CUBOT NOTE 20" is a crawler; "archiver" has no leading \b
+// because the underscore in ia_archiver is already a word char
 const GENERIC_BOT_RE =
   /bot(?:[/;)\]]|$)|compatible;\s*[a-z][\w.-]*bot\b|\bcrawl(?:er)?\b|\bspider\b|\bscraper\b|\bslurp\b|archiver\b|\bfetcher\b|\bmonitoring\b/i
 
-// tokens a company uses for BOTH its link-preview fetcher and its in-app browser.
-// treating them as unconditional bots reported every Pinterest, WhatsApp, NAVER
-// and Sogou user as a crawler.
+// these tokens serve both a link-preview fetcher and an in-app browser, so an unconditional
+// bot match reported every Pinterest, WhatsApp, NAVER and Sogou user as a crawler
 const AMBIGUOUS_BOT_NAMES = ["pinterest", "whatsapp/", "naver", "sogou", "yahoo"]
 
 // a fetcher does not carry a rendering engine token; an in-app browser does
@@ -368,9 +359,7 @@ export function parseUa(ua: string, hints?: UaClientHints): UaReport {
     report.notes.push("Reduced UA - Chrome freezes the minor version; use Client Hints for detail")
   }
 
-  // bowser's own bot rules include bare vendor names like /yahoo/i, which flags
-  // YahooMobileClient on a real iPhone. only trust them when nothing else says
-  // this is a browser.
+  // bowser's bot rules include bare vendor names like /yahoo/i, which flags a real iPhone
   const bowserBot = report.device.type === "bot"
   if (bowserBot && !bot && looksLikeBrowser(trimmed)) {
     report.device.type = /\bMobi/i.test(trimmed) ? "mobile" : "desktop"
@@ -406,11 +395,7 @@ export function parseUa(ua: string, hints?: UaClientHints): UaReport {
   return hints ? applyClientHints(report, hints) : report
 }
 
-/**
- * layers navigator.userAgentData high-entropy values over the UA reading. this is
- * the only way to resolve Windows 10 vs 11 or macOS >= 11, and only works on the
- * live-browser path (Chromium, secure context).
- */
+// the only way to resolve Windows 10 vs 11 or macOS >= 11, and Chromium plus secure context only
 export function applyClientHints(report: UaReport, hints: UaClientHints): UaReport {
   const next: UaReport = {
     ...report,
@@ -450,9 +435,8 @@ export function applyClientHints(report: UaReport, hints: UaClientHints): UaRepo
 
   // fullVersionList carries the real build; the UA only has xxx.0.0.0
   const real = (hints.fullVersionList ?? []).filter((b) => !/not.a.brand/i.test(b.brand))
-  // UA-CH uses marketing names, so real Chrome sends "Google Chrome" and never
-  // "Chrome". requiring an exact match against bowser's name meant no brand ever
-  // matched, the Chromium fallback won, and every Chrome user was relabelled.
+  // UA-CH sends marketing names ("Google Chrome"), so an exact match on bowser's name never
+  // hit and the Chromium fallback relabelled every Chrome user
   const brand = real.find((b) => sameBrand(b.brand, next.browser.name))
   const chosen = brand ?? real.find((b) => !/^chromium$/i.test(b.brand)) ?? real[0]
   if (chosen) {

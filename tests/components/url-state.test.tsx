@@ -6,9 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { SubnetCalculator } from "@/components/tools/subnet-calculator"
 
-// tool inputs live in the query string so a result is a shareable link. these
-// tests cover the two halves of that claim: a link with params produces the
-// right answer on arrival, and editing an input rewrites the link.
+// inputs live in the query string, so a link both reproduces a result and is rewritten on edit
 
 function mount(searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) {
   return render(

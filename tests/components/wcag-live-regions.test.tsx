@@ -8,21 +8,9 @@ import { getToolBySlug, tools } from "@/lib/tool-registry"
 import { settle, settled } from "./settle"
 import { loadTool } from "@/lib/tool-loaders"
 
-// wcag 2.2 sc 4.1.3 status messages (aa) and sc 3.3.1 error identification (a):
-// https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
-// https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
-//
-// axe is silent on both. it can see that a live region is well formed but not
-// that a missing one should have been there, because the result only appears
-// after an async operation the rule engine never triggers. so the tools that do
-// network i/o are asserted here to carry a live region at all, and every error
-// message that names an id is asserted to be reachable from the field that
-// produced it.
-//
-// the tool list is derived from runtime.offline === false in the registry rather
-// than hardcoded, so a tool that starts doing network i/o is covered the moment
-// its registry entry says so.
+// 4.1.3 and 3.3.1: axe cannot see a region that should have been there, the result is async
 
+// from the registry, so a tool that starts doing network i/o is covered the moment it says so
 const ASYNC_TOOLS = tools.filter((tool) => tool.runtime?.offline === false)
 
 function Providers({ children }: { children: React.ReactNode }) {
@@ -35,11 +23,7 @@ function Providers({ children }: { children: React.ReactNode }) {
   )
 }
 
-// the Alert primitive became a live region in its own right so that success
-// confirmations announce (4.1.3). that must not be allowed to satisfy the
-// requirement below on a tool's behalf: a static "this runs in your browser"
-// notice mounted with the tool announces nothing when a result later arrives,
-// and counting it would turn a real gate into a green light.
+// Alert is itself a live region, and a static notice must not satisfy this for a tool
 const RESULT_REGION = ['[role="status"]', '[role="alert"]', '[role="log"]', "[aria-live]"].join(
   ", "
 )
@@ -79,8 +63,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
     }
   )
 
-  // a region that is assertive re-reads on every keystroke-driven revalidation
-  // and talks over the user. the primitives settled on polite for that reason.
+  // assertive re-reads on every keystroke and talks over the user; the primitives use polite
   it.each(ASYNC_TOOLS.map((t) => [t.slug, t] as const))(
     "%s uses no aria-live=assertive",
     async (slug, tool) => {
@@ -102,13 +85,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
 })
 
 describe("3.3.1 error identification: every message is reachable from its field", () => {
-  // the two scans below inspect the resting tree, and the resting tree of a tool
-  // nobody has typed into holds no invalid field at all: measured across all 48,
-  // zero carry aria-invalid="true" on mount and six render any aria-describedby.
-  // so the aria-invalid scan is a regression guard rather than evidence, and the
-  // evidence for 3.3.1 is the two driven cases at the bottom of this file. this
-  // records the number so it cannot quietly fall to zero and take the
-  // describedby scan with it.
+  // at rest, zero of the 48 carry aria-invalid and six render aria-describedby, so pin the six
   it("the resting scan still has something to inspect", async () => {
     let withDescribedBy = 0
     for (const tool of tools) {
@@ -128,11 +105,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
     ).toBeGreaterThanOrEqual(5)
   }, 120000)
 
-  // aria-describedby naming an id that no element carries is silently dropped by
-  // assistive technology, which looks identical to no association at all. the
-  // relay panels legitimately point at an id rendered by a sibling lazy chunk, so
-  // a reference is only a failure when nothing anywhere in the tool supplies it
-  // and the referring element is not itself in a collapsed state.
+  // a dangling id is dropped silently; relay panels legitimately point at a sibling lazy chunk
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s resolves the describedby references it renders",
     async (slug, tool) => {
@@ -148,8 +121,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
       const dangling: string[] = []
       for (const el of container.querySelectorAll("[aria-describedby]")) {
         for (const id of (el.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean)) {
-          // an error id only exists while the error is on screen, which is the
-          // correct behaviour; those are named "-error" by convention here
+          // an error id exists only while the error is on screen, named "-error" by convention
           if (id.endsWith("-error")) continue
           if (!container.querySelector(`#${CSS.escape(id)}`)) {
             dangling.push(`${el.tagName.toLowerCase()}[aria-describedby~="${id}"]`)
@@ -163,8 +135,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
     }
   )
 
-  // aria-invalid without a description tells the user something is wrong but not
-  // what, which is the half-wired state 3.3.1 is about.
+  // aria-invalid with no description says something is wrong but not what
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s pairs every aria-invalid field with a description",
     async (slug, tool) => {
@@ -191,13 +162,9 @@ describe("3.3.1 error identification: every message is reachable from its field"
   )
 })
 
-// the assertions above prove a region and an association exist in the resting
-// tree. these drive the actual interaction, because a region that is present but
-// never populated announces exactly as much as no region at all.
+// the scans above are the resting tree; a region that is never populated announces nothing
 describe("3.3.1 / 4.1.3: the association holds once a real error is produced", () => {
-  // the panel is driven directly: the parent holds this value in nuqs query
-  // state, which the testing adapter does not write back, so typing into the
-  // rendered tool would assert nothing.
+  // driven directly: the parent holds this in nuqs query state, which the adapter never writes back
   it("port-scanner names the reason a port list was rejected", async () => {
     const { default: CustomPortsPanel } = await import("@/components/tools/port-scanner/custom")
     const { container } = render(

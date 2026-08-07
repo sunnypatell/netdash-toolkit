@@ -55,7 +55,6 @@ export function SaveToProject({
     try {
       let projectId = selectedProjectId
 
-      // Create new project if selected
       if (createNew && newProjectName.trim()) {
         const newProject = await addProject({
           name: newProjectName.trim(),
@@ -73,7 +72,6 @@ export function SaveToProject({
         return
       }
 
-      // Add item to project
       await addItemToProject(projectId, {
         type: itemType,
         name: itemName,
@@ -84,7 +82,6 @@ export function SaveToProject({
 
       toast.success("Saved to project", { description: `${itemName} has been saved successfully` })
 
-      // Reset and close
       setOpen(false)
       setSelectedProjectId("")
       setCreateNew(false)

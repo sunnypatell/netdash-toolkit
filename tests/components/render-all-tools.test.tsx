@@ -7,9 +7,7 @@ import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
 import { loadTool } from "@/lib/tool-loaders"
 
-// mounts all 48 tools for real. a tool that throws on mount, imports something
-// missing, or crashes in a provider fails here in seconds, which is the cheap
-// rigorous substitute for clicking through every tool by hand.
+// the cheap rigorous substitute for clicking through every tool by hand
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -45,15 +43,13 @@ describe("every registered tool mounts", () => {
         </Providers>
       )
 
-      // lazy panels resolve after the first paint, so a synchronous assertion
-      // here would only ever see the tab strip
+      // lazy panels resolve after first paint, so a synchronous assertion sees only the tab strip
       await settled(container, slug)
 
       // something must actually be on screen; an empty mount is a broken tool
       expect(document.body.textContent?.trim().length ?? 0).toBeGreaterThan(0)
 
-      // react logs thrown render errors through console.error, so treat those as
-      // failures while ignoring jsdom's unimplemented-css noise
+      // react logs render errors through console.error, so filter out the unimplemented-css noise
       const real = errors.filter((e) => {
         const text = String(e[0] ?? "")
         return !/not implemented|Not implemented|css|jsdom/i.test(text)

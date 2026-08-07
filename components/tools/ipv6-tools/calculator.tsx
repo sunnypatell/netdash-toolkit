@@ -29,8 +29,7 @@ interface IPv6Results {
   linkLocal: string
 }
 
-// derived, never stored: every field below is a pure function of the three
-// inputs, so an invalid address can no longer sit beside a stale answer
+// derived: every field is a pure function of the three inputs, so no stale answer can survive
 function compute(
   address: string,
   mac: string,

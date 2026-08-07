@@ -1,14 +1,5 @@
-// the WIFI: URI scheme, as documented by ZXing's "Barcode Contents" reference
-// (github.com/zxing/zxing/wiki/Barcode-Contents), which is what Android's and
-// iOS's camera scanners implement.
-//
-// two rules from that page decide whether a scan joins the right network:
-//   1. the characters \ ; , : and " are escaped with a backslash, MECARD style.
-//   2. an SSID or password that "could be interpreted as hex" is wrapped in
-//      double quotes, because an unquoted all-hex value is read as hex bytes
-//      (the same rule wpa_supplicant applies to an unquoted ssid= value).
-// getting (1) wrong or skipping (2) produces a QR code that scans cleanly and
-// silently carries the wrong credential.
+// the WIFI: URI scheme per ZXing's Barcode Contents reference, which the phone scanners implement.
+// two rules decide correctness: escape \ ; , : and " MECARD style, and quote all-hex values.
 
 export type WifiSecurity = "wpa2" | "wpa3" | "wep" | "open"
 
@@ -34,10 +25,7 @@ export const SECURITY_LABELS: Record<WifiSecurity, string> = {
   open: "Open (no password)",
 }
 
-/**
- * backslash first, or the backslashes introduced by the later replacements get
- * escaped a second time and the value arrives with stray backslashes in it.
- */
+// backslash first, or the ones added by the later replacements get escaped a second time
 export function escapeWifiValue(value: string): string {
   return value
     .replace(/\\/g, "\\\\")
@@ -47,11 +35,7 @@ export function escapeWifiValue(value: string): string {
     .replace(/"/g, '\\"')
 }
 
-/**
- * true when a value would be mistaken for hex bytes if left unquoted: an even
- * number of hex digits and nothing else. odd-length hex cannot be byte pairs,
- * so quoting it would only add noise.
- */
+// even-length hex only: odd-length cannot be byte pairs, so quoting it would add noise
 export function looksLikeHex(value: string): boolean {
   return value.length >= 2 && value.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(value)
 }
@@ -88,12 +72,8 @@ export interface WifiValidation {
   warnings: string[]
 }
 
-/**
- * SSID length is an octet count, not a character count: IEEE Std 802.11-2020
- * 9.4.2.2 defines the SSID element body as 0-32 octets. A WPA passphrase is
- * 8-63 printable ASCII characters, or a 64 hex digit PSK (802.11-2020 Annex
- * J.4.1). WEP keys are 5 or 13 ASCII characters, or 10 or 26 hex digits.
- */
+// SSID is 0-32 octets, not characters (802.11-2020 9.4.2.2). WPA is 8-63 ascii or a 64-digit
+// hex PSK (Annex J.4.1); WEP is 5 or 13 ascii, or 10 or 26 hex digits.
 export function validateWifiConfig(config: WifiConfig): WifiValidation {
   const errors: string[] = []
   const warnings: string[] = []

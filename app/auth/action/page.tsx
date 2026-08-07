@@ -29,13 +29,11 @@ function AuthActionContent() {
   const [success, setSuccess] = useState(false)
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null)
 
-  // one route serves three purposes, so the static title in layout.tsx is
-  // narrowed here once ?mode= is known
+  // narrows layout.tsx's static title once ?mode= is known
   useEffect(() => {
     document.title = `${MODE_TITLES[mode ?? "invalid"] ?? MODE_TITLES.invalid} | ${SITE_NAME}`
   }, [mode])
 
-  // Verify the action code on mount
   useEffect(() => {
     const verifyCode = async () => {
       const services = await ensureAuth()
@@ -48,11 +46,9 @@ function AuthActionContent() {
       try {
         const { verifyPasswordResetCode, applyActionCode } = await import("firebase/auth")
         if (mode === "resetPassword") {
-          // Verify the password reset code and get the email
           const email = await verifyPasswordResetCode(services.auth, oobCode)
           setVerifiedEmail(email)
         } else if (mode === "verifyEmail") {
-          // Apply the email verification code
           await applyActionCode(services.auth, oobCode)
           setSuccess(true)
         }
@@ -107,7 +103,6 @@ function AuthActionContent() {
 
   const mismatch = Boolean(newPassword && confirmPassword && newPassword !== confirmPassword)
 
-  // Loading state
   if (loading) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -121,7 +116,6 @@ function AuthActionContent() {
     )
   }
 
-  // Invalid mode
   if (!mode || !oobCode) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -146,7 +140,6 @@ function AuthActionContent() {
     )
   }
 
-  // Email verification success
   if (mode === "verifyEmail" && success) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -171,7 +164,6 @@ function AuthActionContent() {
     )
   }
 
-  // Password reset success
   if (mode === "resetPassword" && success) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -196,7 +188,6 @@ function AuthActionContent() {
     )
   }
 
-  // Error state
   if (error && !verifiedEmail) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -219,7 +210,6 @@ function AuthActionContent() {
     )
   }
 
-  // Password reset form
   if (mode === "resetPassword" && verifiedEmail) {
     return (
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
@@ -276,8 +266,7 @@ function AuthActionContent() {
                   aria-invalid={mismatch}
                   aria-describedby={mismatch ? "confirm-new-password-error" : undefined}
                 />
-                {/* status, not alert: this compares on every keystroke, so an
-                    assertive region would interrupt mid-password. */}
+                {/* status, not alert: this compares on every keystroke, so assertive would interrupt mid-password */}
                 {mismatch && (
                   <p
                     id="confirm-new-password-error"
@@ -323,7 +312,6 @@ function AuthActionContent() {
     )
   }
 
-  // Fallback
   return (
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-md">

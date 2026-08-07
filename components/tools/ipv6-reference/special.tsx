@@ -7,9 +7,7 @@ import { ToolHeader } from "@/components/ui/tool-header"
 import type { PanelProps } from "@/lib/tool-panel"
 import { IPV6_SPECIAL_RANGES } from "@/lib/reference/ipv6-ranges"
 
-// the prefix rows come from the one ipv6 registry table in lib/reference. the
-// ipv4 counterpart is the only column that lives here, because it is a teaching
-// aid for this panel rather than registry data.
+// prefixes come from the ipv6 registry table in lib/reference; the ipv4 column is a teaching aid
 const IPV4_COUNTERPART: Readonly<Record<string, string>> = {
   "::/128": "0.0.0.0",
   "::1/128": "127.0.0.1",

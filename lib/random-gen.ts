@@ -1,10 +1,5 @@
-// random address generation. crypto.getRandomValues only, and every bounded
-// draw goes through rejection sampling so no value in the range is more likely
-// than another. Math.random was used here before, which is neither seeded from
-// an unpredictable source nor uniform once folded into a range.
-//
-// reserved-range knowledge is cited inline: an address generator whose "public"
-// mode emits 169.254.x.x is worse than useless in a test fixture.
+// crypto.getRandomValues with rejection sampling on every bounded draw, so no value in range is
+// likelier than another. Math.random was neither unpredictable nor uniform once folded.
 
 import { uniformIndex, type RandomFill } from "@/lib/password-gen"
 
@@ -47,11 +42,7 @@ interface Block {
 const ip = (a: number, b: number, c: number, d: number) =>
   ((a << 24) | (b << 16) | (c << 8) | d) >>> 0
 
-/**
- * IPv4 blocks that are not globally reachable, from the IANA IPv4
- * Special-Purpose Address Registry (RFC 6890 and its updates). "public" mode
- * resamples until it lands outside every one of these.
- */
+// IANA IPv4 Special-Purpose Address Registry (RFC 6890); "public" resamples until outside all
 export const NON_PUBLIC_IPV4: Block[] = [
   { start: ip(0, 0, 0, 0), prefix: 8, why: "this network (RFC 1122)" },
   { start: ip(10, 0, 0, 0), prefix: 8, why: "private (RFC 1918)" },
@@ -123,11 +114,7 @@ export function randomIPv4(kind: IPv4Kind, fill?: RandomFill): string {
 const MULTICAST_BIT = 0x01
 const LOCAL_BIT = 0x02
 
-/**
- * first octet bits per IEEE Std 802-2014 clause 8.2: the least significant bit
- * of the first octet is I/G (0 = individual), the next is U/L (1 = locally
- * administered). in the usual hex notation those are 0x01 and 0x02.
- */
+// IEEE Std 802-2014 8.2: lsb of octet 0 is I/G (0 = individual), next is U/L (1 = local)
 export function applyMacScope(firstOctet: number, scope: MacScope): number {
   let octet = firstOctet & 0xff
   switch (scope) {

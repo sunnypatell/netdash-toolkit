@@ -19,8 +19,7 @@ import {
   type RegexMatchResult,
 } from "@/lib/regex-run"
 
-// a regex engine cannot be interrupted mid-exec, so the only real protection
-// against catastrophic backtracking is running it off-thread and killing it.
+// a regex engine cannot be interrupted mid-exec, so backtracking is bounded by killing the worker
 const DEADLINE_MS = 1000
 const MAX_MATCHES = 500
 const DEBOUNCE_MS = 250
@@ -60,8 +59,7 @@ const PRESETS = [
 ]
 
 export function RegexTester() {
-  // a pattern, its flags and a sample corpus are all short and never sensitive,
-  // so the whole thing goes in the url and a reproduction is a link
+  // pattern, flags and corpus are all short and never sensitive, so a reproduction is a link
   const [query, setQuery] = useQueryStates(
     {
       pattern: parseAsString.withDefault(DEFAULT_PATTERN),
@@ -125,8 +123,7 @@ export function RegexTester() {
     const current = workerRef.current
 
     if (!current) {
-      // no Worker in this environment: same code path, but the deadline can only
-      // bound the match loop, not a single runaway exec()
+      // no Worker here: the deadline can only bound the match loop, not a single runaway exec()
       setOffThread(false)
       setStatus("done")
       setResult(runRegexMatch({ ...request, maxMatches: MAX_MATCHES }, DEADLINE_MS))

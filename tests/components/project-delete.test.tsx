@@ -1,10 +1,7 @@
 import { act, cleanup, render, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-// this suite exists because a deleted project came back after a refresh. the
-// paths that can resurrect one are: reporting success without reaching the
-// cloud, and the snapshot merge treating a deleted project as "local only" and
-// uploading it again. both are covered here against a fake firestore.
+// a deleted project came back after a refresh; the two paths that resurrect one are covered here
 
 type Doc = { id: string; data: Record<string, unknown> }
 type Emit = (docs: Doc[]) => void
@@ -133,8 +130,7 @@ afterEach(() => {
 })
 
 async function mountProvider() {
-  // firestore is loaded on demand, so the listener this mount owns does not
-  // exist yet. without waiting for it, every emit below is a silent no-op.
+  // firestore loads on demand, so without waiting for this mount's listener every emit is a no-op
   const before = emitters.length
   const { ProjectProvider, useProjects } = await import("@/contexts/project-context")
   const react = await import("react")
@@ -165,8 +161,7 @@ describe("deleting a saved project", () => {
   })
 
   it("does not report success while auth has not resolved", async () => {
-    // the token is refreshing. the project is already in the cloud, so a
-    // local-only delete leaves it there and the next snapshot restores it.
+    // the token is refreshing, so a local-only delete leaves the cloud copy for the next snapshot
     const project = seed("p1", "Site A")
     currentUser = null
     authLoading = true
@@ -205,8 +200,7 @@ describe("deleting a saved project", () => {
   })
 
   it("lets a signed-out visitor delete their own local work", async () => {
-    // auth has settled and there is no account. refusing here left a visitor
-    // told "delete failed" while a tombstone quietly removed it on next load.
+    // auth settled with no account; refusing said "delete failed" while a tombstone removed it anyway
     const project = seed("p1", "Site A")
     currentUser = null
     const { get } = await mountProvider()
@@ -281,8 +275,7 @@ describe("deleting a saved project", () => {
       result = await get().deleteProject(project.id)
     })
     expect(result?.success).toBe(false)
-    // checked before any snapshot arrives: a tombstone left here hides the
-    // project on the very next reload, with the copy still in the cloud
+    // checked before any snapshot: a tombstone here hides a project whose cloud copy is intact
     expect(
       tombstonedIds(),
       "the cloud copy is intact, so nothing should still be marked deleted"
@@ -301,8 +294,7 @@ describe("deleting a saved project", () => {
   })
 
   it("still hides a delete that is only half done when the tab reloads", async () => {
-    // the tombstone is written before the request, so a reload taken while the
-    // cloud delete is in flight must not put the project back on screen
+    // the tombstone is written before the request, so a reload mid-flight must not restore it
     seed("p1", "Site A")
     deleteBehaviour = () => new Promise<void>(() => {})
     const first = await mountProvider()
@@ -320,8 +312,7 @@ describe("deleting a saved project", () => {
   })
 
   it("removes the share records so collaborators stop seeing a deleted project", async () => {
-    // projectShares is a separate top level collection, so deleting the project
-    // document on its own leaves every collaborator pointed at something gone
+    // projectShares is a separate top level collection, so collaborators are left pointed at nothing
     const project = seed("p1", "Site A")
     const { get } = await mountProvider()
     await waitFor(() => expect(get().projects).toHaveLength(1))
@@ -334,8 +325,7 @@ describe("deleting a saved project", () => {
   })
 
   it("only lets the owning account retire a tombstone", async () => {
-    // the delete never lands: the tombstone has to outlive a detour through
-    // another account, or signing back in restores the project.
+    // the delete never lands, so the tombstone has to outlive a detour through another account
     seed("p1", "Site A")
     deleteBehaviour = () => new Promise<void>(() => {})
     const a = await mountProvider()

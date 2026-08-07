@@ -42,8 +42,7 @@ function PanelFallback() {
 }
 
 export function SecurityHeaders() {
-  // the target lives in the query string so a check is a shareable link. arriving
-  // with ?url= set scans nothing until a button is pressed.
+  // the target goes in the url, but nothing is scanned until a button is pressed
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("paste"),

@@ -42,9 +42,7 @@ import { toast } from "sonner"
 type CheckStatus = "idle" | "checking" | "complete" | "error"
 
 export function SSLChecker() {
-  // the hostname lives in the query string so a check is a shareable link, but a
-  // request still only happens when the user asks: arriving with ?host= set does
-  // not fetch anything
+  // the hostname is in the url so a check is shareable, but arriving with ?host= set does not fetch
   const [query, setQuery] = useQueryStates(
     { host: parseAsString.withDefault("") },
     { history: "replace" }
@@ -59,8 +57,7 @@ export function SSLChecker() {
 
   const runCheck = useCallback(async () => {
     const host = cleanHostname(hostname)
-    // one message, in the alert the input is described by. this used to also fire
-    // a toast that worded the same branch differently.
+    // one message, in the alert the input is described by; a toast used to word it differently
     if (!host) {
       setError("Enter a hostname, for example example.com")
       setStatus("error")
@@ -74,8 +71,7 @@ export function SSLChecker() {
     setCheckedHost(host)
 
     try {
-      // this await used to sit outside the try, so a rejection here left status
-      // on "checking" forever and stranded aria-busy with it
+      // inside the try: a rejection here used to leave status on "checking" and aria-busy with it
       setTrust(await probeBrowserTrust(host))
       setIssuances(await fetchIssuances(host))
       setStatus("complete")

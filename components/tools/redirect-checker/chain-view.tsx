@@ -80,8 +80,7 @@ export function ChainSummary({ result }: { result: TracedChain }) {
 }
 
 export function ChainView({ result }: { result: TracedChain | null }) {
-  // the source travels with the chain: a relayed trace stays labelled unverified
-  // in the file too
+  // the source travels with the chain, so a relayed trace stays labelled unverified in the file
   const exportChain = () => {
     if (!result) return
     downloadTextFile(

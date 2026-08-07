@@ -2,17 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 2.4.7 focus visible (aa) and 1.4.11 non-text contrast (aa):
-// https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html
-// https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html
-//
-// tests/unit/contrast.test.ts already forbids `ring-ring/<alpha>`, which was the
-// original bug: an opaque --ring composited to 2.09:1 through a 50% alpha. that
-// scan is keyed to the token name, so it missed `focus-visible:ring-destructive/20`
-// on the destructive button variant, where the ring is the only indicator the
-// variant has - the base `focus-visible:border-ring` paints nothing because
-// border-width is 0 on every variant except `outline`. this generalises the rule
-// to any colour: a focus indicator may not be drawn at partial alpha.
+// 2.4.7: contrast.test.ts keys on a token name and missed ring-destructive/20; this takes any colour
 
 const SOURCE_ROOTS = ["components", "app"]
 
@@ -28,8 +18,7 @@ function sourceFiles(): string[] {
 
 const FILES = sourceFiles()
 
-// assembled at runtime so tailwind never scans this file and emits the very
-// utilities it exists to forbid
+// assembled at runtime so tailwind never emits the utilities this file exists to forbid
 const FOCUS_PREFIX = "focus-visible:|focus:"
 const INDICATOR = "ring|outline|border"
 
@@ -39,12 +28,7 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
     expect(FILES).toContain(join("components", "ui", "button.tsx"))
   })
 
-  // the colour and alpha segments have to admit digits and brackets. `[a-z-]+`
-  // with `\d{1,3}\b` matched `border-ring/50` but not `border-slate-500/50` (the
-  // form tailwind's own palette produces), `border-[#f00]/50`, or an arbitrary
-  // alpha like `border-primary/[0.5]`. tests/unit/contrast.test.ts fixed exactly
-  // this for `ring`/`outline`; the `border` arm is this file's alone and stayed
-  // blind, so a translucent focus border in a palette colour passed every gate.
+  // the colour and alpha segments must admit digits and brackets: `[a-z-]+` missed `border-slate-500/50`
   const ALPHA_INDICATOR = () =>
     new RegExp(
       `(?:${FOCUS_PREFIX})(?:${INDICATOR})-(?:\\[[^\\]\\s]+\\]|[a-z0-9-]+)\\${"/"}(?:\\[[^\\]\\s]+\\]|\\d+%?)`,
@@ -55,9 +39,7 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
     return [...source.matchAll(ALPHA_INDICATOR())].map((m) => m[0])
   }
 
-  // a scanner that matches nothing passes forever, so prove it fires first. the
-  // literals are assembled at runtime so tailwind does not scan this file and
-  // emit the very utilities the scan exists to forbid.
+  // a scanner that matches nothing passes forever, so prove it fires first
   it("the indicator scan matches every shape a translucent focus indicator is written in", () => {
     const a = "/"
     for (const literal of [
@@ -100,20 +82,12 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
     ).toEqual([])
   })
 
-  // outline-none removes the indicator; something has to put one back, or the
-  // control has no visible focus state at all. a background swap counts: that is
-  // how menus indicate roving focus, and 2.4.7 does not prescribe a form.
-  //
-  // this was asserted per file, which is the wrong granularity and let a real
-  // failure through: components/ui/tabs.tsx cleared the outline on TabsContent,
-  // a genuine tab stop because radix gives the active panel tabIndex={0}, while
-  // TabsTrigger further up the same file supplied the indicator that made the
-  // file look compliant. the unit is the class expression that reaches one
-  // element, so cn() and cva() calls are read as a whole and nothing else.
+  // per file was the wrong unit: TabsTrigger's indicator hid that TabsContent cleared its outline
   it("every element that clears its outline restores a focus indicator", () => {
     const primitives = FILES.filter((f) => f.startsWith(join("components", "ui")))
     expect(primitives.length).toBeGreaterThan(20)
 
+    // a bg swap counts as an indicator: that is how menus mark roving focus
     const RESTORES = new RegExp(`(?:${FOCUS_PREFIX}|peer-focus-visible:)(?:${INDICATOR}|bg)-`)
     const offenders: string[] = []
     for (const file of primitives) {
@@ -121,9 +95,7 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
       for (const group of classExpressions(source)) {
         if (!/outline-none|outline-hidden/.test(group.classes)) continue
         if (RESTORES.test(group.classes)) continue
-        // radix focuses this container programmatically with tabIndex={-1} when
-        // the dialog opens. it is not in the tab order, so there is no keyboard
-        // focus movement onto it for 2.4.7 to bind. recorded rather than waived.
+        // radix focuses this with tabIndex={-1}, so it is not in the tab order and 2.4.7 does not bind
         if (
           file === join("components", "ui", "dialog.tsx") &&
           group.classes.includes("bg-background")
@@ -142,12 +114,7 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
   })
 })
 
-/**
- * every class expression that lands on a single element: a `cn(...)` or `cva(...)`
- * call read as one unit, plus any standalone `className="..."`. tailwind literals
- * are split across arguments constantly, so a per-literal read reports Input,
- * whose indicator sits in the second argument of the same call, as bare.
- */
+// a cn() or cva() call read as one unit: Input's indicator sits in the second argument
 function classExpressions(source: string): Array<{ index: number; classes: string }> {
   const out: Array<{ index: number; classes: string }> = []
   const consumed: Array<[number, number]> = []

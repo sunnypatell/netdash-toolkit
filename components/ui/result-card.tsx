@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Copy, Check } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { copyText } from "@/lib/clipboard"
 
@@ -23,9 +23,26 @@ interface ResultCardProps {
   badges?: Array<{ label: string; variant?: "default" | "secondary" | "destructive" | "outline" }>
   className?: string
   description?: string
-  // says what will land here, in the same dashed hint every tool uses for an
-  // empty result. callers that know the input name should say so.
+  // same dashed empty hint every tool uses; callers that know the input name should say so
   emptyHint?: ReactNode
+}
+
+// these are synchronous calculators, so every keystroke produced a whole new
+// result. announcing each one read the full table four times while the user
+// typed "1000". the render stays immediate; only the announcement waits.
+function useSettledText(text: string, delayMs = 700): string {
+  const [settled, setSettled] = useState("")
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setSettled(text), delayMs)
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [text, delayMs])
+
+  return settled
 }
 
 export function ResultCard({
@@ -59,18 +76,22 @@ export function ResultCard({
     return value.toString()
   }
 
-  let displayData: ResultData[] = []
-
-  if (data) {
-    displayData = data
-  } else if (results) {
-    // Convert legacy format to new format
-    displayData = Object.entries(results).map(([key, value]) => ({
+  const displayData: ResultData[] = useMemo(() => {
+    if (data) return data
+    if (!results) return []
+    // legacy record shape, mapped onto the data[] one
+    return Object.entries(results).map(([key, value]) => ({
       label: formatLabel(key),
       value,
       copyable: true,
     }))
-  }
+  }, [data, results])
+
+  const summary = useMemo(
+    () => displayData.map((item) => `${item.label}: ${formatValue(item.value)}`).join(". "),
+    [displayData]
+  )
+  const announcement = useSettledText(summary)
 
   return (
     <Card className={cn("", className)} role="region" aria-label={title}>
@@ -96,7 +117,11 @@ export function ResultCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3" aria-live="polite">
+      {/* the visible table is not live: it would re-read on every keystroke */}
+      <span role="status" className="sr-only">
+        {announcement}
+      </span>
+      <CardContent className="space-y-3">
         {displayData.length > 0 ? (
           displayData.map((item, index) => (
             <div

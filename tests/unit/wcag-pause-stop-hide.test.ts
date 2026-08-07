@@ -2,14 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 2.2.2 pause, stop, hide (a):
-// https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html
-//
-// the behavioural proof that the three existing clocks actually stop lives in
-// tests/components/wcag-pause-stop-hide.test.tsx, which counts the interval
-// rather than trusting the button. this is the companion that catches a *new*
-// one: an author who adds a fourth setInterval and no control would not be
-// caught there, because that suite only knows about the three it names.
+// the components suite proves the three named clocks stop; this catches a fourth nobody named
 
 const ROOTS = ["components", "app"]
 
@@ -35,8 +28,7 @@ describe("2.2.2: nothing updates automatically without a way to stop it", () => 
     for (const [file, source] of SOURCES) {
       for (const m of source.matchAll(/setInterval\s*\(/g)) {
         const line = source.slice(0, m.index).split("\n").length
-        // the guard is an early return in the same effect, so look back to the
-        // start of the enclosing useEffect rather than a fixed number of chars
+        // the guard is an early return, so look back to the start of the enclosing useEffect
         const before = source.slice(0, m.index)
         const effectStart = before.lastIndexOf("useEffect(")
         const effectBody = effectStart === -1 ? before.slice(-400) : before.slice(effectStart)
@@ -58,8 +50,7 @@ describe("2.2.2: nothing updates automatically without a way to stop it", () => 
   })
 
   it("the three known clocks are still in the set being scanned", () => {
-    // a floor of zero offenders reads identically to a scan that stopped
-    // matching. name the files it must be finding.
+    // a floor of zero reads identically to a scan that stopped matching, so name what it must find
     const withIntervals = SOURCES.filter(([, source]) => /setInterval\s*\(/.test(source)).map(
       ([file]) => file
     )

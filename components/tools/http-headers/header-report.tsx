@@ -96,8 +96,7 @@ interface DisplayField {
   description?: string
 }
 
-// rfc 9110 5.3: repeated field lines are separate lines, so each one is listed
-// rather than collapsed, which is the only way Set-Cookie stays readable
+// rfc 9110 5.3: repeated field lines stay separate, the only way Set-Cookie stays readable
 function toDisplayFields(block: ResponseBlock): DisplayField[] {
   return block.fields
     .map(({ name, value }) => {

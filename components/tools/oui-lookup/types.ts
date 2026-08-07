@@ -1,7 +1,6 @@
 import type { OuiResult } from "@/lib/oui-vendors"
 
-// the row shape and its source label live outside results.tsx so the shell can
-// build a csv export without statically pulling the results panel back in
+// outside results.tsx so the shell can build a csv export without statically pulling the panel in
 export interface LookupRow extends OuiResult {
   timestamp: number
 }

@@ -1,14 +1,5 @@
-/**
- * NetDash Toolkit - Network Handlers
- *
- * Every handler here runs in the main process and either spawns a system binary
- * or opens a socket, on input that came from the renderer. Validation, bounds and
- * lifecycle live here; the pure parts live in ./validation and ./parsers so they
- * can be tested without electron.
- *
- * @author Sunny Patel
- * @license MIT
- */
+// privileged: every handler spawns a binary or opens a socket on renderer input.
+// the pure parts live in ./validation and ./parsers so they test without electron.
 
 import { ipcMain } from "electron"
 import type { ChildProcess } from "child_process"
@@ -29,13 +20,8 @@ import {
 } from "./parsers"
 import { resolveCommandPath, validateDnsServer, validateHost, validatePorts } from "./validation"
 
-// ============================================================================
-// BOUNDS
-// ============================================================================
-
-// nothing the renderer sends may exceed these. they exist because a renderer
-// that is not the app (see navigation.ts) would otherwise decide how much work
-// the privileged process does.
+// caps on renderer input: a renderer that is not the app (see navigation.ts) would
+// otherwise decide how much work the privileged process does
 const MAX_COMMAND_MS = 120_000
 const MAX_OUTPUT_BYTES = 1_000_000
 const MAX_OPEN_SOCKETS = 256
@@ -56,17 +42,12 @@ function log(level: LogLevel, message: string, data?: Record<string, unknown>) {
   }
 }
 
-// ============================================================================
-// OPTION READING
-// ============================================================================
-
 function readOption(options: unknown, key: string): unknown {
   if (typeof options !== "object" || options === null) return undefined
   return (options as Record<string, unknown>)[key]
 }
 
-// a non-number reaching Math.min used to produce NaN and then the literal string
-// "NaN" on a command line, so the type check is not decoration
+// the type check is not decoration: a non-number used to reach the command line as "NaN"
 function clampOption(
   options: unknown,
   key: string,
@@ -84,17 +65,10 @@ function readStringOption(options: unknown, key: string): string | undefined {
   return typeof raw === "string" ? raw : undefined
 }
 
-// ============================================================================
-// RESOURCE LIFECYCLE
-// ============================================================================
-
 const activeChildren = new Set<ChildProcess>()
 const activeSockets = new Set<net.Socket>()
 
-/**
- * Called from app quit. A scan in flight owns real child processes and real
- * sockets; without this they outlive the window that asked for them.
- */
+// on quit: an in-flight scan's children and sockets outlive their window otherwise
 export function shutdownNetworkHandlers(): void {
   for (const child of activeChildren) child.kill("SIGKILL")
   activeChildren.clear()
@@ -103,9 +77,8 @@ export function shutdownNetworkHandlers(): void {
   activeSockets.clear()
 }
 
-// a global ceiling on concurrent connect attempts. the per-request concurrency
-// cap alone does not bound anything, because the renderer can invoke the handler
-// as many times as it likes.
+// global ceiling: the per-request concurrency cap bounds nothing on its own, since
+// the renderer can invoke the handler as often as it likes
 let openSockets = 0
 const socketWaiters: Array<() => void> = []
 
@@ -126,10 +99,6 @@ function releaseSocketSlot(): void {
   openSockets -= 1
   socketWaiters.shift()?.()
 }
-
-// ============================================================================
-// COMMAND EXECUTION
-// ============================================================================
 
 async function executeCommand(
   command: string,
@@ -209,8 +178,7 @@ async function executeCommand(
         // ping exits non-zero on an unreachable host but still prints its summary
         if (stdout) return resolve({ stdout, stderr })
 
-        // "cannot resolve host: Unknown host" only ever reaches stderr, and
-        // discarding it turned a name failure into a silent 100% packet loss
+        // name failures only reach stderr; discarding it showed them as 100% packet loss
         const diagnostic = stderr.trim().split("\n")[0]
         if (code !== 0) {
           return reject(new Error(diagnostic || `Command failed with exit code ${code}`))
@@ -221,8 +189,7 @@ async function executeCommand(
 
     const deadline = setTimeout(() => {
       child.kill("SIGTERM")
-      // child.killed only records that a signal was sent, so escalation cannot
-      // be conditional on it
+      // child.killed only records that a signal was sent, so escalation cannot depend on it
       escalation = setTimeout(() => child.kill("SIGKILL"), 1000)
       escalation.unref()
 
@@ -234,10 +201,6 @@ async function executeCommand(
   })
 }
 
-// ============================================================================
-// PORT SCANNING
-// ============================================================================
-
 export interface PortScanResult {
   port: number
   state: "open" | "closed" | "filtered"
@@ -245,9 +208,7 @@ export interface PortScanResult {
   responseTime?: number
 }
 
-/**
- * One real TCP connect attempt. Every exit path destroys the socket.
- */
+// one real TCP connect; every exit path destroys the socket
 export async function scanPort(
   host: string,
   port: number,
@@ -281,8 +242,7 @@ export async function scanPort(
     socket.on("timeout", () => cleanup("filtered"))
 
     socket.on("error", (err: NodeJS.ErrnoException) => {
-      // refused means something answered; everything else is indistinguishable
-      // from a filter at this layer
+      // refused means something answered; anything else is indistinguishable from a filter here
       cleanup(err.code === "ECONNREFUSED" ? "closed" : "filtered")
     })
 
@@ -295,10 +255,6 @@ export async function scanPort(
     }
   })
 }
-
-// ============================================================================
-// NETWORK HANDLERS
-// ============================================================================
 
 const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"] as const
 type DnsRecordType = (typeof DNS_RECORD_TYPES)[number]
@@ -313,8 +269,7 @@ function isDnsRecordType(value: string): value is DnsRecordType {
   return (DNS_RECORD_TYPES as readonly string[]).includes(value)
 }
 
-// a switch rather than resolve(host, type as any): it keeps the call typed and
-// it is the only way to ask node for the ttl, which the return type promises
+// a switch rather than resolve(host, type): the only way to get the ttl our return type promises
 async function resolveRecords(
   resolver: dns.promises.Resolver,
   hostname: string,
@@ -362,9 +317,6 @@ async function resolveRecords(
 export function registerNetworkHandlers() {
   log("info", "Registering network handlers")
 
-  // --------------------------------
-  // PING
-  // --------------------------------
   ipcMain.handle("network:ping", async (_event, host: unknown, options: unknown) => {
     const validation = validateHost(host)
     if (!validation.valid) {
@@ -398,8 +350,7 @@ export function registerNetworkHandlers() {
 
       const times = parsePingOutput(result.stdout, platform)
       const alive = times.length > 0
-      // prefer the figure ping printed: it knows how many probes it actually
-      // sent, which our own count is only a request for
+      // prefer ping's own figure: it knows how many probes it sent, our count is only a request
       const reportedLoss = parsePingLoss(result.stdout)
       const packetLoss =
         reportedLoss ?? Math.min(100, Math.max(0, ((count - times.length) / count) * 100))
@@ -434,9 +385,6 @@ export function registerNetworkHandlers() {
     }
   })
 
-  // --------------------------------
-  // TRACEROUTE
-  // --------------------------------
   ipcMain.handle("network:traceroute", async (_event, host: unknown, options: unknown) => {
     const validation = validateHost(host)
     if (!validation.valid) {
@@ -471,9 +419,6 @@ export function registerNetworkHandlers() {
     }
   })
 
-  // --------------------------------
-  // PORT SCAN
-  // --------------------------------
   ipcMain.handle(
     "network:portScan",
     async (_event, host: unknown, ports: unknown, options: unknown) => {
@@ -528,9 +473,6 @@ export function registerNetworkHandlers() {
     }
   )
 
-  // --------------------------------
-  // DNS LOOKUP
-  // --------------------------------
   ipcMain.handle("network:dnsLookup", async (_event, hostname: unknown, options: unknown) => {
     const hostValidation = validateHost(hostname)
     if (!hostValidation.valid) {
@@ -579,9 +521,8 @@ export function registerNetworkHandlers() {
     const startTime = Date.now()
 
     try {
-      // per-request resolver: dns.setServers is process-global and concurrent
-      // lookups would race. the timeout is explicit because the default is none,
-      // and the server address came from the renderer.
+      // per-request resolver: dns.setServers is process-global, so concurrent lookups race.
+      // timeout is explicit because the default is none and the server came from the renderer.
       const resolver = new dns.promises.Resolver({ timeout: DNS_TIMEOUT_MS, tries: 2 })
       if (serverToUse !== "system") resolver.setServers([serverToUse])
 
@@ -613,9 +554,6 @@ export function registerNetworkHandlers() {
     }
   })
 
-  // --------------------------------
-  // NETWORK INTERFACES
-  // --------------------------------
   ipcMain.handle("network:getInterfaces", async () => {
     log("debug", "Getting network interfaces")
 
@@ -649,11 +587,7 @@ export function registerNetworkHandlers() {
     return result
   })
 
-  // --------------------------------
-  // ARP TABLE
-  // --------------------------------
-  // a cache read, not a sweep. it reports the neighbours this host has already
-  // talked to and sends no packets of its own, which is why it takes no subnet.
+  // a cache read, not a sweep: sends no packets, which is why it takes no subnet
   ipcMain.handle("network:arpTable", async () => {
     log("info", "Reading ARP table")
 
@@ -670,9 +604,6 @@ export function registerNetworkHandlers() {
     }
   })
 
-  // --------------------------------
-  // SYSTEM INFO
-  // --------------------------------
   ipcMain.handle("system:getInfo", async () => {
     log("debug", "Getting system info")
 
@@ -688,10 +619,6 @@ export function registerNetworkHandlers() {
 
   log("info", "Network handlers registered successfully")
 }
-
-// ============================================================================
-// SERVICE NAME LOOKUP
-// ============================================================================
 
 const SERVICES: Record<number, string> = {
   20: "FTP-DATA",

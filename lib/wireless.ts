@@ -1,6 +1,4 @@
-// channel plans, phy rates and access point config generation for the wireless
-// tools. every table here is derived from a published allocation rather than
-// typed out by hand, so a wrong entry shows up as a failing arithmetic test.
+// every table is derived from a published allocation, so a wrong entry fails an arithmetic test
 
 export type WirelessBand = "2.4" | "5" | "6"
 export type WirelessStandard = "802.11n" | "802.11ac" | "802.11ax" | "802.11be"
@@ -47,10 +45,8 @@ export const defaultWirelessConfig: WirelessConfig = {
   dtimPeriod: "2",
 }
 
-// 2.4 GHz: centre = 2407 + 5n MHz (IEEE 802.11-2020 Annex E, Table E-1).
-// 20 MHz carriers need 25 MHz of centre separation, which leaves 1/6/11 as the
-// only three-channel non-overlapping plan. 12 and 13 exist under ETSI
-// EN 300 328 and in Japan but not under FCC 47 CFR 15.247.
+// 2.4 GHz: centre = 2407 + 5n MHz (IEEE 802.11-2020 Annex E). 25 MHz of separation leaves
+// 1/6/11 as the only non-overlapping plan; 12 and 13 are ETSI EN 300 328, not FCC 15.247.
 const NON_OVERLAPPING_24 = [1, 6, 11]
 const REGION_RESTRICTED_24 = [12, 13]
 
@@ -70,9 +66,8 @@ export const channels24: ChannelInfo[] = Array.from({ length: 13 }, (_, i) => i 
   }
 )
 
-// 5 GHz: centre = 5000 + 5n MHz. Blocks are the contiguous 20 MHz runs the
-// allocation actually provides, so maxWidth falls out of the run length
-// (FCC 47 CFR 15.407 U-NII-1/2A/2C/3, IEEE 802.11-2020 Annex E).
+// 5 GHz: centre = 5000 + 5n MHz; blocks are the contiguous 20 MHz runs, so maxWidth is the
+// run length (FCC 47 CFR 15.407 U-NII-1/2A/2C/3, IEEE 802.11-2020 Annex E).
 const BLOCKS_5: Array<{ channels: number[]; dfs: boolean; maxWidth: ChannelWidth }> = [
   { channels: [36, 40, 44, 48], dfs: false, maxWidth: 160 },
   { channels: [52, 56, 60, 64], dfs: true, maxWidth: 160 },
@@ -103,10 +98,8 @@ export const channels5: ChannelInfo[] = BLOCKS_5.flatMap(({ channels, dfs, maxWi
   }))
 )
 
-// 6 GHz: centre = 5950 + 5n MHz, n = 1, 5, 9 ... 233 gives the 59 non-overlapping
-// 20 MHz channels of U-NII-5 through U-NII-8 (FCC 47 CFR 15.407, IEEE 802.11ax-2021).
-// 320 MHz blocks are 1-61, 65-125 and 129-189; the top of the band only leaves
-// room for a 160 MHz block at 193-221 and a 40 MHz pair at 225-229.
+// 6 GHz: centre = 5950 + 5n MHz, n = 1, 5, 9 ... 233 gives the 59 channels of U-NII-5 through
+// U-NII-8 (FCC 47 CFR 15.407, IEEE 802.11ax-2021); the top of the band is too narrow for 320 MHz.
 function maxWidth6(channel: number): ChannelWidth {
   if (channel <= 189) return 320
   if (channel <= 221) return 160
@@ -131,10 +124,8 @@ export function channelsForBand(band: WirelessBand): ChannelInfo[] {
   return channels6
 }
 
-// per spatial stream phy rates at the highest mandatory-plus-optional mcs each
-// amendment defines, short guard interval. 802.11n MCS7 (64-QAM 5/6, 400 ns GI),
-// 802.11ac MCS9 (256-QAM 5/6; 20 MHz caps at MCS8), 802.11ax MCS11 (1024-QAM 5/6,
-// 0.8 us GI), 802.11be MCS13 (4096-QAM 5/6, 0.8 us GI).
+// per-stream phy rates at each amendment's top mcs, short GI: 11n MCS7, 11ac MCS9 (20 MHz
+// caps at MCS8), 11ax MCS11, 11be MCS13.
 const PHY_RATE_PER_STREAM: Record<WirelessStandard, Partial<Record<ChannelWidth, number>>> = {
   "802.11n": { 20: 72.2, 40: 150 },
   "802.11ac": { 20: 86.7, 40: 200, 80: 433.3, 160: 866.7 },
@@ -229,10 +220,8 @@ export function calculateWiFiCapacity(input: CapacityInput): CapacityResult {
   }
 }
 
-// autonomous Cisco IOS access point syntax, per the Cisco IOS Software
-// Configuration Guide for Cisco Aironet Access Points. that platform tops out at
-// 802.11ac and has no 6 GHz radio, so unsupported selections are emitted as
-// comments instead of invented commands.
+// autonomous Cisco IOS Aironet syntax: no 6 GHz radio and nothing past 802.11ac, so
+// unsupported selections emit comments rather than invented commands
 const RADIO_INTERFACE: Record<WirelessBand, string | null> = {
   "2.4": "Dot11Radio0",
   "5": "Dot11Radio1",

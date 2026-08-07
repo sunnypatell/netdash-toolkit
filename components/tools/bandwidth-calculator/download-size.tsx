@@ -57,8 +57,7 @@ export function DownloadSizePanel({ embedded }: PanelProps) {
   // computeDownloadSize returns one message at a time, so mirror its order to name the field
   const invalidField = error ? (Number(time) > 0 ? "speed" : "time") : null
 
-  // the rate keys match the other bandwidth panels, so a saved line rate loads
-  // into whichever tab you open next
+  // the rate keys match the other bandwidth panels, so a saved line rate loads into any tab
   const handleLoadFromProject = (data: Record<string, unknown>) => {
     const input = data.input as
       | { time?: string; timeUnit?: string; transferSpeed?: string; transferSpeedUnit?: string }
@@ -192,7 +191,8 @@ export function DownloadSizePanel({ embedded }: PanelProps) {
           </CardContent>
         </Card>
 
-        <div aria-live="polite">
+        {/* ResultCard owns the announcement; a wrapper here nests one live region in another */}
+        <div>
           {result ? (
             <ResultCard
               title="Download Capacity"

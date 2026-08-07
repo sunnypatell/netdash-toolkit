@@ -6,8 +6,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
-// the drawer/rail split is a mount decision, not a css one: a css-hidden radix
-// dialog would still trap focus and lock body scroll on desktop
+// a mount decision, not a css one: a css-hidden radix dialog still traps focus and locks body scroll
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false)
 
@@ -22,14 +21,11 @@ function useIsDesktop() {
   return isDesktop
 }
 
-// owns the one piece of chrome state (sidebar open/collapsed); navigation is
-// real routes now, so the nav chrome persists across tool changes and every
-// tool is deep-linkable.
+// owns the one piece of chrome state; navigation is real routes, so the chrome persists and every tool is deep-linkable
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const isDesktop = useIsDesktop()
-  // radix restores focus to its own Trigger, and this dialog is controlled with
-  // none, so remember what opened the drawer to hand focus back on close
+  // radix restores focus to its own Trigger and this dialog has none, so remember what opened the drawer
   const openedFrom = useRef<HTMLElement | null>(null)
 
   const setDrawer = useCallback((open: boolean) => {
@@ -51,8 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
-      {/* mobile drawer is a real modal dialog: radix supplies the focus trap,
-          escape handling and scroll lock the old overlay div never had */}
+      {/* a real modal dialog: radix supplies the focus trap, escape handling and scroll lock the old overlay div never had */}
       {!isDesktop && (
         <DialogPrimitive.Root open={sidebarOpen} onOpenChange={setDrawer}>
           <DialogPrimitive.Portal>
@@ -76,12 +71,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
-        {/* the scroll container is the wrapper, not <main>: a <footer> nested in
-            <main> gets no contentinfo landmark, so the site footer was invisible
-            to landmark navigation */}
-        {/* a column so main can grow: without it a short page, or one still
-            loading, leaves the footer sitting in the middle of the viewport
-            until content arrives and shoves it down */}
+        {/* the scroll container is the wrapper, not <main>: a <footer> nested in <main> gets no contentinfo landmark */}
+        {/* a column so main can grow, or a short page leaves the footer stranded mid-viewport */}
         <div className="scrollbar-slim flex flex-1 flex-col overflow-auto">
           <main
             id="main-content"

@@ -40,8 +40,7 @@ const SAMPLE = JSON.stringify(
 const TRAP_SAMPLE = '{"id": 9007199254740993, "role": "user", "role": "admin"}'
 
 export function JSONFormatter() {
-  // only the formatting options go in the url. a pasted document is routinely
-  // tens of kilobytes and is often somebody's api response, so it stays local.
+  // only formatting options go in the url: a pasted document is often somebody's api response
   const [{ indent, output: outputMode }, setQuery] = useQueryStates(
     {
       indent: parseAsStringLiteral(INDENTS).withDefault("2"),

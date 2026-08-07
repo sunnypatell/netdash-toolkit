@@ -84,19 +84,16 @@ import {
 import { useAuth } from "@/contexts/auth-context"
 import dynamic from "next/dynamic"
 
-// sharing is the only thing on this page that needs firestore, and a project
-// list works entirely offline, so the sdk stays off this route's first load
+// sharing is the only firestore dependency here, so the sdk stays off this route's first load
 const ShareProjectDialog = dynamic(
   () => import("@/components/ui/share-project-dialog").then((m) => m.ShareProjectDialog),
   { ssr: false }
 )
 import { tools } from "@/lib/tool-registry"
 
-// the registry only carries projectItemType when a tool actually renders
-// SaveToProject, so this number cannot over-promise
+// the registry only carries projectItemType when a tool renders SaveToProject, so this cannot over-promise
 const SAVE_CAPABLE_COUNT = tools.filter((t) => t.projectItemType).length
 
-// Helper to format dates
 const formatDate = (timestamp: number) => {
   return new Date(timestamp).toLocaleDateString("en-US", {
     year: "numeric",
@@ -107,7 +104,6 @@ const formatDate = (timestamp: number) => {
   })
 }
 
-// Get icon for item type
 const getItemIcon = (type: ProjectItem["type"]) => {
   const icons: Record<ProjectItem["type"], typeof Network> = {
     subnet: Calculator,
@@ -137,7 +133,6 @@ const getItemIcon = (type: ProjectItem["type"]) => {
   return icons[type] || FileText
 }
 
-// Get label for item type
 const getItemTypeLabel = (type: ProjectItem["type"]) => {
   const labels: Record<ProjectItem["type"], string> = {
     subnet: "Subnet Calculation",
@@ -196,7 +191,6 @@ export function ProjectManager() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
-  // Form states
   const [newProjectName, setNewProjectName] = useState("")
   const [newProjectDescription, setNewProjectDescription] = useState("")
   const [newProjectTags, setNewProjectTags] = useState("")
@@ -206,22 +200,18 @@ export function ProjectManager() {
   const [newItemData, setNewItemData] = useState("")
   const [newItemNotes, setNewItemNotes] = useState("")
 
-  // Update selected project when projects change
   const currentProject = selectedProject
     ? projects.find((p) => p.id === selectedProject.id) || null
     : null
 
-  // Update selected shared project when shared projects change
   const currentSharedProject = selectedSharedProject
     ? sharedProjects.find((p) => p.id === selectedSharedProject.id) || null
     : null
 
-  // Get the active project (either own or shared)
   const activeProject = projectsTab === "my" ? currentProject : currentSharedProject
   const canEdit = activeProject ? canEditProject(activeProject) : false
   const isOwner = activeProject ? isProjectOwner(activeProject) : false
 
-  // Create a new project
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) {
       toast.error("Name required", { description: "Enter a project name" })
@@ -249,7 +239,6 @@ export function ProjectManager() {
     })
   }
 
-  // Update an existing project
   const handleUpdateProject = async () => {
     if (!currentProject || !newProjectName.trim()) return
 
@@ -267,7 +256,6 @@ export function ProjectManager() {
     toast.success("Project updated", { description: "Project details have been saved" })
   }
 
-  // Delete a project
   const handleDeleteProject = async (id: string) => {
     const result = await deleteProject(id)
 
@@ -283,7 +271,6 @@ export function ProjectManager() {
     }
   }
 
-  // Add item to project
   const handleAddItem = async () => {
     if (!currentProject || !newItemName.trim()) {
       toast.error("Name required", { description: "Enter an item name" })
@@ -315,7 +302,6 @@ export function ProjectManager() {
     toast.success("Item added", { description: "Configuration has been saved to project" })
   }
 
-  // Remove item from project
   const handleRemoveItem = async (itemId: string) => {
     if (!currentProject) return
 
@@ -324,7 +310,6 @@ export function ProjectManager() {
     toast.success("Item removed", { description: "Configuration has been removed from project" })
   }
 
-  // Handle file import
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -343,11 +328,9 @@ export function ProjectManager() {
     e.target.value = ""
   }
 
-  // Copy to clipboard
   const copyToClipboard = async (text: string, field: string) => {
     try {
-      // copyText carries the execCommand fallback for non-secure contexts,
-      // which a bare navigator.clipboard call does not
+      // copyText, not navigator.clipboard: it carries the execCommand fallback for non-secure contexts
       await copyText(text)
       setCopiedField(field)
       setTimeout(() => setCopiedField(null), 2000)
@@ -356,7 +339,6 @@ export function ProjectManager() {
     }
   }
 
-  // Open edit dialog with current values
   const openEditDialog = () => {
     if (!currentProject) return
     setNewProjectName(currentProject.name)
@@ -375,8 +357,7 @@ export function ProjectManager() {
 
   return (
     <div className="space-y-6">
-      {/* matches the heading shape the other standalone pages use, rather than
-          being the one page with its own scale */}
+      {/* matches the heading shape the other standalone pages use */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="eyebrow">Projects</p>
@@ -410,7 +391,6 @@ export function ProjectManager() {
         </div>
       </div>
 
-      {/* Cloud Sync Info */}
       {!syncEnabled && isConfigured && !user && (
         <Alert>
           <Cloud className="h-4 w-4" />
@@ -422,7 +402,6 @@ export function ProjectManager() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Projects List */}
         <Card className="lg:col-span-1">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -483,7 +462,6 @@ export function ProjectManager() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Tabs for My Projects vs Shared */}
             {sharedProjects.length > 0 || syncEnabled ? (
               <Tabs
                 value={projectsTab}
@@ -666,7 +644,6 @@ export function ProjectManager() {
           </CardContent>
         </Card>
 
-        {/* Project Details */}
         <Card className="lg:col-span-2">
           <CardHeader className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -696,7 +673,6 @@ export function ProjectManager() {
               </div>
               {activeProject && (
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
-                  {/* Share button - only for owned projects */}
                   {isOwner && syncEnabled && (
                     <Button
                       aria-label="Share project"
@@ -709,7 +685,6 @@ export function ProjectManager() {
                     </Button>
                   )}
 
-                  {/* Edit button - for owners and those with edit permission */}
                   {canEdit && projectsTab === "my" && (
                     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                       <DialogTrigger asChild>
@@ -764,7 +739,6 @@ export function ProjectManager() {
                     </Dialog>
                   )}
 
-                  {/* Export - available for owners */}
                   {isOwner && currentProject && (
                     <Button
                       aria-label="Export project"
@@ -777,7 +751,6 @@ export function ProjectManager() {
                     </Button>
                   )}
 
-                  {/* Delete - only for owners */}
                   {isOwner && currentProject && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -1081,7 +1054,6 @@ export function ProjectManager() {
         </Card>
       </div>
 
-      {/* Share Project Dialog */}
       {currentProject && (
         <ShareProjectDialog
           project={currentProject}

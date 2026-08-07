@@ -1,17 +1,5 @@
-// fails the docs build when a hand-written page states a tool count that the
-// registry no longer agrees with.
-//
-// this exists because it already happened: `conflict-checker` moved from
-// `offline: false` to `offline: true`, the offline count went 36 -> 37, and
-// eleven hand-written sentences across nine pages silently became wrong. the
-// generated pages under tools/ re-derive their numbers on every build and were
-// fine; only the prose drifted, which is exactly the failure mode prose has.
-//
-// the check is deliberately blunt. it does not try to understand a sentence. it
-// finds numbers sitting in one of the shapes the docs use to state a count, and
-// asserts each one is a number the registry can currently justify. a phrasing
-// this does not recognise is not checked, so add the shape here rather than
-// working around it.
+// fails the docs build when hand-written prose states a tool count the registry no longer backs.
+// shape-based, not semantic: an unrecognised phrasing goes unchecked, so add the shape here.
 
 import { readdir, readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
@@ -55,10 +43,8 @@ export function buildExpectations(registry) {
   }
 }
 
-// each rule is [label, regex, set of numbers the capturing group may legally
-// hold, optional guard]. keep the regexes anchored to words that only ever
-// surround a tool count, so an rfc section number, a byte figure or a header
-// grade cannot match.
+// [label, regex, legal values, optional guard]. anchor each regex to words that only surround a
+// tool count, so an rfc section number or byte figure cannot match.
 function rules(expected) {
   const anyToolCount = new Set([
     expected.total,
@@ -69,10 +55,7 @@ function rules(expected) {
   ])
 
   return [
-    // "48 tools", "48-tool dashboard", "all 48 tools".
-    // "tool files" is a different unit (tools are directories now, so files
-    // outnumber tools), and "N tools whose ..." is a subset by construction.
-    // both produced false positives that failed the build.
+    // "tool files" is a different unit and "N tools whose ..." is a subset; both false-positived
     [
       "a total tool count",
       /\b(\d+)[ -]tools?\b(?!\s+(?:files?|whose)\b)/g,
@@ -92,13 +75,8 @@ function rules(expected) {
       /\b(\d+) (?:of them never|offline|fully working)/g,
       new Set([expected.offline]),
     ],
-    // "the 12 networked tools", "12 networked tools"
-    //
-    // the bare "the other N" shape used to be accepted here too, and it failed
-    // the build on "the other 9 are not input errors" in the accessibility
-    // conformance record, which counts error surfaces rather than tools. a
-    // count is only checkable when the prose says what is being counted, so
-    // the anchor is the word "networked tools" and the prose carries it.
+    // anchored on "networked tools": a bare "the other N" matched "the other 9 are not input
+    // errors", which counts error surfaces rather than tools
     ["a networked tool count", /\b(\d+) networked tools?\b/g, new Set([expected.networked])],
     // "seven categories" is spelled out in prose, so only the numeral form is checked
     ["a category count", /\b(\d+) categories\b/g, new Set([expected.categories])],

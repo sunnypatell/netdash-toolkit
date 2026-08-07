@@ -26,14 +26,12 @@ import {
 
 const OPEN_EVENT = "netdash:open-command-palette"
 
-// lets the header button (and anything else) open the palette without threading
-// state through the shell
+// lets the header button open the palette without threading state through the shell
 export function openCommandPalette() {
   document.dispatchEvent(new CustomEvent(OPEN_EVENT))
 }
 
-// resolved after mount, never during render: the server has no navigator and a
-// hardcoded "Ctrl" is wrong for half the audience
+// after mount, never during render: the server has no navigator and a hardcoded "Ctrl" is wrong for half the audience
 export function useShortcutKey() {
   const [key, setKey] = useState("Ctrl")
   useEffect(() => {
@@ -43,8 +41,7 @@ export function useShortcutKey() {
   return key
 }
 
-// the shortcut is the whole point of the palette, so it gets stated in plain
-// text wherever there is room rather than living only in a tooltip
+// the shortcut is the whole point, so it is stated in plain text rather than living only in a tooltip
 export function ShortcutHint({ className }: { className?: string }) {
   const key = useShortcutKey()
   return (
@@ -64,8 +61,7 @@ export function ShortcutHint({ className }: { className?: string }) {
 const RECENTS_KEY = "netdash-recent-tools"
 const RECENTS_MAX = 6
 
-// external: the docs are static astro output under public/, so the router has
-// never heard of them and has to be bypassed
+// external: the docs are static astro output under public/, so the router has never heard of them
 const pages: Array<{ href: string; label: string; icon: LucideIcon; external?: boolean }> = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/projects", label: "Projects", icon: FolderOpen },
@@ -103,8 +99,7 @@ export function rememberToolVisit(slug: string) {
 const groupClass =
   "text-muted-foreground [&_[cmdk-group-heading]]:bg-popover [&_[cmdk-group-heading]]:sticky [&_[cmdk-group-heading]]:top-0 [&_[cmdk-group-heading]]:z-10 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[0.6875rem] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:tracking-[0.08em] [&_[cmdk-group-heading]]:uppercase"
 
-// 48 tools reachable only by scrolling a category tree, and search existed on
-// exactly one route. cmd+k works from anywhere.
+// 48 tools reachable only by scrolling a category tree, and search existed on exactly one route
 export function CommandPalette() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -112,8 +107,7 @@ export function CommandPalette() {
   const [recents, setRecents] = useState<ToolDefinition[]>([])
 
   useEffect(() => {
-    // sc 2.1.4: a bare "/" was bound here and met none of the three exceptions,
-    // so it was dropped. cmd/ctrl+k uses a modifier and is out of scope.
+    // sc 2.1.4: a bare "/" met none of the three exceptions and was dropped; cmd/ctrl+k uses a modifier
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
@@ -292,8 +286,7 @@ function PaletteItem({
           <span className="hidden sm:inline">Sends data</span>
         </span>
       )}
-      {/* text never rides on opacity here: the selected row is bright emerald, and
-          a faded label on it drops under 4.5:1 */}
+      {/* text never rides on opacity here: a faded label on the selected emerald row drops under 4.5:1 */}
       {showCategory && (
         <span className="text-muted-foreground shrink-0 text-xs group-data-[selected=true]:text-current">
           {categoryLabelOf(tool)}

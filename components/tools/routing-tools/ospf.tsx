@@ -163,7 +163,8 @@ export function OspfPanel({ config, onConfigChange }: OspfPanelProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4" aria-live="polite">
+        {/* ResultCard owns the announcement; a wrapper here nests one live region in another */}
+        <div className="space-y-4">
           {(issues.errors.length > 0 || issues.warnings.length > 0) && (
             <Alert variant={issues.errors.length ? "destructive" : "default"}>
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />

@@ -1,13 +1,9 @@
 import { act, cleanup, render, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-// the sdk is loaded on demand now, so every step that used to be a plain module
-// read is a network fetch that can fail. this suite covers the two ways that
-// turns into a broken shell: a header spinner that never stops, and a cached
-// rejection that makes retrying sign-in impossible.
+// the sdk loads on demand, so every step that was a module read is now a fetch that can fail
 
-// setup.ts mocks @/lib/firebase for the whole project; these tests want the
-// real session detection
+// setup.ts mocks @/lib/firebase project-wide; these tests want the real session detection
 vi.unmock("@/lib/firebase")
 
 const h = vi.hoisted(() => {
@@ -67,8 +63,7 @@ describe("detecting a session without the sdk", () => {
   })
 
   it("never rejects when reading the indexedDB global itself throws", async () => {
-    // firefox with site storage blocked: the getter throws, and a rejection
-    // here escapes into the auth provider and leaves it loading forever
+    // firefox with site storage blocked: a rejection here leaves the auth provider loading forever
     Object.defineProperty(globalThis, "indexedDB", {
       configurable: true,
       get() {
@@ -123,8 +118,7 @@ describe("loading the sdk", () => {
     const { ensureAuth } = await import("@/lib/firebase")
 
     await expect(ensureAuth()).rejects.toThrow()
-    // a rejected promise used to stay cached, so sign-in stayed broken for the
-    // rest of the session with no way back
+    // a rejected promise used to stay cached, so sign-in stayed broken for the rest of the session
     await expect(ensureAuth()).resolves.not.toBeNull()
     h.authImport.fn = h.good
   })

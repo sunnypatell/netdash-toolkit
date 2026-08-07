@@ -23,8 +23,7 @@ import {
 } from "@/lib/oui-vendors"
 import { sourceLabel, type LookupRow } from "./types"
 
-// one chunk per panel: the shell no longer carries both input modes and the
-// results table
+// one chunk per panel: the shell carries neither input mode nor the results table
 const SingleLookupPanel = lazy(() =>
   import("./single").then((m) => ({ default: m.SingleLookupPanel }))
 )
@@ -48,14 +47,11 @@ function PanelFallback() {
 }
 
 export function OUILookup() {
-  // the single address and the offline switch live in the query string, so a
-  // lookup is a link. the bulk textarea does not: a pasted inventory is a list
-  // of the devices on someone's network, which has no business in a url.
+  // the address and offline switch go in the url; a pasted inventory is somebody's device list
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("single"),
-      // a bundled prefix, so the default action resolves offline rather than
-      // firing a request at a third party on first click
+      // a bundled prefix, so the default resolves offline instead of hitting a third party
       mac: parseAsString.withDefault("00:50:56:AA:BB:CC"),
       offline: parseAsBoolean.withDefault(false),
     },
@@ -68,8 +64,7 @@ export function OUILookup() {
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<string | null>(null)
 
-  // prefix -> vendor (null = confirmed remote miss). survives re-renders so a
-  // repeated prefix never costs a second request.
+  // prefix -> vendor (null = confirmed remote miss); survives re-renders so a repeat is free
   const cache = useRef(new Map<string, string | null>())
   const cached = useCallback((oui: string) => cache.current.has(oui), [])
 

@@ -34,8 +34,7 @@ const SIZE_PRESETS = [
   { label: "100 GB", size: "100", unit: "GB" as SizeUnit },
 ]
 
-// nominal line rates, not measured throughput. the ethernet figures are the
-// ieee 802.3 signalling rates; the wi-fi figures are peak phy rates.
+// nominal line rates: ieee 802.3 signalling for ethernet, peak phy for wi-fi
 const COMMON_SPEEDS = [
   { name: "Dial-up (V.90)", speed: "56", unit: "Kbps" as SpeedUnit },
   { name: "ADSL2+", speed: "24", unit: "Mbps" as SpeedUnit },
@@ -263,7 +262,8 @@ export function TransferTimePanel({ embedded }: PanelProps) {
           </CardContent>
         </Card>
 
-        <div aria-live="polite">
+        {/* ResultCard owns the announcement; a wrapper here nests one live region in another */}
+        <div>
           {result ? (
             <ResultCard
               title="Transfer Time"

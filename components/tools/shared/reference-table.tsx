@@ -39,14 +39,12 @@ interface ReferenceTableProps<T> {
   maxHeight?: string
 }
 
-// rows are searched on the same strings the table renders, so anything visible
-// is findable
+// searched on the same strings the table renders, so anything visible is findable
 export function searchableText<T>(columns: readonly ReferenceColumn<T>[], row: T): string[] {
   return columns.map((column) => column.text(row))
 }
 
-// CopyButton's silent behaviour with a per-row name: a table of 33 rows would
-// otherwise put 33 buttons called "Copy to clipboard" in the tab order
+// per-row name: 33 rows would otherwise put 33 buttons called "Copy to clipboard" in the tab order
 function RowCopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
 

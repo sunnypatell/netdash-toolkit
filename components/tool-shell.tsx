@@ -15,8 +15,7 @@ import { loadTool } from "@/lib/tool-loaders"
 
 const RELATED_MAX = 6
 
-// most arrivals on a tool route come from a search engine and have never seen
-// the home page. without this the only way out was a collapsed icon rail.
+// most arrivals come from search and have never seen the home page; a collapsed icon rail was the only way out
 function Breadcrumb({ tool }: { tool: ToolDefinition }) {
   const category = categories.find((c) => c.id === tool.category)
   return (
@@ -77,10 +76,7 @@ function RelatedTools({ tool }: { tool: ToolDefinition }) {
   )
 }
 
-// a spinner over a blank region tells you nothing while a chunk downloads. the
-// registry already knows the title and the purpose, so the placeholder says
-// both, in the geometry ToolHeader actually renders, which keeps the swap from
-// jumping.
+// the placeholder repeats ToolHeader's title and geometry so the swap does not jump
 function ToolSkeleton({ tool }: { tool: ToolDefinition }) {
   const Icon = tool.icon
   return (
@@ -103,10 +99,7 @@ function ToolSkeleton({ tool }: { tool: ToolDefinition }) {
   )
 }
 
-// react.lazy, not next/dynamic: next/dynamic registers every loader it sees in
-// the page's loadable manifest, so building a slug->component map at module
-// scope made all 48 tool chunks preload on every tool page. resolving the
-// loader at runtime keeps the page to its own chunk.
+// react.lazy, not next/dynamic: a module-scope next/dynamic map preloaded all 48 tool chunks on every tool page
 export function ToolShell({ slug }: { slug: string }) {
   // feeds the palette's Recent group from actual navigation
   useEffect(() => {
@@ -116,20 +109,14 @@ export function ToolShell({ slug }: { slug: string }) {
   const tool = useMemo(() => getToolBySlug(slug), [slug])
   const Tool = useMemo(() => (tool ? lazy(() => loadTool(tool.slug)) : null), [tool])
 
-  // unreachable in practice: dynamicParams=false 404s unknown slugs at the
-  // router before this renders
+  // unreachable: dynamicParams=false 404s unknown slugs before this renders
   if (!tool || !Tool) return null
 
   return (
     <div className="space-y-4">
       <Breadcrumb tool={tool} />
 
-      {/* the badge used to exist only in the loading skeleton, so it vanished the
-          moment the tool arrived, and 9 of the 12 tools that leave the device
-          said nothing at all once loaded. one slot, every tool, same wording.
-          this mirrors RuntimeDisclosure's own null case exactly: it renders when a
-          tool does i/o, or when it is offline but has a desktop-only capability
-          worth naming. conflict-checker is the second kind. */}
+      {/* one slot, every tool: the badge lived only in the loading skeleton, so it vanished the moment the tool arrived */}
       {tool.runtime && !(tool.runtime.offline && !tool.runtime.desktopOnly?.length) && (
         <div className="border-l-2 border-amber-500/50 pl-3">
           <RuntimeDisclosure tool={tool} />

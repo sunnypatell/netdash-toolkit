@@ -43,8 +43,7 @@ export function UptimeCalculator() {
   const { uptime, period } = query
   const periodMeta = findPeriod(period)!
 
-  // downtime is a pure function of a percentage and a period length, so the
-  // figures follow the input rather than waiting on a Calculate button
+  // pure function of a percentage and a period, so figures follow typing with no Calculate button
   const results = useMemo(() => analyzeUptime(Number.parseFloat(uptime)), [uptime])
 
   const selected = results?.byPeriod.find((entry) => entry.period.id === period) ?? null

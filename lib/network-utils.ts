@@ -47,13 +47,10 @@ export function intToIpv4(int: number): string {
   return [(int >>> 24) & 0xff, (int >>> 16) & 0xff, (int >>> 8) & 0xff, int & 0xff].join(".")
 }
 
-// js shift counts are mod 32, so `0xffffffff << 32` is `<< 0`; without the
-// guard a /0 produced mask 255.255.255.255 and default routes came out as
-// host routes in every config generator
+// js shift counts are mod 32, so an unguarded /0 gave mask 255.255.255.255, not 0.0.0.0
 export function prefixToMaskInt(prefix: number): number {
-  // the range check alone let a fraction through, and js coerces the shift count
-  // to an int32, so 32 - 24.5 became a shift of 7 and a /24 request returned a
-  // /25 mask. the ipv6 sibling already guarded this.
+  // isInteger, not just a range check: a fractional prefix truncates the shift count and
+  // returned the wrong mask. the ipv6 sibling already guarded this.
   if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
     throw new Error("Invalid prefix length (must be 0-32)")
   }
@@ -168,9 +165,7 @@ export function expandIPv6(ip: string): string {
   const suffix = zone === undefined ? "" : `%${zone}`
   let core = address
 
-  // rfc 4291 2.5.5 ipv4-embedded form ("::ffff:192.168.1.1"): convert the
-  // trailing dotted quad into two hex groups so the rest of the pipeline
-  // only ever sees 8 hex groups
+  // rfc 4291 2.5.5 embedded ipv4: fold the dotted quad to hex so the pipeline only sees 8 groups
   const v4Match = core.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
   if (v4Match) {
     const v4Int = ipv4ToInt(v4Match[2])
@@ -207,9 +202,8 @@ export function expandIPv6(ip: string): string {
   )
 }
 
-// rfc 5952 s5: an address that embeds an ipv4 address keeps the dotted quad.
-// scoped to ::ffff:0:0/96 only. the deprecated ipv4-compatible ::/96 also
-// contains :: and ::1, which must never render as ::0.0.0.0 or ::0.0.0.1.
+// rfc 5952 s5: embedded ipv4 keeps its dotted quad, but scoped to ::ffff:0:0/96 only. the
+// deprecated ::/96 also contains :: and ::1, which must not render as ::0.0.0.0.
 function ipv4MappedText(groups: readonly string[]): string | null {
   if (!groups.slice(0, 5).every((g) => g === "0000") || groups[5] !== "ffff") return null
   const high = Number.parseInt(groups[6], 16)
@@ -277,10 +271,7 @@ export function compressIPv6(ip: string): string {
   return groups.map((g) => g.replace(/^0+/, "") || "0").join(":") + suffix
 }
 
-// solicited-node multicast per rfc 4291 2.7.1: ff02::1:ff00:0/104 with the low
-// 24 bits of the interface identifier appended. single source of truth - the
-// copies in lib/network-testing.ts and components/tools/ipv6-tools.tsx should
-// import this instead of re-deriving it.
+// rfc 4291 2.7.1: ff02::1:ff00:0/104 with the low 24 bits of the interface identifier
 export function solicitedNodeMulticast(ip: string): string {
   const groups = expandIPv6(splitIPv6Zone(ip).address).split(":")
   if (groups.length !== 8) {
@@ -334,7 +325,6 @@ export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
   const isMulticast = (firstGroup & 0xff00) === 0xff00
   const isPrivate = (firstGroup & 0xfe00) === 0xfc00 || isLinkLocal
 
-  // Calculate solicited-node multicast for unicast addresses
   const solicitedNode = !isMulticast && !isLoopback ? solicitedNodeMulticast(expanded) : undefined
 
   return {
@@ -379,9 +369,7 @@ export function cidrToRange(cidr: string): CIDRRange {
   }
 }
 
-// merge input blocks into the minimal set of aligned cidrs covering the same
-// addresses. the old implementation emitted prefixes one bit too specific
-// (including an impossible /33) and silently dropped half of merged ranges.
+// minimal set of aligned cidrs; the old version emitted an impossible /33 and dropped ranges
 export function summarizeCIDRs(cidrs: string[]): string[] {
   if (cidrs.length === 0) return []
 

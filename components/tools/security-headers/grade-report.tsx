@@ -76,8 +76,7 @@ export function GradeReport({ input }: { input: GradeInput }) {
   const grade = gradeBlock(final)
   const hstsHonoured = hstsIsHonoured(final, input.url)
 
-  // the source travels with the grade: a relayed result stays labelled unverified
-  // in the file too
+  // the source travels with the grade, so a relayed result stays labelled unverified in the file
   const exportGrade = () => {
     downloadTextFile(
       JSON.stringify(

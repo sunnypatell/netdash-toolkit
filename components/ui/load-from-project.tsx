@@ -24,7 +24,6 @@ import { FolderOpen, FileDown, Users } from "lucide-react"
 import { useProjects, type ProjectItem } from "@/contexts/project-context"
 import { toast } from "sonner"
 
-// Combined project type for unified handling
 interface CombinedProject {
   id: string
   name: string
@@ -55,7 +54,6 @@ export function LoadFromProject({
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [selectedItemId, setSelectedItemId] = useState<string>("")
 
-  // Combine own projects and shared projects
   const allProjects = useMemo((): CombinedProject[] => {
     const ownProjects: CombinedProject[] = projects.map((p) => ({
       id: p.id,
@@ -75,13 +73,11 @@ export function LoadFromProject({
     return [...ownProjects, ...shared]
   }, [projects, sharedProjects])
 
-  // Filter projects that have items of the specified type
   const projectsWithItems = useMemo(
     () => allProjects.filter((project) => project.items.some((item) => item.type === itemType)),
     [allProjects, itemType]
   )
 
-  // Get items from selected project that match the type
   const selectedProject = useMemo(
     () => projectsWithItems.find((p) => p.id === selectedProjectId),
     [projectsWithItems, selectedProjectId]

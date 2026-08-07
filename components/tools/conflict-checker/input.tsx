@@ -13,8 +13,7 @@ export type ParsedNetworkData = (ParsedARPEntry | ParsedDHCPLease | ParsedMACEnt
 export interface ConflictInputPanelProps {
   analysis: ConflictAnalysisResult | null
   onDataParsed: (data: ParsedNetworkData) => void
-  // the parse succeeded but the analysis rejected the result, and the message
-  // for that is rendered by the parent
+  // the parse succeeded but the analysis rejected it; the parent renders that message
   analysisErrorId?: string
 }
 

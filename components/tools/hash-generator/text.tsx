@@ -22,8 +22,7 @@ export function TextPanel({
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
 }: TextPanelProps) {
-  // a hash is over bytes, and utf-8 makes those two numbers differ for any
-  // non-ascii input, so showing only the character count is misleading
+  // utf-8 makes bytes and characters differ, and a hash is over bytes
   const byteLength = value ? encodeText(value).length : 0
 
   return (

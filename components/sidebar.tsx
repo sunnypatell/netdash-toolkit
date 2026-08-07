@@ -40,14 +40,12 @@ const standalonePages = [
   { href: "/about", label: "About", icon: Info },
 ]
 
-// the docs are static astro output under public/, not a next route, so this one
-// has to be a real navigation rather than a Link
+// the docs are static astro output under public/, not a next route, so this must be a real navigation
 const DOCS_URL = "/docs/"
 
 const GROUPS_KEY = "netdash-sidebar-groups"
 
-// one row, three states, no colour-only signalling: active also carries
-// aria-current and an emerald rail, so it survives greyscale
+// active also carries aria-current and an emerald rail, so the state survives greyscale
 const rowClass = (active: boolean) =>
   cn(
     "group relative flex h-9 w-full items-center gap-2 rounded-md pr-2 text-sm transition-colors",
@@ -63,8 +61,7 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
   const [filter, setFilter] = useState("")
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
-  // trailingSlash:true means exported pages navigate with a trailing slash;
-  // compare with it stripped so active detection works in dev and export
+  // trailingSlash:true means exported pages navigate with a trailing slash, so compare with it stripped
   const isActive = (href: string) => {
     const clean = pathname?.replace(/\/$/, "") || "/"
     return clean === href || (href === "/" && clean === "")
@@ -76,8 +73,7 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
-  // 48 links in one flat open tree meant the bottom half was always below the
-  // fold. groups start closed and remember what you opened.
+  // 48 links in one flat open tree left the bottom half below the fold; groups start closed and are remembered
   useEffect(() => {
     try {
       const raw = localStorage.getItem(GROUPS_KEY)
@@ -236,8 +232,7 @@ export function Sidebar({ isOpen, onToggle, variant = "desktop" }: SidebarProps)
                           className={cn("size-4 shrink-0", active && "text-primary")}
                           aria-hidden="true"
                         />
-                        {/* no category column here: at 256px it costs more label
-                            width than it buys context. the palette has the room. */}
+                        {/* no category column: at 256px it costs more label width than it buys. the palette has the room. */}
                         <span className="min-w-0 flex-1 truncate">{tool.label}</span>
                       </Link>
                     )

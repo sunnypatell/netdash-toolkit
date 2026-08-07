@@ -7,8 +7,7 @@ import { Building2, Info, Mail, MapPin, Phone, User } from "lucide-react"
 import { flattenEntities, redactedFieldNames, type RDAPDomainResponse } from "@/lib/rdap"
 
 export default function ContactsPanel({ domain }: { domain: RDAPDomainResponse }) {
-  // rfc 9083 5.1: entities nest, and the abuse contact usually sits one level
-  // under the registrar. a flat pass dropped it and showed "no contacts".
+  // rfc 9083 5.1: entities nest, so a flat pass dropped the abuse contact under the registrar
   const contacts = flattenEntities(domain.entities)
   const redacted = redactedFieldNames(domain)
 

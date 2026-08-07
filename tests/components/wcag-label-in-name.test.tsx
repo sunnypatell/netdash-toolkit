@@ -7,18 +7,7 @@ import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
 import { loadTool } from "@/lib/tool-loaders"
 
-// wcag 2.2 sc 2.5.3 label in name, level a:
-// https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html
-//
-// where a control shows text, its accessible name has to contain that text. this
-// matters for speech input: someone saying "click copy" needs the name to include
-// the word they can see. the failure mode is an aria-label written as a fuller
-// description that drops the visible word, for example a button reading "Copy"
-// named "Duplicate this row".
-//
-// axe ships label-content-name-mismatch for this, but it is an experimental rule
-// and carries no wcag tag, so the tag-filtered run in tests/components/wcag.test.tsx
-// does not include it. this checks all 48 tools directly.
+// 2.5.3: axe's label-content-name-mismatch is experimental and untagged, so the tagged run skips it
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -50,13 +39,7 @@ function normalise(text: string): string {
 
 type Mismatch = { html: string; visible: string; name: string }
 
-// the criterion binds user interface components, not labelled containers. a
-// role="region" wrapper named after its heading is correct and must not be
-// reported, so the query is restricted to things a user can operate.
-// value-displaying controls are deliberately absent. the text inside a textarea,
-// a text input, or a closed combobox is that control's *value*, not its label,
-// and 2.5.3 constrains the label. including them reported a readonly textarea
-// holding a generated router config as a mismatch against its own aria-label.
+// operable controls only: a textarea's text is its value, not its label, so 2.5.3 does not bind it
 const CONTROLS = [
   "button",
   "a[href]",
@@ -74,15 +57,10 @@ const CONTROLS = [
   .map((selector) => `${selector}[aria-label]`)
   .join(", ")
 
-// open findings recorded in docs/src/content/docs/accessibility-conformance.md, in files owned by
-// other workstreams. matched rather than counted, so a fix elsewhere does not
-// break this suite: an entry that stops matching simply stops being used.
-// the dns-tools "Clear cache" / "Clear DNS cache" mismatch was the only entry
-// and is fixed, so nothing is exempt any more.
+// matched rather than counted, so a fix elsewhere just stops using an entry instead of failing
 const KNOWN_OPEN: Array<{ visible: string; name: string }> = []
 
-// a radix select trigger is a <button role="combobox">, so the tag alone is not
-// enough to tell a command from a value display
+// a radix select trigger is a <button role="combobox">, so the tag alone is not enough
 const VALUE_ROLES = new Set(["combobox", "textbox", "searchbox", "spinbutton", "listbox"])
 
 function mismatchesIn(container: HTMLElement): Mismatch[] {
@@ -92,8 +70,7 @@ function mismatchesIn(container: HTMLElement): Mismatch[] {
     const name = normalise(element.getAttribute("aria-label") ?? "")
     const visible = visibleText(element)
     if (!visible || !name) continue
-    // a control whose visible text is only digits or punctuation carries no word
-    // for a speech user to say, so there is nothing for the name to contain
+    // visible text with no letters carries no word for a speech user to say
     if (!/[a-z]/.test(visible)) continue
     if (name.includes(visible)) continue
     out.push({ html: element.outerHTML.slice(0, 140), visible, name })
@@ -114,8 +91,7 @@ describe("2.5.3 label in name", () => {
           <Tool />
         </Providers>
       )
-      // this suite ran synchronously until now, so on the 19 tools whose panels
-      // are lazy it inspected the tab strip: 6 of reference-hub's 61 buttons
+      // ran synchronously until now: on the 19 lazy tools it saw 6 of reference-hub's 61 buttons
       await settled(container, slug)
       const mismatches = mismatchesIn(container).filter(
         (m) => !KNOWN_OPEN.some((known) => known.visible === m.visible && known.name === m.name)

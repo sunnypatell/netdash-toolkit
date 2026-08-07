@@ -73,8 +73,7 @@ export function IPEnumerator() {
 
   const { summary, error } = useMemo(() => summarize(cidr), [cidr])
 
-  // enumeration is bounded by the display limit, so typing a /8 no longer
-  // allocates 65k strings per keystroke
+  // bounded by the display limit, so typing a /8 no longer allocates 65k strings per keystroke
   const { addresses, available } = useMemo(() => {
     if (!summary) return { addresses: [] as string[], available: 0 }
     const options = {

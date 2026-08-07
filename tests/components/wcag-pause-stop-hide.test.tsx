@@ -5,19 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { settled } from "./settle"
 
-// wcag 2.2 sc 2.2.2 pause, stop, hide (a):
-// https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html
-//
-// three tools start a clock on mount that updates indefinitely: the current-time
-// card, the jwt countdown, and the cron next-run projection. the criterion wants
-// a mechanism to stop it, and "there is a button" is not the same claim as "the
-// thing actually stops". so the interval itself is what is asserted here.
-//
-// only setInterval is faked. setTimeout stays real because settled() waits on it,
-// and vi.getTimerCount() then counts exactly the intervals these tools own: it
-// goes from one to zero when the pause takes effect, and back to one on resume.
-// deleting the `if (paused) return` guard leaves the button toggling its
-// aria-pressed while the clock keeps running, and that is the input this fails on.
+// 2.2.2: "there is a button" is not "the clock stops", so the interval itself is what is asserted
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -77,6 +65,7 @@ function toggleOf(container: HTMLElement): HTMLButtonElement {
 }
 
 beforeEach(() => {
+  // setTimeout stays real because settled() waits on it, so the count is exactly these intervals
   vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] })
 })
 
@@ -103,8 +92,7 @@ describe("2.2.2: every automatically updating clock can be stopped", () => {
 
     const toggle = toggleOf(container)
 
-    // 2.2.2 wants a mechanism, and a mechanism a sighted user cannot identify is
-    // not one. an icon-only toggle would leave this empty.
+    // a mechanism a sighted user cannot identify is not one; an icon-only toggle leaves this empty
     expect(
       toggle.textContent?.trim(),
       `${slug}'s pause control carries no visible label text`

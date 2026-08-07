@@ -2,8 +2,7 @@ import type { MetadataRoute } from "next"
 import { tools } from "@/lib/tool-registry"
 import { canonical } from "@/lib/site"
 
-// generated from the registry, so tools promoted from tab panels to first-class
-// routes appear here without anyone remembering to add them
+// generated from the registry, so newly promoted tool routes appear without anyone remembering
 export const dynamic = "force-static"
 
 export default function sitemap(): MetadataRoute.Sitemap {

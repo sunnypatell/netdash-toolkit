@@ -1,9 +1,5 @@
-// regex evaluation, kept as one self-contained function so the same code can run
-// on the main thread (tests, no-Worker environments) and inside a blob worker.
-//
-// blob worker over `new Worker(new URL(...))` on purpose: this app ships as a
-// static export (and as electron loading those files), so nothing here may
-// depend on the bundler emitting a separate worker chunk at a known url.
+// one self-contained function so it runs on the main thread and inside a blob worker. blob rather
+// than new Worker(new URL(...)): a static export cannot rely on a bundler-emitted worker chunk.
 
 export interface RegexMatchRequest {
   id?: number
@@ -39,11 +35,7 @@ export interface RegexMatchResult {
   deadlineHit: boolean
 }
 
-/**
- * Written deliberately plainly - no imports, no closure over module scope, no
- * spread/destructuring - because `buildRegexWorkerSource` ships its own
- * `toString()` into a worker where none of that context exists.
- */
+// no imports or module-scope closure on purpose: this ships via toString() into a worker
 export function runRegexMatch(request: RegexMatchRequest, deadlineMs: number): RegexMatchResult {
   const started = Date.now()
   const result: RegexMatchResult = {
@@ -74,9 +66,8 @@ export function runRegexMatch(request: RegexMatchRequest, deadlineMs: number): R
   const repeat = request.flags.indexOf("g") !== -1 || request.flags.indexOf("y") !== -1
   const unicode = request.flags.indexOf("u") !== -1 || request.flags.indexOf("v") !== -1
 
-  // ecma-262 22.2.7.3 AdvanceStringIndex. under u/v, exec snaps lastIndex back to
-  // the start of the code point, so a bare +1 inside a surrogate pair is undone
-  // and the zero-length loop never terminates.
+  // ecma-262 22.2.7.3: under u/v exec snaps lastIndex to the code point start, so a bare +1
+  // inside a surrogate pair is undone and the zero-length loop never terminates
   const advance = function (from: number): number {
     const next = from + 1
     if (!unicode || next >= input.length) return next
@@ -133,11 +124,7 @@ export function runRegexMatch(request: RegexMatchRequest, deadlineMs: number): R
   return result
 }
 
-/**
- * Serialise the matcher into worker source. `runRegexMatch` is embedded via
- * toString() rather than by name so a minifier renaming it cannot break the
- * generated code.
- */
+// embedded via toString() rather than by name so a minifier renaming it cannot break the source
 export function buildRegexWorkerSource(deadlineMs: number): string {
   return [
     "var __ndRegexRun = " + runRegexMatch.toString() + ";",

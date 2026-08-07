@@ -81,8 +81,7 @@ const SAMPLES = [
 ]
 
 export function UserAgentParser() {
-  // a UA string is ~150 characters and is not a secret, so it goes in the url:
-  // "here is what this crawler sends" is the whole point of sharing this tool
+  // a UA string is short and not a secret, and sharing one is the whole point of this tool
   const [{ ua: queryUa }, setQuery] = useQueryStates(
     { ua: parseAsString.withDefault("") },
     { history: "replace" }

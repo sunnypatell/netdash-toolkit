@@ -1,10 +1,5 @@
-// cli output parsers for ping, traceroute and arp, plus the argument builders
-// that produce the output they parse. pure on purpose: they are tested against
-// recorded output from macos, linux and windows rather than live probes.
-//
-// the rule they follow is that a line the tool actually produced never
-// disappears. an unparsed hop or arp row reads to the caller as "nothing was
-// there", which is the one failure mode worth engineering against here.
+// pure, and tested against recorded macos/linux/windows output rather than live probes.
+// the invariant: a line the tool produced never disappears, since a hole reads as "nothing there".
 
 export interface TracerouteHop {
   hop: number
@@ -22,18 +17,14 @@ export interface ArpEntry {
 
 const lines = (output: string): string[] => output.split(/\r?\n/)
 
-/**
- * Round-trip times, one per probe that was answered.
- */
+// one entry per probe that was answered
 export function parsePingOutput(output: string, platform: string): number[] {
   const times: number[] = []
   const seen = new Set<string>()
 
   for (const line of lines(output)) {
-    // windows localizes the "time" label (Zeit=, temps=, tiempo=) but always
-    // prints it as "<label>=<n>ms" with no space after the separator, while its
-    // summary block prints " = <n>ms" with one. matching the shape instead of
-    // the english word stops non-english installs reporting 100% loss.
+    // windows localizes the "time" label but always prints "<label>=<n>ms" with no space, while
+    // its summary uses " = <n>ms"; matching shape not the english word fixes non-english installs
     const match =
       platform === "win32"
         ? line.match(/[=<](\d+(?:[.,]\d+)?)\s?ms/i)
@@ -53,12 +44,8 @@ export function parsePingOutput(output: string, platform: string): number[] {
   return times
 }
 
-/**
- * Packet loss as ping itself reported it, or null when it printed no summary
- * (an unreachable name, or a run our own timeout killed). Every implementation
- * prints exactly one percentage and it is the loss figure, so the last percent
- * in the output is locale-independent.
- */
+// null when ping printed no summary. every implementation prints exactly one percentage and it
+// is the loss figure, so taking the last percent is locale-independent.
 export function parsePingLoss(output: string): number | null {
   const matches = Array.from(output.matchAll(/(\d+(?:[.,]\d+)?)\s*%/g))
   if (matches.length === 0) return null
@@ -90,9 +77,8 @@ function parseWindowsHop(line: string): TracerouteHop | null {
   let ip = "*"
   let hostname: string | undefined
 
-  // "one.one.one.one [192.0.2.1]" without -d, a bare address with it. anything
-  // else is the localized "request timed out" text, which still has to produce a
-  // hop rather than a hole in the numbering.
+  // anything unmatched is the localized "request timed out", which still needs a hop rather
+  // than a hole in the numbering
   const named = rest.match(/([^\s[\]]+)\s+\[([0-9A-Fa-f.:]+)\]\s*$/)
   if (named) {
     hostname = named[1]

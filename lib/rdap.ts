@@ -1,6 +1,4 @@
-// rdap response handling. rfc 9083 defines the json, rfc 9224 defines the
-// bootstrap that says which server is authoritative for a given name, and rfc
-// 8056 registers the epp-derived status values registries actually send.
+// rfc 9083 for the json, rfc 9224 for the bootstrap, rfc 8056 for epp-derived status values
 
 export type LookupType = "domain" | "ip" | "asn"
 
@@ -113,10 +111,7 @@ export function cleanQuery(input: string, type: LookupType): string {
 
 export type StatusTone = "positive" | "negative" | "warning" | "neutral"
 
-// rfc 9083 10.2.2 registers the base status values and rfc 8056 registers the
-// epp-derived ones. matching had to become exact: substring matching graded
-// "inactive" as positive because it contains "active", and "revoked" as positive
-// because it contains "ok".
+// exact match, not substring: "inactive" contains "active" and "revoked" contains "ok"
 const POSITIVE_STATUSES = new Set(["active", "validated"])
 const NEGATIVE_STATUSES = new Set([
   "inactive",
@@ -163,9 +158,7 @@ export function classifyStatus(status: string): StatusTone {
   return "neutral"
 }
 
-// rfc 7095 3: a jcard property is [name, parameters, value type, value], and a
-// structured value is an array. keeping every tel and email matters because a
-// single-slot parse let a fax number overwrite the voice number.
+// rfc 7095 3: keep every tel and email, since a single-slot parse let a fax overwrite the voice
 export function parseJCard(entity: RDAPEntity, depth = 0): ParsedContact {
   const contact: ParsedContact = {
     handle: entity.handle,
@@ -252,9 +245,7 @@ export function parseRdapError(status: number, body: unknown, query: string): Rd
   }
 }
 
-// rdap.org is a bootstrap redirector: it reads the rfc 9224 registries and
-// forwards to whichever registry or rir is authoritative, so the answer comes
-// from that server and not from rdap.org itself.
+// rdap.org only redirects per rfc 9224, so the answer comes from the authoritative registry
 const BOOTSTRAP = "https://rdap.org"
 
 export const RDAP_PATHS: Record<LookupType, string> = {

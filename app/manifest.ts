@@ -5,8 +5,7 @@ import { SITE_NAME, SITE_TAGLINE } from "@/lib/site"
 export const dynamic = "force-static"
 
 export default function manifest(): MetadataRoute.Manifest {
-  // shortcuts come from the registry's own popularity flag rather than a
-  // hand-kept list that would rot as tools are added
+  // shortcuts come from the registry's popularity flag rather than a hand-kept list that would rot
   const shortcuts = tools
     .filter((tool) => tool.popular)
     .slice(0, 4)

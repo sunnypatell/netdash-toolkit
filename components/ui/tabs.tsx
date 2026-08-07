@@ -45,8 +45,7 @@ function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPr
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      // radix gives the active panel tabIndex={0}, so it is a real tab stop and
-      // outline-none alone left it with no focus indicator at all (2.4.7)
+      // radix gives the active panel tabIndex={0}, so outline-none alone left it with no focus indicator (2.4.7)
       className={cn(
         "focus-visible:ring-ring flex-1 outline-none focus-visible:ring-[3px] focus-visible:outline-1",
         className

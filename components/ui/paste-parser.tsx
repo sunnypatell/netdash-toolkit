@@ -17,9 +17,7 @@ const PARSE_ERROR_ID = "paste-parser-error"
 
 interface PasteParserProps {
   onDataParsed: (data: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]) => void
-  // the caller may reject the parsed data further downstream, which this
-  // component cannot see. it renders that message and names its id here so the
-  // paste field points at both its own parse failure and the caller's.
+  // the caller may reject the parsed data downstream and names its message id here, so the field points at both
   describedBy?: string
   invalid?: boolean
 }
@@ -131,8 +129,7 @@ Vlan    Mac Address       Type        Ports
             </TabsList>
 
             <TabsContent value="paste" className="space-y-4">
-              {/* a placeholder is not an accessible name: it disappears on first
-                  keystroke and is not exposed as one */}
+              {/* a placeholder is not an accessible name: it disappears on first keystroke */}
               <Label htmlFor="paste-parser-input">Network data to parse</Label>
               <Textarea
                 id="paste-parser-input"
@@ -159,8 +156,7 @@ Vlan    Mac Address       Type        Ports
                   id="file-upload"
                   aria-describedby="file-upload-description"
                 />
-                {/* the input is the tab stop and it is clipped, so the ring is
-                    painted on the visible control instead (2.4.7) */}
+                {/* the input is the tab stop and it is clipped, so the ring paints on the visible control (2.4.7) */}
                 <label htmlFor="file-upload">
                   <Button
                     variant="outline"

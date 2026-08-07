@@ -13,18 +13,12 @@ import {
 import { db } from "@/lib/firebase"
 import type { Permission, ProjectShare, UserIndexEntry } from "@/types/sharing"
 
-/**
- * Normalize email for use as document ID
- * Replaces characters not allowed in Firestore document IDs
- */
+// strips the characters firestore rejects in a document id
 function normalizeEmail(email: string): string {
   return email.toLowerCase().replace(/[.#$[\]\/]/g, "_")
 }
 
-/**
- * Create or update user index entry
- * Called on login to make user searchable by email
- */
+// called on login; the index is what makes a user findable by email
 export async function updateUserIndex(
   uid: string,
   email: string,
@@ -49,10 +43,6 @@ export async function updateUserIndex(
   )
 }
 
-/**
- * Look up user by email address
- * Returns null if user not found or not registered
- */
 export async function findUserByEmail(email: string): Promise<UserIndexEntry | null> {
   if (!db) return null
 
@@ -66,10 +56,6 @@ export async function findUserByEmail(email: string): Promise<UserIndexEntry | n
   return null
 }
 
-/**
- * Share a project with another user
- * Creates both the sharedWith entry on the project and a projectShares document
- */
 export async function shareProject(
   ownerId: string,
   ownerEmail: string,
@@ -83,7 +69,6 @@ export async function shareProject(
 
   const batch = writeBatch(db)
 
-  // Update project's sharedWith map
   const projectRef = doc(db, "users", ownerId, "projects", projectId)
   batch.update(projectRef, {
     [`sharedWith.${targetUserId}`]: {
@@ -96,7 +81,7 @@ export async function shareProject(
     updatedAt: Date.now(),
   })
 
-  // Create projectShare document for recipient's query
+  // flat mirror of the share: "shared with me" cannot be a query across every owner's projects subcollection
   const shareRef = doc(collection(db, "projectShares"))
   batch.set(shareRef, {
     id: shareRef.id,
@@ -115,9 +100,6 @@ export async function shareProject(
   await batch.commit()
 }
 
-/**
- * Remove a user's access to a shared project
- */
 export async function unshareProject(
   ownerId: string,
   projectId: string,
@@ -127,14 +109,12 @@ export async function unshareProject(
 
   const batch = writeBatch(db)
 
-  // Remove from project's sharedWith map
   const projectRef = doc(db, "users", ownerId, "projects", projectId)
   batch.update(projectRef, {
     [`sharedWith.${targetUserId}`]: deleteField(),
     updatedAt: Date.now(),
   })
 
-  // Find and delete the projectShare document
   const sharesQuery = query(
     collection(db, "projectShares"),
     where("projectId", "==", projectId),
@@ -148,11 +128,7 @@ export async function unshareProject(
   await batch.commit()
 }
 
-/**
- * Delete every share record for a project
- * Called when the owner deletes the project, so collaborators stop seeing a
- * project that no longer exists and the records do not sit in firestore forever
- */
+// on project delete; without it collaborators keep seeing a project that is gone
 export async function deleteAllSharesForProject(ownerId: string, projectId: string): Promise<void> {
   if (!db) return
 
@@ -169,10 +145,6 @@ export async function deleteAllSharesForProject(ownerId: string, projectId: stri
   await batch.commit()
 }
 
-/**
- * Subscribe to projects shared with the current user
- * Returns an unsubscribe function
- */
 export function subscribeToSharedProjects(
   userId: string,
   callback: (shares: ProjectShare[]) => void
@@ -193,9 +165,6 @@ export function subscribeToSharedProjects(
   })
 }
 
-/**
- * Update permission level for a shared user
- */
 export async function updateSharePermission(
   ownerId: string,
   projectId: string,
@@ -206,14 +175,13 @@ export async function updateSharePermission(
 
   const batch = writeBatch(db)
 
-  // Update project's sharedWith map
   const projectRef = doc(db, "users", ownerId, "projects", projectId)
   batch.update(projectRef, {
     [`sharedWith.${targetUserId}.permission`]: newPermission,
     updatedAt: Date.now(),
   })
 
-  // Update projectShare document
+  // the mirror carries its own copy of permission, so both writes are required
   const sharesQuery = query(
     collection(db, "projectShares"),
     where("projectId", "==", projectId),
@@ -230,10 +198,6 @@ export async function updateSharePermission(
   await batch.commit()
 }
 
-/**
- * Get a shared project by its path
- * Used to load the full project data when viewing a shared project
- */
 export async function getSharedProject(
   projectPath: string
 ): Promise<Record<string, unknown> | null> {
@@ -248,9 +212,6 @@ export async function getSharedProject(
   return null
 }
 
-/**
- * Subscribe to a shared project for real-time updates
- */
 export function subscribeToSharedProject(
   projectPath: string,
   callback: (project: Record<string, unknown> | null) => void
@@ -268,9 +229,6 @@ export function subscribeToSharedProject(
   })
 }
 
-/**
- * Check if the current sharedWith map is empty and update isShared flag
- */
 export async function updateIsSharedFlag(ownerId: string, projectId: string): Promise<void> {
   if (!db) return
 

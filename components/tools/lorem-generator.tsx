@@ -73,9 +73,7 @@ function CountSlider({
 }
 
 export function LoremGenerator() {
-  // the options live in the query string; the text does not. placeholder prose
-  // is drawn at random, so a link cannot promise to reproduce it and should not
-  // pretend to - the Generate button is the honest contract.
+  // options go in the url; the text does not, since a random draw cannot be reproduced from a link
   const [query, setQuery] = useQueryStates(
     {
       mode: parseAsStringLiteral(MODES).withDefault("paragraphs"),

@@ -33,8 +33,7 @@ const changelog = changelogData.releases
 const offlineCount = offlineToolCount()
 const networkTools = tools.filter((t) => !isOffline(t))
 
-// every tool that names a desktop-only capability, so the browser/desktop split
-// is stated once instead of re-explained inside five tools
+// the browser/desktop split is stated once here instead of re-explained inside five tools
 const desktopTools = tools.filter((t) => (t.runtime?.desktopOnly?.length ?? 0) > 0)
 
 const algorithms = [

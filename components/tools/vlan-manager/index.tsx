@@ -15,9 +15,7 @@ import type { SwitchPort, VLAN } from "@/lib/vlan-utils"
 import { nextId } from "@/lib/id"
 import type { PortRow, Vendor, VLANRow } from "./types"
 
-// only the vendor and the active tab go in the url. the VLAN and port tables are
-// arbitrarily long lists of free text, which do not survive a query string, so
-// they stay in state and travel through Save to Project instead.
+// only the vendor and tab go in the url; the VLAN and port tables are too long for a query string
 const VlansPanel = lazy(() => import("./vlans").then((m) => ({ default: m.VlansPanel })))
 const PortsPanel = lazy(() => import("./ports").then((m) => ({ default: m.PortsPanel })))
 const ConfigPanel = lazy(() => import("./config").then((m) => ({ default: m.ConfigPanel })))

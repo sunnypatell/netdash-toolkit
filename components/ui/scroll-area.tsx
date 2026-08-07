@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils"
 function ScrollArea({
   className,
   children,
-  // the viewport is the element that takes focus, so a name belongs on it
-  // rather than on the root a screen reader never lands on
+  // the viewport is what takes focus, so the name belongs on it rather than the root
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   ...props
@@ -20,9 +19,7 @@ function ScrollArea({
       className={cn("relative", className)}
       {...props}
     >
-      {/* tabIndex: a scroll region that is not focusable cannot be scrolled by
-          keyboard at all, so any content past the fold is unreachable (2.1.1).
-          it also gives the focus-visible ring below something to paint on. */}
+      {/* tabIndex: an unfocusable scroll region cannot be scrolled by keyboard (2.1.1), and gives the ring something to paint on */}
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
         tabIndex={0}

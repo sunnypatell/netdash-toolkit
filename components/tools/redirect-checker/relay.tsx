@@ -28,8 +28,7 @@ export default function RelayPanel({ target, onTrace, onBusyChange }: RelayPanel
   }
 
   const run = async () => {
-    // the alert the input is described by carries the message; a toast beside it
-    // said the same thing twice
+    // the alert the input is described by carries the message; a toast said the same thing twice
     if (!target) {
       setError("Enter a URL first")
       return

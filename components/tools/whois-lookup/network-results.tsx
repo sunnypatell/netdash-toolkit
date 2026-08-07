@@ -6,8 +6,7 @@ import { Building2, Hash, Network } from "lucide-react"
 import { flattenEntities, type RDAPASNResponse, type RDAPIPResponse } from "@/lib/rdap"
 import { EventList, StatusBadges } from "./shared"
 
-// ip and asn answers are single objects rather than a tabbed view, so they live
-// here beside the domain panels instead of inflating the shell
+// ip and asn answers are single objects, so they live here rather than inflating the shell
 
 function OrganizationList({ entities }: { entities: RDAPIPResponse["entities"] }) {
   return (

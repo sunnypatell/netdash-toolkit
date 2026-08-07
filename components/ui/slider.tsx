@@ -11,17 +11,14 @@ const Slider = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SliderPrimitive.Root
     ref={ref}
-    // min-h-6: radix binds pointerdown on the root, so the root is the target
-    // 2.5.8 measures. a 20px thumb would otherwise make it 20px tall.
+    // min-h-6: radix binds pointerdown on the root, so the root is what 2.5.8 measures
     className={cn("relative flex min-h-6 w-full touch-none items-center select-none", className)}
     {...props}
   >
     <SliderPrimitive.Track className="bg-secondary relative h-2 w-full grow overflow-hidden rounded-full">
       <SliderPrimitive.Range className="bg-primary absolute h-full" />
     </SliderPrimitive.Track>
-    {/* the thumb, not the root, is the element with role="slider", so the name
-        has to land here or axe reports aria-input-field-name and screen readers
-        announce an unnamed slider. callers label the Slider, so forward it. */}
+    {/* the thumb carries role="slider", so the name has to land here or it announces unnamed */}
     <SliderPrimitive.Thumb
       aria-label={props["aria-label"]}
       aria-labelledby={props["aria-labelledby"]}

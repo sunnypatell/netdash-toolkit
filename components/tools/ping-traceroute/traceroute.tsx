@@ -65,8 +65,7 @@ export default function TraceroutePanel({ host, onHostChange, isNative }: Tracer
         return
       }
 
-      // a browser cannot set per-packet ttl, so there is no way to discover hops.
-      // this used to return 5 hardcoded hops with random jitter.
+      // a browser cannot set per-packet ttl; this used to return 5 hardcoded hops with jitter
       setUnsupported(true)
       toast.error("Traceroute needs the desktop app", {
         description: "Browsers cannot set packet TTL, so intermediate hops cannot be discovered.",

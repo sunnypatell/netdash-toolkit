@@ -1,8 +1,6 @@
 import type { SwitchPort, VLAN } from "@/lib/vlan-utils"
 
-// nextId rather than the array index or the VLAN id itself: removing a row in
-// the middle made react reuse the wrong dom node, and a loaded project can
-// legitimately contain two rows with the same VLAN id while it is being fixed
+// rowId, not the array index or VLAN id: react reused dom nodes on removal, and ids can duplicate
 export interface VLANRow extends VLAN {
   rowId: string
 }

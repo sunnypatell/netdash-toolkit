@@ -2,16 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 1.1.1 non-text content, level a:
-// https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html
-//
-// axe's image-alt rule catches this and is already in the tagged run, but that
-// run only mounts the 48 tool components. two <AvatarImage> call sites live in
-// the account and share dialogs, which no suite rendered, so an <img> with no
-// alt attribute at all sat outside every gate. this is asserted from the source
-// instead of from a render because radix mounts the underlying <img> only after
-// the image itself loads, which never happens in happy-dom: a rendered
-// assertion on it passes whether or not the attribute is there.
+// the two AvatarImage call sites sit outside the tool axe run, and radix mounts <img> only on load
 
 function tsxFiles(): string[] {
   const out: string[] = []
@@ -23,8 +14,7 @@ function tsxFiles(): string[] {
   return out
 }
 
-// prose mentioning a tag is not a call site: avatar.tsx explains this very rule
-// in a comment containing the literal <img>
+// prose mentioning a tag is not a call site: avatar.tsx explains this rule in a comment
 function withoutComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1")
 }

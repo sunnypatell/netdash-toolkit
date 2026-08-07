@@ -5,8 +5,7 @@ import { ProjectManager } from "@/components/project-manager"
 export const metadata: Metadata = {
   title: "Projects",
   description: "Save, organize, and sync your network engineering work",
-  // without its own canonical this inherits the root layout's, which points at
-  // "/" and tells crawlers to fold this page into the homepage
+  // without its own canonical this inherits the root layout's, which points at "/" and folds the page into the homepage
   alternates: { canonical: canonical("/projects") },
   openGraph: {
     title: "Projects",

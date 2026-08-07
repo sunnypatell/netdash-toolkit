@@ -15,17 +15,12 @@ import { IPInput } from "@/components/ui/ip-input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Slider } from "@/components/ui/slider"
 
-// behavioural evidence for the fixes made in components/ui, which propagate to
-// all 48 tools. the static suites in tests/unit assert the class strings; these
-// assert that the resulting components actually behave. each test names the
-// success criterion it exists for.
+// the static suites assert the class strings in components/ui; these assert the behaviour
 
 afterEach(cleanup)
 
 describe("2.1.1 keyboard / 4.1.2 name, role, value", () => {
-  // eight tool call sites put an onClick on a Badge. as a span that gave them no
-  // role, no tab stop, and no key handling, so they could not be operated by
-  // keyboard at all. the primitive now renders a button when it is clickable.
+  // eight tool call sites put onClick on a Badge; as a span it had no role, tab stop or key handling
   it("a Badge with a click handler is a real button", async () => {
     const onClick = vi.fn()
     render(<Badge onClick={onClick}>/24</Badge>)
@@ -49,8 +44,7 @@ describe("2.1.1 keyboard / 4.1.2 name, role, value", () => {
     expect(screen.queryByRole("button")).toBeNull()
   })
 
-  // 2.5.8: a clickable badge is a target, so it needs a 24px floor that a
-  // decorative badge does not
+  // 2.5.8: a clickable badge is a pointer target, a decorative one is not
   it("2.5.8: a clickable Badge carries the 24px minimum height", () => {
     render(<Badge onClick={() => {}}>100</Badge>)
     expect(screen.getByRole("button").className).toContain("min-h-6")
@@ -58,9 +52,7 @@ describe("2.1.1 keyboard / 4.1.2 name, role, value", () => {
 })
 
 describe("2.1.1 keyboard: scrollable regions", () => {
-  // a scroll container that cannot take focus cannot be scrolled from the
-  // keyboard, so anything past the fold is unreachable. this bit the reference
-  // tables and the about page, which hold static text with no focusable children.
+  // a scroll container that cannot take focus strands everything past the fold
   it("a ScrollArea viewport is focusable", async () => {
     const { container } = render(
       <ScrollArea className="h-8">
@@ -77,8 +69,7 @@ describe("2.1.1 keyboard: scrollable regions", () => {
 })
 
 describe("2.5.8 target size (minimum)", () => {
-  // both of these paint smaller than 24px by design. the pointer target is grown
-  // with a positioned pseudo-element so the visual design is untouched.
+  // both paint under 24px by design; the target is grown with a pseudo-element, the design untouched
   it("a Checkbox grows its hit area to 24px without resizing its box", () => {
     render(<Checkbox aria-label="Include symbols" />)
     const box = screen.getByRole("checkbox").className
@@ -121,8 +112,7 @@ describe("2.1.2 no keyboard trap / 2.4.3 focus order", () => {
 
     await userEvent.keyboard("{Escape}")
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
-    // forwardRef on Button exists for exactly this; without it the ref is
-    // dropped and focus is stranded on the body
+    // forwardRef on Button exists for this; without it focus is stranded on the body
     expect(document.activeElement).toBe(trigger)
   })
 
@@ -141,8 +131,7 @@ describe("2.1.2 no keyboard trap / 2.4.3 focus order", () => {
   })
 })
 
-// IPInput is controlled, so a no-op onChange would swallow every keystroke and
-// the validation state under test would never change
+// IPInput is controlled, so a no-op onChange would swallow every keystroke
 function ControlledIPInput() {
   const [value, setValue] = React.useState("")
   return <IPInput label="Network address" value={value} onChange={setValue} />

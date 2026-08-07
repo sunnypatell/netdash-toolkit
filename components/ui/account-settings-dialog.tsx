@@ -36,28 +36,23 @@ interface AccountSettingsDialogProps {
 export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDialogProps) {
   const { user } = useAuth()
 
-  // Profile state
   const [displayName, setDisplayName] = useState("")
   const [photoURL, setPhotoURL] = useState("")
 
-  // Email state
   const [newEmail, setNewEmail] = useState("")
   const [emailPassword, setEmailPassword] = useState("")
 
-  // Password state
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const passwordMismatch = !!newPassword && !!confirmPassword && newPassword !== confirmPassword
 
-  // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   const isGoogleUser = user?.providerData[0]?.providerId === "google.com"
 
-  // Reset form when dialog opens
   useEffect(() => {
     if (open && user) {
       setDisplayName(user.displayName || "")
@@ -105,7 +100,6 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
     resetState()
 
     try {
-      // Re-authenticate first
       if (isGoogleUser) {
         await reauthenticateWithPopup(user, new GoogleAuthProvider())
       } else {
@@ -159,7 +153,6 @@ export function AccountSettingsDialog({ open, onOpenChange }: AccountSettingsDia
     resetState()
 
     try {
-      // Re-authenticate first
       if (isGoogleUser) {
         await reauthenticateWithPopup(user, new GoogleAuthProvider())
       } else {

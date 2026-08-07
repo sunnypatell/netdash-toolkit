@@ -82,7 +82,6 @@ export function ShareProjectDialog({
     resetMessages()
 
     try {
-      // Look up user by email
       const targetUser = await findUserByEmail(email.trim())
 
       if (!targetUser) {
@@ -176,7 +175,6 @@ export function ShareProjectDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Add new user */}
           <div className="space-y-2">
             <Label htmlFor="share-invite-email">Invite by email</Label>
             {/* stacks on mobile: side by side the fixed-width select squeezed the email field to ~123px */}
@@ -241,14 +239,11 @@ export function ShareProjectDialog({
             )}
           </div>
 
-          {/* Current shares */}
           <div className="space-y-2">
-            {/* not a Label: there is no form control to bind to, and the thing it
-                names is the focusable scroll region */}
+            {/* not a Label: there is no form control to bind to */}
             <p className="text-sm leading-none font-medium">People with access</p>
             <ScrollArea aria-label="People with access" className="h-[220px] rounded-md border">
               <div className="space-y-1 p-2">
-                {/* Owner */}
                 <div className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md p-2">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar className="h-8 w-8 shrink-0">
@@ -268,7 +263,6 @@ export function ShareProjectDialog({
                   </Badge>
                 </div>
 
-                {/* Shared users */}
                 {sharedUsers.map(([userId, share]) => {
                   const PermIcon = permissionConfig[share.permission].icon
                   return (

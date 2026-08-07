@@ -26,8 +26,7 @@ function formatThroughput(mbps: number): string {
 
 type ResolvedTarget = { ok: true; url: string } | { ok: false; error: string }
 
-// same guard testRTT applies internally: a bare host is fine, a scheme the
-// browser will refuse is not
+// same guard testRTT applies internally: a bare host is fine, a scheme the browser refuses is not
 function resolveTarget(raw: string): ResolvedTarget {
   const trimmed = raw.trim()
   let parsed: URL

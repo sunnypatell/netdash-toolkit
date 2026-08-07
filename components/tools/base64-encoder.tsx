@@ -36,8 +36,7 @@ const SAMPLES = [
 ]
 
 export function Base64Encoder() {
-  // mode and alphabet go in the url, the payload does not: base64 input is
-  // routinely a whole file or a secret, and neither belongs in a shareable link
+  // mode and alphabet go in the url, the payload does not: it is routinely a whole file or a secret
   const [{ mode, alphabet }, setQuery] = useQueryStates(
     {
       mode: parseAsStringLiteral(MODES).withDefault("encode"),
@@ -49,9 +48,7 @@ export function Base64Encoder() {
   const [text, setText] = useState("")
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null)
 
-  // derived, never stored. the old effect wrote the file's base64 into state and
-  // was then immediately overwritten by the encoding of the "[File: x]" label it
-  // had just put in the input box, so the tool displayed the wrong value.
+  // derived: storing it let the "[File: x]" label's encoding overwrite the file's real base64
   const result = useMemo(() => {
     if (mode === "encode" && file) return encodeBytesToBase64(file.bytes, alphabet)
     if (!text.trim()) return { output: "", error: null }

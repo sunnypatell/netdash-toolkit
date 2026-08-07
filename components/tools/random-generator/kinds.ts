@@ -1,7 +1,6 @@
 import type { IPv4Kind, IPv6Kind, MacFormat, MacScope } from "@/lib/random-gen"
 
-// the option lists live outside the panels so the shell can derive its url
-// parsers from them without statically pulling all three panels back in
+// outside the panels so the shell can derive its url parsers without statically importing them
 
 export const IPV4_KINDS: { id: IPv4Kind; label: string }[] = [
   { id: "any", label: "Any unicast first octet (1-223)" },

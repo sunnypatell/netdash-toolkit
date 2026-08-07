@@ -21,11 +21,7 @@ import {
 } from "@/lib/network-utils"
 import type { IPv4Result, IPv6Result } from "@/lib/network-utils"
 
-// results are derived, not stored: a subnet is a pure function of an address and
-// a prefix, so there was nothing for a Calculate button to do that typing cannot.
-// the inputs live in the query string, which makes any result a shareable link.
-// which field the message is about, so 3.3.1 can name it. derived from the same
-// guard order the compute uses rather than by matching the message text.
+// which field an error names, derived from the compute's guard order rather than the message text
 type Culprit = "address" | "prefix" | "both" | null
 
 function computeIPv4(address: string, prefixText: string) {
@@ -137,8 +133,7 @@ export function SubnetCalculator() {
     const input = data.input as { address: string; prefix: string } | undefined
     const version = data.version as string | undefined
 
-    // only the inputs are restored. the results recompute from them, so a saved
-    // item can never show a stale figure that no longer matches its own input.
+    // only inputs are restored; results recompute, so a saved item can never show a stale figure
     if (!input) return
     if (version === "ipv4") {
       void setQuery({ tab: "ipv4", ip: input.address, prefix: input.prefix })

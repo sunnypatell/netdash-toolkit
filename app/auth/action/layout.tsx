@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 
-// the page itself is a client component, so it cannot export metadata. this
-// supplies the static title; the page narrows it per mode once ?mode= is read.
+// the page is a client component and cannot export metadata, so the static title lives here and the page narrows it per mode
 export const metadata: Metadata = {
   title: "Account Action: Password Reset and Email Verification",
   description:

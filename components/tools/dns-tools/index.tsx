@@ -24,8 +24,7 @@ import { ToolHeader } from "@/components/ui/tool-header"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 import type { QueryOutcome } from "./results"
 
-// the result list only exists once a lookup has answered, so it loads then. as a
-// static import it rode along in the payload of every page in the app.
+// the result list only exists after an answer; as a static import it rode along in every page
 const DNSResults = lazy(() => import("./results").then((m) => ({ default: m.DNSResults })))
 
 const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"] as const
@@ -88,9 +87,7 @@ export function DNSTools() {
   const runDNSQuery = async () => {
     if (!dnsQuery.trim()) return
 
-    // a PTR record lives under in-addr.arpa (rfc 1035 3.5) or ip6.arpa (rfc 3596
-    // 2.5), never at the address itself. sending "8.8.8.8" as a PTR name asked for
-    // a name that cannot exist and always came back NXDOMAIN.
+    // PTR names live under in-addr.arpa / ip6.arpa (rfc 1035 3.5, rfc 3596 2.5), not at the address
     const { name: sentName, rewrittenFrom } = resolveQueryName(dnsQuery, dnsRecordType)
 
     setActiveQuery(true)
@@ -110,8 +107,7 @@ export function DNSTools() {
           responseTime: nativeResult.responseTime,
           success: !nativeResult.error,
           error: nativeResult.error,
-          // the system resolver api reports no AD bit, so claiming anything about
-          // dnssec here would be an invention
+          // the system resolver api reports no AD bit, so any dnssec claim here is invented
           dnssec: false,
           records: nativeResult.records.map((r) => ({
             name: sentName,

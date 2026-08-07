@@ -42,8 +42,7 @@ export function EmailDiagnostics() {
   const [customSelector, setCustomSelector] = useState("")
   const [status, setStatus] = useState<DiagnosticStatus>("idle")
   const [error, setError] = useState<string | null>(null)
-  // the same banner carries both field validation and a lookup failure; only the
-  // first should mark the field invalid
+  // the banner carries validation and lookup failures; only the first marks the field invalid
   const [domainInvalid, setDomainInvalid] = useState(false)
   const [result, setResult] = useState<EmailDiagnosticResult | null>(null)
   const [progress, setProgress] = useState("")

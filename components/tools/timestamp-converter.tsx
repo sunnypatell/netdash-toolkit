@@ -51,8 +51,7 @@ const UNIT_OPTIONS = [
 ] as const satisfies readonly (TimestampUnit | "auto")[]
 
 export function TimestampConverter() {
-  // the timestamp, its unit and the target zone are the whole input, so they
-  // live in the query string and a converted instant becomes a shareable link
+  // timestamp, unit and zone are the whole input, so a converted instant is a shareable link
   const [query, setQuery] = useQueryStates(
     {
       ts: parseAsString.withDefault(""),
@@ -65,8 +64,7 @@ export function TimestampConverter() {
 
   const raw = query.ts
   const unit = query.unit
-  // an unset tz means "this browser": resolving it during ssr render would bake
-  // one visitor's zone into the static html
+  // unset tz means "this browser"; resolving in ssr would bake one visitor's zone into the html
   const [browserZone, setBrowserZone] = useState("UTC")
   // new Date() during render would differ between server and client html
   const [now, setNow] = useState<Date | null>(null)
@@ -90,8 +88,7 @@ export function TimestampConverter() {
   const timeZone = query.tz || browserZone
   const zones = useMemo(() => listTimeZones(), [])
 
-  // the pickers write the timestamp field directly rather than through an
-  // effect, so changing the zone can never silently rewrite what was typed
+  // the pickers write the field directly, so changing the zone cannot rewrite what was typed
   const applyPickers = (date: string, time: string) => {
     setDateInput(date)
     setTimeInput(time)

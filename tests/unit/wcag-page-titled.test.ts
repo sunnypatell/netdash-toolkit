@@ -2,14 +2,7 @@ import { describe, expect, it } from "vitest"
 import { metadata as authActionMetadata } from "@/app/auth/action/layout"
 import { MODE_TITLES } from "@/app/auth/action/titles"
 
-// wcag 2.2 sc 2.4.2 page titled, level a:
-// https://www.w3.org/WAI/WCAG22/Understanding/page-titled.html
-//
-// every other route supplies a title through generateMetadata. /auth/action is a
-// client component and cannot, so the title comes from a sibling layout, and the
-// page narrows it per ?mode= at runtime because one route serves three purposes.
-// both halves are asserted here: a layout that loses its export, or a mode that
-// gains no title, silently returns the route to the generic site default.
+// /auth/action is a client component: the title comes from a sibling layout, narrowed per ?mode=
 
 const MODES = ["resetPassword", "verifyEmail", "recoverEmail"] as const
 

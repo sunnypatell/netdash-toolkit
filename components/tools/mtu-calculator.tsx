@@ -47,8 +47,7 @@ export function MTUCalculator() {
     return calculateMTU(linkMTU, ip as IPVersion, transport as Transport, enabled)
   }, [mtu, ip, transport, enabled])
 
-  // every error is a statement about the effective mtu, which link mtu, ip
-  // version, transport and the encapsulation set all feed into
+  // every error is about the effective mtu, which all four inputs feed into
   const errorIds = result?.errors.length
     ? result.errors.map((_, index) => `mtu-error-${index}`).join(" ")
     : undefined

@@ -2,12 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// several wcag 2.2 criteria are claimed Not Applicable in
-// docs/src/content/docs/accessibility-conformance.md. an unverified "n/a" is the easiest way for a
-// conformance claim to rot, because the day someone adds a <video> the claim
-// silently becomes false. each n/a below is asserted from the source instead, so
-// introducing the content that makes a criterion apply fails this suite and
-// forces the claim to be revisited.
+// an unverified "n/a" rots silently: the day someone adds a <video> the claim becomes false
 
 const ROOTS = ["components", "app", "lib"]
 
@@ -40,8 +35,6 @@ describe("criteria claimed Not Applicable", () => {
     expect(FILES.length).toBeGreaterThan(100)
   })
 
-  // 1.2.1 - 1.2.5 (time-based media) and 1.4.2 (audio control):
-  // https://www.w3.org/WAI/WCAG22/Understanding/audio-control.html
   it("1.2.x and 1.4.2: there is no time-based media anywhere", () => {
     const media = hits(
       /<(?:audio|video|track|source)\b|new Audio\b|AudioContext|MediaRecorder|speechSynthesis|autoPlay|autoplay=/g
@@ -52,15 +45,11 @@ describe("criteria claimed Not Applicable", () => {
     ).toEqual([])
   })
 
-  // embedded third-party content would put criteria outside this codebase's
-  // control, which the conformance record's scope section denies
+  // embedded third-party content puts criteria outside this codebase's control
   it("no embedded frames or plugin objects", () => {
     expect(hits(/<(?:iframe|embed|object)\b/g)).toEqual([])
   })
 
-  // 2.5.1 pointer gestures and 2.5.4 motion actuation:
-  // https://www.w3.org/WAI/WCAG22/Understanding/pointer-gestures.html
-  // https://www.w3.org/WAI/WCAG22/Understanding/motion-actuation.html
   it("2.5.1 and 2.5.4: no multipoint, path-based, or device-motion input", () => {
     const gestures = hits(
       /devicemotion|deviceorientation|DeviceMotionEvent|DeviceOrientationEvent|onTouchMove|touchmove|onPointerMove|pointermove/gi
@@ -68,32 +57,17 @@ describe("criteria claimed Not Applicable", () => {
     expect(gestures, gestures.join("\n")).toEqual([])
   })
 
-  // 2.5.7 dragging movements:
-  // https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html
-  // the radix slider is the only draggable control and it is operable by click
-  // and by keyboard, so the criterion is met rather than inapplicable. what must
-  // stay absent is a hand-rolled drag interaction with no single-pointer path.
+  // the radix slider is operable by click and keyboard, so 2.5.7 is met rather than inapplicable
   it("2.5.7: no hand-rolled drag-and-drop interaction", () => {
     const drag = hits(/\bdraggable=|onDragStart|onDragEnd|onDragOver|onDrop\b|dnd-kit|useSortable/g)
     expect(drag, drag.join("\n")).toEqual([])
   })
 
-  // 2.3.1 three flashes or below threshold:
-  // https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html
   it("2.3.1: nothing blinks or flashes", () => {
     expect(hits(/<blink|<marquee|animate-(?:ping|bounce)\b/g)).toEqual([])
   })
 
-  // 1.4.13 content on hover or focus:
-  // https://www.w3.org/WAI/WCAG22/Understanding/content-on-hover-or-focus.html
-  //
-  // this criterion was recorded as not applicable on the grounds that nothing
-  // shows content on hover. that stopped being true without anything noticing:
-  // components/tools/color-converter.tsx put a `title` on each preset swatch,
-  // and a native title tooltip is not dismissible, not hoverable, and does not
-  // appear on keyboard focus at all, so it met none of the three conditions.
-  // that one is gone - the hex reaches assistive technology through the button's
-  // aria-label instead - so the cap of one is now a floor of zero.
+  // a native title tooltip meets none of 1.4.13's three conditions; color-converter's swatches had one
   it("1.4.13: no title-attribute tooltip exists", () => {
     const tag =
       /<([a-z][a-z0-9]*)(\s(?:[^<>"'{}]|"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\})*)?\/?>/g
@@ -112,22 +86,11 @@ describe("criteria claimed Not Applicable", () => {
     ).toEqual([])
   })
 
-  // 2.1.4 character key shortcuts:
-  // https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html
-  // a single printable character bound with no modifier and no way to switch it
-  // off is a failure. the command palette's bare "/" was the one instance and it
-  // was removed; every remaining single-character binding must be modifier-
-  // guarded, which takes it out of the criterion's scope.
-  //
-  // the first version of this matched the receiver by name, `e.key`, so renaming
-  // the handler's parameter to `event` hid the same shortcut from it. the
-  // receiver is not part of the failure, so it is not part of the pattern any
-  // more. a `key` destructured out of the event, `({ key }) => key === "/"`, is
-  // matched only inside a keyboard context, because a bare `key === "u"`
-  // otherwise catches unrelated code such as the regex tester's flag toggle.
+  // naming the receiver `e.key` hid the shortcut the day the parameter was renamed to `event`
   it("2.1.4: every single-character shortcut is modifier-guarded", () => {
     const WITH_RECEIVER = /\b[A-Za-z_$][\w$]*\.key\s*===\s*"(\S)"/g
     const DESTRUCTURED = /(?<![.\w$])key\s*===\s*"(\S)"/g
+    // a destructured `key` needs this, or a bare `key === "u"` matches the regex tester's flag toggle
     const KEYBOARD_CONTEXT =
       /KeyboardEvent|on(?:KeyDown|KeyUp|KeyPress)|["']keydown["']|["']keyup["']/
     const unguarded: string[] = []
@@ -161,12 +124,7 @@ describe("criteria claimed Not Applicable", () => {
   })
 })
 
-// the record states its verdict counts in a sentence at the top and then spends
-// two tables justifying them row by row. nothing was checking that the sentence
-// still described the tables. that is the same failure this file exists for, one
-// level up: a headline that says "41 supported" while the tables say something
-// else is exactly as wrong as an unverified not-applicable claim, and harder to
-// notice because the number looks authoritative.
+// a headline the tables no longer justify is the same failure as an unverified n/a, one level up
 describe("the conformance record's headline matches its own tables", () => {
   const RECORD = readFileSync(
     join("docs", "src", "content", "docs", "accessibility-conformance.md"),
@@ -188,8 +146,7 @@ describe("the conformance record's headline matches its own tables", () => {
   }
 
   it("has a criterion table to read", () => {
-    // if the row pattern stops matching, every assertion below reads zero and
-    // agrees with a headline of zero
+    // if the row pattern stops matching, every assertion below reads zero and agrees
     expect(counts().rows, "the verdict rows no longer parse").toBe(55)
   })
 
@@ -208,8 +165,7 @@ describe("the conformance record's headline matches its own tables", () => {
     expect(supports + partial + na + unsupported, "the four totals must cover all 55").toBe(55)
   })
 
-  // a criterion recorded as not applicable has to be one this suite actually
-  // asserts, or the claim is again resting on nothing
+  // a not-applicable verdict has to be one this file asserts, or it rests on nothing again
   it("every not-applicable verdict is one this file checks", () => {
     const asserted = /1\.2|1\.4\.2|1\.4\.13|2\.3\.1|2\.5\.1|2\.5\.4/
     const unchecked: string[] = []

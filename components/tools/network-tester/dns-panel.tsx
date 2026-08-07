@@ -40,8 +40,7 @@ export function DNSPanel() {
 
   const providerHost = PROVIDERS.find((p) => p.value === provider)?.host ?? "the resolver"
 
-  // the answering resolver is on every line: these are its cached answers, not
-  // what this machine's own resolver would return
+  // the answering resolver is on every line: these are its cached answers, not this machine's
   const resultsText = results
     .flatMap((result) =>
       result.success

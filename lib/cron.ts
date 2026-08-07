@@ -1,7 +1,5 @@
-// cron parsing is delegated: cronstrue for the english description, croner for
-// next-run projection (zero deps, real iana timezone support, posix dom/dow OR).
-// the base cronstrue entry is imported on purpose - cronstrue/i18n drags in 31kB
-// of locales we never show.
+// cronstrue for descriptions, croner for next-run projection. the base cronstrue entry on
+// purpose: cronstrue/i18n drags in 31kB of locales we never show.
 import { Cron } from "croner"
 import cronstrue from "cronstrue"
 
@@ -107,11 +105,7 @@ function resolveBound(token: string, role: CronFieldRole): number | null {
   return resolveName(token, role)
 }
 
-/**
- * croner (like vixie cron) rejects a descending range such as `22-2`. posix
- * crontabs in the wild use them to mean "wrap past the end of the field", so
- * expand those to an explicit list before handing the expression over.
- */
+// croner rejects a descending range like `22-2`, which posix crontabs use to mean wrap
 export function expandWrapRanges(expression: string): string {
   const trimmed = expression.trim().replace(/\s+/g, " ")
   if (!trimmed || trimmed.startsWith("@")) return trimmed
@@ -160,13 +154,7 @@ function roleIndex(parts: string[], role: CronFieldRole): number {
 
 const unrestricted = (field: string | undefined) => field === undefined || field === "*"
 
-/**
- * quartz defines `?` as "no specific value", used in day-of-month or
- * day-of-week when the restriction lives in the other one. that is exactly what
- * `*` means to a posix parser, and croner reads a `?` in either day field as
- * cancelling BOTH of them, so `0 0 ? * 5` fired every day instead of every
- * friday. rewrite it before the expression reaches the engine.
- */
+// croner reads quartz's `?` in either day field as cancelling both, so `0 0 ? * 5` fired daily
 export function normalizeQuestionMarks(expression: string): string {
   const trimmed = expression.trim().replace(/\s+/g, " ")
   if (!trimmed || trimmed.startsWith("@")) return trimmed
@@ -184,14 +172,8 @@ export function normalizeCron(expression: string): string {
   return expandWrapRanges(normalizeQuestionMarks(expression))
 }
 
-/**
- * posix.1-2017 crontab: when day-of-month and day-of-week are both restricted,
- * the job runs when EITHER matches. croner mostly does this, but drops the
- * day-of-month match on 1 March when february had 28 days and the 1st lands on
- * a weekend (verified for 2025, 2026 and 2031). splitting the expression into
- * its two halves and merging is the OR the standard describes, and it does not
- * depend on the engine getting the combined walk right.
- */
+// posix.1-2017: with dom and dow both restricted the job runs when EITHER matches. croner drops
+// the dom match on 1 March after a 28-day february, so split into halves and merge instead.
 function splitDayOr(normalized: string): [string, string] | null {
   if (normalized.startsWith("@")) return null
   const parts = normalized.split(" ")

@@ -109,8 +109,7 @@ function ContrastPanel({
 const FALLBACK: Color = { mode: "rgb", r: 0, g: 0, b: 0 }
 
 export function ColorConverter() {
-  // a colour and a background are short and never sensitive, so both live in the
-  // query string and any result here is a shareable link
+  // colour and background are short and never sensitive, so both live in the url
   const [{ c: text, bg: bgText }, setQuery] = useQueryStates(
     {
       c: parseAsString.withDefault("#3b82f6"),
@@ -126,9 +125,7 @@ export function ColorConverter() {
     if (parsedText) setLastValid(parsedText)
   }, [parsedText])
 
-  // the authoritative colour keeps whatever space the user last edited in: every
-  // slider writes its own notation back to the url, so hue survives s=0 and
-  // l=0/100 instead of snapping to 0 through a round trip via rgb
+  // keeps the last-edited space, so hue survives s=0 and l=0/100 instead of round-tripping via rgb
   const source = parsedText ?? lastValid
   const textError = text.trim() && !parsedText ? INVALID_COLOR_MESSAGE : null
 
@@ -143,8 +140,7 @@ export function ColorConverter() {
   const preview = useMemo(() => cssPreview(source), [source])
 
   const customBg = useMemo(() => parseColor(bgText), [bgText])
-  // the colour itself, not strings.hex: the hex drops alpha, so a 50% swatch was
-  // being measured as if it were opaque and reported 21:1 against white
+  // the colour, not strings.hex: hex drops alpha, so a 50% swatch measured as opaque and read 21:1
   const contrast = useMemo(
     () => ({
       white: contrastCheck(source, "#ffffff"),
@@ -154,8 +150,7 @@ export function ColorConverter() {
     [source, customBg]
   )
 
-  // each space writes back in its own notation, which is what keeps a hue of 210
-  // from collapsing to 0 the moment saturation hits zero
+  // each space writes back in its own notation, which keeps hue 210 from collapsing when s hits 0
   const commit = (next: Color, notation: keyof typeof strings = "hex") => {
     void setQuery({ c: toStrings(next)[notation] })
   }
@@ -264,9 +259,7 @@ export function ColorConverter() {
                     onClick={() => handleText(c)}
                     className="h-8 w-8 rounded-md border shadow-sm transition-transform hover:scale-110"
                     style={{ backgroundColor: c }}
-                    // sc 1.4.13: a native title tooltip is not dismissible, not
-                    // hoverable and never shows on focus, so the hex lives in the
-                    // accessible name instead
+                    // sc 1.4.13: title tooltips are not dismissible, hoverable, or focus-visible
                     aria-label={`Use ${c}`}
                   />
                 ))}

@@ -35,8 +35,7 @@ function PanelFallback() {
 }
 
 export function URLEncoder() {
-  // the payload here is a url, which is short and never a secret, so unlike the
-  // base64 and json tools it goes in the query string with the options
+  // a url is short and never a secret, so unlike base64 and json it goes in the query string
   const [query, setQuery] = useQueryStates(
     {
       mode: parseAsStringLiteral(MODES).withDefault("encode"),

@@ -6,23 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { settled } from "./settle"
 
-// wcag 2.2 sc 3.3.1 error identification (a) and sc 3.3.3 error suggestion (aa):
-// https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
-// https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html
-//
-// tests/unit/wcag-error-identification.test.ts proves the association is written
-// in the source. that is not the same claim as it reaching the accessibility
-// tree: an attribute can be dropped by a wrapper that does not spread its props,
-// an id can be rendered on an element that unmounts in the same tick, and a
-// radix trigger can swallow either. so each case below puts a real invalid value
-// into a real tool and then resolves the reference the way a screen reader
-// would, following every id to an element and reading it.
-//
-// the tools hold their input in the query string, which the nuqs testing adapter
-// does not write back, so typing into them would assert nothing. those are
-// seeded through searchParams instead, which produces the same error state by
-// the same code path. the three that keep their input in useState are typed
-// into, because for those typing is the only thing that produces the error.
+// 3.3.1 and 3.3.3: the static suite proves the source, this proves it reaches the accessibility tree
 
 function Providers({ search }: { search?: string }) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -39,13 +23,12 @@ function Providers({ search }: { search?: string }) {
 interface Case {
   slug: string
   load: () => Promise<() => React.JSX.Element>
-  // one of the two: an invalid value seeded into the url, or one typed in
+  // seeded into the url, or typed in: nuqs does not write query state back
   search?: string
   type?: { label: RegExp; value: string }
   // how to find the field that should be marked invalid
   field: { id: string } | { label: RegExp }
-  // what the description must actually say, so a resolved but empty or unrelated
-  // element cannot satisfy it
+  // what the description must say, so a resolved but empty element cannot satisfy it
   says: RegExp
 }
 
@@ -122,8 +105,7 @@ const CASES: Case[] = [
     says: /zero or more/i,
   },
   {
-    // the only case where the field is the shared IPInput primitive, so it also
-    // covers the describedBy passthrough that primitive gained for this
+    // the only case on the shared IPInput, so it covers its describedBy passthrough too
     slug: "subnet-calculator",
     load: async () => (await import("@/components/tools/subnet-calculator")).SubnetCalculator,
     search: "?ip=999.1.1.1",
@@ -140,8 +122,7 @@ const CASES: Case[] = [
   {
     slug: "json-formatter",
     load: async () => (await import("@/components/tools/json-formatter")).JSONFormatter,
-    // user-event reads a brace or a bracket as key syntax, so the invalid value
-    // avoids both
+    // user-event reads braces and brackets as key syntax, so the invalid value avoids both
     type: { label: /^JSON input$/, value: "not json" },
     field: { id: "json-input" },
     says: /\w{4,}/,
@@ -195,9 +176,7 @@ describe("3.3.1: a real error reaches the field that produced it", () => {
     ).toMatch(testCase.says)
   })
 
-  // the other half of the contract: the attributes have to come off again, or a
-  // field stays permanently invalid and permanently described by a message that
-  // is no longer on screen.
+  // the attributes have to come off again, or the field stays invalid and points at a gone message
   it.each(CASES.filter((c) => c.search).map((c) => [c.slug, c] as const))(
     "%s is clean when the value is valid",
     async (slug, testCase) => {

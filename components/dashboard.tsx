@@ -29,8 +29,7 @@ type CategoryFilter = ToolCategory | "all"
 
 const SEARCH_ID = "tool-search"
 
-// the exception carries the information: 36 tiles reading "runs offline" is
-// noise, 12 reading "sends data" is something you can act on
+// the exception carries the information: 36 tiles reading "runs offline" is noise, 12 reading "sends data" is not
 function RuntimeMark({ tool }: { tool: ToolDefinition }) {
   if (isOffline(tool)) return null
   return (
@@ -145,8 +144,7 @@ export function Dashboard() {
   const [category, setCategory] = useState<CategoryFilter>("all")
   const [recents, setRecents] = useState<ToolDefinition[]>([])
 
-  // localStorage is not readable during the static render, so the list arrives
-  // after mount; a first-time visitor never sees the section at all
+  // localStorage is unreadable during the static render, so the list only arrives after mount
   useEffect(() => {
     setRecents(readRecents())
   }, [])
@@ -159,8 +157,7 @@ export function Dashboard() {
     [runtime]
   )
 
-  // when someone types, a flat best-first list is the answer; seven headed
-  // sections holding one hit each is not
+  // when someone types, a flat best-first list beats seven headed sections holding one hit each
   const results = useMemo(
     () => (searching ? searchTools(query).filter(byRuntime) : []),
     [query, searching, byRuntime]
@@ -179,8 +176,7 @@ export function Dashboard() {
 
   const recentList = useMemo(() => recents.filter(byRuntime), [recents, byRuntime])
 
-  // a tool you opened yesterday outranks a tool that is popular in general, so
-  // the two lists stay complementary rather than showing the same tile twice
+  // recency outranks general popularity, so the two lists stay complementary rather than repeating a tile
   const quickStart = useMemo(() => {
     const seen = new Set(recentList.map((t) => t.slug))
     return popularTools.filter((t) => byRuntime(t) && !seen.has(t.slug))
@@ -202,8 +198,7 @@ export function Dashboard() {
     setQuery("")
     setRuntime("all")
     setCategory("all")
-    // the reset control unmounts itself, so focus has to land somewhere on purpose.
-    // the Input primitive is not a forwardRef, so this cannot be a react ref.
+    // the reset control unmounts itself and Input is not a forwardRef, so focus is moved by id rather than by ref
     const input = document.getElementById(SEARCH_ID)
     if (input instanceof HTMLInputElement) input.focus()
   }
@@ -260,9 +255,7 @@ export function Dashboard() {
             </div>
           </form>
 
-          {/* a second search button 40px under a search box is not a second
-              route in, it is the same one twice. the pair that earns the space
-              is "start using it" and "tell me what it is". */}
+          {/* a second search button under a search box is the same route twice; "start using it" and "tell me what it is" are not */}
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" asChild>
               <Link href={`/tools/${leadTool.slug}`}>
@@ -278,9 +271,7 @@ export function Dashboard() {
       </section>
 
       <section className="space-y-5">
-        {/* category leads: what a tool does is the axis people browse by. runtime
-            is a real filter but a niche one, and ranking it first put a privacy
-            taxonomy above the job the visitor came to do. */}
+        {/* category leads: ranking runtime first put a privacy taxonomy above the job the visitor came to do */}
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="eyebrow mr-1">Category</span>
@@ -374,8 +365,7 @@ export function Dashboard() {
           )
         ) : (
           <>
-            {/* the palette already remembered what you opened; the page you
-                actually land on a week later never showed it */}
+            {/* the palette already remembered what you opened; the page you land on a week later never showed it */}
             {category === "all" && recentList.length > 0 && (
               <div className="space-y-3">
                 <SectionHeading

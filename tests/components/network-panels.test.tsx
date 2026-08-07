@@ -6,10 +6,7 @@ import { NuqsTestingAdapter, type OnUrlUpdateFunction } from "nuqs/adapters/test
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 
-// the network tools were split into a shell plus one file per panel. these cover
-// the two claims that split makes: a panel renders on its own with nothing but
-// props, and the shell still puts its inputs in the url without ever firing a
-// request on arrival.
+// the split's two claims: a panel runs on props alone, and the shell fires nothing on arrival
 
 function Providers({
   children,

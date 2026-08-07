@@ -36,8 +36,7 @@ export default function PastePanel({ target, onTrace }: PastePanelProps) {
       toast.error("Could not parse a redirect chain")
       return
     }
-    // without a status line there is no hop, and a hop invented with status 0 was
-    // exactly the fiction this tool was rewritten to stop telling
+    // a hop invented with status 0 is exactly the fiction this tool was rewritten to stop telling
     if (blocks.every((block) => block.status === 0)) {
       setError(
         'That paste has header lines but no status line, so there is no hop to trace. Include the "HTTP/1.1 301 ..." lines that curl -D - prints'

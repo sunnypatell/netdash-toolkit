@@ -2,15 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 2.1.1 keyboard (a), 2.4.3 focus order (a):
-// https://www.w3.org/WAI/WCAG22/Understanding/keyboard.html
-// https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html
-//
-// axe cannot see either of these. 2.1.1 fails when a click handler is attached to
-// something that never receives focus, which is invisible to a rule engine that
-// only inspects the resting dom. 2.4.3 fails when css moves an element away from
-// its dom position, which needs a layout engine to observe. both are asserted
-// from the source here instead.
+// 2.1.1 and 2.4.3: axe sees only the resting dom and has no layout engine, so this reads the source
 
 const INTERACTIVE_TAGS = new Set(["button", "a", "input", "select", "textarea", "summary", "label"])
 
@@ -41,9 +33,7 @@ describe("2.1.1 keyboard", () => {
     expect(SOURCES.length).toBeGreaterThan(100)
   })
 
-  // a div or span carrying onClick is only operable by pointer unless it is also
-  // given a role, a tab stop and key handling. the Badge primitive used to be
-  // exactly this, across eight tool call sites.
+  // a div with onClick and no role, tab stop or key handling is pointer only, as Badge once was
   it("no non-interactive element carries a click handler without a tab stop", () => {
     const offenders: string[] = []
     for (const [file, source] of SOURCES) {
@@ -66,13 +56,7 @@ describe("2.1.1 keyboard", () => {
     ).toEqual([])
   })
 
-  // a native button fires on Enter and on Space. anything claiming role="button"
-  // has to reproduce both, or it is only half operable.
-  //
-  // the first version of this asserted `handlesEnter && !handlesSpace`, which let
-  // the worse case straight through: an element with role="button", tabIndex={0}
-  // and no key handler at all is not operable by keyboard by any key, and it also
-  // satisfies the role-plus-tab-stop test above. every branch is reported now.
+  // asserting `handlesEnter && !handlesSpace` let through the worse case: no key handler at all
   it("every element that claims role=button handles Space as well as Enter", () => {
     const NAMES_ENTER = /"Enter"/
     const NAMES_SPACE = /" "|"Space"|"Spacebar"/
@@ -86,9 +70,7 @@ describe("2.1.1 keyboard", () => {
           offenders.push(`${file}:${line}: role="button" with no key handler at all`)
           continue
         }
-        // the handler is usually an inline arrow on the same tag. when it is a
-        // reference instead, the keys are named somewhere in the same file, so
-        // fall back to the file rather than guessing.
+        // when the handler is a reference rather than an inline arrow, fall back to the whole file
         const scope = NAMES_ENTER.test(tag.attributes) || NAMES_SPACE.test(tag.attributes)
         const text = scope ? tag.attributes : source
         const handlesEnter = NAMES_ENTER.test(text)
@@ -117,11 +99,7 @@ describe("2.4.3 focus order", () => {
     ).toEqual([])
   })
 
-  // a reversing or reordering utility makes visual order disagree with dom order,
-  // which is what 2.4.3 is about. the two dialog footers are the accepted shadcn
-  // pattern: cancel precedes the action in the dom, and mobile stacks the action
-  // on top. both live in an already focus-trapped modal with two sibling buttons,
-  // so meaning and operability are preserved. anything new needs the same review.
+  // the two dialog footers are the reviewed shadcn pattern; anything new needs the same review
   it("order-reversing utilities stay limited to the reviewed dialog footers", () => {
     const found: string[] = []
     for (const [file, source] of SOURCES) {
@@ -144,8 +122,7 @@ describe("2.4.3 focus order", () => {
 })
 
 describe("2.4.1 bypass blocks", () => {
-  // the skip link is the mechanism, but it only works if its target exists and is
-  // focusable. if either half is renamed the link silently becomes a no-op.
+  // a skip link whose target is renamed or unfocusable becomes a silent no-op
   it("the skip link points at a focusable main landmark", () => {
     const shell = readFileSync(join("components", "app-shell.tsx"), "utf8")
     const href = /href="#([\w-]+)"/.exec(shell)

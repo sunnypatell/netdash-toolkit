@@ -16,8 +16,7 @@ import {
   type ExtendedACLRule,
   type StandardACLRule,
 } from "@/lib/acl"
-// one chunk per acl type, and only the open tab is ever fetched: a static import
-// here put both panels plus the rule editor in the payload of every page
+// one chunk per acl type: a static import put both panels and the rule editor in every page
 const ExtendedACLPanel = lazy(() =>
   import("./extended").then((m) => ({ default: m.ExtendedACLPanel }))
 )
@@ -47,8 +46,7 @@ export function ACLGenerator() {
   const [nameEdited, setNameEdited] = useState(false)
   const [platform, setPlatform] = useState<ACLPlatform>("cisco-ios")
 
-  // the generator embeds a timestamp, so memoize it or the readonly textarea
-  // rewrites itself on every keystroke elsewhere in the tool
+  // the generator embeds a timestamp, so without memo the textarea rewrites on every keystroke
   const config = useMemo(
     () => generateACL({ aclType, aclName, platform, standardRules, extendedRules }),
     [aclType, aclName, platform, standardRules, extendedRules]

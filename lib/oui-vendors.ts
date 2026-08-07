@@ -1,12 +1,5 @@
-// bundled OUI prefixes for the lookup tool, plus the offline-first lookup path.
-//
-// a MAC address is a device fingerprint, so the local map is consulted first and
-// the network is only touched when the caller explicitly opts in AND the prefix
-// is not bundled. this is not just a privacy posture: local hits are instant and
-// unmetered, whereas the public APIs are rate limited to ~1 req/s.
-//
-// the map is deliberately small and honest about it - common virtualisation,
-// enterprise networking and consumer prefixes, not the full IEEE registry.
+// a MAC is a device fingerprint, so the local map wins and the network is touched only on explicit
+// opt-in. common prefixes only, not the full IEEE registry; the public APIs cap at ~1 req/s.
 
 import { normalizeMac } from "@/lib/parsers"
 
@@ -221,10 +214,7 @@ function formatOui(oui: string): string {
   return `${oui.slice(0, 2)}:${oui.slice(2, 4)}:${oui.slice(4, 6)}`
 }
 
-/**
- * normalizes any accepted MAC form before the prefix is taken. taking
- * substring(0, 8) off raw input is what turned "001122334455" into "00112233".
- */
+// normalize before slicing: substring(0, 8) on raw input turned "001122334455" into "00112233"
 export function parseMacInput(input: string): ParsedMacInput | null {
   const trimmed = input.trim()
   if (!trimmed) return null
@@ -276,11 +266,7 @@ export function macFlags(oui: string): { locallyAdministered: boolean; multicast
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
 
-/**
- * single remote provider (maclookup.app, CORS-enabled, no key). the previous
- * implementation also routed through a third-party allorigins proxy, which meant
- * one more party seeing the address for no added coverage.
- */
+// one provider (maclookup.app, CORS, no key); the old allorigins proxy saw the address for nothing
 export async function lookupRemote(
   oui: string,
   fetchImpl: FetchLike = fetch
@@ -307,11 +293,7 @@ export interface LookupSettings {
   cache?: Map<string, string | null>
 }
 
-/**
- * offline-first. the local map is consulted for every lookup, including the
- * common "remote said found:false" path that previously fell straight through to
- * "Unknown vendor" without ever reading the bundled data.
- */
+// a remote found:false used to fall straight through to "Unknown vendor" without reading the map
 export async function lookupOui(input: string, settings: LookupSettings): Promise<OuiResult> {
   const parsed = parseMacInput(input)
   if (!parsed) {

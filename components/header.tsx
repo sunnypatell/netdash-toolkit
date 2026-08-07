@@ -12,9 +12,7 @@ import changelog from "@/data/changelog.json"
 
 const latestVersion = changelog.releases[0]?.version ?? "0.0.0"
 
-// the account surfaces are the only thing in the shell that pulls the firebase
-// sdk, so they stay out of the first load. the fallback matches the menu's own
-// pending state, so nothing shifts.
+// the only firebase pull in the shell, kept off first load; the fallback matches the menu's own pending state so nothing shifts
 const UserMenu = dynamic(() => import("@/components/ui/user-menu").then((m) => m.UserMenu), {
   ssr: false,
   loading: () => (
@@ -57,9 +55,7 @@ export function Header({ onToggleSidebar, sidebarOpen }: HeaderProps) {
               <Menu className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
-          {/* not an h1: every page already owns one, and two competing level-one
-              headings is not a hierarchy. a link because arriving on a deep tool
-              route from search left the wordmark as the only dead element on screen. */}
+          {/* not an h1: every page already owns one. a link because the wordmark was the only dead element on a deep tool route. */}
           <Link
             href="/"
             className="text-foreground focus-visible:ring-ring focus-visible:ring-offset-card truncate rounded text-base font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:text-lg"

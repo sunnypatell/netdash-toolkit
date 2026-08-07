@@ -33,8 +33,7 @@ function PanelFallback() {
 }
 
 export function PortScanner() {
-  // inputs live in the query string so a scan setup is a shareable link. no scan
-  // ever starts from a url parameter: it takes a button press.
+  // inputs go in the url, but no scan ever starts from a url parameter
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("common"),

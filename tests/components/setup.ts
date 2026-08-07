@@ -1,19 +1,14 @@
 import { vi } from "vitest"
 
-// happy-dom lacks the browser apis tool components touch on mount. stubbing them
-// here rather than per-test keeps the render smoke suite honest: a tool that
-// crashes for any other reason still fails.
+// happy-dom lacks the browser apis tools touch on mount, so a crash for any other reason still fails
 
-// next/navigation: tools that read the route
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }))
 
-// firebase is imported at module scope by the contexts; never hit the network.
-// mirrors the real module: unconfigured means null services, as on a fresh
-// clone with no env vars.
+// the contexts import this at module scope; null services mirror a fresh clone with no env vars
 vi.mock("@/lib/firebase", () => ({
   isFirebaseConfigured: () => false,
   auth: null,

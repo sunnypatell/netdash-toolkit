@@ -43,10 +43,7 @@ function clampCount(value: number): number {
 }
 
 export function RandomGenerator() {
-  // the options live in the query string so a request ("20 locally administered
-  // MACs, Cisco notation") is a link. the drawn values never do: a random value
-  // reproducible from a url is not random, and the whole point of this tool is
-  // that every draw is fresh.
+  // the options go in the url; the drawn values never do, or the draw would not be random
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("ipv4"),

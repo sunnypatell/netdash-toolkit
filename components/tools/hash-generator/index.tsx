@@ -41,9 +41,7 @@ function PanelFallback() {
 }
 
 export function HashGenerator() {
-  // only the mode goes in the url: the text being hashed is often exactly the
-  // secret you would not want in a link or in browser history, and a file
-  // cannot be addressed by url at all
+  // only the mode goes in the url: the text being hashed is often the secret, and a file has no url
   const [{ mode }, setQuery] = useQueryStates(
     { mode: parseAsStringLiteral(MODES).withDefault("text") },
     { history: "replace" }
@@ -70,8 +68,7 @@ export function HashGenerator() {
     let cancelled = false
     const run = async () => {
       try {
-        // annotated, not inferred: ts 6 will not widen the ArrayBuffer/Uint8Array
-        // union to BufferSource on its own
+        // annotated: ts 6 will not widen the ArrayBuffer/Uint8Array union to BufferSource
         let bytes: BufferSource
         if (mode === "file" && inputFile) bytes = await inputFile.arrayBuffer()
         else bytes = encodeText(inputText)

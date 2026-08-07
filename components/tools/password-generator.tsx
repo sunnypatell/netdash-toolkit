@@ -34,10 +34,7 @@ const CHARACTER_CLASSES = [
 ] as const
 
 export function PasswordGenerator() {
-  // the options live in the query string so a policy ("32 chars, no symbols")
-  // is shareable. the generated password never does: a secret in a url is a
-  // secret in browser history, in the referer header and in every proxy log,
-  // and a password reproducible from a link is not a password.
+  // options go in the url; the password never does: urls land in history, referer and proxy logs
   const [query, setQuery] = useQueryStates(
     {
       length: parseAsInteger.withDefault(16),
@@ -69,8 +66,7 @@ export function PasswordGenerator() {
     [query]
   )
 
-  // entropy is quoted from the charset that will actually be drawn from, so
-  // exclusions move the number and an empty charset is an error, not -Infinity
+  // entropy comes from the charset actually drawn from, so an empty one is an error not -Infinity
   const charset = useMemo(() => buildCharset(options), [options])
   const strength = useMemo(() => strengthOf(charset.length, options.length), [charset, options])
   const empty = charset.length === 0

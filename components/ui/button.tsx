@@ -10,8 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        // the ring is this variant's only focus indicator (border-width is 0 here,
-        // so focus-visible:border-ring paints nothing), so it cannot be alpha'd
+        // border-width is 0 here, so the ring is the only focus indicator and cannot be alpha'd
         destructive:
           "bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive",
         outline:
@@ -39,10 +38,7 @@ type ButtonProps = React.ComponentPropsWithoutRef<"button"> &
     asChild?: boolean
   }
 
-// forwardRef is required, not cosmetic: radix triggers (DialogTrigger,
-// DropdownMenuTrigger, TooltipTrigger) pass a ref through asChild to manage
-// focus. without it react warned and the ref silently dropped, so those
-// dialogs never returned focus to their trigger on close.
+// forwardRef is required: radix triggers pass a ref through asChild, and without it dialogs never returned focus to their trigger
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"

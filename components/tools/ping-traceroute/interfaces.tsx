@@ -15,8 +15,7 @@ interface NetworkInterface {
   internal: boolean
 }
 
-// desktop only: a browser has no api that can enumerate local interfaces, so this
-// panel is never rendered on the web build
+// desktop only: no browser api enumerates local interfaces
 export default function InterfacesPanel() {
   const [interfaces, setInterfaces] = useState<NetworkInterface[] | null>(null)
   const [error, setError] = useState<string | null>(null)

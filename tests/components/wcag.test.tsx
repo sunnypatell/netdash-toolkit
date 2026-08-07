@@ -8,11 +8,7 @@ import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
 import { loadTool } from "@/lib/tool-loaders"
 
-// automated wcag 2.2 aa gate. axe cannot prove conformance on its own - roughly
-// a third of the success criteria need human judgement - but it does catch the
-// mechanically detectable failures, and it catches them on all 48 tools in one
-// run instead of a manual pass per tool. the criteria axe cannot see are
-// covered by the assertions further down and by docs/accessibility.
+// axe proves only the mechanically detectable failures; roughly a third of the criteria need a human
 
 const AXE_OPTIONS: axe.RunOptions = {
   runOnly: {
@@ -21,9 +17,7 @@ const AXE_OPTIONS: axe.RunOptions = {
     values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
   },
   rules: {
-    // happy-dom has no layout engine, so contrast is computed against a page
-    // that never painted. contrast is asserted from the token values instead,
-    // in tests/unit/contrast.test.ts
+    // no layout engine here, so contrast is asserted from tokens in tests/unit/contrast.test.ts
     "color-contrast": { enabled: false },
   },
 }
@@ -61,9 +55,7 @@ describe("wcag 2.2 aa: every tool", () => {
           <Tool />
         </Providers>
       )
-      // without this the lazy tools are scanned as a bare tab strip and pass
-      // for the wrong reason. the shared gate also fails on a Suspense fallback
-      // still being on screen, which a node count alone does not catch.
+      // unsettled, the lazy tools are scanned as a bare tab strip and pass for the wrong reason
       await settled(container, slug)
       const violations = await violationsOf(container)
       expect(violations, `${slug}:\n${JSON.stringify(violations, null, 2)}`).toEqual([])

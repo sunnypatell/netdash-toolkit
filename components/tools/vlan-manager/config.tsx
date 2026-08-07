@@ -24,8 +24,7 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({ vlans, ports, vendor, onVendorChange }: ConfigPanelProps) {
-  // derived: the config is a pure function of the vendor, the VLANs and the
-  // ports, so a Generate button could only ever produce a stale copy
+  // derived: a pure function of vendor, VLANs and ports, so a Generate button could only go stale
   const config = useMemo(
     () => generateSwitchConfig(ports, vendor, true, vlans),
     [ports, vendor, vlans]

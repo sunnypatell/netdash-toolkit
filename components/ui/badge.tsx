@@ -31,9 +31,7 @@ function Badge({
   ...props
 }: React.ComponentPropsWithoutRef<"span"> &
   VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  // a badge with a click handler is a button. rendering it as a span left eight
-  // call sites unreachable by keyboard (2.1.1) and roleless (4.1.2), and the
-  // 22px text box under the 24px target floor (2.5.8).
+  // a clickable badge renders as a button: as a span it was keyboard-unreachable (2.1.1), roleless (4.1.2) and under the 24px target (2.5.8)
   const interactive = !asChild && typeof props.onClick === "function"
   const Comp: React.ElementType = asChild ? Slot : interactive ? "button" : "span"
 

@@ -34,9 +34,7 @@ const fallback = (
   </p>
 )
 
-// three views over one parsed dataset, so the shell owns the data and the panels
-// take it as props. the paste and the arp scan stay user-initiated: pasted
-// inventories are too large for a url and a scan touches the network.
+// three views over one parsed dataset, so the shell owns it; the paste and scan stay user-initiated
 export function ConflictChecker() {
   const [{ tab }, setQuery] = useQueryStates(
     { tab: parseAsStringLiteral(TABS).withDefault("input") },
@@ -212,8 +210,7 @@ export function ConflictChecker() {
             <ConflictInputPanel
               analysis={analysis}
               onDataParsed={setParsedData}
-              // the scan failure has no field behind it, so only the analysis
-              // failure is tied back to the paste
+              // the scan failure has no field behind it, so only the analysis failure ties back
               analysisErrorId={analysisError ? "conflict-checker-error" : undefined}
             />
           </Suspense>

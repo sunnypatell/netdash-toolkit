@@ -1,11 +1,4 @@
-// availability -> allowed downtime arithmetic.
-//
-// two things this module exists to keep honest:
-//   1. a period is a stated number of seconds, never a vague "month". a 30-day
-//      month and a 365-day year are what the figures below are computed from,
-//      and the labels say so.
-//   2. duration formatting carries properly. rounding minutes independently of
-//      hours printed "1h 60m" for 119.8 minutes.
+// periods are a stated number of seconds, never a vague "month": 30-day month, 365-day year
 
 export type UptimePeriod = "day" | "week" | "month" | "quarter" | "year"
 
@@ -50,11 +43,7 @@ export const SLA_LEVELS: SLALevel[] = [
   { nines: "6", percentage: 99.9999, label: "Six Nines", typical: "Mission critical" },
 ]
 
-/**
- * downtime seconds allowed by an availability percentage over a period.
- * unavailability is taken as (100 - p) / 100 rather than 1 - p/100 so the
- * subtraction happens before the division and loses fewer bits.
- */
+// (100 - p) / 100, not 1 - p/100: subtracting before dividing loses fewer bits
 export function downtimeSeconds(availabilityPercent: number, periodSeconds: number): number {
   return (periodSeconds * (100 - availabilityPercent)) / 100
 }
@@ -76,10 +65,7 @@ export function slaLevelFor(availabilityPercent: number): SLALevel | null {
   return best
 }
 
-/**
- * Round to whole seconds first, then decompose. Decomposing before rounding is
- * what produced "1h 60m": 119.8 min floors to 1h and rounds 59.8 min to 60.
- */
+// round to whole seconds before decomposing; the reverse printed "1h 60m" for 119.8 minutes
 export function formatDowntime(seconds: number): string {
   if (!Number.isFinite(seconds)) return "-"
   if (seconds <= 0) return "0s"

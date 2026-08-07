@@ -36,10 +36,7 @@ import QRCode from "qrcode"
 const SECURITY_TYPES = ["wpa2", "wpa3", "wep", "open"] as const
 
 export function WifiQRGenerator() {
-  // the SSID and the network's shape go in the query string so a link is
-  // shareable. the passphrase never does, and neither does the QR image derived
-  // from it: a url lands in browser history, in the referer header of every
-  // outbound link and in any proxy or analytics log on the path.
+  // the SSID and network shape go in the url; the passphrase and the QR image never do
   const [query, setQuery] = useQueryStates(
     {
       ssid: parseAsString.withDefault(""),
@@ -99,8 +96,7 @@ export function WifiQRGenerator() {
     }
   }, [qrString])
 
-  // the json carries the passphrase, so it stays in memory beside qrString, which
-  // already does; nothing writes it anywhere without a click on the copy button
+  // carries the passphrase, so it stays in memory; nothing writes it out without the copy button
   const configJson = useMemo(
     () =>
       JSON.stringify(
@@ -126,8 +122,7 @@ export function WifiQRGenerator() {
           errorCorrectionLevel: "H",
         })
       }
-      // binary/svg payloads stay on the data-url anchor path; downloadTextFile
-      // only models utf-8 text blobs
+      // binary/svg stays on the data-url anchor path; downloadTextFile only models utf-8 text
       const link = document.createElement("a")
       link.href = dataUrl
       link.download = `${stem}.${format}`

@@ -15,9 +15,7 @@ import { calculateVLSM, exportVLSMPlan } from "@/lib/vlsm-utils"
 import type { VLSMPlan, VLSMRequirement } from "@/lib/vlsm-utils"
 import { nextId } from "@/lib/id"
 
-// the scalar base network lives in the url so a plan is a shareable link. the
-// requirement list does not: it is an arbitrary number of free-text rows, which
-// would blow past url length limits and make every keystroke rewrite the query.
+// the base network goes in the url; the requirement rows are unbounded free text and would not fit
 const PlanningPanel = lazy(() => import("./planning").then((m) => ({ default: m.PlanningPanel })))
 const ResultsPanel = lazy(() => import("./results").then((m) => ({ default: m.ResultsPanel })))
 const VisualizationPanel = lazy(() =>
@@ -38,8 +36,7 @@ const DEFAULT_REQUIREMENTS: ReadonlyArray<Omit<VLSMRequirement, "id">> = [
   { name: "DMZ", hostsRequired: 10, description: "Demilitarized zone" },
 ]
 
-// nextId rather than Date.now(): two rows added inside the same millisecond
-// collided on both the react key and the per-row dom ids labels point at
+// nextId, not Date.now(): two rows in the same millisecond collided on the key and the dom ids
 function withIds(rows: ReadonlyArray<Omit<VLSMRequirement, "id">>): VLSMRequirement[] {
   return rows.map((row) => ({ ...row, id: nextId("vlsm") }))
 }
@@ -99,8 +96,7 @@ export function VLSMPlanner() {
     const savedPrefix = data.basePrefix as number | undefined
     const savedRequirements = data.requirements as VLSMRequirement[] | undefined
 
-    // only inputs are restored; the plan recomputes from them, so a saved item
-    // can never show a figure that no longer matches its own requirements
+    // only inputs are restored; the plan recomputes, so a saved item can never show a stale figure
     if (!savedNetwork || savedPrefix === undefined || !savedRequirements) return
     void setQuery({ network: savedNetwork, prefix: String(savedPrefix) })
     setRequirements(savedRequirements.map((req) => ({ ...req, id: req.id || nextId("vlsm") })))

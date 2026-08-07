@@ -2,23 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 3.3.1 error identification (a) and sc 3.3.3 error suggestion (aa):
-// https://www.w3.org/WAI/WCAG22/Understanding/error-identification.html
-// https://www.w3.org/WAI/WCAG22/Understanding/error-suggestion.html
-//
-// every error surface in this app already announces, because the destructive
-// Alert primitive carries role="alert". what 3.3.1 additionally requires is that
-// the *item* in error is identified, and 3.3.3 that the suggestion reaches the
-// person who has to act on it. an announcement with no association tells a
-// screen reader user that something is wrong without telling them which field to
-// go back to, which is the state the conformance record recorded as gap 3.
-//
-// this is asserted statically because the runtime scan cannot do it. the resting
-// tree of a tool nobody has typed into holds no error at all, and the runtime
-// dangling-reference check in tests/components/wcag-live-regions.test.tsx
-// deliberately skips every id ending in "-error" for exactly that reason, so a
-// typo in an error id is invisible to it. here the reference is resolved against
-// the source, where the id exists whether or not the error is on screen.
+// 3.3.1: static, because the runtime scan skips every "-error" id and cannot see a typo in one
 
 const TOOLS = join("components", "tools")
 const UI = join("components", "ui")
@@ -38,32 +22,20 @@ function lineOf(source: string, index: number): number {
   return source.slice(0, index).split("\n").length
 }
 
-// several tools split the input from the panel that reports the failure: the URL
-// field lives in index.tsx and the message in a lazily loaded relay.tsx, so the
-// reference is legitimately cross-file within one tool folder. resolving per file
-// would report all of those as broken, which is the mistake that let 24 panel
-// files sit outside an earlier gate.
+// legitimately cross-file within a tool folder: the input in index.tsx, the message in relay.tsx
 function idsDeclaredNear(file: string): Set<string> {
   const dir = dirname(file)
   const ids = new Set<string>()
   for (const [other, source] of SOURCE) {
     if (dirname(other) !== dir) continue
     for (const m of source.matchAll(/\bid="([^"{}]+)"/g)) ids.add(m[1])
-    // an id built from useId() cannot be resolved statically; the primitives that
-    // do that resolve it at runtime instead
+    // an id built from useId() cannot be resolved statically; those are covered at runtime
     for (const m of source.matchAll(/\bid=\{([^}]*)\}/g)) if (m[1].includes("Id")) ids.add("*")
   }
   return ids
 }
 
-// every string literal inside an aria-describedby attribute value, whether it is
-// a bare string, a ternary, or a space-separated token list.
-//
-// the first version of this reported thirteen dangling ids that were not ids at
-// all: `aria-describedby={invalidField === "time" ? "download-size-error" :
-// undefined}` also holds the literal being compared against, and reading that as
-// a reference makes a correctly wired field look broken. operands of a
-// comparison and arguments to a string method are dropped first.
+// a comparison operand is not a reference; reading them as one reported 13 ids that were not
 function describedByLiterals(attributeValue: string): string[] {
   const value = attributeValue
     .replace(/[=!]==?\s*(["'])(?:(?!\1).)*\1/g, " ")
@@ -79,11 +51,7 @@ function describedByLiterals(attributeValue: string): string[] {
   return ids
 }
 
-// aria-describedby is not the only spelling of the reference. a shared primitive
-// takes the id as a prop and applies the attribute itself, so subnet-calculator
-// writes `describedBy={...}` onto <IPInput> and conflict-checker writes
-// `analysisErrorId={...}` onto its panel. reading only the attribute reported
-// four correctly wired surfaces as orphaned.
+// a shared primitive takes the id as a prop, so `describedBy=` and `*ErrorId=` are the same reference
 const ARIA_ONLY = /aria-describedby=(\{|")/
 const ANY_DESCRIPTION = /(?:aria-describedby|describedBy|[A-Za-z]*[Ee]rrorId)=(\{|")/
 
@@ -96,10 +64,7 @@ function describedByAttributes(
   for (const m of source.matchAll(attr)) {
     const start = m.index + m[0].length
     if (m[1] === '"') {
-      // the quotes are put back so the bare-string form reads the same to the
-      // literal extractor as the ternary form does. without them every
-      // aria-describedby="..." in the tree resolved to no ids at all and the
-      // check quietly stopped covering the four tools that use it.
+      // quotes are put back so the bare-string form reads like the ternary form to the extractor
       const end = source.indexOf('"', start)
       out.push({ value: `"${source.slice(start, end)}"`, index: m.index })
       continue
@@ -117,18 +82,7 @@ function describedByAttributes(
   return out
 }
 
-// several panels hoist the reference into a local rather than spelling it inline:
-// `const describedBy = unsupported ? "wireless-capacity-error" : undefined` and
-// then `aria-describedby={describedBy}`; the two shared primitives go further and
-// build a space-separated list so their own message and the caller's can both be
-// named. reading only the attribute reported all three wireless panels and both
-// primitives as unassociated when every one of them is wired correctly.
-//
-// so every identifier in the value is followed to its declaration, twice, which
-// is enough for `description -> [errorId, describedBy]`. it is deliberately not
-// a full resolver: it over-approximates, and the assertions it feeds are all
-// "is this reference present", where over-approximating costs coverage rather
-// than producing a false pass on a surface that names no id at all.
+// two hops cover `description -> [errorId, describedBy]`; over-approximating costs coverage, not a pass
 function expand(source: string, value: string, depth = 2): string {
   if (depth === 0) return value
   let out = value
@@ -157,10 +111,7 @@ describe("3.3.1: every aria-describedby resolves to an element that exists", () 
       const declared = idsDeclaredNear(file)
       if (declared.has("*")) continue
       for (const { value, index } of describedByAttributes(source, ARIA_ONLY)) {
-        // only a bare identifier is followed here. expanding further pulls in
-        // unrelated string literals from neighbouring declarations and reports
-        // them as dangling ids, which is a false alarm in the one check whose
-        // whole job is to be precise.
+        // only a bare identifier is followed; going further reports neighbouring literals as dangling
         const resolved = /^[A-Za-z_$][\w$]*$/.test(value.trim()) ? expand(source, value, 1) : value
         for (const id of describedByLiterals(resolved)) {
           if (!declared.has(id)) {
@@ -179,10 +130,7 @@ describe("3.3.1: every aria-describedby resolves to an element that exists", () 
 
 // ---------------------------------------------------------------------------
 
-// an error surface is a destructive Alert, or a message element painted with the
-// destructive token, that is rendered conditionally. an unconditional destructive
-// Alert is a standing caveat rather than a reported error, and is not a 3.3.1
-// surface: the third-party relay warnings are the whole of that class.
+// an unconditional destructive Alert is a standing caveat, not a reported error
 const DESTRUCTIVE_ALERT = /<Alert\s[^>]*variant="destructive"/g
 const DESTRUCTIVE_TEXT = /<p\s[^>]*className=\{?["'`][^"'`]*text-(?:destructive|red-\d)/g
 
@@ -193,20 +141,13 @@ interface Surface {
   body: string
 }
 
-// the JSX element plus the block it renders, so the id on its description and
-// the text of the message are both inside `body`
+// the element plus the block it renders, so the id and the message text are both in `body`
 function blockFrom(source: string, index: number, closing: string): string {
   const end = source.indexOf(closing, index)
   return source.slice(index, end === -1 ? Math.min(source.length, index + 600) : end)
 }
 
-// a surface preceded by `&& (`, `? (` or `: (` is rendered only when some state
-// says so, which is what makes it a reported error rather than a standing notice.
-//
-// the `: (` arm was missing at first, and vlsm-planner's plan-failure alert sits
-// in exactly that position, so the scan never saw it. that is the shape of every
-// gate failure recorded in the conformance record: not a wrong rule, a rule
-// pointed slightly to one side of the thing it was written for.
+// the `: (` arm was missing at first, so vlsm-planner's plan-failure alert was never seen
 function isConditional(source: string, index: number): boolean {
   const before = source.slice(Math.max(0, index - 220), index)
   return /(?:&&|\?|:)\s*\(?\s*$/.test(before)
@@ -233,10 +174,7 @@ function errorSurfaces(): Surface[] {
   return found
 }
 
-// a surface that reports something other than an input error is exempt, and each
-// exemption has to say which one and why. matched on a distinctive substring of
-// the surface's own source so it survives the lines moving, and a substring that
-// matches nothing fails below rather than rotting quietly.
+// matched on a distinctive substring so it survives lines moving, and a dead substring fails below
 const NOT_AN_INPUT_ERROR: { file: string; contains: string; why: string }[] = [
   {
     file: join(TOOLS, "hash-generator", "index.tsx"),
@@ -309,10 +247,7 @@ describe("3.3.1: every reported input error names the field that produced it", (
   const surfaces = errorSurfaces()
 
   it("found the error surfaces it is meant to police", () => {
-    // the count is a floor, not an exact number: a scan that silently stops
-    // matching reports zero offenders and looks like a clean bill of health,
-    // which is how the contrast ring check passed three times while matching
-    // nothing at all.
+    // a floor, not an exact number: a scan that stops matching reports zero and looks clean
     expect(
       surfaces.length,
       "the error-surface scan matched almost nothing, so every assertion below is vacuous"
@@ -338,16 +273,13 @@ describe("3.3.1: every reported input error names the field that produced it", (
       if (exempt) continue
 
       const ids = [...surface.body.matchAll(/\bid="([^"{}]+)"/g)].map((m) => m[1])
-      // the shared primitives and one panel build the id from useId() or from a
-      // template, so there is no literal to match. the reference is then the
-      // expression itself, and it is resolved by name below.
+      // the primitives build the id from useId() or a template, so it is resolved by name below
       const expressionIds = [...surface.body.matchAll(/\bid=\{([^}]+)\}/g)].map((m) => m[1].trim())
       if (ids.length === 0 && expressionIds.length === 0) {
         orphaned.push(`${surface.file}:${surface.line}: the message carries no id`)
         continue
       }
-      // the id has to be pointed at, not merely present. resolving across the
-      // tool folder covers the panels whose input sits in the parent index.tsx.
+      // pointed at, not merely present; the folder-wide resolve covers panels driven by index.tsx
       const referenced = [...SOURCE]
         .filter(([other]) => dirname(other) === dirname(surface.file))
         .some(([, source]) =>
@@ -374,10 +306,7 @@ describe("3.3.1: every reported input error names the field that produced it", (
   })
 
   it("marks the field invalid wherever the error state is in scope", () => {
-    // aria-describedby says what is wrong; aria-invalid says the control is the
-    // thing that is wrong. a control carrying one and not the other is the
-    // half-wired state, and it is only checkable where both the field and the
-    // error state live in one file.
+    // a control with one and not the other is half wired, and only checkable within one file
     const missing: string[] = []
     for (const [file, source] of SOURCE) {
       const surfacesHere = errorSurfaces().filter((s) => s.file === file)
@@ -386,8 +315,7 @@ describe("3.3.1: every reported input error names the field that produced it", (
         NOT_AN_INPUT_ERROR.some((e) => e.file === s.file && s.body.includes(e.contains))
       )
       if (exemptOnly) continue
-      // no describedby in this file means the association is cross-file, and the
-      // referring file is where aria-invalid would have to live
+      // no describedby here means the association is cross-file, where aria-invalid would live
       if (!/aria-describedby/.test(source)) continue
       if (!/aria-invalid/.test(source)) missing.push(file)
     }

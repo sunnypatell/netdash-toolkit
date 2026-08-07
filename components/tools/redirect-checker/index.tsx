@@ -46,8 +46,7 @@ function PanelFallback() {
 }
 
 export function RedirectChecker() {
-  // the starting url lives in the query string so a trace is a shareable link.
-  // arriving with ?url= set traces nothing until a button is pressed.
+  // the starting url goes in the query string, but nothing traces until a button is pressed
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("paste"),

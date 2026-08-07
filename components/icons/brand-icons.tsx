@@ -1,8 +1,6 @@
 import type { SVGProps } from "react"
 
-// lucide-react v1 dropped brand/logo icons (trademark cleanup), so the github
-// and linkedin marks live here as inline svgs. same prop surface as a lucide
-// icon (className/aria-* pass straight through) so callers are unchanged.
+// lucide-react v1 dropped brand icons, so github and linkedin live here with the same prop surface as a lucide icon
 
 export function Github({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (

@@ -43,8 +43,7 @@ function PanelFallback() {
 }
 
 export function HTTPHeaders() {
-  // the target lives in the query string so a lookup is a shareable link. nothing
-  // is requested on arrival: the relay only runs when the button is pressed.
+  // the target goes in the url, but the relay only runs on a button press
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("paste"),

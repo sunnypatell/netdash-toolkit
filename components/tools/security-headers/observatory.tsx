@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button"
 import { AlertTriangle, ExternalLink, Info, Loader2 } from "lucide-react"
 import { gradeColor } from "./grade-report"
 
-// mdn observatory answers cross-origin requests with "access-control-allow-origin: *"
-// (verified by curl). mozilla runs the scan from their own servers, so the result is
-// first-party for their methodology and is not relayed through anyone.
+// mozilla runs the scan themselves and sends access-control-allow-origin: *, so nothing is relayed
 const OBSERVATORY_ENDPOINT = "https://observatory-api.mdn.mozilla.net/api/v2/scan"
 export const OBSERVATORY_HOST = "observatory-api.mdn.mozilla.net"
 

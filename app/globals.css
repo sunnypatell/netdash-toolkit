@@ -4,7 +4,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color tokens to match emerald-based networking design brief */
   --background: #ffffff;
   --foreground: #475569;
   --card: #f1f5f9;
@@ -43,7 +42,6 @@
 }
 
 .dark {
-  /* Updated dark mode tokens for emerald-based professional networking theme */
   --background: #0f172a;
   --foreground: #f1f5f9;
   --card: #1e293b;
@@ -130,8 +128,7 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  /* inter ships slashed-zero and straight-l alternates; both matter when the
-     ui is full of addresses, masks and version strings */
+  /* inter's slashed-zero and straight-l alternates both matter in a ui full of addresses and masks */
   body {
     font-feature-settings:
       "cv05" 1,
@@ -149,16 +146,13 @@
   }
 }
 
-/* Mobile-first responsive utilities */
 @layer components {
-  /* Tool page container with responsive spacing. overflow-x-auto, not hidden:
-     hidden silently clipped any wide child on mobile instead of letting it scroll */
+  /* overflow-x-auto, not hidden: hidden silently clipped wide children on mobile instead of letting them scroll */
   .tool-container {
     @apply space-y-4 overflow-x-auto sm:space-y-6;
   }
 
-  /* digits that change in place (counts, octets, timers) must not reflow their
-     neighbours, so every numeric readout opts into fixed-width figures */
+  /* numeric readouts opt into fixed-width figures so a changing digit does not reflow its neighbours */
   .tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -168,8 +162,7 @@
     @apply text-muted-foreground text-xs font-medium tracking-[0.08em] uppercase;
   }
 
-  /* faint engineering grid behind the dashboard masthead. drawn from --border so
-     it re-tints per theme, and masked so it fades out instead of ending on a seam */
+  /* drawn from --border so it re-tints per theme, and masked so it fades instead of ending on a seam */
   .grid-backdrop {
     background-image:
       linear-gradient(to right, var(--border) 1px, transparent 1px),
@@ -182,8 +175,7 @@
 }
 
 @layer utilities {
-  /* a dense nav that scrolls constantly should not carry a 15px platform
-     scrollbar; the thumb still uses --border so it stays visible in both themes */
+  /* the thumb uses --border so a slim scrollbar stays visible in both themes */
   .scrollbar-slim {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
@@ -201,9 +193,7 @@
   }
 }
 
-/* wcag 2.3.3: honour the os setting globally rather than trusting 40+ call
-   sites to remember motion-safe. transitions collapse to instant, not removed,
-   so :hover and :focus-visible states still resolve. */
+/* wcag 2.3.3: global rather than 40+ motion-safe call sites. collapsed to instant, not removed, so :hover still resolves. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

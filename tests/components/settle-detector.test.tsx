@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-// settle() is the gate every tool-scanning suite depends on, so a detector that
-// stops matching would silently let all of them scan a shell. eight gates in
-// this repo have already passed for the wrong reason; this one proves it fires
-// before anything trusts a green.
+// every tool-scanning suite leans on this detector, so prove it fires before trusting a green
 import { pendingFallback } from "./settle"
 
 function withText(text: string): HTMLElement {
@@ -19,9 +16,7 @@ describe("the fallback detector fires on every shape a shell is written in", () 
     "Loading table...",
     "Loading Subnet Calculator",
     "loading",
-    // textContent concatenates siblings, so a tab strip sitting beside a
-    // fallback runs the two together. every PanelFallback opens with a space
-    // for exactly this reason; these are the real concatenated strings.
+    // textContent runs a tab strip into the fallback, so every PanelFallback opens with a space
     "Extended ACL Loading panel...",
     "Channel Planning Loading...",
   ])("catches %j", (text) => {
@@ -35,9 +30,7 @@ describe("the fallback detector fires on every shape a shell is written in", () 
   })
 
   it("cannot see a fallback whose text runs straight into the tab before it", () => {
-    // no boundary exists between ACL and Loading, so no regex can find one.
-    // pinned so the leading space in every PanelFallback stays load-bearing,
-    // and so the marker above is the thing new panels are held to.
+    // no boundary between ACL and Loading, so the marker is what new panels are held to
     expect(pendingFallback(withText("Extended ACLLoading panel..."))).toBe(false)
   })
 

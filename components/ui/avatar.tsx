@@ -17,9 +17,7 @@ function Avatar({ className, ...props }: React.ComponentProps<typeof AvatarPrimi
 
 function AvatarImage({
   className,
-  // an <img> with no alt attribute at all is an unlabelled image (1.1.1). an
-  // avatar sits next to the name it belongs to, so empty alt is the right
-  // default; a caller with no adjacent name passes its own.
+  // an <img> with no alt is an unlabelled image (1.1.1); an avatar sits beside its name, so empty alt is the right default
   alt = "",
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {

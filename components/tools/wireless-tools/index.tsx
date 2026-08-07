@@ -49,8 +49,7 @@ const STANDARDS = ["802.11n", "802.11ac", "802.11ax", "802.11be"] as const
 const SECURITY = ["open", "wep", "wpa", "wpa2", "wpa3", "wpa2-enterprise"] as const
 
 export function WirelessTools() {
-  // every input lives in the query string, so any plan or generated config is a
-  // shareable link
+  // every input lives in the query string, so any plan or config is a shareable link
   const [query, setQuery] = useQueryStates(
     {
       tab: parseAsStringLiteral(TABS).withDefault("channel-planning"),

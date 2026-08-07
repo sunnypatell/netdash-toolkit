@@ -2,12 +2,7 @@ import { Cloud, Monitor, WifiOff } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { isOffline, type ToolDefinition } from "@/lib/tool-registry"
 
-// says, at the point of use, whether a tool leaves the device and where to.
-// five tools each hand-rolled their own "Native Mode" alert while the seven
-// third-party tools disclosed nothing at all.
-//
-// deliberately not a tooltip: hover-only disclosure fails wcag 2.2 1.4.13 for
-// touch and keyboard users, and "where does my data go" is not supplementary.
+// discloses whether a tool leaves the device. not a tooltip: hover-only disclosure fails WCAG 1.4.13 for touch and keyboard.
 
 export function RuntimeBadge({ tool }: { tool: ToolDefinition }) {
   if (isOffline(tool)) {
@@ -30,13 +25,10 @@ export function RuntimeBadge({ tool }: { tool: ToolDefinition }) {
   )
 }
 
-// the full disclosure, as visible text. render near a tool's inputs so the user
-// reads it before triggering a request, not after.
+// visible text, rendered near a tool's inputs so it is read before the request rather than after
 export function RuntimeDisclosure({ tool }: { tool: ToolDefinition }) {
   const runtime = tool.runtime
-  // an offline tool can still have a desktop-only capability: conflict-checker
-  // makes no request in the browser and reads the local arp cache on the
-  // desktop. gating the whole disclosure on `offline === false` hid that.
+  // an offline tool can still have a desktop-only capability, so gating on `offline` alone hid conflict-checker's arp read
   const desktopOnly = runtime?.desktopOnly?.length ? runtime.desktopOnly : null
   if (!runtime || (runtime.offline && !desktopOnly)) return null
 

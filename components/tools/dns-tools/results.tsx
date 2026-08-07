@@ -33,8 +33,7 @@ export function DNSResults({
         </Button>
       </div>
       {outcomes.map(({ result, sentName, typedName }, index) => {
-        // the cache returns the original response time, so showing it as a fresh
-        // measurement would misreport a lookup that never left the browser
+        // the cache returns the original response time, so it is not a fresh measurement
         const fromCache = result.provider.includes("(cached)")
         return (
           <Card key={index} className="p-4">

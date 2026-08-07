@@ -1,11 +1,3 @@
-/**
- * NetDash Toolkit - Electron Main Process
- * Desktop application for network engineering
- *
- * @author Sunny Patel
- * @license MIT
- */
-
 import { app, BrowserWindow, ipcMain, session, shell, Menu, dialog } from "electron"
 import * as path from "path"
 import * as http from "http"
@@ -14,17 +6,9 @@ import { registerNetworkHandlers, shutdownNetworkHandlers } from "./network/hand
 import { CONTENT_SECURITY_POLICY } from "./csp"
 import { appOrigins, decideNavigation, isPermissionAllowed } from "./navigation"
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const APP_NAME = "NetDash Toolkit"
 const isDev = process.env.NODE_ENV === "development"
-const STATIC_PORT = 17890 // Port for static file server
-
-// ============================================================================
-// STATIC FILE SERVER
-// ============================================================================
+const STATIC_PORT = 17890
 
 let staticServer: http.Server | null = null
 
@@ -54,16 +38,11 @@ function startStaticServer(): Promise<number> {
 
 function stopStaticServer(): void {
   if (!staticServer) return
-  // close() alone waits for keep-alive sockets the renderer still holds, which
-  // on quit means the listener outlives the app
+  // close() alone waits on the renderer's keep-alive sockets, so the listener outlives the app
   staticServer.closeAllConnections()
   staticServer.close()
   staticServer = null
 }
-
-// ============================================================================
-// WINDOW MANAGEMENT
-// ============================================================================
 
 let mainWindow: BrowserWindow | null = null
 
@@ -76,9 +55,7 @@ function applyContentSecurityPolicy(allowedOrigins: string[]): void {
       origin = null
     }
 
-    // only the app's own documents get the policy. rewriting headers on the
-    // third-party api responses the tools fetch would change nothing and would
-    // mean parsing every response in the main process.
+    // app documents only: rewriting headers on the third-party responses tools fetch buys nothing
     if (!origin || !allowedOrigins.includes(origin)) {
       callback({})
       return
@@ -116,16 +93,12 @@ function createWindow(): void {
     mainWindow?.focus()
   })
 
-  // Load the app
   if (isDev) {
     mainWindow.loadURL("http://localhost:3000")
     mainWindow.webContents.openDevTools({ mode: "detach" })
   } else {
-    // Load from local static server
-    // load over localhost, not 127.0.0.1: firebase auth's authorized-domain
-    // list contains "localhost" and treats the literal ip as a different
-    // origin, so google sign-in failed with auth/unauthorized-domain in the
-    // desktop app. the server still binds to 127.0.0.1 only.
+    // localhost, not 127.0.0.1: firebase auth treats them as different origins.
+    // see docs/src/content/docs/self-hosting/desktop-build.md
     mainWindow.loadURL(`http://localhost:${STATIC_PORT}`)
   }
 
@@ -137,10 +110,8 @@ function createWindow(): void {
     return { action: "deny" }
   })
 
-  // setWindowOpenHandler only sees window.open and target=_blank. without this,
-  // a location.href assignment or a plain anchor click navigates the window to a
-  // remote origin, and preload.js (which exposes portScan, getArpTable and friends)
-  // runs for every navigation in this webContents.
+  // setWindowOpenHandler misses location.href and anchor clicks, and preload runs for every
+  // navigation in this webContents, so a remote origin would get portScan and arpTable
   mainWindow.webContents.on("will-navigate", (event, url) => {
     const decision = decideNavigation(url, allowedOrigins)
     if (decision.action === "allow") return
@@ -163,10 +134,6 @@ function createWindow(): void {
     mainWindow = null
   })
 }
-
-// ============================================================================
-// MENU
-// ============================================================================
 
 function createMenu(): void {
   const isMac = process.platform === "darwin"
@@ -231,22 +198,13 @@ function createMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-// ============================================================================
-// IPC HANDLERS
-// ============================================================================
-
-// only what preload.ts actually bridges. the dialog and theme handlers that used
-// to live here were unreachable (contextIsolation is on and preload never
-// exposed them) while still forwarding raw renderer objects into native dialogs.
+// only what preload.ts bridges: the old dialog and theme handlers were unreachable but still
+// forwarded raw renderer objects into native dialogs
 function registerAppHandlers(): void {
   ipcMain.handle("app:getVersion", () => app.getVersion())
   ipcMain.handle("app:getPlatform", () => process.platform)
   ipcMain.handle("app:isElectron", () => true)
 }
-
-// ============================================================================
-// APP LIFECYCLE
-// ============================================================================
 
 const gotTheLock = app.requestSingleInstanceLock()
 
@@ -261,7 +219,6 @@ if (!gotTheLock) {
   })
 
   app.whenReady().then(async () => {
-    // Start static server for production
     if (!isDev) {
       try {
         await startStaticServer()
@@ -273,8 +230,7 @@ if (!gotTheLock) {
       }
     }
 
-    // next dev serves eval-based sourcemaps and an hmr websocket, so the policy
-    // ships with the packaged build only
+    // packaged build only: next dev serves eval sourcemaps and an hmr websocket
     if (!isDev) {
       applyContentSecurityPolicy(appOrigins({ isDev, staticPort: STATIC_PORT }))
     }
@@ -299,8 +255,7 @@ app.on("window-all-closed", () => {
 })
 
 app.on("before-quit", () => {
-  // a scan in flight owns child processes and sockets; quitting mid-scan used to
-  // leave both to finish on their own
+  // quitting mid-scan used to leave its child processes and sockets running
   shutdownNetworkHandlers()
   stopStaticServer()
 })

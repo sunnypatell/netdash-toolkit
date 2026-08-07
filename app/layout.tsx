@@ -23,8 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  // without metadataBase, every og:image and canonical resolves relative and
-  // breaks the moment a card is rendered off-site
+  // without metadataBase every og:image and canonical resolves relative and breaks once a card renders off-site
   metadataBase: new URL(SITE_URL),
   title: {
     default: `${SITE_NAME}: ${SITE_TAGLINE}`,
@@ -67,8 +66,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  // both values are the real --background tokens, so the browser chrome matches
-  // the painted page instead of flashing a default
+  // both values are the real --background tokens, so browser chrome matches the painted page instead of flashing
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0f172a" },
@@ -85,8 +83,7 @@ export default function RootLayout({
       <body className={`font-sans ${inter.variable} ${jetbrainsMono.variable} antialiased`}>
         <script
           type="application/ld+json"
-          // no ratings, no review counts, no publisher organisation: only claims
-          // that are verifiably true of this app
+          // only claims that are verifiably true of this app: no ratings, review counts or publisher organisation
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
@@ -117,8 +114,7 @@ export default function RootLayout({
                 <ProjectProvider>{children}</ProjectProvider>
               </AuthProvider>
             </NuqsAdapter>
-            {/* the app had two toast systems and mounted neither, so every
-                "copied"/"saved"/"failed" message was silent. one system now. */}
+            {/* two toast systems were declared and neither mounted, so every "copied"/"saved"/"failed" message was silent */}
             <Toaster richColors closeButton position="bottom-right" />
           </ThemeProvider>
         </Suspense>

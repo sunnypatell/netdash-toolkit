@@ -6,9 +6,7 @@ import { BookOpen, ExternalLink, Globe, Heart, Monitor } from "lucide-react"
 import { Github, Linkedin } from "@/components/icons/brand-icons"
 import { REPO_URL, SITE_NAME } from "@/lib/site"
 
-// the docs are an astro build copied into public/, so they are same-origin
-// static files rather than a next route: a Link here would try to soft-navigate
-// a page the router has never heard of
+// the docs are an astro build copied into public/, so a Link would soft-navigate a page the router has never heard of
 const DOCS_URL = "/docs/"
 const RELEASES_URL = `${REPO_URL}/releases/latest`
 
@@ -29,8 +27,7 @@ export function Footer() {
             </p>
           </div>
 
-          {/* the docs site and the desktop build were both shipped and then never
-              linked from anywhere in the app */}
+          {/* the docs site and the desktop build were both shipped and then never linked from the app */}
           <nav aria-label="Site links" className="flex flex-wrap items-center justify-center gap-1">
             <Button variant="ghost" size="sm" asChild>
               <a href={DOCS_URL} className="flex items-center space-x-1">

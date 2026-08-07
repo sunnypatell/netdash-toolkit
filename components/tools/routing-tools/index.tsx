@@ -49,8 +49,7 @@ function PanelFallback() {
 }
 
 export function RoutingTools() {
-  // the panel is deep-linkable; the network statement and route lists are not in
-  // the url because a partial restore would silently drop a user's rows
+  // the tab is deep-linkable; the route lists are not, since a partial restore would drop rows
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsStringLiteral(TABS).withDefault("ospf")

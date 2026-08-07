@@ -354,7 +354,8 @@ export function FiberPanel({ embedded }: PanelProps) {
           </CardContent>
         </Card>
 
-        <div className="space-y-4" aria-live="polite">
+        {/* ResultCard owns the announcement; a wrapper here nests one live region in another */}
+        <div className="space-y-4">
           {result ? (
             <>
               <ResultCard

@@ -34,8 +34,7 @@ export function SpeedConverterPanel({ embedded }: PanelProps) {
   const { value, unit } = query
   const converted = useMemo(() => convertSpeed(value, unit), [value, unit])
 
-  // the rate keys match the other bandwidth panels, so a saved line rate loads
-  // into whichever tab you open next
+  // the rate keys match the other bandwidth panels, so a saved line rate loads into any tab
   const handleLoadFromProject = (data: Record<string, unknown>) => {
     const input = data.input as { transferSpeed?: string; transferSpeedUnit?: string } | undefined
     if (!input) return

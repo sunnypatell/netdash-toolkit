@@ -51,8 +51,7 @@ const PRESETS = [
 ]
 
 export function CronParser() {
-  // the expression and the zone are the whole input, so they live in the query
-  // string: a projected schedule is then a link someone else can open
+  // expression and zone are the whole input, so a projected schedule is a shareable link
   const [query, setQuery] = useQueryStates(
     {
       cron: parseAsString.withDefault("0 9 * * 1-5"),
@@ -65,8 +64,7 @@ export function CronParser() {
   const expression = query.cron
   const setExpression = (value: string) => void setQuery({ cron: value })
 
-  // an unset tz means "this browser", resolved on the client only: reading it
-  // during ssr render would bake one visitor's zone into the static html
+  // unset tz means "this browser"; resolving in ssr would bake one visitor's zone into the html
   const [browserZone, setBrowserZone] = useState("UTC")
   // next-run projection depends on "now", so it must not run during ssr render
   const [from, setFrom] = useState<Date | null>(null)

@@ -1,7 +1,4 @@
-// one route serves password reset, email verification and email recovery. the
-// page is a client component so it cannot export metadata; layout.tsx carries
-// the static title and the page narrows it from this map once ?mode= is read.
-// kept out of page.tsx so the route file exports only what next expects.
+// the page is a client component and cannot export metadata, so layout.tsx holds the static title and the page narrows it from this map
 export const MODE_TITLES: Record<string, string> = {
   resetPassword: "Reset Your Password",
   verifyEmail: "Verify Your Email Address",
