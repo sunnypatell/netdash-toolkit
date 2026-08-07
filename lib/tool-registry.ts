@@ -79,10 +79,8 @@ export type ProjectItemType =
 // a lazy import thunk; each tool becomes its own chunk, loaded on navigation
 export type ToolLoader = () => Promise<{ default: ComponentType }>
 
-// what a tool actually needs at runtime. the dashboard used to hardcode
-// "100% offline ready" while 12 tools did network i/o, and nothing in the
-// registry could contradict it. a test derives these from the source so the
-// metadata cannot drift from the code again.
+// the dashboard once claimed "100% offline ready" while 12 tools did network i/o; a test now
+// derives these from the source so the metadata cannot drift
 export interface ToolRuntime {
   // false when the tool performs network i/o of any kind
   offline: boolean
@@ -774,9 +772,7 @@ export const tools: ToolDefinition[] = [
   },
 ]
 
-// Standalone navigation items (not tools)
-// helpers: the small api the app actually consumes. everything renders from
-// this registry; there is no other list of tools anywhere.
+// standalone nav items, not tools. everything renders from this registry; there is no other list.
 
 export function getToolBySlug(slug: string): ToolDefinition | undefined {
   return tools.find((t) => t.slug === slug)

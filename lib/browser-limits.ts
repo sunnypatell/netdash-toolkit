@@ -1,11 +1,8 @@
-// the hard limits a page runs into when it tries to measure the network. kept in
-// one place, each one traceable to the spec that imposes it, so a tool can state
-// what it could not measure instead of reporting a limit as a finding.
+// browser limits, each traceable to its spec, so a tool can say what it could not measure
+// rather than reporting the limit as a finding
 
-// fetch standard, "cors-safelisted response-header name": on a cross-origin
-// response these seven are readable and nothing else is, unless the server names
-// more in access-control-expose-headers. every other header reads as absent from
-// script, which is not the same as being absent from the response.
+// fetch standard, cors-safelisted response headers: the rest read as absent from script,
+// which is not the same as absent from the response
 export const CORS_SAFELISTED_RESPONSE_HEADERS = [
   "Cache-Control",
   "Content-Language",
@@ -21,9 +18,7 @@ export function isCorsSafelistedResponseHeader(name: string): boolean {
   return CORS_SAFELISTED_RESPONSE_HEADERS.some((h) => h.toLowerCase() === key)
 }
 
-// fetch standard, "port blocking": a fetch to any of these ports fails before a
-// packet leaves, whatever the port's real state is. next ships the same table
-// (next/dist/lib/helpers/get-reserved-port) citing the same section.
+// fetch standard port blocking: these fail before a packet leaves, whatever the real state
 export const BLOCKED_PORT_SERVICES: Record<number, string> = {
   1: "tcpmux",
   7: "echo",

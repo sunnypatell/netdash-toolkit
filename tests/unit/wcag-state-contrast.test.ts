@@ -2,14 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 1.4.11 non-text contrast, level aa:
-// https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html
-//
-// tests/unit/contrast.test.ts checks the token pairs that carry text (1.4.3) and
-// the boundary/ring tokens. this file covers the pairs that signal a *state*:
-// the menu and listbox highlight that marks which row has roving focus. that
-// highlight is a fill swap rather than a ring, so it needs 3:1 against the
-// surface it sits on to be distinguishable from the unfocused rows.
+// 1.4.11 for the pairs that signal state: the roving-focus highlight is a fill swap, so 3:1 binds it
 
 const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8")
 
@@ -50,18 +43,13 @@ function hex(theme: keyof typeof themes, token: string) {
 }
 
 describe("1.4.11 state indicators", () => {
-  // components/ui/dropdown-menu.tsx and components/ui/select.tsx both mark the
-  // focused row with `focus:bg-accent` over `--popover`
+  // dropdown-menu.tsx and select.tsx both mark the focused row with `focus:bg-accent` over --popover
   it("the dark theme menu highlight clears 3:1 against the popover surface", () => {
     const r = ratio(hex("dark", "accent"), hex("dark", "popover"))
     expect(r, `--accent on --popover is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
   })
 
-  // the same highlight in the light theme measures 2.54:1, which is below the
-  // floor. it is recorded here rather than skipped so the number is checked
-  // rather than remembered, and so that fixing --accent fails this test and
-  // prompts an update to docs/src/content/docs/accessibility-conformance.md. the mitigation is
-  // that the row's text colour swaps at the same time, asserted below.
+  // 2.54:1 in the light theme, recorded so the number is checked not remembered; the text swaps too
   it("the light theme menu highlight is a known open gap, still measuring under 3:1", () => {
     const r = ratio(hex("light", "accent"), hex("light", "popover"))
     expect(
@@ -81,9 +69,7 @@ describe("1.4.11 state indicators", () => {
     }
   })
 
-  // the same highlight family as above, one level down: the sidebar marks its
-  // active item with --sidebar-accent over --sidebar. it measures worse than the
-  // menu case in the light theme because --sidebar is not white.
+  // the same family one level down, and worse in the light theme because --sidebar is not white
   it("the light theme sidebar highlight is a known open gap, still measuring under 3:1", () => {
     const r = ratio(hex("light", "sidebar-accent"), hex("light", "sidebar"))
     expect(
@@ -98,9 +84,7 @@ describe("1.4.11 state indicators", () => {
     expect(r, `--sidebar-accent on --sidebar is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
   })
 
-  // the destructive focus ring used to be drawn at 20% alpha, which composited to
-  // roughly 1.2:1 and left that variant with no visible focus state. it is opaque
-  // now, so the token itself has to clear 3:1 on the surfaces it lands on.
+  // this ring was 20% alpha, composited to ~1.2:1; opaque now, so the token itself has to pass
   it("2.4.7: the destructive focus ring clears 3:1 on the page surfaces", () => {
     for (const theme of ["light", "dark"] as const) {
       for (const surface of ["background", "card", "popover"] as const) {
@@ -114,27 +98,9 @@ describe("1.4.11 state indicators", () => {
   })
 })
 
-// 1.4.3 contrast (minimum), level aa:
-// https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html
-//
-// tests/unit/contrast.test.ts pairs each foreground token with the surface it
-// was designed for, and --destructive was only ever checked as a *background*,
-// under --destructive-foreground. it is also a foreground: `text-destructive`
-// draws every validation message and every error alert in the app. the surface
-// under each of those is known statically rather than guessed, because the
-// primitive that renders it declares its own background:
-//
-//   components/ui/alert.tsx        text-destructive on bg-card
-//   components/ui/dropdown-menu.tsx  destructive item on bg-popover
-//   components/ui/dialog.tsx       the three "Passwords do not match" messages
-//                                  sit on bg-background
-//
-// none of it is large text: the call sites are text-sm and text-xs, so the floor
-// is 4.5:1 rather than 3:1.
+// --destructive is a foreground too: alert on bg-card, menu on bg-popover, dialog on bg-background
 describe("1.4.3 --destructive as a foreground", () => {
-  // all six now clear the floor. one value could not: a red dark enough for the
-  // light surfaces was too dark for the dark ones, so --destructive is per theme
-  // (#b91c1c light, #f87171 dark) and --destructive-foreground follows it.
+  // a red dark enough for the light surfaces was too dark for the dark ones, so it is per theme
   const PASSING: Array<[keyof typeof themes, string]> = [
     ["light", "background"],
     ["light", "popover"],
@@ -152,9 +118,7 @@ describe("1.4.3 --destructive as a foreground", () => {
     ).toBeGreaterThanOrEqual(4.5)
   })
 
-  // the message colour is the whole message, so it may not composite against
-  // something unknown. the alert description used to be drawn at 90% alpha,
-  // which cost another 0.4 of a ratio point on the same surface.
+  // the alert description was drawn at 90% alpha, costing another 0.4 of a ratio point
   it("no destructive text is drawn at partial alpha", () => {
     const offenders: string[] = []
     for (const rel of readdirSync(join("components", "ui"), { encoding: "utf8" })) {

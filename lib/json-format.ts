@@ -50,11 +50,7 @@ interface ScanFrame {
   expectKey: boolean
 }
 
-/**
- * JSON.parse discards the evidence for both of these problems: a repeated key is
- * silently collapsed to the last one, and an integer past 2^53 is silently
- * rounded. Both have to be found in the source text, before parsing.
- */
+// must run on the source text: JSON.parse collapses repeated keys and rounds past 2^53
 export function scanJsonSource(source: string): JsonWarning[] {
   const warnings: JsonWarning[] = []
   const duplicates = new Set<string>()
@@ -154,11 +150,7 @@ export function scanJsonSource(source: string): JsonWarning[] {
   return warnings
 }
 
-/**
- * Iterative on purpose. The recursive version overflowed the stack on valid but
- * deeply nested input, and because that threw inside the parse try/catch it was
- * reported to the user as invalid JSON.
- */
+// iterative on purpose: the recursive version overflowed and got reported as invalid JSON
 export function jsonStats(root: unknown): JsonStats {
   const stats: JsonStats = {
     keys: 0,
@@ -233,9 +225,7 @@ export function analyzeJson(input: string, indent: JsonIndent, mode: JsonOutputM
     output =
       mode === "minify" ? JSON.stringify(parsed) : JSON.stringify(parsed, null, indentValue(indent))
   } catch (err) {
-    // JSON.parse handles any nesting depth but JSON.stringify recurses, so past
-    // roughly 10k levels it overflows on input that parsed perfectly well. the
-    // distinction matters: this input is valid, it just cannot be re-serialised.
+    // JSON.stringify recurses where parse does not, so ~10k levels is valid but not re-serialisable
     const message =
       err instanceof RangeError
         ? `Valid JSON, but too deeply nested to re-serialise: JSON.stringify recurses and overflowed the stack at depth ${jsonStats(parsed).depth.toLocaleString()}.`

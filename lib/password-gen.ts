@@ -1,13 +1,5 @@
-// password generation for the generator tool.
-//
-// two properties this file exists to guarantee:
-//   1. uniform selection over the charset - modulo folding of a 32-bit draw
-//      biases the first (2^32 % n) characters, so draws land in the rejection
-//      zone are thrown away instead of folded.
-//   2. entropy quoted from the charset that was actually used, after exclusions.
-// crypto.getRandomValues only in this file. Math.random exists
-// elsewhere (lorem text, a cache-buster, a dns query id) but never for a
-// security-relevant draw.
+// crypto.getRandomValues only. rejection sampling because modulo folding a 32-bit draw biases
+// the first (2^32 % n) characters, and entropy is quoted from the charset left after exclusions.
 
 export interface PasswordOptions {
   length: number
@@ -56,10 +48,7 @@ export function buildCharset(options: PasswordOptions): string {
   return charset
 }
 
-/**
- * uniform index in [0, size) by rejection sampling. draws at or above the
- * largest multiple of size that fits in 2^32 are discarded rather than folded.
- */
+// draws at or above the largest multiple of size under 2^32 are discarded, not folded
 export function uniformIndex(size: number, fill: RandomFill = defaultFill): number {
   if (size <= 0) throw new Error("size must be positive")
   if (size === 1) return 0

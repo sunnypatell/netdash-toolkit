@@ -39,6 +39,17 @@ import { useAuth } from "@/contexts/auth-context"
 import type { Project } from "@/contexts/project-context"
 import type { Permission } from "@/types/sharing"
 import { findUserByEmail, shareProject, unshareProject, updateSharePermission } from "@/lib/sharing"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface ShareProjectDialogProps {
   project: Project
@@ -317,16 +328,37 @@ export function ShareProjectDialog({
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveShare(userId)}
-                          className="text-destructive hover:text-destructive h-8 w-8 p-0"
-                          disabled={loading}
-                          aria-label={`Remove access for ${share.email}`}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </Button>
+                        {/* 3.3.4: this destroys cross-user data server side and the
+                            row vanishes, so a mis-click leaves nothing to restore from */}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive h-8 w-8 p-0"
+                              disabled={loading}
+                              aria-label={`Remove access for ${share.email}`}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove access?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                {share.email} will lose access to this project immediately. You can
+                                share it with them again, but their {share.permission} permission is
+                                not restored automatically.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRemoveShare(userId)}>
+                                Remove access
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   )

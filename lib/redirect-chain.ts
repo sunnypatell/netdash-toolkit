@@ -18,18 +18,14 @@ export interface RedirectChain {
   warnings: string[]
 }
 
-// rfc 9110 15.4: the redirection statuses that carry a Location a client follows.
-// 304 is in the 3xx range but is a cache validator, not a redirect (15.4.5), and
-// 305/306 are deprecated and unused.
+// rfc 9110 15.4; 304 is a cache validator not a redirect, and 305/306 are deprecated
 const REDIRECT_STATUSES = new Set([300, 301, 302, 303, 307, 308])
 
 // rfc 9110 15.4.2 / 15.4.3: for 301 and 302 clients historically rewrite a POST
 // to GET, and 15.4.4 makes that mandatory for 303
 const METHOD_REWRITING_STATUSES = new Set([301, 302, 303])
 
-// rfc 3986 3.1: the scheme is case-insensitive, so "HTTP://x" is the http scheme.
-// comparing with startsWith("http://") missed that and reported an upgrade that
-// had not happened.
+// rfc 3986 3.1: schemes are case-insensitive, so startsWith("http://") reported a phantom upgrade
 function schemeOf(url: string): string {
   try {
     return new URL(url).protocol.replace(":", "").toLowerCase()
@@ -52,9 +48,7 @@ export function buildRedirectChain(blocks: ResponseBlock[], startUrl: string): R
     let resolved: string | undefined
     if (isRedirect && location) {
       try {
-        // rfc 9110 10.2.2: Location is a URI-reference, so it resolves against
-        // the target uri. covers absolute, path-relative, protocol-relative
-        // //host/path and bare relative forms in one step.
+        // rfc 9110 10.2.2: Location is a URI-reference, so resolving against the target covers every form
         resolved = new URL(location, currentUrl).href
       } catch {
         warnings.push(`Hop ${hops.length + 1} sent an unparsable Location: ${location}`)

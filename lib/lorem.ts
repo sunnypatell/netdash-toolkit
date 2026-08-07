@@ -1,6 +1,4 @@
-// lorem ipsum generation, pure and with an injectable rng so the counts can be
-// asserted. placeholder prose is decoration, so Math.random is the right tool
-// here - nothing in this file should ever be used as a secret.
+// injectable rng so counts are assertable. Math.random is fine: nothing here is ever a secret.
 
 export type LoremMode = "paragraphs" | "sentences" | "words"
 
@@ -56,11 +54,7 @@ function intBetween(rng: Rng, min: number, max: number): number {
   return Math.floor(rng() * (max - min + 1)) + min
 }
 
-/**
- * n random words. the classic opening, when asked for, is spliced in as the
- * first words and counts toward n - the old implementation pasted five extra
- * words on top of the requested count and reported the wrong total.
- */
+// the classic opening counts toward n; the old version pasted five extra words on top
 export function loremWords(count: number, startWithLorem: boolean, rng: Rng): string[] {
   const n = Math.max(0, Math.floor(count))
   const words: string[] = []

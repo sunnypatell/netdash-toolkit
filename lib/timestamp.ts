@@ -59,11 +59,7 @@ export function detectInputKind(input: string): TimestampKind | "empty" {
   return "text"
 }
 
-/**
- * Rank a bare number by digit count, sign-blind magnitude only. Negative
- * (pre-1970) values must be classified on absolute value, otherwise every
- * pre-epoch ms/µs timestamp silently reads as seconds.
- */
+// classify on absolute value, or every pre-epoch ms/µs timestamp reads as seconds
 export function detectUnit(value: number): Extract<TimestampUnit, "s" | "ms" | "us" | "ns"> {
   const abs = Math.abs(value)
   if (abs < 1e11) return "s"
@@ -128,12 +124,7 @@ export type TimestampParse =
     }
   | { ok: false; error: string }
 
-/**
- * Parse anything a user is likely to paste: a bare number in any of the
- * supported unit scales, an ISO 8601 string, or an RFC 2822 / loose date
- * string. ISO input without an offset is resolved in `timeZone` rather than
- * silently taking the browser's ambient zone.
- */
+// ISO input without an offset resolves in `timeZone`, not the browser's ambient zone
 export function parseTimestampInput(
   input: string,
   options: { unit?: TimestampUnit | "auto"; timeZone?: string } = {}

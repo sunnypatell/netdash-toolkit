@@ -2,11 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 1.4.3 (contrast minimum) and 1.4.11 (non-text contrast) are the two AA
-// criteria the axe suite in tests/components cannot check, because happy-dom
-// has no layout engine and computes contrast against a page that never
-// painted. they are checked here instead, straight from the token values in
-// app/globals.css so the assertion cannot drift from the shipped css.
+// 1.4.3 and 1.4.11 read straight from app/globals.css, so the assertion cannot drift from the css
 
 const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8")
 
@@ -46,8 +42,7 @@ function ratio(a: string, b: string) {
 function hex(theme: keyof typeof themes, token: string) {
   const value = themes[theme][token]
   expect(value, `--${token} missing from the ${theme} theme`).toBeTruthy()
-  // a token that is not an opaque hex cannot be reasoned about here: its
-  // contrast depends on whatever it composites over
+  // a token that is not an opaque hex composites over something unknown
   expect(value, `--${token} in the ${theme} theme is not an opaque hex`).toMatch(
     /^#[0-9a-fA-F]{6}$/
   )
@@ -68,9 +63,7 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ["muted-foreground", "muted"],
   ["muted-foreground", "background"],
   ["muted-foreground", "card"],
-  // --destructive is not only a fill: `text-destructive` draws every validation
-  // message and error alert, so it has to clear 4.5:1 as a foreground on every
-  // surface it lands on. checking it only as a background missed four of six.
+  // `text-destructive` draws every validation message; checking it as a fill only missed four of six
   ["destructive", "background"],
   ["destructive", "card"],
   ["destructive", "popover"],
@@ -80,11 +73,7 @@ const TEXT_PAIRS: Array<[string, string]> = [
   ["sidebar-accent-foreground", "sidebar-accent"],
 ]
 
-// `--input` is the boundary of a text field and `--ring` is the focus
-// indicator, so both carry information required to identify a control and its
-// state. `--border` is deliberately absent: it draws decorative separators and
-// card hairlines, which 1.4.11 does not bind. that limit is stated in the
-// accessibility docs rather than silently assumed here.
+// --border is deliberately absent: it draws decorative separators, which 1.4.11 does not bind
 const UI_PAIRS: Array<[string, string]> = [
   ["input", "background"],
   ["ring", "background"],
@@ -122,23 +111,8 @@ it("defines the same colour tokens in both themes", () => {
   expect(colours(themes.dark)).toEqual(colours(themes.light))
 })
 
-// shadcn draws the ring at 50% alpha by default. an opaque --ring token composites to
-// 2.09:1 through that alpha, so the focus indicator failed 1.4.11 on every
-// surface in both themes even though the token itself passes. the ring has to
-// paint at full opacity, and a pasted component must not undo that.
-// scanning only .tsx was not enough: an `@apply` of the 50% outline utility in
-// the base layer of globals.css painted every focus outline in the app, and
-// the whole --sidebar-ring family was translucent. css counts too.
-// the class literals are assembled at runtime so tailwind does not scan this
-// file and emit the very utilities it exists to forbid.
-// the first version of this scan matched only `-ring/N` and missed
-// `ring-destructive/20`, which seven primitives used for the aria-invalid state.
-// an invalid-state ring identifies a control's state, so 1.4.11 binds it exactly
-// as it binds the focus ring. matching any ring colour token, not one name.
-// the colour segment has to admit digits and brackets: `[a-z-]+` matched
-// `ring-ring/50` and `ring-destructive/20` but not `ring-red-500/50`, which is
-// the form tailwind's own palette produces, nor an arbitrary alpha like
-// `ring-primary/[0.5]` or an arbitrary colour like `ring-[#f00]/50`.
+// an opaque --ring through shadcn's default 50% alpha composites to 2.09:1, so no ring may be translucent.
+// the colour segment must admit digits and brackets: `[a-z-]+` missed `ring-red-500/50` and `ring-[#f00]/50`
 const RING_ALPHA = () =>
   new RegExp(
     `(?:ring|outline)-(?:\\[[^\\]\\s]+\\]|[a-z0-9-]+)\\${"/"}(?:\\[[^\\]\\s]+\\]|\\d+%?)`,
@@ -149,9 +123,7 @@ function ringAlphaOffenders(source: string): string[] {
   return [...source.matchAll(RING_ALPHA())].map((m) => m[0])
 }
 
-// a scanner that matches nothing passes forever, so prove it fires first. the
-// literals are assembled at runtime so tailwind does not scan this file and emit
-// the very utilities the scan exists to forbid.
+// a scanner that matches nothing passes forever, so prove it fires first
 it("the ring scan actually matches every shape a translucent ring is written in", () => {
   const alpha = "/"
   const known = [
@@ -184,6 +156,7 @@ it("2.4.7 and 1.4.11: no ring is drawn at partial alpha", () => {
   let scanned = 0
   for (const root of roots) {
     for (const rel of readdirSync(root, { recursive: true, encoding: "utf8" })) {
+      // css counts: an `@apply` of the 50% outline utility in globals.css painted every focus outline
       if (!/\.(tsx|ts|css)$/.test(rel)) continue
       scanned++
       const file = join(root, rel)

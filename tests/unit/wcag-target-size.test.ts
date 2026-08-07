@@ -3,28 +3,14 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { twMerge } from "tailwind-merge"
 
-// wcag 2.2 sc 2.5.8 target size (minimum), level aa:
-// https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html
-//
-// a pointer target must be at least 24 by 24 css px. happy-dom has no layout
-// engine, so this is resolved from the tailwind classes instead: each wrapper's
-// own base classes are merged with the caller's className through the same
-// tailwind-merge the app uses in cn(), so a caller's `h-4` overriding a base
-// `h-8` resolves here exactly as it does in the browser.
-//
-// this only reports a control whose classes *pin* a dimension under 24px. a
-// control sized by its content is left alone rather than guessed at, so the
-// suite under-reports rather than crying wolf. the limit is stated in
-// docs/src/content/docs/accessibility-conformance.md rather than assumed away here.
+// 2.5.8 with no layout engine: the box is resolved through the same tailwind-merge cn() uses
 
 const MINIMUM_PX = 24
 
 // tailwind v4 default spacing scale: 1 unit = 0.25rem = 4px at the root size
 const SPACING_PX = 4
 
-// base classes each wrapper applies before the caller's className is merged in.
-// MODEL_SOURCES below pins each entry to the file it models so the two cannot
-// drift apart silently.
+// base classes, pinned to the file each models by MODEL_SOURCES so the two cannot drift apart
 const BASE_CLASSES: Record<string, string> = {
   Button: "h-9 px-4 py-2",
   CopyButton: "h-8 px-3", // defaults to size="sm"
@@ -36,8 +22,7 @@ const BASE_CLASSES: Record<string, string> = {
   SelectItem: "py-1.5 pr-8 pl-2 text-sm",
 }
 
-// utilities that must still be present in the primitive for the model above to
-// hold. if a primitive is restyled, this fails instead of quietly mismodelling.
+// if a primitive is restyled this fails, instead of quietly mismodelling it
 const MODEL_SOURCES: Record<string, { file: string; must: string[] }> = {
   Button: { file: "components/ui/button.tsx", must: ["h-9 px-4 py-2"] },
   CopyButton: { file: "components/ui/copy-button.tsx", must: ['size = "sm"'] },
@@ -59,8 +44,7 @@ const INTERACTIVE = new Set([
   "AlertDialogCancel",
 ])
 
-// text-* utilities pin a line box, which sets the height of a control with no
-// explicit height. values are tailwind's default line-heights.
+// text-* pins a line box, which sets the height of a control with no explicit height
 const LINE_HEIGHT_PX: Record<string, number> = {
   xs: 16,
   sm: 20,
@@ -80,14 +64,13 @@ function toPx(value: string): number | null {
 
 type Box = { height: number | null; width: number | null }
 
+// only a control that *pins* a dimension is reported; one sized by its content is left alone
 function resolveBox(classes: string[]): Box {
   let h: number | null = null
   let w: number | null = null
   let py = 0
   let lineHeight: number | null = null
-  // an absolutely positioned ::before with a negative inset grows the pointer
-  // target past the painted box, which is how an undersized control can still
-  // meet 2.5.8 without changing its visual design
+  // a negative-inset ::before grows the pointer target past the painted box, design untouched
   let grow = 0
   const positionedPseudo = classes.includes("before:absolute")
 
@@ -98,8 +81,7 @@ function resolveBox(classes: string[]): Box {
       if (v !== null) grow = Math.max(grow, v * 2)
       continue
     }
-    // a variant only applies in some states or breakpoints, so it cannot be
-    // treated as the resting size of the control
+    // a variant applies only in some states or breakpoints, so it is not the resting size
     if (cls.includes(":")) continue
     let m: RegExpExecArray | null
     if ((m = /^size-(.+)$/.exec(cls))) {
@@ -168,10 +150,7 @@ function scan(file: string): Finding[] {
     const caller = classLiteralsIn(attributes)
     const base = BASE_CLASSES[tag] ?? ""
     if (!base && caller.length === 0) continue
-    // a visually hidden element is not a pointer target at all. the skip link is
-    // the case in point: it is sr-only until focused, and the focus: variants
-    // that give it its padding are exactly the ones this resolver skips, so
-    // measuring its resting box reports a 20px control that never renders.
+    // sr-only is not a pointer target: the skip link's padding sits in the focus: variants this skips
     if (caller.includes("sr-only")) continue
 
     const merged = twMerge(base, caller.join(" "))
@@ -226,17 +205,13 @@ describe("2.5.8 target size (minimum)", () => {
     }
   )
 
-  // the shared primitives are the only files this suite's owner can edit, and a
-  // single miss here lands on all 48 tools, so they carry a hard floor
+  // a single miss in a shared primitive lands on all 48 tools, so they carry a hard floor
   it("no shared primitive pins an interactive box under 24px", () => {
     const inPrimitives = allFindings.filter((f) => f.file.startsWith(join("components", "ui")))
     expect(inPrimitives, report(inPrimitives)).toEqual([])
   })
 
-  // the four findings this used to allow (two copy buttons in
-  // conflict-checker/analysis.tsx, one in reference-hub/reference-table.tsx, and
-  // the cancel button on the auth action page) are all fixed, so the ceiling is
-  // now a floor of zero across the whole tree.
+  // the four findings this used to allow are fixed, so the ceiling is a floor of zero now
   it("no tool component pins an interactive box under 24px", () => {
     const outside = allFindings.filter((f) => !f.file.startsWith(join("components", "ui")))
     expect(outside, `2.5.8: ${outside.length} undersized targets.\n${report(outside)}`).toEqual([])

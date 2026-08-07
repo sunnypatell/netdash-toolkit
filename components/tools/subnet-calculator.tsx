@@ -27,7 +27,11 @@ type Culprit = "address" | "prefix" | "both" | null
 function computeIPv4(address: string, prefixText: string) {
   if (!address.trim()) return { result: null, error: "", culprit: null as Culprit }
   if (!isValidIPv4(address)) {
-    return { result: null, error: "Invalid IPv4 address", culprit: "address" as Culprit }
+    return {
+      result: null,
+      error: "Invalid IPv4 address (expected four octets, for example 192.168.1.1)",
+      culprit: "address" as Culprit,
+    }
   }
   const prefix = Number.parseInt(prefixText, 10)
   if (isNaN(prefix) || prefix < 0 || prefix > 32) {
@@ -47,7 +51,11 @@ function computeIPv4(address: string, prefixText: string) {
 function computeIPv6(address: string, prefixText: string) {
   if (!address.trim()) return { result: null, error: "", culprit: null as Culprit }
   if (!isValidIPv6(address)) {
-    return { result: null, error: "Invalid IPv6 address", culprit: "address" as Culprit }
+    return {
+      result: null,
+      error: "Invalid IPv6 address. Try a full or compressed form such as 2001:db8::1",
+      culprit: "address" as Culprit,
+    }
   }
   const prefix = Number.parseInt(prefixText, 10)
   if (isNaN(prefix) || prefix < 0 || prefix > 128) {

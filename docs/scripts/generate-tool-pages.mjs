@@ -1,7 +1,4 @@
-// writes src/content/docs/tools/ from lib/tool-registry.ts.
-// the registry is the app's single source of truth for slug, label, description,
-// category and runtime metadata, so hand-written per-tool pages would drift the
-// moment a tool is added or its network behaviour changes.
+// writes src/content/docs/tools/ from lib/tool-registry.ts, so per-tool prose cannot drift
 
 import { mkdir, rm, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
@@ -198,10 +195,8 @@ function hubPage(categories, tools, byCategory) {
   return lines.join("\n")
 }
 
-// the repo's prettier runs over the whole tree, so generated pages have to come
-// out already formatted or `pnpm format:check` fails after every docs build.
-// resolved from the root install; if it is not there, write unformatted rather
-// than making the docs build depend on it.
+// prettier runs over the whole tree, so generated pages must come out formatted or format:check
+// fails after every docs build. optional: write unformatted rather than hard-depend on it.
 async function formatter() {
   try {
     const prettier = await import("prettier")

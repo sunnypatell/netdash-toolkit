@@ -1,25 +1,12 @@
-// content-security-policy for the packaged desktop build, kept as data in its
-// own module so it can be asserted in tests without launching electron (same
-// reason navigation.ts is separate).
-//
-// the desktop renderer runs the identical next static export the website does,
-// so the directive content matches vercel.json exactly; 'self' just resolves to
-// http://localhost:<staticPort> here instead of the deployed https origin.
-// tests/unit/csp.test.ts asserts that equality and derives the egress list from
-// the source, so a new third-party call fails ci instead of failing users.
+// data, not electron calls, so tests/unit/csp.test.ts can assert it. must stay byte-identical to
+// vercel.json: only 'self' differs, resolving to http://localhost:<staticPort> here.
 
 export type CspDirectives = Record<string, string[]>
 
 export const CSP_DIRECTIVES: CspDirectives = {
   "default-src": ["'self'"],
-  // a static export inlines hydration scripts and has no per-request nonce, so
-  // 'unsafe-inline' is the ceiling here. apis.google.com is firebase auth's gapi
-  // loader, accounts.google.com is google identity services (one tap).
-  // 'wasm-unsafe-eval' is required by pagefind, which powers search on the docs
-  // site: it compiles a wasm index through WebAssembly.instantiateStreaming, and
-  // chromium gates wasm compilation on script-src. without it, docs search is
-  // dead on the web deploy and in the desktop app at the same time. it permits
-  // wasm only, not eval or new Function.
+  // a static export has no per-request nonce, so 'unsafe-inline' is the ceiling; 'wasm-unsafe-eval'
+  // is pagefind's, since chromium gates wasm on script-src. see self-hosting/desktop-build.md.
   "script-src": [
     "'self'",
     "'unsafe-inline'",

@@ -21,9 +21,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   isConfigured: boolean
-  // resolve to true on success. callers used to branch on the `error`
-  // state right after awaiting, which is the value captured in their own
-  // render closure, so a failed sign-in looked like a success.
+  // returns success rather than making callers read `error`, which is stale in their render closure
   signInWithGoogle: () => Promise<boolean>
   signInWithEmail: (email: string, password: string) => Promise<boolean>
   signUpWithEmail: (email: string, password: string) => Promise<boolean>
@@ -130,9 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await attach()
     }
 
-    // every await in here is now a network fetch for a chunk. a rejected one
-    // used to escape as an unhandled rejection with `loading` still true, which
-    // is a header spinner that never stops.
+    // every await here fetches a chunk; an unhandled rejection left `loading` true forever
     start().catch((error: unknown) => {
       console.error("Failed to initialise Firebase auth:", error)
       if (!cancelled) setLoading(false)
@@ -144,9 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authRequested])
 
-  // Initialize Google One Tap (requires NEXT_PUBLIC_GOOGLE_CLIENT_ID env var)
-  // the handler closes over pendingCredential, so naming it as a dep would tear
-  // down and reload the gsi script every time that changes
+  // pendingCredential is deliberately not a dep: it would reload the gsi script on every change
   const oneTapRef = useRef<(response: { credential: string }) => void>(() => {})
 
   useEffect(() => {

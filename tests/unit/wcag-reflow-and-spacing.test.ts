@@ -2,18 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// wcag 2.2 sc 1.4.4 resize text (aa), 1.4.10 reflow (aa), 1.4.12 text spacing (aa):
-// https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html
-// https://www.w3.org/WAI/WCAG22/Understanding/reflow.html
-// https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html
-//
-// all three are ultimately about what happens at 320 css px, at 200% zoom, and
-// with the user's own spacing overrides applied. none of that can be observed
-// without a layout engine, so what is asserted here is the set of authoring
-// decisions that *cause* those failures: pixel type that will not scale, fixed
-// widths that force two-dimensional scrolling, declarations that would win
-// against a user stylesheet, and wide content with nowhere to scroll.
-// the residual visual check is listed as human-only in the conformance record.
+// 1.4.4, 1.4.10 and 1.4.12 need a layout engine, so this asserts the decisions that cause a failure
 
 const CSS = readFileSync(join("app", "globals.css"), "utf8")
 
@@ -40,13 +29,7 @@ function hits(pattern: RegExp): string[] {
 }
 
 describe("1.4.12 text spacing", () => {
-  // the criterion is met by *not* fighting the user. a declaration the user
-  // cannot override is the failure mode. declaring one of these properties is
-  // fine, and the criterion says so explicitly: an author may set any value it
-  // likes so long as the user can still win. what breaks it is !important on one
-  // of the four properties the criterion governs, because a user stylesheet then
-  // cannot take effect at all. the h1/h2/h3 tracking in globals.css is a normal
-  // declaration and is correctly not reported here.
+  // declaring these is fine; !important is the failure, because a user stylesheet then cannot win
   const SPACING_PROPERTIES = "line-height|letter-spacing|word-spacing|margin-bottom"
 
   it("no text-spacing property is locked with !important", () => {
@@ -59,9 +42,7 @@ describe("1.4.12 text spacing", () => {
     ).toEqual([])
   })
 
-  // !important is still worth containing. the only sanctioned use is the
-  // reduced-motion reset, which collapses animation and transition durations and
-  // touches no typography.
+  // the only sanctioned !important is the reduced-motion reset, which touches no typography
   it("!important is confined to the reduced-motion block", () => {
     const reducedMotion = /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\n\}/.exec(CSS)
     const outside = reducedMotion
@@ -76,14 +57,7 @@ describe("1.4.4 resize text", () => {
     expect([...CSS.matchAll(/font-size\s*:\s*[\d.]+px/g)].map((m) => m[0])).toEqual([])
   })
 
-  // arbitrary px type does not grow when the user raises their default font size.
-  // browser zoom still scales it, so this holds 1.4.4 on the zoom pathway and is
-  // fragile on the text-only pathway.
-  //
-  // the tailwind utility is not the only way to pin type: `style={{ fontSize:
-  // "10px" }}` does exactly the same thing and the first version of this scan did
-  // not see it, and `[font-size:10px]` is a third spelling of the same failure.
-  // all of them are matched.
+  // `style={{ fontSize }}` and `[font-size:10px]` pin type just as `text-[10px]` does
   const pxTypePattern =
     /text-\[\d+(?:\.\d+)?px\]|fontSize:\s*["'`]?\d+(?:\.\d+)?(?:px)?["'`]?|\[font-size:[^\]]*\dpx\]/g
 
@@ -94,12 +68,7 @@ describe("1.4.4 resize text", () => {
     expect(inPrimitives, inPrimitives.join("\n")).toEqual([])
   })
 
-  // this used to be a ceiling of 20 while six offenders sat under it in the
-  // shell, so it reported green the whole time they existed. they are gone -
-  // measured zero across all 201 tsx and ts files under components/ and app/ -
-  // and a ceiling that no longer binds is not a gate, so it is a floor of zero
-  // now. the rem spellings in command-palette.tsx scale with the user's default
-  // size and are correctly not matched.
+  // a ceiling of 20 reported green while six offenders sat under it, so it is a floor of zero now
   it("nothing anywhere pins type in px", () => {
     const pxType = hits(pxTypePattern)
     expect(
@@ -109,9 +78,7 @@ describe("1.4.4 resize text", () => {
   })
 
   it("the scan reaches the files the shell lives in", () => {
-    // a floor of zero passes just as happily when the file list is empty, which
-    // is how a scan that had quietly stopped matching anything reported a clean
-    // tree three times running. prove the shell is in the set being read.
+    // a floor of zero passes just as happily on an empty file list, so prove the shell is in the set
     const scanned = SOURCES.map(([file]) => file)
     for (const shell of ["dashboard.tsx", "header.tsx", "sidebar.tsx"]) {
       expect(scanned, `${shell} is not in the scanned set`).toContain(join("components", shell))
@@ -121,8 +88,7 @@ describe("1.4.4 resize text", () => {
 })
 
 describe("1.4.10 reflow", () => {
-  // a table is the canonical case the criterion exempts from single-column
-  // reflow, but only if it can actually be scrolled in the one axis it needs.
+  // a table is exempt from single-column reflow only if it can scroll in the one axis it needs
   it("every table can scroll horizontally", () => {
     const unwrapped: string[] = []
     for (const [file, source] of SOURCES) {
@@ -148,8 +114,7 @@ describe("1.4.10 reflow", () => {
     for (const [file, source] of SOURCES) {
       for (const m of source.matchAll(/(\S*)min-w-\[(\d+)px\]/g)) {
         if (Number(m[2]) <= 320) continue
-        // a breakpoint-prefixed utility only applies above that width, so it
-        // cannot break the 320px case
+        // a breakpoint-prefixed utility only applies above that width, so 320px is unaffected
         if (m[1].includes(":")) continue
         const line = source.slice(0, m.index).split("\n").length
         const context = source

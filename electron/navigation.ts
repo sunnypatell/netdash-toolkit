@@ -1,12 +1,5 @@
-// navigation policy for the main window, kept pure so it can be tested without
-// launching electron.
-//
-// this matters more here than in a typical app: preload.ts exposes ping,
-// traceroute, portScan, getArpTable and getSystemInfo to the renderer, and a preload
-// runs for every navigation in its webContents. so a renderer-initiated
-// navigation to a remote origin would hand that origin the ability to scan the
-// user's internal network from the user's machine. setWindowOpenHandler does not
-// cover this: it only sees window.open and target=_blank.
+// pure so it tests without electron. preload runs for every navigation in its webContents, so a
+// renderer-initiated hop to a remote origin would hand that origin portScan and getArpTable.
 
 export type NavigationDecision =
   { action: "allow" } | { action: "external"; url: string } | { action: "block"; reason: string }
@@ -39,12 +32,8 @@ export function decideNavigation(rawUrl: string, allowedOrigins: string[]): Navi
   return { action: "block", reason: `refused scheme ${url.protocol}` }
 }
 
-// permissions the app has no feature that needs. the web build already sends
-// Permissions-Policy: camera=(), microphone=(), geolocation=(), so the desktop
-// build should not be weaker than the website.
-// an allow-list, not a deny-list. a deny-list grants anything electron adds in a
-// future version until someone remembers to deny it, which is the wrong default
-// for a window whose preload can reach the network directly.
+// allow-list, not deny-list: a deny-list would grant whatever electron adds next. matches the
+// web build's Permissions-Policy so the desktop is never weaker than the site.
 const ALLOWED_PERMISSIONS = new Set([
   // every tool has copy buttons; chromium consults this for
   // navigator.clipboard.writeText

@@ -1,9 +1,7 @@
 import { pageIsHttps } from "./browser-limits"
 
-// what actually produced a latency number. a browser cannot send an icmp echo, so
-// calling its result "ping" and interpreting it against icmp rtt guidance was the
-// overstatement here: an https round trip includes dns, the tcp handshake, the tls
-// handshake and a full request/response.
+// a browser cannot send an ICMP echo, so this number includes dns, tcp, tls and a full
+// request/response and must not be read against ICMP rtt guidance
 export type ProbeTransport = "icmp" | "https-round-trip" | "http-round-trip"
 
 export interface ReachabilityResult {
@@ -37,9 +35,7 @@ export function describeTransport(transport: ProbeTransport): string {
 export interface PingTarget {
   displayHost: string
   urls: string[]
-  // set when the http:// probe the user asked for was dropped as mixed content and
-  // only the https:// one ran, so the ui can say which one actually happened. the
-  // old code dropped it silently and then labelled the result "https".
+  // set when the requested http:// probe was dropped as mixed content, so the ui can say so
   insecureDropped: boolean
 }
 

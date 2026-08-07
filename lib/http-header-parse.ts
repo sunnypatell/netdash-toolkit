@@ -1,6 +1,4 @@
-// one parser for the three tools that read pasted or relayed response headers.
-// they each carried their own near-identical copy, and each copy had a
-// different set of rfc 9110 / rfc 9112 bugs.
+// one parser for three tools that each carried a copy with its own rfc 9110/9112 bugs
 
 export interface HeaderField {
   name: string
@@ -16,9 +14,7 @@ export interface ResponseBlock {
   fields: HeaderField[]
 }
 
-// rfc 9112 4: status-line = HTTP-version SP status-code SP [ reason-phrase ].
-// h2 and h3 have no textual version, and curl prints "HTTP/2 200", so the minor
-// version is optional here.
+// rfc 9112 4; the minor version is optional because h2/h3 print "HTTP/2 200"
 const STATUS_LINE = /^HTTP\/(\d+(?:\.\d+)?)\s+(\d{3})(?:\s+(.*))?$/i
 
 // rfc 9110 5.6.2: token = 1*tchar
@@ -69,9 +65,7 @@ export function parseResponseBlocks(raw: string): ResponseBlock[] {
 
     const split = line.indexOf(":")
     if (split <= 0) continue
-    // rfc 9110 5.1: no whitespace is allowed between field name and colon, and
-    // the name must be a token, so a prose line like "Note : see below" is not a
-    // header field and must not be counted as one
+    // rfc 9110 5.1: no space before the colon, so prose like "Note : see below" is not a field
     const name = line.slice(0, split)
     if (!isValidFieldName(name)) continue
     current.fields.push({ name, value: line.slice(split + 1).trim() })

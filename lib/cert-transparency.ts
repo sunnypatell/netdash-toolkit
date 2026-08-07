@@ -1,7 +1,5 @@
-// api.certspotter.com sends "access-control-allow-origin: *", verified by curl, so
-// it is the one certificate source a page can read. it serves certificate
-// transparency log entries: what was ISSUED for a name, which is not what the
-// server is presenting right now.
+// certspotter sends access-control-allow-origin: *, so it is the one source a page can read.
+// CT logs say what was issued for a name, not what the server presents now.
 const CERTSPOTTER_ENDPOINT = "https://api.certspotter.com/v1/issuances"
 
 export const CT_SOURCE_HOST = "api.certspotter.com"
@@ -70,10 +68,8 @@ export function sortIssuancesByExpiry(issuances: CtIssuance[]): CtIssuance[] {
   )
 }
 
-// a no-cors fetch is opaque, but the browser still refuses to complete it when the
-// chain does not validate against this machine's trust store. that is the only
-// real tls signal a page gets, and it cannot be told apart from dns or network
-// failure, so callers must not present a failure as a certificate problem.
+// an opaque fetch still fails when the chain does not validate, but that is indistinguishable
+// from dns or network failure, so a failure must not be presented as a certificate problem
 export async function probeBrowserTrust(host: string): Promise<TrustProbe> {
   const start = Date.now()
   try {

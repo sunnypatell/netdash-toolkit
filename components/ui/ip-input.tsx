@@ -21,6 +21,18 @@ interface IPInputProps {
   invalid?: boolean
 }
 
+const VERSION_LABEL: Record<string, string> = {
+  ipv4: "IPv4",
+  ipv6: "IPv6",
+  both: "IP address",
+}
+
+const VERSION_EXAMPLE: Record<string, string> = {
+  ipv4: "four octets, for example 192.168.1.1",
+  ipv6: "a full or compressed form such as 2001:db8::1",
+  both: "192.168.1.1 or 2001:db8::1",
+}
+
 export function IPInput({
   label,
   placeholder,
@@ -129,7 +141,8 @@ export function IPInput({
         <p id={errorId} className="text-destructive text-sm" role="status">
           {isPrefixInput
             ? `Invalid prefix length (must be 0-${ipVersion === "ipv6" ? "128" : ipVersion === "ipv4" ? "32" : "128"})`
-            : `Invalid ${ipVersion === "both" ? "IP address" : ipVersion.toUpperCase()} format${allowCIDR ? " or CIDR notation" : ""}`}
+            : // toUpperCase rendered "IPV4". 3.3.3 also wants a way out, not just a verdict
+              `Invalid ${VERSION_LABEL[ipVersion]} format${allowCIDR ? " or CIDR notation" : ""}. Expected ${VERSION_EXAMPLE[ipVersion]}${allowCIDR ? ", optionally with /prefix" : ""}`}
         </p>
       )}
     </div>
