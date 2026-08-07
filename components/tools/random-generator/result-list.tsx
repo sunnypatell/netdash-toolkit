@@ -1,26 +1,23 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Copy, Download, Trash2 } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Download, Trash2 } from "lucide-react"
 
 interface ResultListProps {
-  /** what the values are, for the accessible names of the three buttons */
+  /** what the values are, for the accessible names of the buttons */
   kind: string
   values: string[]
-  onCopy: () => void
   onExport: () => void
   onClear: () => void
 }
 
-export function ResultList({ kind, values, onCopy, onExport, onClear }: ResultListProps) {
+export function ResultList({ kind, values, onExport, onClear }: ResultListProps) {
   const empty = values.length === 0
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={onCopy} disabled={empty}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copy all<span className="sr-only"> {kind}</span>
-        </Button>
+        {!empty && <CopyButton value={values.join("\n")} variant="outline" />}
         <Button variant="outline" size="sm" onClick={onExport} disabled={empty}>
           <Download className="mr-2 h-4 w-4" />
           Export<span className="sr-only"> {kind}</span>

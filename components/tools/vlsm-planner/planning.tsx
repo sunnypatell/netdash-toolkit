@@ -15,6 +15,8 @@ interface PlanningPanelProps {
   baseNetwork: string
   basePrefix: string
   requirements: VLSMRequirement[]
+  // the plan is computed in the parent and reported in the results panel
+  planFailed?: boolean
   onBaseNetworkChange: (value: string) => void
   onBasePrefixChange: (value: string) => void
   onRequirementsChange: (requirements: VLSMRequirement[]) => void
@@ -24,6 +26,7 @@ export function PlanningPanel({
   baseNetwork,
   basePrefix,
   requirements,
+  planFailed,
   onBaseNetworkChange,
   onBasePrefixChange,
   onRequirementsChange,
@@ -31,6 +34,10 @@ export function PlanningPanel({
   const [draftName, setDraftName] = useState("")
   const [draftHosts, setDraftHosts] = useState("")
   const [draftDescription, setDraftDescription] = useState("")
+
+  // every infeasibility message weighs a host count against the base block, so
+  // both sides of that comparison point at it
+  const planDescribedBy = planFailed ? "vlsm-plan-error" : undefined
 
   const addRequirement = () => {
     const hosts = Number.parseInt(draftHosts, 10)
@@ -79,6 +86,8 @@ export function PlanningPanel({
                 placeholder="20"
                 value={basePrefix}
                 onChange={(e) => onBasePrefixChange(e.target.value)}
+                aria-invalid={planFailed}
+                aria-describedby={planDescribedBy}
               />
             </div>
           </div>
@@ -137,6 +146,8 @@ export function PlanningPanel({
                       })
                     }
                     placeholder="Hosts needed"
+                    aria-invalid={planFailed}
+                    aria-describedby={planDescribedBy}
                   />
                   <Input
                     aria-label={`Description for subnet ${req.name || req.id}`}

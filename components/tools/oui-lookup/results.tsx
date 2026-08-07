@@ -6,24 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Download } from "lucide-react"
 import { CopyButton } from "@/components/ui/copy-button"
-import type { OuiResult } from "@/lib/oui-vendors"
-
-export interface LookupRow extends OuiResult {
-  timestamp: number
-}
-
-export function sourceLabel(source: OuiResult["source"]): string {
-  switch (source) {
-    case "offline":
-      return "Bundled database"
-    case "remote":
-      return "api.maclookup.app"
-    case "cache":
-      return "Session cache"
-    default:
-      return "Not looked up"
-  }
-}
+import { sourceLabel, type LookupRow } from "./types"
 
 interface ResultsPanelProps {
   rows: LookupRow[]

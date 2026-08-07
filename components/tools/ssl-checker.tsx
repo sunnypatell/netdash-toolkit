@@ -16,6 +16,7 @@ import {
   Terminal,
   AlertTriangle,
   CheckCircle2,
+  Download,
   XCircle,
   ExternalLink,
   Info,
@@ -58,10 +59,11 @@ export function SSLChecker() {
 
   const runCheck = useCallback(async () => {
     const host = cleanHostname(hostname)
+    // one message, in the alert the input is described by. this used to also fire
+    // a toast that worded the same branch differently.
     if (!host) {
       setError("Enter a hostname, for example example.com")
       setStatus("error")
-      toast.error("Enter a hostname first")
       return
     }
 
@@ -206,6 +208,13 @@ export function SSLChecker() {
 
       {/* live region so the async result is announced when it lands */}
       <div aria-live="polite" aria-busy={status === "checking"} className="space-y-4 sm:space-y-6">
+        {!trust && (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            Enter a hostname and press Check - the trust probe and the certificate transparency
+            entries appear here.
+          </p>
+        )}
+
         {trust && (
           <Card>
             <CardHeader>
@@ -261,7 +270,8 @@ export function SSLChecker() {
                   <Badge variant="secondary">{matching.length} covering this host</Badge>
                   {issuances.length > 0 && (
                     <Button variant="outline" size="sm" onClick={exportIssuances}>
-                      Export JSON
+                      <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                      Export
                     </Button>
                   )}
                 </div>

@@ -32,7 +32,6 @@ export interface StandardACLPanelProps {
   onAclNameChange: (value: string) => void
   onPlatformChange: (value: ACLPlatform) => void
   onRulesChange: (rules: StandardACLRule[]) => void
-  onCopy: () => void
   onExport: () => void
   saveAction?: ReactNode
 }
@@ -45,7 +44,6 @@ export function StandardACLPanel({
   onAclNameChange,
   onPlatformChange,
   onRulesChange,
-  onCopy,
   onExport,
   saveAction,
 }: StandardACLPanelProps) {
@@ -81,52 +79,60 @@ export function StandardACLPanel({
             ])
           }
         >
-          {rules.map((rule, index) => (
-            <RuleShell
-              key={rule.id}
-              index={index}
-              validation={validationResults[index]}
-              onDelete={() => onRulesChange(rules.filter((r) => r.id !== rule.id))}
-            >
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label htmlFor={`acl-std-action-${rule.id}`}>Action</Label>
-                    <Select
-                      value={rule.action}
-                      onValueChange={(value) => updateRule(rule.id, "action", value)}
-                    >
-                      <SelectTrigger id={`acl-std-action-${rule.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="permit">Permit</SelectItem>
-                        <SelectItem value="deny">Deny</SelectItem>
-                      </SelectContent>
-                    </Select>
+          {rules.map((rule, index) => {
+            const validation = validationResults[index]
+            // rule-level: every error this rule can raise comes from its source network
+            const ruleInvalid = Boolean(validation && !validation.isValid)
+            const ruleDescribedBy = ruleInvalid ? `acl-rule-${index}-error` : undefined
+            return (
+              <RuleShell
+                key={rule.id}
+                index={index}
+                validation={validation}
+                onDelete={() => onRulesChange(rules.filter((r) => r.id !== rule.id))}
+              >
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor={`acl-std-action-${rule.id}`}>Action</Label>
+                      <Select
+                        value={rule.action}
+                        onValueChange={(value) => updateRule(rule.id, "action", value)}
+                      >
+                        <SelectTrigger id={`acl-std-action-${rule.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="permit">Permit</SelectItem>
+                          <SelectItem value="deny">Deny</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor={`acl-std-source-${rule.id}`}>Source Network</Label>
+                      <Input
+                        id={`acl-std-source-${rule.id}`}
+                        value={rule.sourceNetwork}
+                        onChange={(e) => updateRule(rule.id, "sourceNetwork", e.target.value)}
+                        placeholder="192.168.1.0/24, host 1.1.1.1, or any"
+                        aria-invalid={ruleInvalid}
+                        aria-describedby={ruleDescribedBy}
+                      />
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor={`acl-std-source-${rule.id}`}>Source Network</Label>
+                    <Label htmlFor={`acl-std-description-${rule.id}`}>Description</Label>
                     <Input
-                      id={`acl-std-source-${rule.id}`}
-                      value={rule.sourceNetwork}
-                      onChange={(e) => updateRule(rule.id, "sourceNetwork", e.target.value)}
-                      placeholder="192.168.1.0/24, host 1.1.1.1, or any"
+                      id={`acl-std-description-${rule.id}`}
+                      value={rule.description || ""}
+                      onChange={(e) => updateRule(rule.id, "description", e.target.value)}
+                      placeholder="Rule description"
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor={`acl-std-description-${rule.id}`}>Description</Label>
-                  <Input
-                    id={`acl-std-description-${rule.id}`}
-                    value={rule.description || ""}
-                    onChange={(e) => updateRule(rule.id, "description", e.target.value)}
-                    placeholder="Rule description"
-                  />
-                </div>
-              </div>
-            </RuleShell>
-          ))}
+              </RuleShell>
+            )
+          })}
         </RulesCard>
       </div>
 
@@ -135,7 +141,6 @@ export function StandardACLPanel({
           aclType="standard"
           platform={platform}
           config={config}
-          onCopy={onCopy}
           onExport={onExport}
           saveAction={saveAction}
         />

@@ -29,7 +29,7 @@ export default function InterfacesPanel() {
         if (!cancelled) setInterfaces(result ?? [])
       })
       .catch(() => {
-        if (!cancelled) setError("Could not read network interfaces from the system.")
+        if (!cancelled) setError("Could not read network interfaces from the system")
       })
     return () => {
       cancelled = true
@@ -59,7 +59,9 @@ export default function InterfacesPanel() {
             </div>
           )}
           {!error && interfaces !== null && interfaces.length === 0 && (
-            <p className="text-muted-foreground py-8 text-center">No interfaces were reported.</p>
+            <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              No interfaces were reported
+            </p>
           )}
           {ordered.length > 0 && (
             <div className="space-y-4">

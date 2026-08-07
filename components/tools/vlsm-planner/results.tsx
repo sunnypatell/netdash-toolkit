@@ -33,7 +33,7 @@ export function ResultsPanel({ plan }: { plan: VLSMPlan | null }) {
         </CardHeader>
         {/* the figures change in place as the inputs change, with no other cue */}
         <CardContent aria-live="polite">
-          {plan.success ? (
+          {plan.success && (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div className="text-center">
                 <div className="text-primary text-2xl font-bold">{plan.totalHosts}</div>
@@ -54,10 +54,11 @@ export function ResultsPanel({ plan }: { plan: VLSMPlan | null }) {
                 <div className="text-muted-foreground text-sm">Address Space Used</div>
               </div>
             </div>
-          ) : (
+          )}
+          {!plan.success && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{plan.errorMessage}</AlertDescription>
+              <AlertDescription id="vlsm-plan-error">{plan.errorMessage}</AlertDescription>
             </Alert>
           )}
         </CardContent>

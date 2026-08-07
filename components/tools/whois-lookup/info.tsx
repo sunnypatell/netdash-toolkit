@@ -1,12 +1,10 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, Globe } from "lucide-react"
-import { copyText } from "@/lib/clipboard"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Globe } from "lucide-react"
 import type { RDAPDomainResponse } from "@/lib/rdap"
-import { toast } from "sonner"
 import { EventList, StatusBadges } from "./shared"
 
 interface InfoPanelProps {
@@ -16,11 +14,6 @@ interface InfoPanelProps {
 }
 
 export default function InfoPanel({ domain, authoritativeUrl }: InfoPanelProps) {
-  const copy = async (value: string) => {
-    if (await copyText(value)) toast.success("Copied to clipboard")
-    else toast.error("Copy failed")
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -35,15 +28,7 @@ export default function InfoPanel({ domain, authoritativeUrl }: InfoPanelProps) 
             <p className="text-muted-foreground text-sm">Domain Name</p>
             <div className="flex items-center gap-2">
               <p className="font-medium">{domain.ldhName}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={() => copy(domain.ldhName)}
-                aria-label={`Copy ${domain.ldhName}`}
-              >
-                <Copy className="h-3 w-3" />
-              </Button>
+              <CopyButton value={domain.ldhName} className="h-6 w-6 p-0" />
             </div>
           </div>
           {domain.unicodeName && domain.unicodeName !== domain.ldhName && (

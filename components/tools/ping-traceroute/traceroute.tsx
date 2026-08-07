@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Activity, AlertCircle, Clock, Download, Navigation } from "lucide-react"
 import { electronNetwork } from "@/lib/electron"
+import { CopyButton } from "@/components/ui/copy-button"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 import { toast } from "sonner"
 
@@ -74,6 +75,12 @@ export default function TraceroutePanel({ host, onHostChange, isNative }: Tracer
       setIsTracing(false)
     }
   }
+
+  const hopsText = hops
+    .map((hop) =>
+      [hop.hop, hop.host, hop.timeout ? "no reply" : `${hop.responseTime?.toFixed(1)}ms`].join("\t")
+    )
+    .join("\n")
 
   const exportResults = () => {
     downloadTextFile(
@@ -149,15 +156,24 @@ export default function TraceroutePanel({ host, onHostChange, isNative }: Tracer
 
         {/* live region: hops stream in one at a time */}
         <div aria-live="polite" aria-busy={isTracing}>
+          {hops.length === 0 && !isTracing && !unsupported && (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              Enter a host and press Traceroute - each discovered hop appears here.
+            </p>
+          )}
+
           {(hops.length > 0 || isTracing) && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">Route to {activeTarget || host}</h4>
                 {hops.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={exportResults}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <CopyButton value={hopsText} variant="outline" />
+                    <Button variant="outline" size="sm" onClick={exportResults}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
                 )}
               </div>
 

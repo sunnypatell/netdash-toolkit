@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Plus, Trash2, X } from "lucide-react"
-import { copyText } from "@/lib/clipboard"
-import { toast } from "sonner"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Plus, Trash2, X } from "lucide-react"
 import { buildUrl, type QueryParam } from "@/lib/url-encode"
 
 export interface BuildPanelProps {
@@ -23,11 +22,6 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
     onParamsChange(params.map((p, i) => (i === index ? { ...p, [field]: value } : p)))
   }
 
-  const copyToClipboard = async (value: string) => {
-    if (await copyText(value)) toast.success("Copied to clipboard")
-    else toast.error("Copy failed")
-  }
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -39,6 +33,7 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
           placeholder="https://example.com/path"
           className="font-mono"
           aria-invalid={built.error !== null}
+          aria-describedby={built.error ? "url-base-error" : undefined}
         />
       </div>
 
@@ -91,23 +86,17 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
 
       <div className="space-y-2">
         <Label htmlFor="url-built">Generated URL</Label>
-        <div id="url-built" className="bg-muted/50 rounded-lg border p-3">
-          <p className="font-mono text-sm break-all">{built.url || "Enter a base URL..."}</p>
+        <div id="url-built" className="bg-muted/50 flex items-start gap-2 rounded-lg border p-3">
+          <p className="min-w-0 flex-1 font-mono text-sm break-all">
+            {built.url || "Enter a base URL to see the encoded result"}
+          </p>
+          {built.url && <CopyButton value={built.url} className="shrink-0" />}
         </div>
         <p className="text-muted-foreground text-xs">
           Values are serialised as application/x-www-form-urlencoded, which is what the URL standard
           specifies for a query string, so a space becomes + rather than %20.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copyToClipboard(built.url)}
-            disabled={!built.url}
-          >
-            <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-            Copy URL
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -124,7 +113,7 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
 
       {built.error && (
         <Alert variant="destructive">
-          <AlertDescription>{built.error}</AlertDescription>
+          <AlertDescription id="url-base-error">{built.error}</AlertDescription>
         </Alert>
       )}
     </div>

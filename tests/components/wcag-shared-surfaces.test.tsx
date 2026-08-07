@@ -44,8 +44,17 @@ function Providers({ children }: { children: React.ReactNode }) {
   )
 }
 
-async function violationsOf(container: HTMLElement) {
-  const results = await axe.run(container, AXE_OPTIONS)
+async function violationsOf(root: HTMLElement) {
+  // radix's own focus guards are appended to body as siblings of the portal, so
+  // hideOthers() marks them aria-hidden while they keep tabindex=0. that trips
+  // aria-hidden-focus on markup this app does not own and cannot reach: the
+  // guards are opacity:0, pointer-events:none, and exist only to bounce focus
+  // back into the dialog. excluded by that attribute alone, so the rule still
+  // binds on every element the app actually renders.
+  const results = await axe.run(
+    { include: [root], exclude: [["[data-radix-focus-guard]"]] } as unknown as HTMLElement,
+    AXE_OPTIONS
+  )
   return results.violations.map((v) => ({
     id: v.id,
     help: v.help,
@@ -98,10 +107,30 @@ const SURFACES: Array<[string, () => React.ReactElement]> = [
 
 afterEach(cleanup)
 
+// radix portals every dialog to document.body, which is outside the `container`
+// testing-library returns. scanning `container` therefore handed axe an empty
+// element for the account dialog and nothing but a trigger button for the two
+// project dialogs: an unlabelled input, an alt-less image and an unnamed button
+// inside DialogContent all passed. `baseElement` is document.body, so the
+// portalled content is in the scan, and the floor below makes an empty scan
+// impossible to mistake for a clean one again.
+const MINIMUM_NODES: Record<string, number> = {
+  "account settings dialog": 40,
+  "paste parser": 5,
+  "result card": 10,
+  "save to project": 2,
+  "load from project": 2,
+  "alert, both variants": 8,
+}
+
 describe("wcag 2.2 aa: the shared surfaces the tool suite never renders", () => {
-  it.each(SURFACES)("%s has no detectable violations", async (_name, mount) => {
-    const { container } = render(<Providers>{mount()}</Providers>)
-    const violations = await violationsOf(container)
+  it.each(SURFACES)("%s has no detectable violations", async (name, mount) => {
+    const { baseElement } = render(<Providers>{mount()}</Providers>)
+    const scanned = baseElement.querySelectorAll("*").length
+    expect(scanned, `${name}: axe was handed ${scanned} nodes`).toBeGreaterThanOrEqual(
+      MINIMUM_NODES[name]
+    )
+    const violations = await violationsOf(baseElement)
     expect(violations, JSON.stringify(violations, null, 2)).toEqual([])
   })
 })

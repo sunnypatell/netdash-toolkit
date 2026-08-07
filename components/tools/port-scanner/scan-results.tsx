@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Ban, CheckCircle, Download, HelpCircle, X } from "lucide-react"
 import {
   summarizeStates,
@@ -40,6 +41,11 @@ interface ScanResultsProps {
 
 export function ScanResults({ session, onExport }: ScanResultsProps) {
   const counts = summarizeStates(session.results)
+  // the state label goes in the paste too, so "blocked by browser" cannot be read
+  // back later as a fact about the host
+  const resultsText = session.results
+    .map((result) => [result.port, result.service, stateLabel(result.state)].join("\t"))
+    .join("\n")
 
   return (
     <Card>
@@ -56,10 +62,13 @@ export function ScanResults({ session, onExport }: ScanResultsProps) {
             )}
             <Badge variant="secondary">{session.results.length} total</Badge>
             {session.completed && (
-              <Button variant="outline" size="sm" onClick={() => onExport(session)}>
-                <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                Export
-              </Button>
+              <>
+                <CopyButton value={resultsText} variant="outline" />
+                <Button variant="outline" size="sm" onClick={() => onExport(session)}>
+                  <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Export
+                </Button>
+              </>
             )}
           </div>
         </CardTitle>

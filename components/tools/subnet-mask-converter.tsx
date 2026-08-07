@@ -33,6 +33,7 @@ const columns: ReferenceColumn<SubnetMaskEntry>[] = [
     header: "Subnet Mask",
     cellClassName: "font-mono",
     text: (row) => row.mask,
+    copyLabel: (row) => `Copy mask ${row.mask}`,
   },
   {
     key: "wildcard",
@@ -81,7 +82,7 @@ export function SubnetMaskConverter() {
       return {
         result: null,
         error: mask.trim()
-          ? "Not a valid mask. Enter CIDR (/24), a prefix length (24), a dotted-decimal mask (255.255.255.0) or a wildcard (0.0.0.255). Non-contiguous masks are rejected."
+          ? "Invalid subnet mask. Enter CIDR (/24), a prefix length (24), a dotted-decimal mask (255.255.255.0) or a wildcard (0.0.0.255). Non-contiguous masks are rejected."
           : "",
       }
     }
@@ -111,6 +112,8 @@ export function SubnetMaskConverter() {
                 onChange={(e) => setQuery({ mask: e.target.value })}
                 placeholder="/24 or 255.255.255.0"
                 className="font-mono"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "subnet-mask-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Accepts /24, 24, 255.255.255.0 or 0.0.0.255
@@ -120,7 +123,7 @@ export function SubnetMaskConverter() {
             {error && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription id="subnet-mask-error">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -181,9 +184,10 @@ export function SubnetMaskConverter() {
                 )}
               </>
             ) : (
-              <div className="flex h-48 items-center justify-center">
-                <p className="text-muted-foreground">Enter a valid subnet mask</p>
-              </div>
+              <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                Enter a mask in any notation - CIDR, dotted decimal, wildcard and binary appear
+                here.
+              </p>
             )}
           </CardContent>
         </Card>

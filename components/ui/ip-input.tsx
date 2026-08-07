@@ -16,6 +16,11 @@ interface IPInputProps {
   ipVersion?: "ipv4" | "ipv6" | "both"
   className?: string
   id?: string
+  // a caller that validates further up (a subnet pair that overlaps, a plan that
+  // will not fit) has an error this component cannot see. it renders that
+  // message itself and names its id here, so the field points at both.
+  describedBy?: string
+  invalid?: boolean
 }
 
 export function IPInput({
@@ -27,12 +32,18 @@ export function IPInput({
   ipVersion = "both",
   className,
   id,
+  describedBy,
+  invalid = false,
 }: IPInputProps) {
   const [isValid, setIsValid] = useState(true)
   const [addressType, setAddressType] = useState<string>("")
   const generatedId = useId()
   const inputId = id || generatedId
   const errorId = `${inputId}-error`
+  const showsOwnError = !isValid && !!value
+  // both messages can be on screen at once, so both ids go on the field rather
+  // than one winning
+  const description = [showsOwnError ? errorId : null, describedBy].filter(Boolean).join(" ")
 
   const isPrefixInput = label?.toLowerCase().includes("prefix")
 
@@ -97,13 +108,13 @@ export function IPInput({
           onChange={(e) => onChange(e.target.value)}
           className={cn(
             "font-mono",
-            !isValid && value && "border-destructive focus-visible:ring-destructive"
+            (showsOwnError || invalid) && "border-destructive focus-visible:ring-destructive"
           )}
           type={isPrefixInput ? "number" : "text"}
           min={isPrefixInput ? "0" : undefined}
           max={isPrefixInput ? (ipVersion === "ipv6" ? "128" : "32") : undefined}
-          aria-invalid={!isValid && !!value}
-          aria-describedby={!isValid && value ? errorId : undefined}
+          aria-invalid={showsOwnError || invalid}
+          aria-describedby={description || undefined}
         />
         {addressType && (
           <Badge

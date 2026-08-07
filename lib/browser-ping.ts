@@ -1,4 +1,4 @@
-import { HTTP_FROM_HTTPS_EXPLANATION, pageIsHttps } from "./browser-limits"
+import { pageIsHttps } from "./browser-limits"
 
 // what actually produced a latency number. a browser cannot send an icmp echo, so
 // calling its result "ping" and interpreting it against icmp rtt guidance was the

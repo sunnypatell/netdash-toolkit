@@ -139,7 +139,6 @@ export function PortReference() {
             rows={rows}
             columns={columns}
             rowKey={(row) => `${row.port}-${row.protocol}`}
-            emptyMessage="No ports match your search"
           />
         </TabsContent>
       </Tabs>

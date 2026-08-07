@@ -67,6 +67,8 @@ export function MACFormatter() {
                 onChange={(e) => setQuery({ mac: e.target.value })}
                 placeholder="00:1A:2B:3C:4D:5E"
                 className="font-mono"
+                aria-invalid={showError}
+                aria-describedby={showError ? "mac-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Accepts colon, hyphen, Cisco dotted, ProCurve 6-6 and bare
@@ -76,7 +78,7 @@ export function MACFormatter() {
             {showError && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription id="mac-error">
                   Not a MAC address. Expected 12 hex digits as 00:1A:2B:3C:4D:5E, 00-1A-2B-3C-4D-5E,
                   001a.2b3c.4d5e or 001A2B3C4D5E.
                 </AlertDescription>

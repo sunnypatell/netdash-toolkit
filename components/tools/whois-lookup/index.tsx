@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, ExternalLink, Globe, Loader2, Search } from "lucide-react"
+import { AlertTriangle, Download, ExternalLink, Globe, Loader2, Search } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import {
   cleanQuery,
   detectQueryType,
@@ -21,9 +22,10 @@ import {
   type RDAPDomainResponse,
   type RDAPIPResponse,
 } from "@/lib/rdap"
-import { ASNResult, IPResult } from "./network-results"
 
 // one chunk per domain panel
+const IPResult = lazy(() => import("./network-results").then((m) => ({ default: m.IPResult })))
+const ASNResult = lazy(() => import("./network-results").then((m) => ({ default: m.ASNResult })))
 const InfoPanel = lazy(() => import("./info"))
 const ContactsPanel = lazy(() => import("./contacts"))
 const NameserversPanel = lazy(() => import("./nameservers"))
@@ -37,7 +39,7 @@ type LookupStatus = "idle" | "loading" | "success" | "error"
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p data-panel-fallback role="status" className="text-muted-foreground p-4 text-sm">
       Loading...
     </p>
   )
@@ -56,6 +58,9 @@ export function WhoisLookup() {
   const { q: query, tab } = urlState
 
   const [lookupType, setLookupType] = useState<LookupType>("domain")
+  // what was actually asked, not what the box says now: editing the input after a
+  // lookup must not relabel the answer already on screen
+  const [lookedUp, setLookedUp] = useState("")
   const [status, setStatus] = useState<LookupStatus>("idle")
   const [error, setError] = useState<string | null>(null)
   const [authoritativeUrl, setAuthoritativeUrl] = useState<string | undefined>()
@@ -81,6 +86,7 @@ export function WhoisLookup() {
 
     try {
       const cleaned = cleanQuery(query, type)
+      setLookedUp(cleaned)
       if (type === "domain") {
         const { data, authoritativeUrl: self } = await fetchRdap<RDAPDomainResponse>(type, cleaned)
         setDomainResult(data)
@@ -100,6 +106,18 @@ export function WhoisLookup() {
       setStatus("error")
     }
   }, [query])
+
+  // the rdap response is the answer, so the export is that object verbatim rather
+  // than a re-rendering of the panels
+  const answer = domainResult ?? ipResult ?? asnResult
+  const exportAnswer = () => {
+    if (!answer) return
+    downloadTextFile(
+      JSON.stringify({ query: lookedUp, authoritativeUrl, answer }, null, 2),
+      `whois-${lookupType}-${dateStamp()}.json`,
+      "application/json"
+    )
+  }
 
   const exampleQueries = [
     { label: "example.com", type: "Domain" },
@@ -128,10 +146,9 @@ export function WhoisLookup() {
         <CardContent className="space-y-4">
           <div className="text-muted-foreground space-y-1 text-xs">
             <p>
-              Pressing Lookup sends what you typed to <strong>rdap.org</strong>, which reads the RFC
-              9224 bootstrap registries and redirects your browser to whichever registry or RIR is
-              authoritative for it. Both that redirector and the registry that answers see the query
-              and your IP address.
+              <strong>rdap.org</strong> reads the RFC 9224 bootstrap registries and redirects your
+              browser to whichever registry or RIR is authoritative for the query. Both that
+              redirector and the registry that answers see the query and your IP address.
             </p>
           </div>
 
@@ -192,6 +209,21 @@ export function WhoisLookup() {
 
       {/* live region: the rdap response arrives asynchronously */}
       <div aria-live="polite" aria-busy={status === "loading"} className="space-y-4 sm:space-y-6">
+        {status === "success" && answer && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={exportAnswer}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              Export
+            </Button>
+          </div>
+        )}
+
+        {status !== "success" && (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            Enter a domain, IP address or ASN and press Lookup - registration data appears here.
+          </p>
+        )}
+
         {domainResult && status === "success" && lookupType === "domain" && (
           <Tabs
             value={tab}
@@ -231,11 +263,15 @@ export function WhoisLookup() {
         )}
 
         {ipResult && status === "success" && (
-          <IPResult result={ipResult} authoritativeUrl={authoritativeUrl} />
+          <Suspense fallback={<PanelFallback />}>
+            <IPResult result={ipResult} authoritativeUrl={authoritativeUrl} />
+          </Suspense>
         )}
 
         {asnResult && status === "success" && (
-          <ASNResult result={asnResult} authoritativeUrl={authoritativeUrl} />
+          <Suspense fallback={<PanelFallback />}>
+            <ASNResult result={asnResult} authoritativeUrl={authoritativeUrl} />
+          </Suspense>
         )}
       </div>
 

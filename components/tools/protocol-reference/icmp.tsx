@@ -22,6 +22,7 @@ const columns: ReferenceColumn<ICMPTypeEntry>[] = [
         {row.type}
       </Badge>
     ),
+    copyLabel: (row) => `Copy ICMP type ${row.type}`,
   },
   {
     key: "name",
@@ -79,7 +80,6 @@ export function ICMPPanel({ searchTerm }: { searchTerm: string }) {
       rows={rows}
       columns={columns}
       rowKey={(row) => String(row.type)}
-      emptyMessage="No ICMP types match your search"
     />
   )
 }

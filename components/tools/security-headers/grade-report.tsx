@@ -2,9 +2,19 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { AlertTriangle, CheckCircle2, ExternalLink, Info, ShieldAlert, XCircle } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  Info,
+  ShieldAlert,
+  XCircle,
+} from "lucide-react"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import { describeStatus, type ResponseBlock } from "@/lib/http-header-parse"
 import { gradeBlock, hstsIsHonoured, type HeaderVerdict } from "@/lib/security-header-grade"
 
@@ -66,11 +76,37 @@ export function GradeReport({ input }: { input: GradeInput }) {
   const grade = gradeBlock(final)
   const hstsHonoured = hstsIsHonoured(final, input.url)
 
+  // the source travels with the grade: a relayed result stays labelled unverified
+  // in the file too
+  const exportGrade = () => {
+    downloadTextFile(
+      JSON.stringify(
+        {
+          url: input.url,
+          source: input.source,
+          verified: input.source !== "relay",
+          exportedAt: new Date().toISOString(),
+          grade,
+        },
+        null,
+        2
+      ),
+      `security-headers-${input.label || "response"}-${dateStamp()}.json`,
+      "application/json"
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-1">
         <CardHeader>
-          <CardTitle>Header score</CardTitle>
+          <CardTitle className="flex items-center justify-between gap-2">
+            Header score
+            <Button variant="outline" size="sm" onClick={exportGrade}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              Export
+            </Button>
+          </CardTitle>
           <CardDescription className="break-all">{input.label}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

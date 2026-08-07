@@ -46,6 +46,14 @@ describe("ipv4ToInt", () => {
 })
 
 describe("prefixToNetmask", () => {
+  it("rejects a fractional prefix instead of silently rounding it", () => {
+    // js coerces the shift count to an int32, so 32 - 24.5 shifted by 7 and a
+    // /24 request came back as a /25 mask. same for 23.1 giving a /24.
+    for (const p of [24.5, 24.9, 23.1, 0.5]) {
+      expect(() => prefixToNetmask(p), `prefix ${p}`).toThrow(/must be 0-32/)
+    }
+  })
+
   it("handles the full prefix range including /0", () => {
     // /0 regression: js shifts are mod 32, the old code returned /32's mask
     expect(prefixToNetmask(0)).toBe("0.0.0.0")

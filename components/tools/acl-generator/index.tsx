@@ -1,14 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, lazy, useMemo, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Network, Settings, Shield } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import { SaveToProject } from "@/components/ui/save-to-project"
-import { copyText } from "@/lib/clipboard"
 import { dateStamp, downloadTextFile } from "@/lib/download"
-import { toast } from "sonner"
 import {
   generateACL,
   SAMPLE_EXTENDED_RULES,
@@ -18,10 +16,28 @@ import {
   type ExtendedACLRule,
   type StandardACLRule,
 } from "@/lib/acl"
-import { ExtendedACLPanel } from "./extended"
-import { StandardACLPanel } from "./standard"
+// one chunk per acl type, and only the open tab is ever fetched: a static import
+// here put both panels plus the rule editor in the payload of every page
+const ExtendedACLPanel = lazy(() =>
+  import("./extended").then((m) => ({ default: m.ExtendedACLPanel }))
+)
+const StandardACLPanel = lazy(() =>
+  import("./standard").then((m) => ({ default: m.StandardACLPanel }))
+)
 
 const DEFAULT_NAME: Record<ACLType, string> = { standard: "10", extended: "101" }
+
+function PanelFallback() {
+  return (
+    <p
+      role="status"
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-sm"
+      data-panel-fallback
+    >
+      Loading panel...
+    </p>
+  )
+}
 
 export function ACLGenerator() {
   const [aclType, setAclType] = useState<ACLType>("extended")
@@ -48,14 +64,6 @@ export function ACLGenerator() {
   const handleAclNameChange = (value: string) => {
     setNameEdited(true)
     setAclName(value)
-  }
-
-  const copyConfig = async () => {
-    if (await copyText(config)) {
-      toast.success("Copied to clipboard")
-    } else {
-      toast.error("Could not copy to clipboard")
-    }
   }
 
   const exportConfig = () => {
@@ -127,33 +135,33 @@ export function ACLGenerator() {
         {/* one panel keyed to the active type: without it the selected tab's
             aria-controls pointed at an element that does not exist */}
         <TabsContent value={aclType} className="space-y-4">
-          {aclType === "standard" ? (
-            <StandardACLPanel
-              aclName={aclName}
-              platform={platform}
-              rules={standardRules}
-              config={config}
-              onAclNameChange={handleAclNameChange}
-              onPlatformChange={setPlatform}
-              onRulesChange={setStandardRules}
-              onCopy={copyConfig}
-              onExport={exportConfig}
-              saveAction={saveAction}
-            />
-          ) : (
-            <ExtendedACLPanel
-              aclName={aclName}
-              platform={platform}
-              rules={extendedRules}
-              config={config}
-              onAclNameChange={handleAclNameChange}
-              onPlatformChange={setPlatform}
-              onRulesChange={setExtendedRules}
-              onCopy={copyConfig}
-              onExport={exportConfig}
-              saveAction={saveAction}
-            />
-          )}
+          <Suspense fallback={<PanelFallback />}>
+            {aclType === "standard" ? (
+              <StandardACLPanel
+                aclName={aclName}
+                platform={platform}
+                rules={standardRules}
+                config={config}
+                onAclNameChange={handleAclNameChange}
+                onPlatformChange={setPlatform}
+                onRulesChange={setStandardRules}
+                onExport={exportConfig}
+                saveAction={saveAction}
+              />
+            ) : (
+              <ExtendedACLPanel
+                aclName={aclName}
+                platform={platform}
+                rules={extendedRules}
+                config={config}
+                onAclNameChange={handleAclNameChange}
+                onPlatformChange={setPlatform}
+                onRulesChange={setExtendedRules}
+                onExport={exportConfig}
+                saveAction={saveAction}
+              />
+            )}
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

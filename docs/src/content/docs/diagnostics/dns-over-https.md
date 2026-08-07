@@ -141,6 +141,6 @@ One correctness note that is only visible in [the code](https://github.com/sunny
 
 That client has no abort signal, so a hung resolver depends on the browser's own connection timeout. It is a real rough edge and it is worth naming.
 
-:::caution[Every Lookup Is a Disclosure]
+:::caution[Every lookup is a disclosure]
 DoH encrypts your query in transit and hands it to a resolver you chose. Do not use it to look up names you would not want that resolver to know about. For internal names, the desktop app can query a DNS server on your own network instead.
 :::

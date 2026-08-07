@@ -2,17 +2,16 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Copy, FileText } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
+import { FileText } from "lucide-react"
 import type { SPFResult } from "@/lib/email-auth"
 import { Issues } from "./issues"
 
 export interface SPFPanelProps {
   result: SPFResult
-  onCopy?: (text: string) => void
 }
 
-export function SPFPanel({ result, onCopy }: SPFPanelProps) {
+export function SPFPanel({ result }: SPFPanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -28,17 +27,7 @@ export function SPFPanel({ result, onCopy }: SPFPanelProps) {
             <div className="bg-muted rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <code className="text-sm break-all">{result.record}</code>
-                {onCopy && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 shrink-0 p-0"
-                    onClick={() => onCopy(result.record || "")}
-                    aria-label="Copy SPF record"
-                  >
-                    <Copy className="h-3 w-3" aria-hidden="true" />
-                  </Button>
-                )}
+                <CopyButton value={result.record || ""} className="shrink-0" />
               </div>
             </div>
 

@@ -137,12 +137,14 @@ export function JWTDecoder() {
               placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
               className="h-32 resize-none font-mono text-sm"
               aria-label="JWT token"
+              aria-invalid={error !== null}
+              aria-describedby={error ? "jwt-token-error" : undefined}
             />
 
             {error && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{error.message}</AlertDescription>
+                <AlertDescription id="jwt-token-error">{error.message}</AlertDescription>
               </Alert>
             )}
 

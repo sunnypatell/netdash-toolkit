@@ -11,6 +11,7 @@ import { Activity, AlertCircle, CheckCircle, Download, Upload } from "lucide-rea
 import { testDownloadThroughput, testUploadThroughput } from "@/lib/network-testing"
 import type { ThroughputTestResult } from "@/lib/network-testing"
 import { formatBytes, formatDuration } from "@/lib/format"
+import { ResultActions } from "./result-actions"
 
 const DEFAULT_UPLOAD_BYTES = 1048576
 const MIN_UPLOAD_BYTES = 1024
@@ -36,12 +37,12 @@ function resolveTarget(raw: string): ResolvedTarget {
     try {
       parsed = new URL(`https://${trimmed}`)
     } catch {
-      return { ok: false, error: "Enter a valid http:// or https:// URL." }
+      return { ok: false, error: "Invalid URL. Enter an http:// or https:// URL" }
     }
   }
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { ok: false, error: "Only HTTP and HTTPS URLs can be measured from a browser." }
+    return { ok: false, error: "Only HTTP and HTTPS URLs can be measured from a browser" }
   }
 
   if (
@@ -94,6 +95,18 @@ export function ThroughputPanel() {
   }
 
   const running = direction !== null
+
+  const resultsText = results
+    .map((result) =>
+      [
+        result.url,
+        result.direction,
+        result.success
+          ? `${formatThroughput(result.throughputMbps)}\t${formatBytes(result.bytesTransferred, { decimals: 2 })}\t${formatDuration(result.durationMs)}`
+          : (result.error ?? "failed"),
+      ].join("\t")
+    )
+    .join("\n")
 
   return (
     <Card>
@@ -191,7 +204,15 @@ export function ThroughputPanel() {
 
           {results.length > 0 && (
             <div className="space-y-4">
-              <h4 className="font-semibold">Recent Results</h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-semibold">Recent Results</h4>
+                <ResultActions
+                  kind="throughput"
+                  measurement="single-stream HTTP transfer timed by the browser, a floor for the path rather than link capacity"
+                  results={results}
+                  text={resultsText}
+                />
+              </div>
               {results.map((result, index) => (
                 <Card key={`${result.timestamp}-${index}`} className="p-4">
                   <div className="mb-2 flex flex-wrap items-center gap-2">

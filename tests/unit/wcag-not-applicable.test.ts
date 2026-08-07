@@ -89,13 +89,12 @@ describe("criteria claimed Not Applicable", () => {
   //
   // this criterion was recorded as not applicable on the grounds that nothing
   // shows content on hover. that stopped being true without anything noticing:
-  // components/tools/color-converter.tsx puts a `title` on each preset swatch,
+  // components/tools/color-converter.tsx put a `title` on each preset swatch,
   // and a native title tooltip is not dismissible, not hoverable, and does not
-  // appear on keyboard focus at all, so it meets none of the three conditions.
-  // capped at the one known instance rather than asserted to zero, because
-  // removing it is the tool workstream's call and a silent second one is what
-  // this exists to prevent.
-  it("1.4.13: no new title-attribute tooltip appears", () => {
+  // appear on keyboard focus at all, so it met none of the three conditions.
+  // that one is gone - the hex reaches assistive technology through the button's
+  // aria-label instead - so the cap of one is now a floor of zero.
+  it("1.4.13: no title-attribute tooltip exists", () => {
     const tag =
       /<([a-z][a-z0-9]*)(\s(?:[^<>"'{}]|"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\})*)?\/?>/g
     const tooltips: string[] = []
@@ -108,9 +107,9 @@ describe("criteria claimed Not Applicable", () => {
       }
     }
     expect(
-      tooltips.length,
+      tooltips,
       `a title attribute renders a tooltip that cannot be dismissed, hovered, or reached by keyboard:\n${tooltips.join("\n")}`
-    ).toBeLessThanOrEqual(1)
+    ).toEqual([])
   })
 
   // 2.1.4 character key shortcuts:
@@ -158,6 +157,69 @@ describe("criteria claimed Not Applicable", () => {
     expect(
       unguarded,
       `each of these binds a bare printable character. 2.1.4 needs it to be turn-off-able, remappable, or active only while a component has focus:\n${unguarded.join("\n")}`
+    ).toEqual([])
+  })
+})
+
+// the record states its verdict counts in a sentence at the top and then spends
+// two tables justifying them row by row. nothing was checking that the sentence
+// still described the tables. that is the same failure this file exists for, one
+// level up: a headline that says "41 supported" while the tables say something
+// else is exactly as wrong as an unverified not-applicable claim, and harder to
+// notice because the number looks authoritative.
+describe("the conformance record's headline matches its own tables", () => {
+  const RECORD = readFileSync(
+    join("docs", "src", "content", "docs", "accessibility-conformance.md"),
+    "utf8"
+  )
+
+  // only the criterion rows: three pipes, a level cell of a or aa, then a verdict
+  const ROW =
+    /^\|\s*\[([^\]]+)\]\([^)]+\)\s*\|\s*(a|aa)\s*\|\s*(supports|partially supports|not applicable|does not support)\s*\|/gm
+
+  function counts() {
+    const tally: Record<string, number> = {}
+    let rows = 0
+    for (const m of RECORD.matchAll(ROW)) {
+      tally[m[3]] = (tally[m[3]] ?? 0) + 1
+      rows++
+    }
+    return { tally, rows }
+  }
+
+  it("has a criterion table to read", () => {
+    // if the row pattern stops matching, every assertion below reads zero and
+    // agrees with a headline of zero
+    expect(counts().rows, "the verdict rows no longer parse").toBe(55)
+  })
+
+  it("the stated totals are the totals in the tables", () => {
+    const { tally } = counts()
+    const stated =
+      /records \*\*(\d+) as supported, (\d+) as partially supported, and (\d+) as not applicable\*\*, with (\d+) recorded as wholly unsupported/.exec(
+        RECORD
+      )
+    expect(stated, "the record no longer states its totals in the form this reads").not.toBeNull()
+    const [supports, partial, na, unsupported] = (stated ?? []).slice(1).map(Number)
+    expect(tally["supports"] ?? 0, "supported").toBe(supports)
+    expect(tally["partially supports"] ?? 0, "partially supported").toBe(partial)
+    expect(tally["not applicable"] ?? 0, "not applicable").toBe(na)
+    expect(tally["does not support"] ?? 0, "wholly unsupported").toBe(unsupported)
+    expect(supports + partial + na + unsupported, "the four totals must cover all 55").toBe(55)
+  })
+
+  // a criterion recorded as not applicable has to be one this suite actually
+  // asserts, or the claim is again resting on nothing
+  it("every not-applicable verdict is one this file checks", () => {
+    const asserted = /1\.2|1\.4\.2|1\.4\.13|2\.3\.1|2\.5\.1|2\.5\.4/
+    const unchecked: string[] = []
+    for (const m of RECORD.matchAll(ROW)) {
+      if (m[3] !== "not applicable") continue
+      if (!asserted.test(m[1])) unchecked.push(m[1])
+    }
+    expect(
+      unchecked,
+      `these are recorded as not applicable with no assertion behind the claim:\n${unchecked.join("\n")}`
     ).toEqual([])
   })
 })

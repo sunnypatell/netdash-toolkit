@@ -277,7 +277,7 @@ describe("panels compute from props alone", () => {
 
   it("says so instead of showing an empty table when nothing matches", () => {
     render(createElement(ICMPPanel, { searchTerm: "zzzz" }))
-    expect(screen.getByText(/No ICMP types match your search/)).toBeTruthy()
+    expect(screen.getByText(/No rows match your search/)).toBeTruthy()
   })
 })
 

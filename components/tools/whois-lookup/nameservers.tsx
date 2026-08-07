@@ -1,20 +1,13 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, Server } from "lucide-react"
-import { copyText } from "@/lib/clipboard"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Server } from "lucide-react"
 import type { RDAPDomainResponse } from "@/lib/rdap"
-import { toast } from "sonner"
 
 export default function NameserversPanel({ domain }: { domain: RDAPDomainResponse }) {
   const nameservers = domain.nameservers ?? []
-
-  const copy = async (value: string) => {
-    if (await copyText(value)) toast.success("Copied to clipboard")
-    else toast.error("Copy failed")
-  }
 
   if (nameservers.length === 0) {
     return (
@@ -44,15 +37,7 @@ export default function NameserversPanel({ domain }: { domain: RDAPDomainRespons
             <div key={index} className="rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <p className="font-medium">{ns.ldhName}</p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => copy(ns.ldhName)}
-                  aria-label={`Copy ${ns.ldhName}`}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
+                <CopyButton value={ns.ldhName} className="h-6 w-6 p-0" />
               </div>
               {ns.ipAddresses && (
                 <div className="mt-2 flex flex-wrap gap-2">

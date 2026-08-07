@@ -22,6 +22,7 @@ const columns: ReferenceColumn<ProtocolNumberEntry>[] = [
         {row.number}
       </Badge>
     ),
+    copyLabel: (row) => `Copy protocol number ${row.number}`,
   },
   {
     key: "name",
@@ -65,7 +66,6 @@ export function ProtocolsPanel({ searchTerm }: { searchTerm: string }) {
       rows={rows}
       columns={columns}
       rowKey={(row) => String(row.number)}
-      emptyMessage="No protocols match your search"
     />
   )
 }

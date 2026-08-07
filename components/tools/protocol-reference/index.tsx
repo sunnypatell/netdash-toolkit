@@ -42,7 +42,10 @@ const TRANSPORTS = [
 
 function PanelFallback() {
   return (
-    <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
       Loading table...
     </p>
   )

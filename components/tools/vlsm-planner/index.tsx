@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download, Network } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { CopyButton } from "@/components/ui/copy-button"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
 import { downloadTextFile, dateStamp } from "@/lib/download"
@@ -45,7 +46,10 @@ function withIds(rows: ReadonlyArray<Omit<VLSMRequirement, "id">>): VLSMRequirem
 
 function PanelFallback() {
   return (
-    <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
       Loading panel...
     </p>
   )
@@ -114,14 +118,15 @@ export function VLSMPlanner() {
             <Button variant="outline" size="sm" onClick={() => setRequirements(withIds(SAMPLE))}>
               <span className="hidden sm:inline">Load </span>Sample
             </Button>
+            {plan?.success && <CopyButton value={exportVLSMPlan(plan, "text")} variant="outline" />}
             <Button
               variant="outline"
               size="sm"
               onClick={() => exportPlan("csv")}
               disabled={!plan?.success}
             >
-              <Download className="mr-1 h-4 w-4 sm:mr-2" />
-              CSV
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
             </Button>
             <Button
               variant="outline"
@@ -129,8 +134,8 @@ export function VLSMPlanner() {
               onClick={() => exportPlan("text")}
               disabled={!plan?.success}
             >
-              <Download className="mr-1 h-4 w-4 sm:mr-2" />
-              Text
+              <Download className="mr-2 h-4 w-4" />
+              Export Text
             </Button>
             {plan?.success && (
               <SaveToProject
@@ -166,6 +171,7 @@ export function VLSMPlanner() {
               baseNetwork={query.network}
               basePrefix={query.prefix}
               requirements={requirements}
+              planFailed={plan?.success === false}
               onBaseNetworkChange={(network) => void setQuery({ network })}
               onBasePrefixChange={(prefix) => void setQuery({ prefix })}
               onRequirementsChange={setRequirements}

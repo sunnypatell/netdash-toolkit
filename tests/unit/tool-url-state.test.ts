@@ -129,9 +129,10 @@ describe("results arrive from the link, with no Convert button", () => {
     expect(screen.queryByRole("button", { name: /^convert$/i })).toBeNull()
   })
 
-  it("oui lookup reads the prefix out of the link with no request", () => {
+  it("oui lookup reads the prefix out of the link with no request", async () => {
     mount(OUILookup, "?mac=00%3A0C%3A29%3A11%3A22%3A33")
-    expect(screen.getByText(/Full MAC - prefix 00:0C:29/)).toBeTruthy()
+    // the panel is a lazy chunk, so the first query has to wait for it
+    expect(await screen.findByText(/Full MAC - prefix 00:0C:29/)).toBeTruthy()
     expect(screen.getByText(/Answered from the bundled database/)).toBeTruthy()
   })
 
@@ -151,15 +152,15 @@ describe("results arrive from the link, with no Convert button", () => {
 })
 
 describe("the active tab is in the url", () => {
-  it("opens random generator on the MAC panel", () => {
+  it("opens random generator on the MAC panel", async () => {
     mount(RandomGenerator, "?tab=mac&macFormat=dot")
-    expect(screen.getByText("Random MAC addresses")).toBeTruthy()
+    expect(await screen.findByText("Random MAC addresses")).toBeTruthy()
     expect(screen.queryByText("Random IPv4 addresses")).toBeNull()
   })
 
-  it("opens oui lookup on the bulk panel", () => {
+  it("opens oui lookup on the bulk panel", async () => {
     mount(OUILookup, "?tab=bulk")
-    expect(screen.getByLabelText("MAC addresses")).toBeTruthy()
+    expect(await screen.findByLabelText("MAC addresses")).toBeTruthy()
     expect(screen.queryByLabelText("MAC address or OUI")).toBeNull()
   })
 
@@ -222,7 +223,7 @@ describe("generated values never reach the url", () => {
     const onUrlUpdate = vi.fn()
     mount(RandomGenerator, "?tab=ipv4&ip4=private-c&count=5", onUrlUpdate)
 
-    fireEvent.click(screen.getByRole("button", { name: /generate ipv4 addresses/i }))
+    fireEvent.click(await screen.findByRole("button", { name: /generate ipv4 addresses/i }))
     await waitFor(() => expect(screen.getByText(/5 IPv4 addresses generated/)).toBeTruthy())
 
     const addresses = screen
@@ -247,7 +248,6 @@ function Ipv4Host() {
     onKindChange: setKind,
     onCountChange: setCount,
     onGenerate: () => setValues(Array.from({ length: count }, () => "203.0.113.9")),
-    onCopy: () => undefined,
     onExport: () => undefined,
     onClear: () => setValues([]),
   })
@@ -268,7 +268,6 @@ function MacHost() {
     onUppercaseChange: setUppercase,
     onCountChange: () => undefined,
     onGenerate: () => undefined,
-    onCopy: () => undefined,
     onExport: () => undefined,
     onClear: () => undefined,
   })
@@ -283,7 +282,6 @@ function Ipv6Host() {
     onKindChange: setKind,
     onCountChange: () => undefined,
     onGenerate: () => undefined,
-    onCopy: () => undefined,
     onExport: () => undefined,
     onClear: () => undefined,
   })

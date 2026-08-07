@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { parseAsString, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,10 +8,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Monitor, Smartphone, Tablet, Tv, Globe, Bot, RefreshCw, Info } from "lucide-react"
+import { Monitor, Smartphone, Tablet, Tv, Globe, Bot, RefreshCw, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { copyText } from "@/lib/clipboard"
-import { toast } from "sonner"
+import { CopyButton } from "@/components/ui/copy-button"
 import { ResultCard } from "@/components/ui/result-card"
 import {
   applyClientHints,
@@ -116,14 +115,6 @@ export function UserAgentParser() {
 
   const setUa = (value: string) => void setQuery({ ua: value })
 
-  const copyToClipboard = useCallback(async (text: string) => {
-    if (await copyText(text)) {
-      toast.success("User agent copied to clipboard")
-    } else {
-      toast.error("Copy failed")
-    }
-  }, [])
-
   // clearing the param is what selects the live UA, so hints apply again
   const loadCurrentUA = () => void setQuery({ ua: null })
 
@@ -169,15 +160,7 @@ export function UserAgentParser() {
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Use Current Browser
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(userAgent)}
-                disabled={!hasInput}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </Button>
+              {hasInput && <CopyButton value={userAgent} variant="outline" />}
             </div>
 
             {hasInput && (

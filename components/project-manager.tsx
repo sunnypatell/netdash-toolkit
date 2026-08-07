@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { copyText } from "@/lib/clipboard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,7 +82,14 @@ import {
   type SharedProject,
 } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
-import { ShareProjectDialog } from "@/components/ui/share-project-dialog"
+import dynamic from "next/dynamic"
+
+// sharing is the only thing on this page that needs firestore, and a project
+// list works entirely offline, so the sdk stays off this route's first load
+const ShareProjectDialog = dynamic(
+  () => import("@/components/ui/share-project-dialog").then((m) => m.ShareProjectDialog),
+  { ssr: false }
+)
 import { tools } from "@/lib/tool-registry"
 
 // the registry only carries projectItemType when a tool actually renders
@@ -338,7 +346,9 @@ export function ProjectManager() {
   // Copy to clipboard
   const copyToClipboard = async (text: string, field: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      // copyText carries the execCommand fallback for non-secure contexts,
+      // which a bare navigator.clipboard call does not
+      await copyText(text)
       setCopiedField(field)
       setTimeout(() => setCopiedField(null), 2000)
     } catch (error) {

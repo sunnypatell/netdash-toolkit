@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Globe, Info } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
-import { ChainSummary, ChainView, type TracedChain } from "./chain-view"
+import { normalizeTargetUrl } from "@/lib/http-relay"
+import type { TracedChain } from "./chain-view"
 
 // one chunk per acquisition method; only the open tab is fetched and mounted
+const ChainSummary = lazy(() => import("./chain-view").then((m) => ({ default: m.ChainSummary })))
+const ChainView = lazy(() => import("./chain-view").then((m) => ({ default: m.ChainView })))
 const PastePanel = lazy(() => import("./paste"))
 const RelayPanel = lazy(() => import("./relay"))
 
@@ -37,7 +39,7 @@ const REDIRECT_CODES = [
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p data-panel-fallback role="status" className="text-muted-foreground p-4 text-sm">
       Loading...
     </p>
   )
@@ -85,7 +87,7 @@ export function RedirectChecker() {
             <code className="font-mono text-xs">http://</code> URL at all - the browser blocks it as
             mixed content before it leaves. An http:// start is exactly what you want when checking
             an HTTPS upgrade, so it has to come from <code className="font-mono text-xs">curl</code>{" "}
-            or from <span className="font-mono">{RELAY_HOST}</span>, a labelled third-party relay.
+            or from the labelled third-party relay.
           </p>
         </AlertDescription>
       </Alert>
@@ -139,13 +141,19 @@ export function RedirectChecker() {
               </TabsContent>
             </Tabs>
 
-            {result && <ChainSummary result={result} />}
+            {result && (
+              <Suspense fallback={<PanelFallback />}>
+                <ChainSummary result={result} />
+              </Suspense>
+            )}
           </CardContent>
         </Card>
 
         {/* live region: the relay result arrives asynchronously */}
         <div aria-live="polite" aria-busy={busy} className="lg:col-span-2">
-          <ChainView result={result} />
+          <Suspense fallback={<PanelFallback />}>
+            <ChainView result={result} />
+          </Suspense>
         </div>
       </div>
 

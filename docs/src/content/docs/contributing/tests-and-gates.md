@@ -168,7 +168,7 @@ This one lives in the docs build rather than in vitest, and it exists because th
 | `48 tools`, `48-tool dashboard`                      | the total                                                                                                      |
 | `36 of the 48`                                       | one of total, offline, networked, saveable, or a per-category count, **and** the denominator must be the total |
 | `36 offline`, `36 of them never`, `36 fully working` | the offline count                                                                                              |
-| `the other 12`, `12 networked tools`                 | the networked count                                                                                            |
+| `12 networked tools`                                 | the networked count                                                                                            |
 | `7 categories`                                       | the category count                                                                                             |
 
 Two design choices are worth naming. The denominator guard on the second row is what stops it matching `0 of 100`, which is a security-header score rather than a tool fraction. And the generated `tools/` directory is skipped entirely, because a check on a file that is rewritten from the same source on every build proves nothing.
@@ -183,6 +183,10 @@ docs/src/content/docs/index.mdx:6
 ```
 
 The scope limit is real and worth stating: a phrasing the script does not recognise is not checked at all. If you write a count a new way, add its shape to the rules rather than working around the check.
+
+The opposite failure is just as real, and the rules carry three exclusions that exist because it happened. The total-count rule skips `N tool files`, because a tool with several panels is a directory and files outnumber tools; it skips `N tools whose ...`, because that is a subset by construction; and the networked-count rule no longer accepts a bare `the other N`, because "the other 9 are not input errors" in the accessibility conformance record counts error surfaces and failed the build on a sentence that was never about tools. A count is only checkable when the prose says what it is counting, so all four hand-written mentions of the networked count now spell it `N networked tools`, and the rule anchors on that noun.
+
+The lesson generalises past this script: a blunt check that fires on the wrong unit trains people to phrase around it, and a check people phrase around is worse than no check.
 
 ## What CI runs
 
@@ -203,6 +207,6 @@ Put logic in `lib/` and test it in `tests/unit/`. [`CONTRIBUTING.md`](https://gi
 
 Parsers that consume real command output get a fixture rather than an inline string. `tests/fixtures/` holds captured macOS `ping`, `traceroute` and `arp` transcripts, and the Electron parser tests read those files. A fixture from a real machine catches the formatting details a hand-written sample smooths over, which is how the duplicate-`icmp_seq` and unpadded-MAC bugs were found.
 
-:::caution[What a Green Run Does Not Mean]
+:::caution[What a green run does not mean]
 `next.config.mjs` sets `eslint.ignoreDuringBuilds` and `typescript.ignoreBuildErrors` to `true`, so a passing `next build` proves nothing about types or lint. And axe with `color-contrast` disabled proves nothing about contrast. Each gate is evidence for exactly one property; none of them is evidence for the others.
 :::

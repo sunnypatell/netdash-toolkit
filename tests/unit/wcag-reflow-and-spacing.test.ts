@@ -80,15 +80,12 @@ describe("1.4.4 resize text", () => {
   // browser zoom still scales it, so this holds 1.4.4 on the zoom pathway and is
   // fragile on the text-only pathway.
   //
-  // the shared primitives carry a hard floor, because a px size there reaches all
-  // 48 tools at once. everywhere else is a loose ceiling rather than an exact
-  // count: those files are under active rewrite and an exact number would report
-  // a different figure every few minutes without any of it being a regression.
-  //
   // the tailwind utility is not the only way to pin type: `style={{ fontSize:
   // "10px" }}` does exactly the same thing and the first version of this scan did
-  // not see it, so both spellings are matched.
-  const pxTypePattern = /text-\[\d+(?:\.\d+)?px\]|fontSize:\s*["'`]?\d+(?:\.\d+)?(?:px)?["'`]?/g
+  // not see it, and `[font-size:10px]` is a third spelling of the same failure.
+  // all of them are matched.
+  const pxTypePattern =
+    /text-\[\d+(?:\.\d+)?px\]|fontSize:\s*["'`]?\d+(?:\.\d+)?(?:px)?["'`]?|\[font-size:[^\]]*\dpx\]/g
 
   it("no shared primitive pins type in px", () => {
     const inPrimitives = hits(pxTypePattern).filter((hit) =>
@@ -97,12 +94,29 @@ describe("1.4.4 resize text", () => {
     expect(inPrimitives, inPrimitives.join("\n")).toEqual([])
   })
 
-  it("arbitrary px type does not spread across the app", () => {
+  // this used to be a ceiling of 20 while six offenders sat under it in the
+  // shell, so it reported green the whole time they existed. they are gone -
+  // measured zero across all 201 tsx and ts files under components/ and app/ -
+  // and a ceiling that no longer binds is not a gate, so it is a floor of zero
+  // now. the rem spellings in command-palette.tsx scale with the user's default
+  // size and are correctly not matched.
+  it("nothing anywhere pins type in px", () => {
     const pxType = hits(pxTypePattern)
     expect(
-      pxType.length,
+      pxType,
       `px type does not respond to text-only resize. replace with a rem value, e.g. text-[0.625rem]:\n${pxType.join("\n")}`
-    ).toBeLessThanOrEqual(20)
+    ).toEqual([])
+  })
+
+  it("the scan reaches the files the shell lives in", () => {
+    // a floor of zero passes just as happily when the file list is empty, which
+    // is how a scan that had quietly stopped matching anything reported a clean
+    // tree three times running. prove the shell is in the set being read.
+    const scanned = SOURCES.map(([file]) => file)
+    for (const shell of ["dashboard.tsx", "header.tsx", "sidebar.tsx"]) {
+      expect(scanned, `${shell} is not in the scanned set`).toContain(join("components", shell))
+    }
+    expect(scanned.length).toBeGreaterThan(150)
   })
 })
 

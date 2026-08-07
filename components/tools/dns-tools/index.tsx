@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, lazy, useState, useEffect } from "react"
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,37 +14,33 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import {
-  Globe,
-  Search,
-  Activity,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Shield,
-  Zap,
-  Database,
-  Trash2,
-} from "lucide-react"
+import { Globe, Search, Activity, AlertCircle, Shield, Zap, Database, Trash2 } from "lucide-react"
 import { queryDNSOverHTTPS, dnsCache } from "@/lib/network-testing"
 import type { DNSResult } from "@/lib/network-testing"
 import { isElectron, electronNetwork } from "@/lib/electron"
 import { resolveQueryName } from "@/lib/reverse-dns"
-import { formatDuration } from "@/lib/format"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
-import { getToolBySlug } from "@/lib/tool-registry"
+import { dateStamp, downloadTextFile } from "@/lib/download"
+import type { QueryOutcome } from "./results"
+
+// the result list only exists once a lookup has answered, so it loads then. as a
+// static import it rode along in the payload of every page in the app.
+const DNSResults = lazy(() => import("./results").then((m) => ({ default: m.DNSResults })))
 
 const RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "NS", "TXT", "SOA", "PTR", "SRV"] as const
 const PROVIDERS = ["native", "cloudflare", "google", "quad9", "opendns", "adguard"] as const
 
-interface QueryOutcome {
-  result: DNSResult
-  // the name actually sent, when it differs from what was typed
-  sentName?: string
-  typedName?: string
+function ResultsFallback() {
+  return (
+    <p
+      role="status"
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+      data-panel-fallback
+    >
+      Loading results...
+    </p>
+  )
 }
 
 export function DNSTools() {
@@ -69,9 +65,20 @@ export function DNSTools() {
     setIsNative(isElectron())
   }, [])
 
-  const tool = getToolBySlug("dns-tools")
-
   const updateCacheStats = () => setCacheStats(dnsCache.getStats())
+
+  const exportResults = () => {
+    if (outcomes.length === 0) return
+    downloadTextFile(
+      JSON.stringify(
+        outcomes.map(({ result, sentName, typedName }) => ({ ...result, sentName, typedName })),
+        null,
+        2
+      ),
+      `dns-lookups-${dateStamp()}.json`,
+      "application/json"
+    )
+  }
 
   const clearCache = () => {
     dnsCache.clear()
@@ -92,7 +99,7 @@ export function DNSTools() {
       if (dnsProvider === "native" && isNative) {
         const nativeResult = await electronNetwork.dnsLookup(sentName, { type: dnsRecordType })
         if (!nativeResult) {
-          setError("The desktop resolver did not answer.")
+          setError("The desktop resolver did not answer")
           return
         }
         const result: DNSResult = {
@@ -129,113 +136,6 @@ export function DNSTools() {
 
   const applyPreset = (name: string, type: (typeof RECORD_TYPES)[number]) =>
     void setQuery({ name, type })
-
-  const renderDNSResults = () => {
-    if (outcomes.length === 0) return null
-
-    return (
-      <div className="space-y-4">
-        <h4 className="font-semibold">Query Results</h4>
-        {outcomes.map(({ result, sentName, typedName }, index) => {
-          // the cache returns the original response time, so showing it as a fresh
-          // measurement would misreport a lookup that never left the browser
-          const fromCache = result.provider.includes("(cached)")
-          return (
-            <Card key={index} className="p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex flex-wrap items-center gap-2">
-                  {result.success ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" aria-hidden="true" />
-                      <span className="sr-only">Succeeded. </span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
-                      <span className="sr-only">Failed. </span>
-                    </>
-                  )}
-                  <span className="font-mono">{sentName ?? result.domain}</span>
-                  <Badge variant="outline">{result.recordType}</Badge>
-                  <Badge variant="secondary">{result.provider}</Badge>
-                  {result.dnssec && (
-                    <Badge variant="outline" className="text-green-600">
-                      <Shield className="mr-1 h-3 w-3" aria-hidden="true" />
-                      Resolver set AD
-                    </Badge>
-                  )}
-                  {fromCache ? (
-                    <Badge variant="outline" className="text-emerald-600">
-                      <Database className="mr-1 h-3 w-3" aria-hidden="true" />
-                      From this page&apos;s cache
-                    </Badge>
-                  ) : (
-                    result.success &&
-                    result.responseTime > 0 && (
-                      <Badge variant="outline" className="text-blue-600">
-                        <Clock className="mr-1 h-3 w-3" aria-hidden="true" />
-                        {formatDuration(result.responseTime)}
-                      </Badge>
-                    )
-                  )}
-                </div>
-                <span className="text-muted-foreground text-xs">
-                  {new Date(result.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-
-              {typedName && (
-                <p className="text-muted-foreground mb-3 text-xs">
-                  You entered <span className="font-mono">{typedName}</span>. A PTR record is stored
-                  under the reversed-address name, so the query sent was{" "}
-                  <span className="font-mono">{sentName}</span> (RFC 1035 §3.5).
-                </p>
-              )}
-
-              {result.success ? (
-                result.records.length > 0 ? (
-                  <div className="space-y-2">
-                    {result.records.map((record, recordIndex) => (
-                      <div key={recordIndex} className="bg-muted/50 rounded-md p-3 text-sm">
-                        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-                          <div>
-                            <span className="text-muted-foreground font-medium">Name:</span>
-                            <div className="font-mono text-xs break-all">{record.name}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground font-medium">Type:</span>
-                            <div className="font-mono">{record.type}</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground font-medium">TTL:</span>
-                            <div className="font-mono">{record.ttl}s</div>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground font-medium">Data:</span>
-                            <div className="font-mono text-xs break-all">{record.data}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-muted-foreground bg-muted/30 rounded-md p-3 text-sm">
-                    The resolver answered NOERROR with no records of this type. The name exists;
-                    this record type is not set on it.
-                  </div>
-                )
-              ) : (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                  <AlertDescription>{result.error}</AlertDescription>
-                </Alert>
-              )}
-            </Card>
-          )
-        })}
-      </div>
-    )
-  }
 
   return (
     <div className="tool-container">
@@ -283,8 +183,8 @@ export function DNSTools() {
           <CardDescription>Query DNS records through a DoH resolver of your choice</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {tool && <RuntimeDisclosure tool={tool} />}
-
+          {/* the shared disclosure is rendered once by ToolShell; this card used to
+              repeat the same sentence a second time */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <div>
               <Label htmlFor="dns-query">Domain Name</Label>
@@ -423,7 +323,9 @@ export function DNSTools() {
           {/* live region so results are announced when the async query lands */}
           <div aria-live="polite" aria-busy={activeQuery}>
             {outcomes.length > 0 ? (
-              renderDNSResults()
+              <Suspense fallback={<ResultsFallback />}>
+                <DNSResults outcomes={outcomes} onExport={exportResults} />
+              </Suspense>
             ) : (
               <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
                 Enter a domain name, pick a record type and provider, then run the query - records,

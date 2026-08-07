@@ -41,12 +41,20 @@ export const MIN_RENDERED_NODES = 25
 // actually closes that; this is the margin around it.
 const STABLE_TICKS = 3
 
-// every lazy tool renders its Suspense fallback as a local PanelFallback reading
-// "Loading...", "Loading panel..." or "Loading table...". while any of those is
-// on screen the tree is a shell by definition, whatever the node count says.
-const PENDING_FALLBACK = /\bloading\b[a-z ]*\.\.\./i
+// every lazy tool marks its Suspense fallback with data-panel-fallback, which
+// is what this matches on. text is only the backstop for anything unmarked.
+//
+// the text pattern cannot be made reliable on its own and is not expected to be:
+// textContent concatenates siblings with no separator, so acl-generator's shell
+// reads "Extended ACLLoading panel..." and no boundary exists for a regex to
+// find. proven at the time: a never-resolving panel let render-all-tools pass
+// while scanning a 27 node tab strip, just over the floor. the marker is the
+// property that actually closes it, and the ellipsis stays optional because
+// ToolShell's skeleton renders a bare "Loading <title>" in an sr-only span.
+const PENDING_FALLBACK = /(?:^|[^a-z])loading(?![a-z])/i
 
 export function pendingFallback(container: HTMLElement): boolean {
+  if (container.querySelector("[data-panel-fallback]")) return true
   return PENDING_FALLBACK.test(container.textContent ?? "")
 }
 

@@ -15,7 +15,11 @@ const TABS = ["transfer-time", "download-size", "converter"] as const
 const TRIGGER_CLASS =
   "border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
 
-const fallback = <p className="text-muted-foreground py-8 text-center text-sm">Loading panel</p>
+const fallback = (
+  <p className="text-muted-foreground py-8 text-center text-sm" data-panel-fallback>
+    Loading panel
+  </p>
+)
 
 export function BandwidthCalculator() {
   const [{ tab }, setQuery] = useQueryStates(

@@ -1,15 +1,15 @@
 ---
 title: Address math, walked through
-description: The RFC 5952 compression rule, modified EUI-64, solicited-node multicast, RFC 3021 point-to-point subnets, and MTU and MSS arithmetic, each worked with real numbers against the code that implements it.
+description: Prefix-to-mask conversion and the two ways a 32-bit shift loses information, the RFC 5952 compression rule, modified EUI-64, solicited-node multicast, RFC 3021 point-to-point subnets, and MTU and MSS arithmetic, each worked with real numbers against the code that implements it.
 ---
 
-The 36 offline tools are all arithmetic, which means every answer they give is checkable by hand. This page walks the five pieces that are easy to get subtly wrong, with the rule, the code, and a worked example.
+The 36 offline tools are all arithmetic, which means every answer they give is checkable by hand. This page walks the pieces that are easy to get subtly wrong, with the rule, the code, and a worked example.
 
 Every number in the worked examples below was produced by calling the function it illustrates and reading the result, not by doing the arithmetic in prose. If one of them is wrong, the code is wrong too, which is the point.
 
 ## IPv4 subnetting, and the `/31` and `/32` special cases
 
-[`calculateIPv4Subnet`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L85-L148) does the whole thing in 32-bit integer space:
+[`calculateIPv4Subnet`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L88-L152) does the whole thing in 32-bit integer space:
 
 ```ts
 const ipInt = ipv4ToInt(ip)
@@ -62,6 +62,76 @@ Getting this wrong is the classic subnet-calculator bug. Three cases in [`tests/
 
 One deliberate choice worth flagging: address classification runs against the **host** address, not the network address. `192.168.1.5/8` has network `192.0.0.0`, which is not private, but the address you typed is still [RFC 1918 section 3](https://www.rfc-editor.org/rfc/rfc1918#section-3) space. The comment in the code says so. The classifier covers `10/8`, `172.16/12`, `192.168/16`, loopback, link-local and multicast; it does **NOT** cover `100.64.0.0/10` shared address space ([RFC 6598](https://www.rfc-editor.org/rfc/rfc6598#section-7)) or the documentation ranges in the [IANA IPv4 Special-Purpose Address Registry](https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml), so a CGNAT address is reported as public.
 
+### The shift count is an integer whether or not you gave it one
+
+`prefixToMaskInt` is four lines long and has now been the site of two separate bugs of the same family, both caused by the same clause of the language specification. It is worth reading closely, because the fix for the second one is a single call to `Number.isInteger` and the failure it prevents is silent wrong output rather than a crash.
+
+```ts
+export function prefixToMaskInt(prefix: number): number {
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+    throw new Error("Invalid prefix length (must be 0-32)")
+  }
+  return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0
+}
+```
+
+[ECMA-262, the left shift operator](https://tc39.es/ecma262/#sec-left-shift-operator) does two things to its operands before shifting anything:
+
+```text
+mask = ToInt32(lhs) << (ToUint32(rhs) mod 32)
+
+where:
+  lhs      = 0xffffffff, the all-ones mask
+  rhs      = 32 - prefix, the number of host bits
+  ToInt32  = truncate toward zero, reduce modulo 2^32, reinterpret as signed
+  ToUint32 = truncate toward zero, reduce modulo 2^32
+  mod 32   = the shift count is reduced again, to the low five bits
+```
+
+Both of those are lossy, and each one ate a prefix.
+
+`mod 32` is the older bug, and it is named in the comment above the function: `0xffffffff << 32` is `0xffffffff << 0`, so a `/0` produced the mask `255.255.255.255`. Every default route came out as a host route, and `network 0.0.0.0 255.255.255.255` is not an OSPF statement any device will accept. The `prefix === 0 ? 0 :` branch is that fix.
+
+`ToUint32` is the newer one, and it is nastier because there is no boundary to notice. A fractional prefix passes a range check, then truncates in the shift count, so the effective prefix silently becomes `ceil(prefix)`:
+
+```text
+effective = 32 - trunc(32 - prefix)
+          = ceil(prefix)          for any prefix in [0, 32]
+```
+
+Worked, on the two values the test uses:
+
+```text
+prefixToNetmask(24.5)
+  32 - 24.5      = 7.5
+  ToUint32(7.5)  = 7                       # truncated, not rounded
+  0xffffffff << 7 -> 25 leading ones
+  mask           = 255.255.255.128         # a /25, for a /24-ish request
+
+prefixToNetmask(23.1)
+  32 - 23.1      = 8.899999999999999       # binary64, not 8.9
+  ToUint32(...)  = 8
+  0xffffffff << 8 -> 24 leading ones
+  mask           = 255.255.255.0           # a /24, for a /23-ish request
+```
+
+Note the direction. Truncating the **host** count rounds the **prefix** up, so every fractional input produced a mask tighter than the one asked for, and a config generator emitting a /25 where you typed 24.5 produces a subnet that is legal, plausible, and half the size you intended. That is the failure mode this whole page exists for: there was no exception, no `NaN`, and no boundary case to trip a reviewer.
+
+What it does now is throw, rather than clamp or round, because there is no defensible rounding direction for a prefix that a user typed wrong. The message is `Invalid prefix length (must be 0-32)`, with no trailing period, and [`tests/unit/network-utils.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/network-utils.test.ts) asserts it in "rejects a fractional prefix instead of silently rounding it" across `24.5`, `24.9`, `23.1` and `0.5`. The assertion matches on the `must be 0-32` substring, so rewording the message fails the test rather than weakening it.
+
+You can reproduce the old behaviour in any JavaScript runtime, which is the cheapest way to convince yourself the mechanism is the language rather than the app:
+
+```bash
+# count the leading ones the old expression produced for a prefix of 24.5
+node -e 'const p=24.5;
+  console.log(((0xffffffff << (32 - p)) >>> 0).toString(2).replace(/0+$/, "").length)'
+# 25
+```
+
+The blast radius of the guard is wider than the one function, because everything that derives a mask goes through it: `calculateIPv4Subnet`, `lib/ip-enumerate.ts`, `lib/mask-convert.ts` and the four route generators in `lib/routing.ts`. `calculateIPv4Subnet` keeps only its own range check and did not gain an integer check of its own, so it is protected indirectly, by the call to `prefixToMaskInt` on the line after.
+
+The IPv6 sibling `ipv6NetworkPrefix` already had `Number.isInteger` in its guard, which is how the asymmetry was found.
+
 ## RFC 5952 compression, and why the leftmost longest run wins
 
 [RFC 5952 section 4.2](https://www.rfc-editor.org/rfc/rfc5952#section-4.2) gives three rules that together make IPv6 text canonical, and they matter because two spellings of the same address must compare equal:
@@ -73,7 +143,7 @@ One deliberate choice worth flagging: address classification runs against the **
 | Longest run, then leftmost   | [4.2.3](https://www.rfc-editor.org/rfc/rfc5952#section-4.2.3) | on a tie, the **first** run is the one shortened |
 | Lowercase hex                | [4.3](https://www.rfc-editor.org/rfc/rfc5952#section-4.3)     | `2001:db8` not `2001:DB8`                        |
 
-[`compressIPv6`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L217-L273) implements all four. The tie-break is one character:
+[`compressIPv6`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L220-L278) implements all four. The tie-break is one character:
 
 ```ts
 if (currentZeroLength > longestZeroLength) {
@@ -111,9 +181,9 @@ The `>= 2` guard on the compression branch is what enforces 4.2.2: a run of one 
 
 Three more details in the same file.
 
-[`splitIPv6Zone`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L155-L161) peels off the `%eth0` scope identifier before parsing and reattaches it after, because a zone ID is part of the textual form under [RFC 4007 section 11](https://www.rfc-editor.org/rfc/rfc4007#section-11) and not part of the address.
+[`splitIPv6Zone`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L158-L164) peels off the `%eth0` scope identifier before parsing and reattaches it after, because a zone ID is part of the textual form under [RFC 4007 section 11](https://www.rfc-editor.org/rfc/rfc4007#section-11) and not part of the address.
 
-[`expandIPv6`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L163-L207) converts the IPv4-embedded form of [RFC 4291 section 2.5.5](https://www.rfc-editor.org/rfc/rfc4291#section-2.5.5), so `::ffff:192.168.1.1` becomes eight hex groups rather than failing to parse.
+[`expandIPv6`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L166-L208) converts the IPv4-embedded form of [RFC 4291 section 2.5.5](https://www.rfc-editor.org/rfc/rfc4291#section-2.5.5), so `::ffff:192.168.1.1` becomes eight hex groups rather than failing to parse.
 
 And `compressIPv6` starts with an early return through `ipv4MappedText`, which implements the rule the other three rules do not cover. [RFC 5952 section 5](https://www.rfc-editor.org/rfc/rfc5952#section-5) says an address with an embedded IPv4 address keeps the dotted quad in the text form, so the canonical spelling is `::ffff:192.0.2.1` and not `::ffff:c000:201`. The subtlety is the scope: that rule applies to the IPv4-mapped block `::ffff:0:0/96`, not to every address whose last 32 bits could be read as a dotted quad. Two tests draw exactly that line, "keeps the dotted quad for ipv4-mapped addresses (rfc 5952 5)" and "applies the dotted quad only to `::ffff:0:0/96`".
 
@@ -158,7 +228,7 @@ The test names here are unusually specific on purpose, because "it produces an a
 
 [RFC 4291 section 2.7.1](https://www.rfc-editor.org/rfc/rfc4291#section-2.7.1) defines the solicited-node address as `ff02::1:ff00:0/104` with the low 24 bits of the target address appended. Neighbour Discovery uses it so a neighbour solicitation reaches one host instead of every host on the link ([RFC 4861 section 7.2.1](https://www.rfc-editor.org/rfc/rfc4861#section-7.2.1)).
 
-[`solicitedNodeMulticast`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L281-L294) takes the last two groups of the expanded address and masks them:
+[`solicitedNodeMulticast`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/network-utils.ts#L284-L297) takes the last two groups of the expanded address and masks them:
 
 ```ts
 const upper = Number.parseInt(groups[6], 16) & 0xff // low byte of group 7
@@ -295,6 +365,6 @@ Now add an AES-GCM IPsec tunnel underneath the overlay
 
 The last stack is the point. It is a completely ordinary design, and it has 113 bytes of margin above the IPv6 floor. Add a single VLAN tag and a NAT-T header, and `effectiveMTU` reaches 1381; add an IPv6 outer header on the VXLAN instead of an IPv4 one, and the extra 20 bytes take you to 1361. Keep going and IPv6 stops passing inside the tunnel while IPv4 keeps limping along fragmenting, which is the failure mode that presents as "the VPN is slow for some sites" and takes a week to find. That transition is what the error exists to catch, and it is why the threshold is an IPv6 constant rather than a percentage.
 
-:::tip[Check the Arithmetic Yourself]
+:::tip[Check the arithmetic yourself]
 Every worked example above can be reproduced by hand from the linked RFC section, which is the point. If the app and the RFC disagree, the RFC wins and the app has a bug worth [filing](https://github.com/sunnypatell/netdash-toolkit/issues).
 :::

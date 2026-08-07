@@ -9,10 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, FileText, RefreshCw } from "lucide-react"
+import { FileText, RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { copyText } from "@/lib/clipboard"
-import { toast } from "sonner"
+import { CopyButton } from "@/components/ui/copy-button"
 import {
   LOREM_MAX,
   countParagraphs,
@@ -95,14 +94,6 @@ export function LoremGenerator() {
     setText(generateLorem({ mode, count, startWithLorem: classic }))
   }, [mode, count, classic])
 
-  const copyToClipboard = async () => {
-    if (await copyText(text)) {
-      toast.success("Lorem ipsum text copied")
-    } else {
-      toast.error("Copy failed")
-    }
-  }
-
   const stats = text
     ? `${countParagraphs(text)} paragraphs, ${countSentences(text)} sentences, ${countWords(text)} words, ${text.length} characters`
     : "Click generate to create text"
@@ -179,10 +170,7 @@ export function LoremGenerator() {
                 <CardTitle>Generated Text</CardTitle>
                 <CardDescription>{stats}</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={copyToClipboard} disabled={!text}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </Button>
+              {text && <CopyButton value={text} variant="outline" />}
             </div>
           </CardHeader>
           <CardContent>

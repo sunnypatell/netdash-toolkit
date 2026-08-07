@@ -55,6 +55,9 @@ export function CapacityCalculatorPanel({ value, onChange }: CapacityCalculatorP
     maxClients: Number.parseInt(value.maxClients, 10),
     spatialStreams: value.spatialStreams,
   })
+  // the reason names the standard, the band and sometimes the width, so all three are at fault
+  const unsupported = !capacity.supported && Boolean(capacity.reason)
+  const describedBy = unsupported ? "wireless-capacity-error" : undefined
 
   return (
     <div className="space-y-4">
@@ -82,7 +85,11 @@ export function CapacityCalculatorPanel({ value, onChange }: CapacityCalculatorP
                     })
                   }}
                 >
-                  <SelectTrigger id="wireless-capacity-standard">
+                  <SelectTrigger
+                    id="wireless-capacity-standard"
+                    aria-invalid={unsupported}
+                    aria-describedby={describedBy}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -106,7 +113,11 @@ export function CapacityCalculatorPanel({ value, onChange }: CapacityCalculatorP
                     })
                   }}
                 >
-                  <SelectTrigger id="wireless-capacity-band">
+                  <SelectTrigger
+                    id="wireless-capacity-band"
+                    aria-invalid={unsupported}
+                    aria-describedby={describedBy}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -127,7 +138,11 @@ export function CapacityCalculatorPanel({ value, onChange }: CapacityCalculatorP
                     onChange({ ...value, width: Number.parseInt(next, 10) as ChannelWidth })
                   }
                 >
-                  <SelectTrigger id="wireless-capacity-channel-width">
+                  <SelectTrigger
+                    id="wireless-capacity-channel-width"
+                    aria-invalid={unsupported}
+                    aria-describedby={describedBy}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,10 +186,10 @@ export function CapacityCalculatorPanel({ value, onChange }: CapacityCalculatorP
               />
             </div>
 
-            {!capacity.supported && capacity.reason && (
+            {unsupported && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                <AlertDescription>{capacity.reason}.</AlertDescription>
+                <AlertDescription id="wireless-capacity-error">{capacity.reason}.</AlertDescription>
               </Alert>
             )}
 

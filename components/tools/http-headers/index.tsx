@@ -12,11 +12,14 @@ import { ToolHeader } from "@/components/ui/tool-header"
 import { CORS_SAFELISTED_RESPONSE_HEADERS } from "@/lib/browser-limits"
 import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
 import type { HeaderAnalysis } from "./header-report"
-import { HeaderReport } from "./header-report"
 
 // one chunk per acquisition method; only the open tab is fetched and mounted
 const PastePanel = lazy(() => import("./paste"))
 const RelayPanel = lazy(() => import("./relay"))
+// the report is the biggest module here and holds nothing until a lookup lands
+const HeaderReport = lazy(() =>
+  import("./header-report").then((m) => ({ default: m.HeaderReport }))
+)
 
 const TABS = ["paste", "relay"] as const
 
@@ -33,7 +36,7 @@ function hostOf(target: string): string {
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p role="status" className="text-muted-foreground p-4 text-sm" data-panel-fallback>
       Loading...
     </p>
   )
@@ -148,11 +151,13 @@ export function HTTPHeaders() {
 
         {/* live region: the relay result arrives asynchronously */}
         <div aria-live="polite" aria-busy={busy}>
-          <HeaderReport
-            analysis={analysis}
-            blockIndex={blockIndex}
-            onBlockIndexChange={setBlockIndex}
-          />
+          <Suspense fallback={<PanelFallback />}>
+            <HeaderReport
+              analysis={analysis}
+              blockIndex={blockIndex}
+              onBlockIndexChange={setBlockIndex}
+            />
+          </Suspense>
         </div>
       </div>
     </div>

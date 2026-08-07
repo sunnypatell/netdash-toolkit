@@ -5,9 +5,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Copy, Trash2 } from "lucide-react"
-import { copyText } from "@/lib/clipboard"
-import { toast } from "sonner"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Trash2 } from "lucide-react"
 import {
   URL_MODE_HELP,
   URL_MODE_LABELS,
@@ -39,11 +38,7 @@ export function TransformPanel({
     direction === "encode" ? encodeUrlText(text, encoding) : decodeUrlText(text, encoding)
   const inputId = `url-${direction}-input`
   const outputId = `url-${direction}-output`
-
-  const copyToClipboard = async (value: string) => {
-    if (await copyText(value)) toast.success("Copied to clipboard")
-    else toast.error("Copy failed")
-  }
+  const errorId = `url-${direction}-error`
 
   return (
     <div className="space-y-4">
@@ -87,6 +82,8 @@ export function TransformPanel({
               direction === "encode" ? "Enter text to URL encode..." : "Enter URL-encoded string..."
             }
             className="h-32 resize-none font-mono"
+            aria-invalid={result.error !== null}
+            aria-describedby={result.error ? errorId : undefined}
           />
           {onParseIntoBuilder && (
             <Button
@@ -115,15 +112,7 @@ export function TransformPanel({
             className="bg-muted/50 h-32 resize-none font-mono"
           />
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyToClipboard(result.output)}
-              disabled={!result.output}
-            >
-              <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-              Copy
-            </Button>
+            {result.output && <CopyButton value={result.output} variant="outline" />}
             <Button variant="outline" size="sm" onClick={() => onTextChange("")}>
               <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Clear
@@ -134,7 +123,7 @@ export function TransformPanel({
 
       {result.error && (
         <Alert variant="destructive">
-          <AlertDescription>{result.error}</AlertDescription>
+          <AlertDescription id={errorId}>{result.error}</AlertDescription>
         </Alert>
       )}
     </div>

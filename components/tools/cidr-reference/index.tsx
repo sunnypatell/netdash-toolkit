@@ -27,7 +27,11 @@ function addressSpan(cidr: string): string {
   return `${intToIpv4(start)} - ${intToIpv4(end)}`
 }
 
-const fallback = <p className="text-muted-foreground py-8 text-center text-sm">Loading table</p>
+const fallback = (
+  <p className="text-muted-foreground py-8 text-center text-sm" data-panel-fallback>
+    Loading table
+  </p>
+)
 
 export function CIDRReference() {
   const [{ tab }, setQuery] = useQueryStates(

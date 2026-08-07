@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Globe2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import type { PanelProps } from "@/lib/tool-panel"
@@ -60,6 +61,9 @@ export function IPv6SpecialAddresses({ embedded }: PanelProps) {
                   <th scope="col" className="p-2 text-left font-medium">
                     Reference
                   </th>
+                  <th scope="col" className="p-2 font-medium">
+                    <span className="sr-only">Copy prefix</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -75,6 +79,9 @@ export function IPv6SpecialAddresses({ embedded }: PanelProps) {
                       {IPV4_COUNTERPART[entry.range] ?? "-"}
                     </td>
                     <td className="text-muted-foreground p-2 text-xs">{entry.rfc}</td>
+                    <td className="p-2">
+                      <CopyButton value={entry.range} size="sm" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

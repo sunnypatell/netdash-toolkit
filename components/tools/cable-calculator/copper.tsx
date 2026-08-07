@@ -51,6 +51,15 @@ export function CopperPanel({ embedded }: PanelProps) {
     [category, permanentLink, patchCord, nvp]
   )
 
+  // computeCopperLink returns one message at a time, so mirror its order to name the field
+  const invalidField = !error
+    ? null
+    : !(Number(permanentLink) > 0)
+      ? "permanentLink"
+      : !(Number(patchCord) >= 0)
+        ? "patchCord"
+        : "nvp"
+
   const saveData = {
     type: "copper",
     copperType: category,
@@ -115,7 +124,7 @@ export function CopperPanel({ embedded }: PanelProps) {
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="copper-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -159,6 +168,8 @@ export function CopperPanel({ embedded }: PanelProps) {
                 step="any"
                 value={permanentLink}
                 onChange={(event) => void setQuery({ permanentLink: event.target.value })}
+                aria-invalid={invalidField === "permanentLink"}
+                aria-describedby={invalidField === "permanentLink" ? "copper-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Horizontal cable from the patch panel to the outlet, {spec.maxPermanentLinkM} m
@@ -176,6 +187,8 @@ export function CopperPanel({ embedded }: PanelProps) {
                 step="any"
                 value={patchCord}
                 onChange={(event) => void setQuery({ patchCord: event.target.value })}
+                aria-invalid={invalidField === "patchCord"}
+                aria-describedby={invalidField === "patchCord" ? "copper-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Equipment and work area cords combined, {MAX_PATCH_CORD_TOTAL_M} m maximum
@@ -192,6 +205,8 @@ export function CopperPanel({ embedded }: PanelProps) {
                 step="0.01"
                 value={nvp}
                 onChange={(event) => void setQuery({ nvp: event.target.value })}
+                aria-invalid={invalidField === "nvp"}
+                aria-describedby={invalidField === "nvp" ? "copper-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Fraction of the speed of light in the cable. Typical UTP is 0.64 to 0.70; the

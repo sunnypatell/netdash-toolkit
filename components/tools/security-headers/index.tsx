@@ -10,11 +10,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Info, Shield } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CORS_SAFELISTED_RESPONSE_HEADERS } from "@/lib/browser-limits"
-import { RELAY_HOST, normalizeTargetUrl } from "@/lib/http-relay"
+import { normalizeTargetUrl } from "@/lib/http-relay"
 import { SECURITY_HEADER_SPECS } from "@/lib/security-header-grade"
-import { GradeReport, type GradeInput } from "./grade-report"
+import type { GradeInput } from "./grade-report"
 
 // one chunk per acquisition route; only the open tab is fetched and mounted
+const GradeReport = lazy(() => import("./grade-report").then((m) => ({ default: m.GradeReport })))
 const PastePanel = lazy(() => import("./paste"))
 const ObservatoryPanel = lazy(() => import("./observatory"))
 const RelayPanel = lazy(() => import("./relay"))
@@ -34,7 +35,7 @@ function hostOf(target: string): string {
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p data-panel-fallback role="status" className="text-muted-foreground p-4 text-sm">
       Loading...
     </p>
   )
@@ -82,8 +83,8 @@ export function SecurityHeaders() {
           </p>
           <p>
             Instead: paste real <code className="font-mono text-xs">curl</code> output for a grade
-            you can trust, ask Mozilla to scan the host, or fetch through{" "}
-            <span className="font-mono">{RELAY_HOST}</span>, a labelled third-party relay.
+            you can trust, ask Mozilla to scan the host, or fetch through the labelled third-party
+            relay.
           </p>
         </AlertDescription>
       </Alert>
@@ -151,7 +152,11 @@ export function SecurityHeaders() {
 
       {/* live region: relay and observatory results arrive asynchronously */}
       <div aria-live="polite" aria-busy={busy}>
-        {result && <GradeReport input={result} />}
+        {result && (
+          <Suspense fallback={<PanelFallback />}>
+            <GradeReport input={result} />
+          </Suspense>
+        )}
       </div>
 
       <Card>

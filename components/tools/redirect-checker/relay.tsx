@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertTriangle, Loader2, Radio, ShieldAlert } from "lucide-react"
-import { RELAY_HOST, fetchRelayHeaders, isProbeableUrl } from "@/lib/http-relay"
+import { fetchRelayHeaders, isProbeableUrl } from "@/lib/http-relay"
 import { buildRedirectChain } from "@/lib/redirect-chain"
 import { toast } from "sonner"
 import type { TracedChain } from "./chain-view"
@@ -28,13 +28,14 @@ export default function RelayPanel({ target, onTrace, onBusyChange }: RelayPanel
   }
 
   const run = async () => {
+    // the alert the input is described by carries the message; a toast beside it
+    // said the same thing twice
     if (!target) {
       setError("Enter a URL first")
-      toast.error("Enter a URL first")
       return
     }
     if (!isProbeableUrl(target)) {
-      setError("Only http:// and https:// URLs can be traced.")
+      setError("Only http:// and https:// URLs can be traced")
       return
     }
     setBusy(true)
@@ -58,11 +59,13 @@ export default function RelayPanel({ target, onTrace, onBusyChange }: RelayPanel
       <Alert variant="destructive">
         <ShieldAlert className="h-4 w-4" />
         <AlertTitle>The chain comes from an unaffiliated third party</AlertTitle>
+        {/* the relay is named once at the top of the page by the shared runtime
+            disclosure; what only belongs here is what it can do to the answer */}
         <AlertDescription className="text-sm">
-          The request goes to <span className="font-mono">{RELAY_HOST}</span>. It sees the URL you
-          asked about and can invent, drop, or rewrite any hop. Treat the chain as indicative and
-          confirm with curl before acting on it. It traces from its own network, so geography and
-          user-agent based redirects may differ from what you would get.
+          The request goes through an unaffiliated third-party relay, which can invent, drop, or
+          rewrite any hop. Treat the chain as indicative and confirm with curl before acting on it.
+          It traces from its own network, so geography and user-agent based redirects may differ
+          from what you would get.
         </AlertDescription>
       </Alert>
       <Button onClick={run} disabled={loading} variant="outline" className="w-full">

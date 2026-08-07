@@ -14,16 +14,7 @@ import {
 import { RefreshCw } from "lucide-react"
 import { ResultList } from "./result-list"
 import type { IPv4Kind } from "@/lib/random-gen"
-
-export const IPV4_KINDS: { id: IPv4Kind; label: string }[] = [
-  { id: "any", label: "Any unicast first octet (1-223)" },
-  { id: "public", label: "Public only (globally routable)" },
-  { id: "private-a", label: "Private class A (10.0.0.0/8)" },
-  { id: "private-b", label: "Private class B (172.16.0.0/12)" },
-  { id: "private-c", label: "Private class C (192.168.0.0/16)" },
-  { id: "loopback", label: "Loopback (127.0.0.0/8)" },
-  { id: "link-local", label: "Link-local (169.254.0.0/16)" },
-]
+import { IPV4_KINDS } from "./kinds"
 
 interface Ipv4PanelProps {
   kind: IPv4Kind
@@ -32,7 +23,6 @@ interface Ipv4PanelProps {
   onKindChange: (kind: IPv4Kind) => void
   onCountChange: (count: number) => void
   onGenerate: () => void
-  onCopy: () => void
   onExport: () => void
   onClear: () => void
 }
@@ -44,7 +34,6 @@ export function Ipv4Panel({
   onKindChange,
   onCountChange,
   onGenerate,
-  onCopy,
   onExport,
   onClear,
 }: Ipv4PanelProps) {
@@ -93,13 +82,7 @@ export function Ipv4Panel({
           Generate IPv4 addresses
         </Button>
 
-        <ResultList
-          kind="IPv4 addresses"
-          values={values}
-          onCopy={onCopy}
-          onExport={onExport}
-          onClear={onClear}
-        />
+        <ResultList kind="IPv4 addresses" values={values} onExport={onExport} onClear={onClear} />
       </CardContent>
     </Card>
   )

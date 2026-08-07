@@ -245,6 +245,9 @@ export function TimestampConverter() {
                   placeholder="1609459200 or 2021-01-01T00:00:00Z"
                   className="font-mono"
                   aria-invalid={raw.trim() !== "" && !parsed.ok}
+                  aria-describedby={
+                    raw.trim() !== "" && !parsed.ok ? "timestamp-input-error" : undefined
+                  }
                 />
                 <Button variant="outline" onClick={applyNow} aria-label="Use current time">
                   <RefreshCw className="h-4 w-4" />
@@ -323,7 +326,7 @@ export function TimestampConverter() {
             {raw.trim() !== "" && !parsed.ok && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{parsed.error}</AlertDescription>
+                <AlertDescription id="timestamp-input-error">{parsed.error}</AlertDescription>
               </Alert>
             )}
 

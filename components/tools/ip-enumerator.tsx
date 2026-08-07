@@ -15,11 +15,10 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertTriangle, ArrowDown, ArrowUp, Copy, Download, List } from "lucide-react"
+import { AlertTriangle, ArrowDown, ArrowUp, Download, List } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { toast } from "sonner"
+import { CopyButton } from "@/components/ui/copy-button"
 import { ResultCard } from "@/components/ui/result-card"
-import { copyText } from "@/lib/clipboard"
 import { downloadTextFile, dateStamp } from "@/lib/download"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
@@ -104,14 +103,6 @@ export function IPEnumerator() {
     addresses,
   }
 
-  const copyAll = async () => {
-    if (await copyText(addresses.join("\n"))) {
-      toast.success(`Copied ${addresses.length} addresses`)
-      return
-    }
-    toast.error("Copy failed")
-  }
-
   const fileStem = () => `ip-range-${(summary?.cidr ?? cidr).replace("/", "-")}-${dateStamp()}`
 
   const exportCSV = () => {
@@ -172,7 +163,8 @@ export function IPEnumerator() {
                 onChange={(event) => void setQuery({ cidr: event.target.value })}
                 placeholder="192.168.1.0/24"
                 className="font-mono"
-                aria-describedby="cidr-hint"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "cidr-hint cidr-error" : "cidr-hint"}
               />
               <p id="cidr-hint" className="text-muted-foreground mt-1 text-xs">
                 A host address is normalised onto its network. Examples: 10.0.0.0/24,
@@ -183,7 +175,7 @@ export function IPEnumerator() {
             {error && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription id="cidr-error">{error}</AlertDescription>
               </Alert>
             )}
 
@@ -281,9 +273,13 @@ export function IPEnumerator() {
             <CardTitle className="flex items-center justify-between gap-2">
               <span>Address List</span>
               {summary && (
-                <Badge variant="secondary">
-                  {addresses.length.toLocaleString("en-US")} of {available.toLocaleString("en-US")}
-                </Badge>
+                <span className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {addresses.length.toLocaleString("en-US")} of{" "}
+                    {available.toLocaleString("en-US")}
+                  </Badge>
+                  {addresses.length > 0 && <CopyButton value={addresses.join("\n")} />}
+                </span>
               )}
             </CardTitle>
             <CardDescription>
@@ -296,17 +292,13 @@ export function IPEnumerator() {
             {summary && addresses.length > 0 ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={copyAll}>
-                    <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Copy All
-                  </Button>
                   <Button variant="outline" size="sm" onClick={exportCSV}>
                     <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                    CSV
+                    Export CSV
                   </Button>
                   <Button variant="outline" size="sm" onClick={exportJSON}>
                     <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                    JSON
+                    Export JSON
                   </Button>
                 </div>
 

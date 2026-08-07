@@ -32,9 +32,7 @@ export default function PastePanel({ target, onTrace }: PastePanelProps) {
     }
     const blocks = parseResponseBlocks(pasted)
     if (blocks.length === 0) {
-      setError(
-        "No response blocks found. Each hop must start with a status line like “HTTP/2 301”."
-      )
+      setError('No response blocks found. Each hop must start with a status line like "HTTP/2 301"')
       toast.error("Could not parse a redirect chain")
       return
     }
@@ -42,7 +40,7 @@ export default function PastePanel({ target, onTrace }: PastePanelProps) {
     // exactly the fiction this tool was rewritten to stop telling
     if (blocks.every((block) => block.status === 0)) {
       setError(
-        "That paste has header lines but no status line, so there is no hop to trace. Include the “HTTP/1.1 301 ...” lines that curl -D - prints."
+        'That paste has header lines but no status line, so there is no hop to trace. Include the "HTTP/1.1 301 ..." lines that curl -D - prints'
       )
       toast.error("No status line in the paste")
       return
@@ -86,7 +84,7 @@ export default function PastePanel({ target, onTrace }: PastePanelProps) {
         Trace pasted chain
       </Button>
       <p className="text-muted-foreground text-xs">
-        Fully offline - the paste never leaves your browser.
+        Runs offline - the paste never leaves your browser.
       </p>
       {error && (
         <Alert variant="destructive">

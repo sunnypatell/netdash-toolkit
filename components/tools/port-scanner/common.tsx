@@ -42,8 +42,8 @@ export default function CommonPortsPanel({ disabled, browserMode, onScan }: Comm
           {blocked.length} of these {COMMON_PORTS.length} ports (
           {blocked.map((p) => p.port).join(", ")}) are on the Fetch Standard&apos;s port blocking
           list. The browser refuses to send anything to them, so they will come back as{" "}
-          <strong>blocked by the browser</strong> rather than as a finding about the host. The
-          desktop app scans them for real.
+          <strong>blocked by browser</strong> rather than as a finding about the host. The desktop
+          app scans them for real.
         </p>
       )}
 

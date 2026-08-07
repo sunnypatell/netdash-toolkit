@@ -51,8 +51,11 @@ export function intToIpv4(int: number): string {
 // guard a /0 produced mask 255.255.255.255 and default routes came out as
 // host routes in every config generator
 export function prefixToMaskInt(prefix: number): number {
-  if (prefix < 0 || prefix > 32) {
-    throw new Error("Invalid prefix length")
+  // the range check alone let a fraction through, and js coerces the shift count
+  // to an int32, so 32 - 24.5 became a shift of 7 and a /24 request returned a
+  // /25 mask. the ipv6 sibling already guarded this.
+  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+    throw new Error("Invalid prefix length (must be 0-32)")
   }
   return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0
 }
@@ -84,7 +87,7 @@ export function netmaskToPrefix(netmask: string): number {
 
 export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
   if (prefix < 0 || prefix > 32) {
-    throw new Error("Invalid prefix length")
+    throw new Error("Invalid prefix length (must be 0-32)")
   }
 
   const ipInt = ipv4ToInt(ip)
@@ -296,7 +299,7 @@ export function solicitedNodeMulticast(ip: string): string {
 // zero the host bits and return the expanded 8-group network address
 export function ipv6NetworkPrefix(address: string, prefixLength: number): string {
   if (!Number.isInteger(prefixLength) || prefixLength < 0 || prefixLength > 128) {
-    throw new Error("Invalid prefix length. Enter a value between 0 and 128.")
+    throw new Error("Invalid prefix length (must be 0-128)")
   }
 
   const groups = expandIPv6(splitIPv6Zone(address).address)

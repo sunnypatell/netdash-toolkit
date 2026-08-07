@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CopyButton } from "@/components/ui/copy-button"
-import { AlertTriangle, ArrowRight, ExternalLink, Globe } from "lucide-react"
+import { AlertTriangle, ArrowRight, Download, ExternalLink, Globe } from "lucide-react"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import type { RedirectChain } from "@/lib/redirect-chain"
 
 export type ChainSource = "pasted" | "relay"
@@ -79,10 +80,38 @@ export function ChainSummary({ result }: { result: TracedChain }) {
 }
 
 export function ChainView({ result }: { result: TracedChain | null }) {
+  // the source travels with the chain: a relayed trace stays labelled unverified
+  // in the file too
+  const exportChain = () => {
+    if (!result) return
+    downloadTextFile(
+      JSON.stringify(
+        {
+          source: result.source,
+          verified: result.source !== "relay",
+          exportedAt: new Date().toISOString(),
+          chain: result,
+        },
+        null,
+        2
+      ),
+      `redirect-chain-${dateStamp()}.json`,
+      "application/json"
+    )
+  }
+
   return (
     <Card className="lg:col-span-2">
       <CardHeader>
-        <CardTitle>Redirect chain</CardTitle>
+        <CardTitle className="flex items-center justify-between gap-2">
+          Redirect chain
+          {result && (
+            <Button variant="outline" size="sm" onClick={exportChain}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              Export
+            </Button>
+          )}
+        </CardTitle>
         <CardDescription>
           {result
             ? `${result.hops.length} hop${result.hops.length === 1 ? "" : "s"}${result.source === "relay" ? " - reported by the relay, unverified" : ""}`

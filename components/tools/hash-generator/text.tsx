@@ -10,9 +10,18 @@ export interface TextPanelProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  // the hash runs in the parent, so the failure and its message live there too
+  "aria-invalid"?: boolean
+  "aria-describedby"?: string
 }
 
-export function TextPanel({ value, onChange, disabled }: TextPanelProps) {
+export function TextPanel({
+  value,
+  onChange,
+  disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+}: TextPanelProps) {
   // a hash is over bytes, and utf-8 makes those two numbers differ for any
   // non-ascii input, so showing only the character count is misleading
   const byteLength = value ? encodeText(value).length : 0
@@ -33,6 +42,8 @@ export function TextPanel({ value, onChange, disabled }: TextPanelProps) {
         placeholder="Enter text to generate hash..."
         className="h-32 font-mono"
         disabled={disabled}
+        aria-invalid={invalid}
+        aria-describedby={describedBy}
       />
       <p className="text-muted-foreground text-xs">
         Hashed as UTF-8 bytes, so &quot;café&quot; is 5 bytes and not 4.

@@ -2,18 +2,17 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Copy, Server } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Server } from "lucide-react"
 import type { MXResult } from "@/lib/email-auth"
 import { Issues } from "./issues"
 
 export interface MXPanelProps {
   domain: string
   result: MXResult
-  onCopy?: (text: string) => void
 }
 
-export function MXPanel({ domain, result, onCopy }: MXPanelProps) {
+export function MXPanel({ domain, result }: MXPanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -39,17 +38,7 @@ export function MXPanel({ domain, result, onCopy }: MXPanelProps) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-sm">TTL: {mx.ttl}s</span>
-                  {onCopy && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                      onClick={() => onCopy(mx.exchange)}
-                      aria-label={`Copy ${mx.exchange}`}
-                    >
-                      <Copy className="h-3 w-3" aria-hidden="true" />
-                    </Button>
-                  )}
+                  <CopyButton value={mx.exchange} />
                 </div>
               </div>
             ))}
@@ -62,7 +51,7 @@ export function MXPanel({ domain, result, onCopy }: MXPanelProps) {
         <Issues
           errors={
             result.records.length === 0 && result.errors.length === 0
-              ? ["No MX records found. This domain cannot receive email."]
+              ? ["No MX records found, so this domain cannot receive email"]
               : result.errors
           }
           warnings={result.warnings}

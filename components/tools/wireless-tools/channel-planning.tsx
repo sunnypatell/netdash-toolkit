@@ -32,6 +32,9 @@ export function ChannelPlanningPanel({
   const recommended = fitsWidth.filter((ch) => ch.recommended)
   const acceptable = fitsWidth.filter((ch) => !ch.recommended && ch.interference === "medium")
   const avoid = channels.filter((ch) => ch.interference === "high" || ch.maxWidth < width)
+  // the band and the width jointly produce the no-clean-plan error, so both carry it
+  const widthTooWideForBand = band === "2.4" && width > 20
+  const describedBy = widthTooWideForBand ? "wireless-channel-width-error" : undefined
 
   return (
     <div className="space-y-4">
@@ -48,7 +51,11 @@ export function ChannelPlanningPanel({
             <div>
               <Label htmlFor="wireless-band">Frequency Band</Label>
               <Select value={band} onValueChange={(value) => onBandChange(value as WirelessBand)}>
-                <SelectTrigger id="wireless-band">
+                <SelectTrigger
+                  id="wireless-band"
+                  aria-invalid={widthTooWideForBand}
+                  aria-describedby={describedBy}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -65,7 +72,11 @@ export function ChannelPlanningPanel({
                 value={width.toString()}
                 onValueChange={(value) => onWidthChange(Number.parseInt(value, 10) as ChannelWidth)}
               >
-                <SelectTrigger id="wireless-channel-width">
+                <SelectTrigger
+                  id="wireless-channel-width"
+                  aria-invalid={widthTooWideForBand}
+                  aria-describedby={describedBy}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -87,10 +98,10 @@ export function ChannelPlanningPanel({
               </AlertDescription>
             </Alert>
 
-            {band === "2.4" && width > 20 && (
+            {widthTooWideForBand && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                <AlertDescription>
+                <AlertDescription id="wireless-channel-width-error">
                   2.4 GHz only has 83.5 MHz of spectrum, so a {width} MHz channel leaves no
                   non-overlapping plan. Only one AP can use it without colliding with its
                   neighbours.

@@ -34,7 +34,7 @@ export default function PastePanel({ target, hostLabel, onAnalysis }: PastePanel
     const blocks = parseResponseBlocks(pasted)
     if (blocks.length === 0) {
       setError(
-        "No headers found in that paste. Expected lines like “content-type: text/html; charset=utf-8”."
+        'No headers found in that paste. Expected lines like "content-type: text/html; charset=utf-8"'
       )
       toast.error("Could not parse any headers")
       return
@@ -73,8 +73,7 @@ export default function PastePanel({ target, hostLabel, onAnalysis }: PastePanel
         Analyze pasted headers
       </Button>
       <p className="text-muted-foreground text-xs">
-        Fully offline - the paste never leaves your browser, and curl sees the response exactly as
-        the server sent it, with no CORS filtering in the way.
+        curl sees the response exactly as the server sent it, with no CORS filtering in the way.
       </p>
       {error && (
         <Alert variant="destructive">

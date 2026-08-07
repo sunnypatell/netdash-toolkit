@@ -41,7 +41,7 @@ function compute(
 
   const prefixLength = Number.parseInt(prefixText, 10)
   if (!Number.isInteger(prefixLength) || prefixLength < 0 || prefixLength > 128) {
-    return { result: null, error: "Prefix length must be between 0 and 128" }
+    return { result: null, error: "Invalid prefix length (must be 0-128)" }
   }
 
   try {
@@ -107,6 +107,17 @@ export function IPv6Calculator({ embedded }: PanelProps) {
   const { ip6, mac, prefix } = query
   const { result, error } = useMemo(() => compute(ip6, mac, prefix), [ip6, mac, prefix])
 
+  // compute() returns one message at a time, so mirror its order to name the field
+  const invalidField = useMemo(() => {
+    if (!error) return null
+    if (!isValidIPv6(ip6)) return "address"
+    // the eui-64 failure is the only one that still produces a result
+    if (result) return "mac"
+    const prefixLength = Number.parseInt(prefix, 10)
+    const prefixOk = Number.isInteger(prefixLength) && prefixLength >= 0 && prefixLength <= 128
+    return prefixOk ? "address" : "prefix"
+  }, [error, ip6, prefix, result])
+
   const exportResults = () => {
     if (!result) return
     downloadTextFile(
@@ -129,7 +140,7 @@ export function IPv6Calculator({ embedded }: PanelProps) {
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="ipv6-calculator-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -153,6 +164,8 @@ export function IPv6Calculator({ embedded }: PanelProps) {
                 onChange={(event) => void setQuery({ ip6: event.target.value })}
                 placeholder="2001:db8::1"
                 className="font-mono"
+                aria-invalid={invalidField === "address"}
+                aria-describedby={invalidField === "address" ? "ipv6-calculator-error" : undefined}
               />
               {result && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -175,6 +188,8 @@ export function IPv6Calculator({ embedded }: PanelProps) {
                 onChange={(event) => void setQuery({ mac: event.target.value })}
                 placeholder="00:11:22:33:44:55"
                 className="font-mono"
+                aria-invalid={invalidField === "mac"}
+                aria-describedby={invalidField === "mac" ? "ipv6-calculator-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Used for the EUI-64 interface identifier. Leave blank to skip it.
@@ -189,6 +204,8 @@ export function IPv6Calculator({ embedded }: PanelProps) {
                 onChange={(event) => void setQuery({ prefix: event.target.value })}
                 placeholder="64"
                 inputMode="numeric"
+                aria-invalid={invalidField === "prefix"}
+                aria-describedby={invalidField === "prefix" ? "ipv6-calculator-error" : undefined}
               />
             </div>
 
@@ -258,7 +275,7 @@ export function IPv6Calculator({ embedded }: PanelProps) {
 
               <Button onClick={exportResults} variant="outline" className="w-full bg-transparent">
                 <Download className="mr-2 h-4 w-4" />
-                Export Results
+                Export
               </Button>
             </>
           ) : (

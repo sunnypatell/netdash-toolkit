@@ -69,6 +69,15 @@ export function TransferTimePanel({ embedded }: PanelProps) {
     [size, sizeUnit, speed, speedUnit, overhead]
   )
 
+  // computeTransferTime returns one message at a time, so mirror its order to name the field
+  const invalidField = !error
+    ? null
+    : !(Number(size) > 0)
+      ? "size"
+      : !(Number(speed) > 0)
+        ? "speed"
+        : "overhead"
+
   const handleLoadFromProject = (data: Record<string, unknown>) => {
     const input = data.input as
       | {
@@ -132,7 +141,7 @@ export function TransferTimePanel({ embedded }: PanelProps) {
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="transfer-time-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -159,6 +168,8 @@ export function TransferTimePanel({ embedded }: PanelProps) {
                   step="any"
                   value={size}
                   onChange={(event) => void setQuery({ size: event.target.value })}
+                  aria-invalid={invalidField === "size"}
+                  aria-describedby={invalidField === "size" ? "transfer-time-error" : undefined}
                 />
               </div>
               <div>
@@ -181,6 +192,8 @@ export function TransferTimePanel({ embedded }: PanelProps) {
                   step="any"
                   value={speed}
                   onChange={(event) => void setQuery({ speed: event.target.value })}
+                  aria-invalid={invalidField === "speed"}
+                  aria-describedby={invalidField === "speed" ? "transfer-time-error" : undefined}
                 />
               </div>
               <div>
@@ -203,6 +216,8 @@ export function TransferTimePanel({ embedded }: PanelProps) {
                 step="any"
                 value={overhead}
                 onChange={(event) => void setQuery({ overhead: event.target.value })}
+                aria-invalid={invalidField === "overhead"}
+                aria-describedby={invalidField === "overhead" ? "transfer-time-error" : undefined}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 TCP over Ethernet with a 1500 byte MTU carries 1460 payload bytes in a 1538 byte

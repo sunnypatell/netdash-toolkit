@@ -39,15 +39,57 @@ describe("2.4.7 / 1.4.11 focus indicators", () => {
     expect(FILES).toContain(join("components", "ui", "button.tsx"))
   })
 
-  it("no focus indicator is drawn at partial alpha, whatever its colour", () => {
-    const alphaRing = new RegExp(
-      `(?:${FOCUS_PREFIX})(?:${INDICATOR})-[a-z-]+\\${"/"}(\\d{1,3})\\b`,
+  // the colour and alpha segments have to admit digits and brackets. `[a-z-]+`
+  // with `\d{1,3}\b` matched `border-ring/50` but not `border-slate-500/50` (the
+  // form tailwind's own palette produces), `border-[#f00]/50`, or an arbitrary
+  // alpha like `border-primary/[0.5]`. tests/unit/contrast.test.ts fixed exactly
+  // this for `ring`/`outline`; the `border` arm is this file's alone and stayed
+  // blind, so a translucent focus border in a palette colour passed every gate.
+  const ALPHA_INDICATOR = () =>
+    new RegExp(
+      `(?:${FOCUS_PREFIX})(?:${INDICATOR})-(?:\\[[^\\]\\s]+\\]|[a-z0-9-]+)\\${"/"}(?:\\[[^\\]\\s]+\\]|\\d+%?)`,
       "g"
     )
+
+  function alphaIndicators(source: string): string[] {
+    return [...source.matchAll(ALPHA_INDICATOR())].map((m) => m[0])
+  }
+
+  // a scanner that matches nothing passes forever, so prove it fires first. the
+  // literals are assembled at runtime so tailwind does not scan this file and
+  // emit the very utilities the scan exists to forbid.
+  it("the indicator scan matches every shape a translucent focus indicator is written in", () => {
+    const a = "/"
+    for (const literal of [
+      `focus-visible:ring-ring${a}50`,
+      `focus-visible:ring-red-500${a}50`,
+      `focus-visible:border-slate-500${a}50`,
+      `focus-visible:border-destructive${a}20`,
+      `focus-visible:outline-blue-600${a}50`,
+      `focus-visible:ring-primary${a}[0.5]`,
+      `focus-visible:border-[#ff0000]${a}50`,
+      `focus:ring-ring${a}50`,
+      `peer-focus-visible:border-slate-500${a}50`,
+    ]) {
+      expect(alphaIndicators(literal), `${literal} slipped past the scan`).toHaveLength(1)
+    }
+    // opaque indicators, non-focus alphas and ring width must not be swept in
+    for (const fine of [
+      "focus-visible:border-ring",
+      "focus-visible:ring-[3px]",
+      "focus-visible:ring-offset-2",
+      "hover:bg-primary/90",
+      `aria-invalid:ring-destructive${a}20`,
+    ]) {
+      expect(alphaIndicators(fine), fine).toEqual([])
+    }
+  })
+
+  it("no focus indicator is drawn at partial alpha, whatever its colour", () => {
     const offenders: string[] = []
     for (const file of FILES) {
       const source = readFileSync(file, "utf8")
-      for (const m of source.matchAll(alphaRing)) {
+      for (const m of source.matchAll(ALPHA_INDICATOR())) {
         const line = source.slice(0, m.index).split("\n").length
         offenders.push(`${file}:${line}: ${m[0]}`)
       }

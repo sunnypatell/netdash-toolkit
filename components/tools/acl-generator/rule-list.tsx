@@ -78,7 +78,9 @@ export function RuleShell({ index, validation, onDelete, children }: RuleShellPr
       {validation && !validation.isValid && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" aria-hidden="true" />
-          <AlertDescription>{validation.errors.join(", ")}</AlertDescription>
+          <AlertDescription id={`acl-rule-${index}-error`}>
+            {validation.errors.join(", ")}
+          </AlertDescription>
         </Alert>
       )}
 

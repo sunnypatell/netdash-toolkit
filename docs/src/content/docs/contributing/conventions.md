@@ -1,6 +1,6 @@
 ---
 title: Code conventions
-description: Formatting, commit style, the comment discipline NetDash Toolkit follows, and the exact steps to add a tool to the registry.
+description: Formatting, commit style, the comment discipline NetDash Toolkit follows, the shared copy, export, error-string and disclosure vocabulary across the 48 tools, and the exact steps to add a tool to the registry.
 ---
 
 The mechanical conventions are enforced by tooling, so you do not have to remember them. The one convention that is not automated, and that the codebase leans on heavily, is what a comment is for.
@@ -95,6 +95,89 @@ The fourth rule is the one with history. The comment on the `ToolRuntime` interf
 
 Adding a **category** is a bigger change than adding a tool. The docs sidebar is manual by design, so `docs/scripts/generate-tool-pages.mjs` fails the docs build if the registry's categories and the sidebar in `docs/astro.config.mjs` disagree, and tells you which one is unaccounted for. Add the sidebar entry and update `SIDEBAR_CATEGORIES` in the same change.
 
+## Shared UI vocabulary
+
+A directory of 48 tools drifts into 48 dialects unless the shared surfaces are actually shared. Four conventions were unified across the whole set, and each one is stated below with the exceptions that still exist, because a convention described as universal when it is not is worse than one described accurately.
+
+### Copying
+
+Every copy in the app goes through `copyText` in [`lib/clipboard.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/clipboard.ts), which tries the secure-context `navigator.clipboard.writeText` and falls back to `document.execCommand("copy")` for a non-secure origin. **No copy raises a toast anywhere in the app**, which is the change worth knowing: a toast for an action whose result is already visible on the button is noise, and 51 of them used to fire into a `Toaster` that was never mounted.
+
+[`components/ui/copy-button.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/copy-button.tsx) is the component to reach for. It swaps its own accessible name rather than announcing through a live region:
+
+```tsx
+aria-label={copied ? "Copied!" : "Copy to clipboard"}
+```
+
+52 tool files import it. Three surfaces copy without it, and each is a deliberate variant rather than an oversight:
+
+| Surface                                                                                                                                               | Why it is not `CopyButton`                                                                                                                                   | Announcement                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| [`components/ui/result-card.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/result-card.tsx)                             | copy is per result row, inside a card the tool does not compose button-by-button                                                                             | `aria-live="polite"` on the card plus an `sr-only` "Copied" |
+| [`components/tools/shared/reference-table.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/shared/reference-table.tsx) | a 33-row table would otherwise put 33 buttons all named "Copy to clipboard" in the tab order, so `RowCopyButton` carries a per-row name                      | none, same as `CopyButton`                                  |
+| [`components/project-manager.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/project-manager.tsx)                           | a share link, not a tool result. It calls `navigator.clipboard.writeText` directly, which is the one remaining raw clipboard call outside `lib/clipboard.ts` | none, and no `execCommand` fallback either                  |
+
+So the accurate summary is: copy is silent everywhere except `ResultCard`, which announces politely, and it runs through one helper everywhere except the project share link. Eight tools reach copy only through `ResultCard` or `ReferenceTable` and therefore never import `CopyButton` at all: bandwidth calculator, cable calculator, IPv6 tools, MTU calculator, port reference, protocol reference, reference hub and subnet calculator.
+
+### Export labels
+
+The rule is that the label names the format only when the format is a choice:
+
+| Situation                    | Label                        | Examples                                                                                                                                   |
+| ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| One export from that surface | bare `Export`                | whois lookup, network tester, security headers, redirect checker, email diagnostics, DNS tools, ACL generator, JSON formatter, and 16 more |
+| Two formats side by side     | `Export CSV` / `Export JSON` | IP enumerator, OUI lookup, subnet calculator                                                                                               |
+
+Two tools sit beside that second row with a non-JSON second format, which is the rule applied rather than broken: the VLSM planner offers `Export CSV` and `Export Text`, and the conflict checker offers `Export CSV` and `Export Report`, where the report is a `text/plain` remediation write-up rather than a serialisation format. The one genuine exception is the Wi-Fi QR generator, whose two downloads are labelled `PNG` and `SVG` with the word "Export" absent entirely.
+
+Where a bare `Export` would be ambiguous to a screen reader out of context, the visible label stays bare and the accessible name is extended instead, which keeps the visual convention intact:
+
+```tsx
+// components/tools/random-generator/result-list.tsx
+Export<span className="sr-only"> {kind}</span>
+
+// components/tools/port-scanner/scan-results.tsx
+aria-label={`Export the scan of ${session.target}`}
+```
+
+Two exports also carry their own provenance into the file rather than only onto the screen: the security-header report and the redirect chain both write `source` and `verified: input.source !== "relay"` into the JSON, so a relayed result stays labelled unverified after it leaves the app.
+
+### Error strings
+
+Validation errors that **reject a malformed value** converged on `Invalid X`, with no trailing period, so the string is a fragment that a caller can compose rather than a sentence:
+
+```ts
+throw new Error("Invalid IPv4 address")
+throw new Error("Invalid prefix length (must be 0-32)")
+throw new Error("Invalid prefix length (must be 0-128)")
+```
+
+Three other families exist and are not the same thing, which is why they were not folded in:
+
+| Shape           | Means                                | Example                                        |
+| --------------- | ------------------------------------ | ---------------------------------------------- |
+| `Invalid X`     | you supplied a value and it is wrong | `Invalid CIDR prefix`                          |
+| `Enter a X`     | you supplied nothing yet             | `Enter a domain, IP address, or ASN`           |
+| `X must be ...` | a numeric or structural range        | `Subnet mask must have contiguous 1 bits`      |
+| `X is required` | a required field of a config object  | used across the ACL, routing and VLAN builders |
+
+The convergence is not complete, and the remainder is where it is worth knowing: the auth and project-sharing dialogs ([`components/ui/account-settings-dialog.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/account-settings-dialog.tsx), [`components/ui/share-project-dialog.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/share-project-dialog.tsx) and [`components/ui/user-menu.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/user-menu.tsx)) still use full sentences with terminal periods, as do a handful of parse failures that need to say what they expected instead. Those are prose addressed to a person mid-task rather than fragments composed into a field, so the divergence is defensible; it is simply not yet a single rule.
+
+Nothing enforces any of this. There is no lint rule and no test over error-message shape, so treat the table as the convention to follow rather than as a gate that will catch you.
+
+### The runtime disclosure is written once
+
+`ToolShell` renders [`RuntimeDisclosure`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/runtime-badge.tsx) above the tool for any tool the registry marks `offline: false`, as a sibling of the `<Suspense>` boundary rather than inside its fallback. That placement matters: the disclosure previously sat inside the fallback, so it was visible only while the tool's chunk was still downloading and disappeared the moment the tool it was warning you about became usable.
+
+Because the shell states it once, a tool must not restate it. Three tools carry a comment where their duplicate sentence used to be, which is the pattern to copy when you remove one:
+
+```tsx
+// the shared disclosure is rendered once by ToolShell; this card used to
+// repeat the same sentence a second time
+```
+
+A tool-level disclosure is still right when it says something the shared sentence cannot: the DNS tools spell out the DoH threat model, the network tester's DNS panel names the specific resolver you picked, and the OUI lookup explains that only the first three octets ever leave. Those are additive. A restatement of "your input goes to a third party" is not.
+
 ## Working on these docs
 
 `docs/` is a separate pnpm project with its own lockfile, deliberately not a workspace package, so an Astro dependency can never enter the app's tree.
@@ -114,6 +197,6 @@ Four constraints the docs hold to, all of them load-bearing:
 - **Tool counts in prose are checked against the registry.** `scripts/check-counts.mjs` runs during `pnpm build` and fails on any sentence stating a count the registry no longer supports, naming the file, the line and the matched text. If you phrase a count a way the script does not recognise, add the shape to its rules rather than routing around it. [Tests and gates](/docs/contributing/tests-and-gates/) has the detail.
 - **Every claim traces to code.** Link the implementation and, where one exists, the test that guards it. If something cannot be verified, say so in the page rather than rounding it up.
 
-:::tip[The Bar for a Claim]
+:::tip[The bar for a claim]
 If you write that the app does something, link the file. If you write that it keeps doing it, link the test. If you cannot do either, write that you did not verify it. A documented uncertainty is worth more than a confident guess, because the next person can close it.
 :::

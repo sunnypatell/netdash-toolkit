@@ -11,14 +11,14 @@ export function isElectron(): boolean {
 // Type-safe wrapper for Electron API calls
 export async function callElectronAPI<T>(
   method: keyof typeof window.electronAPI,
-  ...args: any[]
+  ...args: unknown[]
 ): Promise<T | null> {
   if (!isElectron()) {
     return null
   }
 
   try {
-    const api = window.electronAPI as any
+    const api = window.electronAPI as unknown as Record<string, (...a: unknown[]) => Promise<T>>
     return await api[method](...args)
   } catch (error) {
     console.error(`Electron API call failed: ${method}`, error)

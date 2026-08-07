@@ -8,7 +8,6 @@ import {
   categories,
   getToolBySlug,
   getToolsByCategory,
-  isOffline,
   type ToolDefinition,
 } from "@/lib/tool-registry"
 import { rememberToolVisit } from "@/components/command-palette"
@@ -127,8 +126,10 @@ export function ToolShell({ slug }: { slug: string }) {
       {/* the badge used to exist only in the loading skeleton, so it vanished the
           moment the tool arrived, and 9 of the 12 tools that leave the device
           said nothing at all once loaded. one slot, every tool, same wording.
-          the gate mirrors RuntimeDisclosure's own null case; widen both together. */}
-      {!isOffline(tool) && (
+          this mirrors RuntimeDisclosure's own null case exactly: it renders when a
+          tool does i/o, or when it is offline but has a desktop-only capability
+          worth naming. conflict-checker is the second kind. */}
+      {tool.runtime && !(tool.runtime.offline && !tool.runtime.desktopOnly?.length) && (
         <div className="border-l-2 border-amber-500/50 pl-3">
           <RuntimeDisclosure tool={tool} />
         </div>

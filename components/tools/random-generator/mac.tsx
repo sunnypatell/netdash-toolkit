@@ -16,22 +16,7 @@ import {
 import { Info, RefreshCw } from "lucide-react"
 import { ResultList } from "./result-list"
 import type { MacFormat, MacScope } from "@/lib/random-gen"
-
-export const MAC_SCOPES: { id: MacScope; label: string }[] = [
-  { id: "unicast-local", label: "Unicast, locally administered (safe for testing)" },
-  { id: "unicast", label: "Unicast (I/G bit clear)" },
-  { id: "multicast", label: "Multicast (I/G bit set)" },
-  { id: "local", label: "Locally administered (U/L bit set)" },
-  { id: "universal", label: "Universally administered (U/L bit clear)" },
-  { id: "any", label: "Any (both bits random)" },
-]
-
-export const MAC_FORMATS: { id: MacFormat; label: string }[] = [
-  { id: "colon", label: "Colon (AA:BB:CC:DD:EE:FF)" },
-  { id: "dash", label: "Dash (AA-BB-CC-DD-EE-FF)" },
-  { id: "dot", label: "Cisco dotted (AABB.CCDD.EEFF)" },
-  { id: "none", label: "Bare (AABBCCDDEEFF)" },
-]
+import { MAC_FORMATS, MAC_SCOPES } from "./kinds"
 
 interface MacPanelProps {
   scope: MacScope
@@ -44,7 +29,6 @@ interface MacPanelProps {
   onUppercaseChange: (uppercase: boolean) => void
   onCountChange: (count: number) => void
   onGenerate: () => void
-  onCopy: () => void
   onExport: () => void
   onClear: () => void
 }
@@ -60,7 +44,6 @@ export function MacPanel({
   onUppercaseChange,
   onCountChange,
   onGenerate,
-  onCopy,
   onExport,
   onClear,
 }: MacPanelProps) {
@@ -145,13 +128,7 @@ export function MacPanel({
           Generate MAC addresses
         </Button>
 
-        <ResultList
-          kind="MAC addresses"
-          values={values}
-          onCopy={onCopy}
-          onExport={onExport}
-          onClear={onClear}
-        />
+        <ResultList kind="MAC addresses" values={values} onExport={onExport} onClear={onClear} />
       </CardContent>
     </Card>
   )

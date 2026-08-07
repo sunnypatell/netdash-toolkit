@@ -13,17 +13,26 @@ import { Upload, FileText, AlertCircle } from "lucide-react"
 import { autoParseNetworkData } from "@/lib/parsers"
 import type { ParsedARPEntry, ParsedDHCPLease, ParsedMACEntry } from "@/lib/parsers"
 
+const PARSE_ERROR_ID = "paste-parser-error"
+
 interface PasteParserProps {
   onDataParsed: (data: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]) => void
+  // the caller may reject the parsed data further downstream, which this
+  // component cannot see. it renders that message and names its id here so the
+  // paste field points at both its own parse failure and the caller's.
+  describedBy?: string
+  invalid?: boolean
 }
 
-export function PasteParser({ onDataParsed }: PasteParserProps) {
+export function PasteParser({ onDataParsed, describedBy, invalid = false }: PasteParserProps) {
   const [inputText, setInputText] = useState("")
   const [parsedData, setParsedData] = useState<
     (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[]
   >([])
   const [isLoading, setIsLoading] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
+  // both messages can be on screen at once, so both ids go on the field
+  const description = [parseError ? PARSE_ERROR_ID : null, describedBy].filter(Boolean).join(" ")
 
   const handleParse = async () => {
     if (!inputText.trim()) return
@@ -131,6 +140,8 @@ Vlan    Mac Address       Type        Ports
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 className="min-h-50 font-mono text-sm"
+                aria-invalid={parseError !== null || invalid}
+                aria-describedby={description || undefined}
               />
             </TabsContent>
 
@@ -172,7 +183,7 @@ Vlan    Mac Address       Type        Ports
           </Button>
 
           {parseError && (
-            <p role="alert" className="text-destructive text-sm">
+            <p id={PARSE_ERROR_ID} role="alert" className="text-destructive text-sm">
               {parseError}
             </p>
           )}

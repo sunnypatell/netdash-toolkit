@@ -13,7 +13,7 @@ If you would rather browse, [all 48 tools](/docs/tools/) are listed by category 
 
 ## 2. Read the runtime badge before you type
 
-36 of the 48 tools never make a network request. The other 12 declare the hosts they contact, and the UI surfaces that before you submit anything. Treat the badge as the contract:
+36 of the 48 tools never make a network request. The 12 networked tools declare the hosts they contact, and the UI surfaces that before you submit anything. Treat the badge as the contract:
 
 | What you see      | What it means                                | Why you should care                             |
 | ----------------- | -------------------------------------------- | ----------------------------------------------- |

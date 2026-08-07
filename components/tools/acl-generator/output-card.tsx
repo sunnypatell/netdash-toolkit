@@ -3,8 +3,9 @@
 import type { ReactNode } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Textarea } from "@/components/ui/textarea"
-import { Copy, Download, FileText } from "lucide-react"
+import { Download, FileText } from "lucide-react"
 import type { ACLPlatform, ACLType } from "@/lib/acl"
 
 const PLATFORM_LABELS: Record<ACLPlatform, string> = {
@@ -17,7 +18,6 @@ interface ACLOutputCardProps {
   aclType: ACLType
   platform: ACLPlatform
   config: string
-  onCopy: () => void
   onExport: () => void
   saveAction?: ReactNode
 }
@@ -26,7 +26,6 @@ export function ACLOutputCard({
   aclType,
   platform,
   config,
-  onCopy,
   onExport,
   saveAction,
 }: ACLOutputCardProps) {
@@ -42,17 +41,16 @@ export function ACLOutputCard({
         </CardDescription>
       </CardHeader>
       <CardContent aria-live="polite">
-        <Textarea
-          value={config}
-          readOnly
-          aria-label={`Generated ${aclType} ACL configuration`}
-          className="min-h-[400px] font-mono text-sm"
-        />
+        <div className="relative">
+          <Textarea
+            value={config}
+            readOnly
+            aria-label={`Generated ${aclType} ACL configuration`}
+            className="min-h-[400px] font-mono text-sm"
+          />
+          <CopyButton value={config} variant="outline" className="absolute top-2 right-2" />
+        </div>
         <div className="mt-4 flex space-x-2">
-          <Button onClick={onCopy} variant="outline" className="flex-1">
-            <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-            Copy
-          </Button>
           <Button onClick={onExport} variant="outline" className="flex-1">
             <Download className="mr-2 h-4 w-4" aria-hidden="true" />
             Export

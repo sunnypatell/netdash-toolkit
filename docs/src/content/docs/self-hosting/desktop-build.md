@@ -83,6 +83,48 @@ Two properties are enforced rather than intended. `tests/unit/csp.test.ts` asser
 
 The policy is installed by `applyContentSecurityPolicy` in `electron/main.ts`, on `session.defaultSession.webRequest.onHeadersReceived`, and only for responses whose origin is in the app's own allowlist. Rewriting headers on the third-party API responses the tools fetch would change nothing and would mean parsing every response in the main process. It is also applied to the packaged build only, because `next dev` serves eval-based sourcemaps and an HMR websocket that the policy blocks.
 
+### `'unsafe-inline'`, and why a static export cannot use a nonce
+
+The `script-src` row above is the weakest thing in the policy, and it is worth being exact about why it is the ceiling rather than an oversight, because "just add a nonce" is the obvious suggestion and it does not work here.
+
+[CSP Level 3, should element's inline type behavior be blocked by content security policy?](https://www.w3.org/TR/CSP3/#should-block-inline) allows an inline script when the source list matches it, and the two ways to match are a [nonce-source](https://www.w3.org/TR/CSP3/#grammardef-nonce-source) or a [hash-source](https://www.w3.org/TR/CSP3/#grammardef-hash-source):
+
+```text
+allowed = 'unsafe-inline' in list
+        OR nonce(script) matches some 'nonce-<value>' in list
+        OR hash(script body) matches some 'sha256-<value>' in list
+
+where:
+  nonce(script) = the element's own nonce attribute, compared by
+                  match nonce to source list
+  hash(...)     = a base64 digest of the exact script text, so it changes
+                  whenever a single byte of that script changes
+```
+
+A nonce is out because of what a nonce is. [CSP Level 3 section 8.2, nonce reuse](https://www.w3.org/TR/CSP3/#security-nonces) requires the value to be unguessable and regenerated for **every response**, and the whole point of `output: "export"` is that there is no per-response anything: `next build` writes HTML files once, and Vercel or the desktop build's `serve-handler` sends those bytes unchanged to everyone. A value baked into the file at build time is a constant that ships in plain sight in the HTML, so anyone who could inject markup could copy it out of the page they are injecting into. It would satisfy the syntax and provide none of the protection, which is worse than not claiming it.
+
+A hash allowlist is the real alternative, and the reason it is not done is a build-pipeline cost rather than a principle. Count what would have to be hashed, against the export in `out/`:
+
+```bash
+# inline <script> tags with no src attribute, per page
+python3 - <<'PY'
+import re, sys
+for page in ("out/index.html", "out/tools/subnet-calculator/index.html"):
+    h = open(page, encoding="utf-8").read()
+    inline = re.findall(r'<script(?![^>]*\ssrc=)[^>]*>(.*?)</script>', h, re.S)
+    print(page, len(inline), "inline scripts,", sum(len(x) for x in inline), "bytes")
+PY
+```
+
+```text
+out/index.html                          13 inline scripts, 13407 bytes
+out/tools/subnet-calculator/index.html  15 inline scripts, 16548 bytes
+```
+
+The sets are not the same between the two pages, because most of that content is React's streamed hydration payload for that specific route. So a hash-based policy is not one extra source expression; it is a distinct `script-src` per page, computed after `next build` and injected as a per-path response header. `vercel.json` sets one `headers` block for all paths, and the desktop build sends one policy from `electron/csp.ts` for the whole session, so both would need to become path-aware first.
+
+What makes the current position defensible rather than merely convenient is what `'unsafe-inline'` is actually exposed to here. There is no server, so no request of yours is reflected into a page. No tool renders user input as HTML either: `dangerouslySetInnerHTML` occurs exactly once in the whole tree, at [`app/layout.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/app/layout.tsx), where it writes a JSON-LD block assembled from build-time constants with no user input reaching it. So the injection vector that `'unsafe-inline'` fails to stop has no way in. That is an argument for the residual risk being low, not for the directive being correct, and it is written down here so the next person tightening this policy starts from the real constraint rather than from the obvious suggestion.
+
 ### `'wasm-unsafe-eval'`, and the search box it fixed
 
 This one is worth recording because the symptom pointed away from the cause. Documentation search is [Pagefind](https://pagefind.app/), which Starlight builds into a WebAssembly index at docs build time. Chromium gates WebAssembly compilation on `script-src`, so a policy with no WASM source kills `WebAssembly.instantiate` even though nothing about it is an `eval`. The search box rendered, accepted typing, and returned nothing, on both the web deploy and inside the desktop app at once, with the failure visible only in the console.
@@ -117,6 +159,6 @@ It was also wired to nothing. The `mac` block in `electron-builder.json` sets no
 
 The reason it could not simply be left there harmlessly is the sharp one. electron-builder **auto-discovers** a file named `entitlements.mac.plist` in `buildResources`, and `buildResources` here is `electron/resources`. Nothing referenced it today because ad-hoc signing skips entitlements entirely. The day someone adds a Developer ID certificate and turns on `hardenedRuntime`, that file would have been picked up automatically, and the app would have silently acquired `allow-unsigned-executable-memory` and `disable-library-validation` along with the nonsense one.
 
-:::caution[The Rule That Follows]
+:::caution[The rule that follows]
 Dead configuration is not inert when the tool that reads it discovers files by name. An unused credential, plist, or policy file sitting in a conventional location is a change waiting for a trigger. Delete it, rather than documenting that it currently does nothing.
 :::

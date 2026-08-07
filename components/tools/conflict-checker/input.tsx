@@ -13,12 +13,23 @@ export type ParsedNetworkData = (ParsedARPEntry | ParsedDHCPLease | ParsedMACEnt
 export interface ConflictInputPanelProps {
   analysis: ConflictAnalysisResult | null
   onDataParsed: (data: ParsedNetworkData) => void
+  // the parse succeeded but the analysis rejected the result, and the message
+  // for that is rendered by the parent
+  analysisErrorId?: string
 }
 
-export function ConflictInputPanel({ analysis, onDataParsed }: ConflictInputPanelProps) {
+export function ConflictInputPanel({
+  analysis,
+  onDataParsed,
+  analysisErrorId,
+}: ConflictInputPanelProps) {
   return (
     <div className="space-y-6">
-      <PasteParser onDataParsed={onDataParsed} />
+      <PasteParser
+        onDataParsed={onDataParsed}
+        invalid={Boolean(analysisErrorId)}
+        describedBy={analysisErrorId}
+      />
 
       {analysis && (
         <Card>

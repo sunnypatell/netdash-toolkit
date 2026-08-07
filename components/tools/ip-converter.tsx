@@ -146,7 +146,10 @@ export function IPConverter() {
                   onChange={(event) => void setQuery({ value: event.target.value })}
                   placeholder={meta.placeholder}
                   className="font-mono"
-                  aria-describedby="ip-input-hint"
+                  aria-invalid={!result && Boolean(value.trim())}
+                  aria-describedby={
+                    !result && value.trim() ? "ip-input-hint ip-input-error" : "ip-input-hint"
+                  }
                 />
                 <p id="ip-input-hint" className="text-muted-foreground mt-1 text-xs">
                   {meta.hint}
@@ -157,7 +160,7 @@ export function IPConverter() {
             {!result && value.trim() && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription id="ip-input-error">
                   Not a valid {meta.label.toLowerCase()} IPv4 address
                 </AlertDescription>
               </Alert>

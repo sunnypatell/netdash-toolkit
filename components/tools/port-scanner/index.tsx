@@ -3,7 +3,6 @@
 import { Suspense, lazy, useEffect, useState } from "react"
 import { parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -11,15 +10,15 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertCircle, Shield, Zap } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
-import { getToolBySlug } from "@/lib/tool-registry"
 import { isElectron, electronNetwork } from "@/lib/electron"
 import { pageIsHttps } from "@/lib/browser-limits"
 import { probePortOverHttp, serviceNameFor, summarizeStates } from "@/lib/port-probe"
 import { dateStamp, downloadTextFile } from "@/lib/download"
-import { ScanHistory, ScanResults, type ScanSession } from "./scan-results"
+import type { ScanSession } from "./scan-results"
 
 // one chunk per port-selection mode
+const ScanResults = lazy(() => import("./scan-results").then((m) => ({ default: m.ScanResults })))
+const ScanHistory = lazy(() => import("./scan-results").then((m) => ({ default: m.ScanHistory })))
 const CommonPortsPanel = lazy(() => import("./common"))
 const CustomPortsPanel = lazy(() => import("./custom"))
 
@@ -27,7 +26,7 @@ const TABS = ["common", "custom"] as const
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p data-panel-fallback role="status" className="text-muted-foreground p-4 text-sm">
       Loading...
     </p>
   )
@@ -55,8 +54,6 @@ export function PortScanner() {
   useEffect(() => {
     setIsNative(isElectron())
   }, [])
-
-  const tool = getToolBySlug("port-scanner")
 
   const runScan = async (portList: number[]) => {
     if (!host.trim() || portList.length === 0) return
@@ -168,8 +165,8 @@ export function PortScanner() {
           <CardDescription>Configure target host and ports to scan</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {tool && <RuntimeDisclosure tool={tool} />}
-
+          {/* the shared disclosure is rendered once by ToolShell; this card used to
+              repeat the same sentence a second time */}
           <div>
             <Label htmlFor="target-host">Target Host</Label>
             <Input
@@ -231,10 +228,22 @@ export function PortScanner() {
 
       {/* live region: probes land one at a time */}
       <div aria-live="polite" aria-busy={isScanning} className="space-y-4 sm:space-y-6">
-        {currentScan && <ScanResults session={currentScan} onExport={exportResults} />}
+        {currentScan ? (
+          <Suspense fallback={<PanelFallback />}>
+            <ScanResults session={currentScan} onExport={exportResults} />
+          </Suspense>
+        ) : (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            Pick ports and start a scan - each port and its state appear here.
+          </p>
+        )}
       </div>
 
-      {scanHistory.length > 0 && <ScanHistory sessions={scanHistory} onExport={exportResults} />}
+      {scanHistory.length > 0 && (
+        <Suspense fallback={<PanelFallback />}>
+          <ScanHistory sessions={scanHistory} onExport={exportResults} />
+        </Suspense>
+      )}
 
       <Card>
         <CardHeader>

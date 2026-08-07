@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RefreshCw } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
 import {
   SPEED_LABELS,
   SPEED_UNITS,
@@ -32,13 +34,47 @@ export function SpeedConverterPanel({ embedded }: PanelProps) {
   const { value, unit } = query
   const converted = useMemo(() => convertSpeed(value, unit), [value, unit])
 
+  // the rate keys match the other bandwidth panels, so a saved line rate loads
+  // into whichever tab you open next
+  const handleLoadFromProject = (data: Record<string, unknown>) => {
+    const input = data.input as { transferSpeed?: string; transferSpeedUnit?: string } | undefined
+    if (!input) return
+    void setQuery({
+      ...(input.transferSpeed ? { value: input.transferSpeed } : {}),
+      ...(input.transferSpeedUnit && SPEED_UNITS.includes(input.transferSpeedUnit as SpeedUnit)
+        ? { unit: input.transferSpeedUnit as SpeedUnit }
+        : {}),
+    })
+  }
+
+  const actions = (
+    <>
+      <LoadFromProject itemType="bandwidth" onLoad={handleLoadFromProject} size="sm" />
+      {converted && (
+        <SaveToProject
+          itemType="bandwidth"
+          itemName={`${value} ${SPEED_LABELS[unit]}`}
+          itemData={{
+            input: { transferSpeed: value, transferSpeedUnit: unit },
+            result: converted,
+          }}
+          toolSource="Bandwidth Calculator"
+          size="sm"
+        />
+      )}
+    </>
+  )
+
   return (
     <div className={embedded ? "space-y-4" : "tool-container"}>
-      {!embedded && (
+      {embedded ? (
+        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+      ) : (
         <ToolHeader
           icon={RefreshCw}
           title="Bandwidth Unit Converter"
           description="Convert between bit and byte rates using the decimal multiples IEEE 802.3 uses"
+          actions={actions}
         />
       )}
 

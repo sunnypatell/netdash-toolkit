@@ -18,6 +18,7 @@ import { Activity, AlertCircle, CheckCircle, Globe, Search } from "lucide-react"
 import { queryDNSOverHTTPS } from "@/lib/network-testing"
 import type { DNSResult } from "@/lib/network-testing"
 import { formatDuration } from "@/lib/format"
+import { ResultActions } from "./result-actions"
 
 const PROVIDERS = [
   { value: "cloudflare", label: "Cloudflare (1.1.1.1)", host: "cloudflare-dns.com" },
@@ -38,6 +39,18 @@ export function DNSPanel() {
   const [results, setResults] = useState<DNSResult[]>([])
 
   const providerHost = PROVIDERS.find((p) => p.value === provider)?.host ?? "the resolver"
+
+  // the answering resolver is on every line: these are its cached answers, not
+  // what this machine's own resolver would return
+  const resultsText = results
+    .flatMap((result) =>
+      result.success
+        ? result.records.map((record) =>
+            [result.provider, record.name, record.type, `${record.ttl}s`, record.data].join("\t")
+          )
+        : [[result.provider, result.domain, result.recordType, result.error ?? "failed"].join("\t")]
+    )
+    .join("\n")
 
   const runQuery = async () => {
     if (!domain.trim()) return
@@ -69,7 +82,7 @@ export function DNSPanel() {
         <Alert>
           <AlertCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>
-            <strong>Third party lookup:</strong> the name you type is sent to{" "}
+            <strong>Third-party lookup:</strong> the name you type is sent to{" "}
             <span className="font-mono">{providerHost}</span> over HTTPS, so that operator sees the
             query. Answers come from their cache, not from your configured resolver, so they can
             differ from what this machine would resolve.
@@ -150,7 +163,15 @@ export function DNSPanel() {
             </p>
           ) : (
             <div className="space-y-4">
-              <h4 className="font-semibold">Recent Queries</h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-semibold">Recent Queries</h4>
+                <ResultActions
+                  kind="dns"
+                  measurement="answers from the DoH resolver's cache, which can differ from what this machine would resolve"
+                  results={results}
+                  text={resultsText}
+                />
+              </div>
               {results.map((result, index) => (
                 <Card key={`${result.timestamp}-${index}`} className="p-4">
                   <div className="mb-3 flex items-center justify-between">

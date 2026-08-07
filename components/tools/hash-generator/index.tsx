@@ -31,7 +31,10 @@ type Mode = (typeof MODES)[number]
 
 function PanelFallback() {
   return (
-    <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+    <p
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+      data-panel-fallback
+    >
       Loading...
     </p>
   )
@@ -129,20 +132,32 @@ export function HashGenerator() {
 
               <TabsContent value="text" className="space-y-4">
                 <Suspense fallback={<PanelFallback />}>
-                  <TextPanel value={inputText} onChange={setInputText} disabled={!usable} />
+                  <TextPanel
+                    value={inputText}
+                    onChange={setInputText}
+                    disabled={!usable}
+                    aria-invalid={Boolean(failure)}
+                    aria-describedby={failure ? "hash-generator-input-error" : undefined}
+                  />
                 </Suspense>
               </TabsContent>
 
               <TabsContent value="file" className="space-y-4">
                 <Suspense fallback={<PanelFallback />}>
-                  <FilePanel file={inputFile} onSelect={setInputFile} disabled={!usable} />
+                  <FilePanel
+                    file={inputFile}
+                    onSelect={setInputFile}
+                    disabled={!usable}
+                    aria-invalid={Boolean(failure)}
+                    aria-describedby={failure ? "hash-generator-input-error" : undefined}
+                  />
                 </Suspense>
               </TabsContent>
             </Tabs>
 
             {failure && (
               <Alert variant="destructive">
-                <AlertDescription>{failure}</AlertDescription>
+                <AlertDescription id="hash-generator-input-error">{failure}</AlertDescription>
               </Alert>
             )}
 
@@ -154,9 +169,12 @@ export function HashGenerator() {
                 onChange={(event) => setVerifyInput(event.target.value)}
                 placeholder="Paste a hash to compare..."
                 className="font-mono text-sm"
+                aria-invalid={verification?.state === "not-a-hash"}
+                aria-describedby={verification ? "hash-verify-status" : undefined}
               />
               {verification && (
                 <div
+                  id="hash-verify-status"
                   className={`flex items-center gap-2 rounded p-2 ${
                     verification.state === "match"
                       ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"

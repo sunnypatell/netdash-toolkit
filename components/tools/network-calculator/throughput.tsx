@@ -35,6 +35,8 @@ export function ThroughputPanel({
     [bandwidth, rtt, windowSize]
   )
 
+  const windowOutOfRange = Boolean(result?.exceedsMaxWindow)
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <Card>
@@ -73,6 +75,8 @@ export function ThroughputPanel({
               value={windowSize}
               onChange={(e) => onWindowSizeChange(e.target.value)}
               min={0}
+              aria-invalid={windowOutOfRange}
+              aria-describedby={windowOutOfRange ? "throughput-window-error" : undefined}
             />
             <p className="text-muted-foreground mt-1 text-xs">
               65535 without window scaling. RFC 7323 caps the scale shift at 14, so the ceiling is{" "}
@@ -92,7 +96,7 @@ export function ThroughputPanel({
               {result.exceedsMaxWindow && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
+                  <AlertDescription id="throughput-window-error">
                     A window above {MAX_SCALED_WINDOW_BYTES.toLocaleString()} bytes is not
                     representable: RFC 7323 section 2.2 limits the window scale shift to 14.
                   </AlertDescription>

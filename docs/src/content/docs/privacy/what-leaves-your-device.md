@@ -3,7 +3,7 @@ title: What leaves your device
 description: Every outbound request NetDash Toolkit can make, which capability makes it, and what the receiving host learns, derived from the tool registry.
 ---
 
-There is no backend, so the app has nowhere of its own to send your input. 36 of the 48 tools make no network request at all. This page covers the other 12, plus the two things that run on every page.
+There is no backend, so the app has nowhere of its own to send your input. 36 of the 48 tools make no network request at all. This page covers the 12 networked tools, plus the two things that run on every page.
 
 ## How the declaration works
 
@@ -32,6 +32,10 @@ Read the right-hand column as the honest scope limit. The test catches a tool th
 
 One tool uses the second half of that rule. The conflict checker declares `offline: false` with no `thirdParty` entry at all, and only `desktopOnly: ["reading the local ARP cache"]`. That is accurate rather than a loophole: its browser path parses text you paste and contacts nobody, and its one piece of I/O is the desktop build shelling out to `arp -a` on your own machine. There is no third party to name, so naming one would be worse than naming none.
 
+:::caution
+That declaration is currently rendered wrong in the app, and it is recorded here rather than left for you to find. [`RuntimeDisclosure`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/ui/runtime-badge.tsx) gates its "what you enter is sent to" sentence on `runtime.offline === false` alone, without also requiring a non-empty `thirdParty`, so on the conflict checker that sentence renders with an empty host list. The registry is right and the screen is wrong: nothing you paste into the conflict checker is sent anywhere, in either build. The desktop-only sentence beneath it renders correctly.
+:::
+
 ## The hosts, by capability
 
 Grouped by what they are for rather than by tool, because the same resolver serves several tools.
@@ -54,11 +58,13 @@ The last row is the one people forget. When you ping or scan a target, that targ
 
 Three hosts belong to sign-in rather than to any tool, and they are listed separately because they are reached only if you sign in, or only if this deployment was built with a Google client id:
 
-| Host                              | Reached when                                                | What it receives                                    |
-| --------------------------------- | ----------------------------------------------------------- | --------------------------------------------------- |
-| `accounts.google.com`             | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set, and not on localhost | the One Tap prompt loads; Google sees the page view |
-| `apis.google.com`                 | Firebase Auth loads its `gapi` helper                       | the same                                            |
-| Your project's Firebase endpoints | you are signed in and sync is enabled                       | your auth token and your project documents          |
+| Host                              | Reached when                                                                             | What it receives                                    |
+| --------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `accounts.google.com`             | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set, and not on localhost                              | the One Tap prompt loads; Google sees the page view |
+| `apis.google.com`                 | Firebase Auth has been loaded and reaches for its `gapi` helper, which is a sign-in path | the same                                            |
+| Your project's Firebase endpoints | you are signed in and sync is enabled                                                    | your auth token and your project documents          |
+
+The second row moved recently. The Firebase SDK is no longer imported at module scope anywhere: `lib/firebase.ts` holds only type-only imports and three dynamic `import()` calls, so `initializeApp` runs the first time something asks for auth or Firestore rather than on page load. A visitor who has never signed in is detected from a `localStorage` hint rather than from the SDK, so nothing on this row is reached. [Accounts and saved projects](/docs/privacy/accounts-and-projects/) walks the decision, including the one browser case where the auth chunk is fetched anyway to prove a negative.
 
 The third row is deliberately not a literal hostname. Firebase derives its endpoints from the `authDomain` and `projectId` in the build's environment, so the exact names depend on whose deployment you are using. On the official deployment they are Google's. On your own fork they are yours, and with no Firebase environment variables at all there are no such requests, because `initializeApp` is never called. [Accounts and saved projects](/docs/privacy/accounts-and-projects/) has the detail.
 
@@ -106,9 +112,10 @@ Specifically:
 - **Password and key generation is local, and unbiased.** [`lib/password-gen.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/password-gen.ts) draws from [`crypto.getRandomValues`](https://w3c.github.io/webcrypto/#Crypto-method-getRandomValues) and rejects draws that land in the biased tail rather than folding them with `%`, which would over-represent the first `2^32 mod n` characters of the charset. [`tests/unit/password-gen.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/password-gen.test.ts) asserts that directly in "discards draws in the biased tail", and [`tests/unit/random-gen.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/random-gen.test.ts) checks the statistical consequence in "shows no low-bucket skew, which is what modulo folding looks like". Output is never transmitted.
 - **The desktop build adds no telemetry.** It makes the same requests the web build makes, plus whichever diagnostic you run.
 - **No GeoIP.** There is no IP geolocation provider anywhere in the codebase.
+- **Nothing is stored on your device beyond five `localStorage` keys.** `netdash-projects` holds your saved projects; `netdash-deleted-projects` holds the ids of projects you deleted until the cloud confirms they are gone; `netdash-auth-session` holds a single `"1"` or `"0"` so a page load can tell whether to load the auth SDK; `netdash-recent-tools` and `netdash-sidebar-groups` hold command-palette history and which sidebar groups you left open. The app sets no cookies of its own, and creates no `IndexedDB` database; the only one that appears is the store Firebase Auth creates after you sign in.
 - **No encryption, anywhere, of anything.** This is stated as a limitation rather than omitted. A repository-wide search for `subtle.encrypt`, `subtle.decrypt`, `deriveKey`, `deriveBits`, `PBKDF2`, `importKey` and `generateKey` returns nothing. The only Web Crypto the app uses is `crypto.subtle.digest` in [`lib/hash.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/hash.ts) and `crypto.getRandomValues` in `lib/password-gen.ts`. Saved projects are plain JSON in `localStorage` and plain documents in Firestore. If you have read a claim anywhere that this app encrypts project storage with AES-GCM and PBKDF2, that claim is false and no code has ever backed it.
 
-:::caution[A Claim in the Source That Is Not True]
+:::caution[A claim in the source that is not true]
 The comment at the top of `lib/password-gen.ts` reads "crypto.getRandomValues only. no `Math.random` anywhere in this repo." The first sentence is true of that file. The second is not true of the repository: `Math.random` is used for placeholder prose in `lib/lorem.ts` (deliberately, and documented as decorative), for the cache-busting query parameter and the DNS query ID in `lib/network-testing.ts`, and for project id generation in `contexts/project-context.tsx`. None of those is a security-relevant draw, so the practical claim holds; the sentence as written does not, and it is recorded here rather than quietly dropped.
 :::
 
@@ -118,6 +125,6 @@ The comment at the top of `lib/password-gen.ts` reads "crypto.getRandomValues on
 - **A `runtime.thirdParty` list checked against the code.** The registry test proves a host list exists and is non-empty; it does not diff those names against the URLs the component actually requests. `tests/unit/csp.test.ts` closes half of this from the other direction, since it extracts request-target literals from `lib/`, `components/`, `app/` and `contexts/` and fails if the CSP does not permit them, so a **new** egress host cannot appear unnoticed. What is still missing is the per-tool attribution: nothing asserts that the host a given tool declares is the host that tool calls.
 - **Self-service account deletion.** Covered on [accounts and saved projects](/docs/privacy/accounts-and-projects/); it is an email request today.
 
-:::caution[The One Rule Worth Remembering]
+:::caution[The one rule worth remembering]
 If a tool shows no host warning, it made no request. If it shows hosts, assume those operators saw exactly what you typed. Do not paste an internal hostname into a DoH lookup and expect it to stay internal.
 :::

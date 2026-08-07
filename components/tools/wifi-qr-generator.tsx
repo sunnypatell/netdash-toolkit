@@ -15,11 +15,11 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Download, Copy, Check, Eye, EyeOff, QrCode, Info, Wifi, ShieldAlert } from "lucide-react"
+import { Download, Eye, EyeOff, QrCode, Info, Wifi, ShieldAlert } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { LoadFromProject } from "@/components/ui/load-from-project"
-import { copyText } from "@/lib/clipboard"
 import { toast } from "sonner"
 import type { ProjectItem } from "@/contexts/project-context"
 import {
@@ -54,7 +54,6 @@ export function WifiQRGenerator() {
   const [showPassword, setShowPassword] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState("")
   const [qrError, setQrError] = useState("")
-  const [copied, setCopied] = useState<"string" | "config" | null>(null)
 
   const config: WifiConfig = useMemo(
     () => ({
@@ -100,25 +99,17 @@ export function WifiQRGenerator() {
     }
   }, [qrString])
 
-  const copyToClipboard = async (type: "string" | "config") => {
-    // the config json carries the passphrase, so it is only ever produced on an
-    // explicit click, never written anywhere automatically
-    const text =
-      type === "string"
-        ? qrString
-        : JSON.stringify(
-            { ssid: config.ssid, security: config.security, hidden: config.hidden, password },
-            null,
-            2
-          )
-    if (!(await copyText(text))) {
-      toast.error("Could not copy to clipboard")
-      return
-    }
-    setCopied(type)
-    setTimeout(() => setCopied(null), 2000)
-    toast.success(type === "string" ? "QR string copied" : "Config copied")
-  }
+  // the json carries the passphrase, so it stays in memory beside qrString, which
+  // already does; nothing writes it anywhere without a click on the copy button
+  const configJson = useMemo(
+    () =>
+      JSON.stringify(
+        { ssid: config.ssid, security: config.security, hidden: config.hidden, password },
+        null,
+        2
+      ),
+    [config.ssid, config.security, config.hidden, password]
+  )
 
   const downloadQR = async (format: "png" | "svg") => {
     if (!qrString) return
@@ -161,6 +152,8 @@ export function WifiQRGenerator() {
   }
 
   const ssidBytes = utf8Length(config.ssid)
+  // one joint surface: the ssid and passphrase rules land in the same error list
+  const showErrors = validation.errors.length > 0 && config.ssid !== ""
 
   return (
     <div className="tool-container">
@@ -168,6 +161,20 @@ export function WifiQRGenerator() {
         icon={QrCode}
         title="WiFi QR Code Generator"
         description="Generate a WIFI: URI QR code for a network. Scan with any phone camera to join."
+        actions={
+          <>
+            <LoadFromProject itemType="wifi-qr" onLoad={handleLoadFromProject} size="sm" />
+            {config.ssid && (
+              <SaveToProject
+                itemType="wifi-qr"
+                itemName={config.ssid}
+                itemData={{ ...config, qrString, generatedAt: Date.now() }}
+                toolSource="WiFi QR Code Generator"
+                size="sm"
+              />
+            )}
+          </>
+        }
       />
 
       <Alert>
@@ -197,7 +204,8 @@ export function WifiQRGenerator() {
                 value={config.ssid}
                 onChange={(e) => setQuery({ ssid: e.target.value })}
                 placeholder="My WiFi Network"
-                aria-invalid={ssidBytes > 32}
+                aria-invalid={showErrors}
+                aria-describedby={showErrors ? "wifi-qr-error" : undefined}
               />
               <p className="text-muted-foreground text-xs">
                 {ssidBytes}/32 bytes
@@ -237,6 +245,8 @@ export function WifiQRGenerator() {
                     placeholder={config.security === "wep" ? "WEP key" : "WiFi passphrase"}
                     autoComplete="off"
                     className="pr-10"
+                    aria-invalid={showErrors}
+                    aria-describedby={showErrors ? "wifi-qr-error" : undefined}
                   />
                   <Button
                     type="button"
@@ -268,10 +278,10 @@ export function WifiQRGenerator() {
               </Label>
             </div>
 
-            {validation.errors.length > 0 && config.ssid !== "" && (
+            {showErrors && (
               <Alert variant="destructive">
                 <AlertTitle>Cannot generate a code yet</AlertTitle>
-                <AlertDescription>
+                <AlertDescription id="wifi-qr-error">
                   <ul className="list-inside list-disc space-y-1">
                     {validation.errors.map((message) => (
                       <li key={message}>{message}</li>
@@ -324,20 +334,13 @@ export function WifiQRGenerator() {
                   <div className="flex w-full flex-wrap justify-center gap-2">
                     <Button onClick={() => downloadQR("png")} variant="outline" size="sm">
                       <Download className="mr-2 h-4 w-4" />
-                      PNG
+                      Export PNG
                     </Button>
                     <Button onClick={() => downloadQR("svg")} variant="outline" size="sm">
                       <Download className="mr-2 h-4 w-4" />
-                      SVG
+                      Export SVG
                     </Button>
-                    <Button onClick={() => copyToClipboard("string")} variant="outline" size="sm">
-                      {copied === "string" ? (
-                        <Check className="mr-2 h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="mr-2 h-4 w-4" />
-                      )}
-                      Copy String
-                    </Button>
+                    <CopyButton value={qrString} variant="outline" />
                   </div>
                 </>
               ) : (
@@ -360,41 +363,24 @@ export function WifiQRGenerator() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <code className="bg-muted block rounded p-2 font-mono text-xs break-all">
-                  {showPassword ? qrString : buildWifiUri({ ...config, password: "*".repeat(8) })}
-                </code>
+                <div className="flex items-start gap-2">
+                  <code className="bg-muted block min-w-0 flex-1 rounded p-2 font-mono text-xs break-all">
+                    {showPassword ? qrString : buildWifiUri({ ...config, password: "*".repeat(8) })}
+                  </code>
+                  <CopyButton value={configJson} className="shrink-0" />
+                </div>
                 {!showPassword && config.security !== "open" && (
                   <p className="text-muted-foreground mt-2 text-xs">
                     Passphrase masked. Use the eye button above to reveal it.
                   </p>
                 )}
+                <p className="text-muted-foreground mt-2 text-xs">
+                  Copy takes the whole configuration as JSON, passphrase included.
+                </p>
               </CardContent>
             </Card>
           )}
 
-          <div className="flex gap-2">
-            <LoadFromProject itemType="wifi-qr" onLoad={handleLoadFromProject} className="flex-1" />
-            <Button
-              onClick={() => copyToClipboard("config")}
-              variant="outline"
-              className="flex-1"
-              disabled={!config.ssid}
-            >
-              {copied === "config" ? (
-                <Check className="mr-2 h-4 w-4 text-green-600" />
-              ) : (
-                <Copy className="mr-2 h-4 w-4" />
-              )}
-              Copy
-            </Button>
-            <SaveToProject
-              itemType="wifi-qr"
-              itemName={config.ssid || "WiFi QR"}
-              itemData={{ ...config, qrString, generatedAt: Date.now() }}
-              toolSource="wifi-qr-generator"
-              className="flex-1"
-            />
-          </div>
           <p className="text-muted-foreground text-xs">
             Saving to a project stores the passphrase alongside the SSID so the code can be
             regenerated later. That is a deliberate click, not something typing does.

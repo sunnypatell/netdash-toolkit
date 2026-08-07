@@ -18,6 +18,7 @@ import {
   type ReachabilityResult,
 } from "@/lib/browser-ping"
 import { electronNetwork } from "@/lib/electron"
+import { CopyButton } from "@/components/ui/copy-button"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 
 interface PingPanelProps {
@@ -48,7 +49,7 @@ export default function PingPanel({ host, onHostChange, isNative }: PingPanelPro
           .split("/")[0]
         const native = await electronNetwork.ping(bare, { count: 4, timeout: 5000 })
         if (!native) {
-          setValidationError("The desktop pinger did not answer.")
+          setValidationError("The desktop pinger did not answer")
           return
         }
         record({
@@ -69,7 +70,7 @@ export default function PingPanel({ host, onHostChange, isNative }: PingPanelPro
 
       const target = parsePingTarget(host)
       if (!target) {
-        setValidationError("Enter a valid hostname or IP address.")
+        setValidationError("Invalid hostname or IP address")
         return
       }
       if (target.insecureDropped) {
@@ -116,6 +117,18 @@ export default function PingPanel({ host, onHostChange, isNative }: PingPanelPro
       setIsPinging(false)
     }
   }
+
+  // each line names the transport, so a paste cannot be read as an ICMP figure
+  const resultsText = results
+    .map((result) =>
+      [
+        new Date(result.timestamp).toISOString(),
+        result.host,
+        describeTransport(result.transport),
+        result.success ? `${result.roundTripMs?.toFixed(1)}ms` : (result.error ?? "failed"),
+      ].join("\t")
+    )
+    .join("\n")
 
   const exportResults = () => {
     downloadTextFile(
@@ -188,14 +201,25 @@ export default function PingPanel({ host, onHostChange, isNative }: PingPanelPro
 
         {/* live region: each probe resolves asynchronously */}
         <div aria-live="polite" aria-busy={isPinging}>
+          {results.length === 0 && (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              {isNative
+                ? "Enter a host and press Ping - round-trip time and packet loss appear here."
+                : "Enter a host and press Test - the HTTPS round trip appears here."}
+            </p>
+          )}
+
           {results.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">Results</h4>
-                <Button variant="outline" size="sm" onClick={exportResults}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
+                <div className="flex items-center gap-2">
+                  <CopyButton value={resultsText} variant="outline" />
+                  <Button variant="outline" size="sm" onClick={exportResults}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
+                </div>
               </div>
 
               <div className="max-h-96 space-y-2 overflow-y-auto">

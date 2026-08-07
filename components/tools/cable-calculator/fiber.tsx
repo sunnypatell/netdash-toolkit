@@ -43,6 +43,12 @@ const LENGTH_LABELS: Record<LengthUnit, string> = {
   km: "Kilometres",
 }
 
+// blank counts as 0 in computeFiberLink, so the check has to agree
+const isWholeCount = (text: string) => {
+  const value = Number(text || "0")
+  return Number.isInteger(value) && value >= 0
+}
+
 const SPLICE_LABELS: Record<SpliceType, string> = {
   fusion: `Fusion (typical ${SPLICE_LOSS_DB.fusion} dB)`,
   mechanical: `Mechanical (typical ${SPLICE_LOSS_DB.mechanical} dB)`,
@@ -86,6 +92,16 @@ export function FiberPanel({ embedded }: PanelProps) {
       }),
     [grade, wavelengthNm, length, lengthUnit, connectors, splices, spliceType, budget]
   )
+
+  // computeFiberLink returns one message at a time, so mirror its order to name the field
+  const invalidField = useMemo(() => {
+    if (!error) return null
+    if (spec.attenuation[wavelengthNm] === undefined) return "wavelength"
+    if (!(Number(length) > 0)) return "length"
+    if (!isWholeCount(connectors)) return "connectors"
+    if (!isWholeCount(splices)) return "splices"
+    return "budget"
+  }, [error, spec, wavelengthNm, length, connectors, splices])
 
   const selectGrade = (next: FiberGrade) => {
     const allowed = wavelengthsFor(next)
@@ -171,7 +187,7 @@ export function FiberPanel({ embedded }: PanelProps) {
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="fiber-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -205,7 +221,11 @@ export function FiberPanel({ embedded }: PanelProps) {
                   value={String(wavelengthNm)}
                   onValueChange={(next) => void setQuery({ wavelength: next })}
                 >
-                  <SelectTrigger id="fiber-wavelength">
+                  <SelectTrigger
+                    id="fiber-wavelength"
+                    aria-invalid={invalidField === "wavelength"}
+                    aria-describedby={invalidField === "wavelength" ? "fiber-error" : undefined}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -229,6 +249,8 @@ export function FiberPanel({ embedded }: PanelProps) {
                   step="any"
                   value={length}
                   onChange={(event) => void setQuery({ length: event.target.value })}
+                  aria-invalid={invalidField === "length"}
+                  aria-describedby={invalidField === "length" ? "fiber-error" : undefined}
                 />
               </div>
               <div>
@@ -262,6 +284,8 @@ export function FiberPanel({ embedded }: PanelProps) {
                   step="1"
                   value={connectors}
                   onChange={(event) => void setQuery({ connectors: event.target.value })}
+                  aria-invalid={invalidField === "connectors"}
+                  aria-describedby={invalidField === "connectors" ? "fiber-error" : undefined}
                 />
                 <p className="text-muted-foreground mt-1 text-xs">
                   {MAX_CONNECTOR_PAIR_LOSS_DB} dB each, the TIA-568.3-D maximum
@@ -277,6 +301,8 @@ export function FiberPanel({ embedded }: PanelProps) {
                   step="1"
                   value={splices}
                   onChange={(event) => void setQuery({ splices: event.target.value })}
+                  aria-invalid={invalidField === "splices"}
+                  aria-describedby={invalidField === "splices" ? "fiber-error" : undefined}
                 />
               </div>
             </div>
@@ -310,6 +336,8 @@ export function FiberPanel({ embedded }: PanelProps) {
                   step="0.5"
                   value={budget}
                   onChange={(event) => void setQuery({ budget: event.target.value })}
+                  aria-invalid={invalidField === "budget"}
+                  aria-describedby={invalidField === "budget" ? "fiber-error" : undefined}
                 />
               </div>
             </div>

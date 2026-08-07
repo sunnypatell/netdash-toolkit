@@ -11,7 +11,11 @@ const IPv6ToolsReference = lazy(() => import("./reference"))
 
 const TABS = ["calculator", "reference"] as const
 
-const fallback = <p className="text-muted-foreground py-8 text-center text-sm">Loading panel</p>
+const fallback = (
+  <p className="text-muted-foreground py-8 text-center text-sm" data-panel-fallback>
+    Loading panel
+  </p>
+)
 
 export function IPv6Tools() {
   const [{ tab }, setQuery] = useQueryStates(

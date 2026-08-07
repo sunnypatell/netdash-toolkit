@@ -5,7 +5,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { getToolBySlug, tools } from "@/lib/tool-registry"
-import { MIN_RENDERED_NODES, settle } from "./settle"
+import { settle, settled } from "./settle"
 
 // wcag 2.2 sc 4.1.3 status messages (aa) and sc 3.3.1 error identification (a):
 // https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
@@ -33,8 +33,6 @@ function Providers({ children }: { children: React.ReactNode }) {
     </NuqsTestingAdapter>
   )
 }
-
-const LIVE_REGION = '[role="status"], [role="alert"], [role="log"], [aria-live]'
 
 // the Alert primitive became a live region in its own right so that success
 // confirmations announce (4.1.3). that must not be allowed to satisfy the
@@ -69,11 +67,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
           <Tool />
         </Providers>
       )
-      const nodes = await settle(container)
-      expect(
-        nodes,
-        `${slug} rendered ${nodes} nodes, so its lazy panel never resolved`
-      ).toBeGreaterThan(MIN_RENDERED_NODES)
+      await settled(container, slug)
 
       const regions = resultRegions(container)
       expect(
@@ -96,7 +90,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
           <Tool />
         </Providers>
       )
-      await settle(container)
+      await settled(container, slug)
 
       const shouty = [...container.querySelectorAll('[aria-live="assertive"]')].map((el) =>
         el.outerHTML.slice(0, 120)
@@ -123,7 +117,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
           <Tool />
         </Providers>
       )
-      await settle(container)
+      await settled(container, tool.slug)
       if (container.querySelector("[aria-describedby]")) withDescribedBy++
       cleanup()
     }
@@ -148,7 +142,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
           <Tool />
         </Providers>
       )
-      await settle(container)
+      await settled(container, slug)
 
       const dangling: string[] = []
       for (const el of container.querySelectorAll("[aria-describedby]")) {
@@ -180,7 +174,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
           <Tool />
         </Providers>
       )
-      await settle(container)
+      await settled(container, slug)
 
       const unexplained: string[] = []
       for (const el of container.querySelectorAll('[aria-invalid="true"]')) {
@@ -246,12 +240,12 @@ describe("3.3.1 / 4.1.3: the association holds once a real error is produced", (
         <Tool />
       </Providers>
     )
-    await settle(container)
+    await settled(container, "email-diagnostics")
 
     const field = screen.getByLabelText(/^domain$/i)
     await user.type(field, "not a domain")
     await user.click(screen.getByRole("button", { name: /run diagnostics/i }))
-    await settle(container)
+    await settled(container, "email-diagnostics")
 
     expect(field.getAttribute("aria-invalid")).toBe("true")
     const id = field.getAttribute("aria-describedby")

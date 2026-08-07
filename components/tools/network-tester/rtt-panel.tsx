@@ -19,6 +19,7 @@ import { calculateMedian, calculatePercentile, testRTT } from "@/lib/network-tes
 import type { RTTTestResult } from "@/lib/network-testing"
 import { electronNetwork } from "@/lib/electron"
 import { formatDuration } from "@/lib/format"
+import { ResultActions } from "./result-actions"
 
 type NativePing = NonNullable<Awaited<ReturnType<typeof electronNetwork.ping>>>
 
@@ -71,6 +72,18 @@ export function RTTPanel({ isNative }: { isNative: boolean }) {
   const sampleCount = Math.min(Math.max(Number.parseInt(samples, 10) || 10, 1), MAX_SAMPLES)
   const useICMP = isNative && method === "ICMP"
 
+  // the transport is on every line, so a paste cannot be read as an ICMP figure
+  const resultsText = results
+    .map((result) =>
+      [
+        new Date(result.timestamp).toISOString(),
+        result.url,
+        result.transport,
+        result.success ? `median ${formatDuration(result.median)}` : (result.error ?? "failed"),
+      ].join("\t")
+    )
+    .join("\n")
+
   const runTest = async () => {
     if (!url.trim()) return
 
@@ -84,7 +97,7 @@ export function RTTPanel({ isNative }: { isNative: boolean }) {
           .split("/")[0]
         const ping = await electronNetwork.ping(host, { count: sampleCount, timeout: 5000 })
         if (!ping) {
-          setError("The desktop bridge returned no ping result.")
+          setError("The desktop bridge returned no ping result")
           return
         }
         setResults((previous) => [fromNativePing(host, ping), ...previous.slice(0, 9)])
@@ -209,7 +222,19 @@ export function RTTPanel({ isNative }: { isNative: boolean }) {
             </p>
           ) : (
             <div className="space-y-4">
-              <h4 className="font-semibold">Recent Results</h4>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-semibold">Recent Results</h4>
+                <ResultActions
+                  kind="rtt"
+                  measurement={
+                    useICMP
+                      ? "ICMP echo round trips (desktop app)"
+                      : "HTTPS request round trips timed with fetch(), not ICMP"
+                  }
+                  results={results}
+                  text={resultsText}
+                />
+              </div>
               {results.map((result, index) => (
                 <Card key={`${result.timestamp}-${index}`} className="p-4">
                   <div className="mb-2 flex items-center justify-between">

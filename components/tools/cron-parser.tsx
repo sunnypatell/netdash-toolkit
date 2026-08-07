@@ -14,7 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Timer, CheckCircle2, XCircle, Calendar, Globe, AlertTriangle } from "lucide-react"
+import {
+  Timer,
+  CheckCircle2,
+  XCircle,
+  Calendar,
+  Globe,
+  AlertTriangle,
+  Pause,
+  Play,
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { CopyButton } from "@/components/ui/copy-button"
 import { analyzeCron, CRON_MACROS, formatRelativeMs } from "@/lib/cron"
@@ -120,6 +130,9 @@ export function CronParser() {
                   placeholder="*/5 * * * *"
                   className="font-mono text-lg"
                   aria-invalid={trimmed !== "" && !result.valid}
+                  aria-describedby={
+                    trimmed !== "" && !result.valid ? "cron-expression-error" : undefined
+                  }
                 />
                 <CopyButton value={expression} variant="outline" />
               </div>
@@ -157,14 +170,16 @@ export function CronParser() {
             {trimmed !== "" && !result.valid && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription>{result.error ?? "Invalid cron expression"}</AlertDescription>
+                <AlertDescription id="cron-expression-error">
+                  {result.error ?? "Invalid cron expression"}
+                </AlertDescription>
               </Alert>
             )}
 
             {trimmed === "" && (
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>Enter a cron expression to get started.</AlertDescription>
+                <AlertDescription>Enter a cron expression to get started</AlertDescription>
               </Alert>
             )}
 
@@ -233,13 +248,31 @@ export function CronParser() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Next Runs
-              </CardTitle>
-              <CardDescription>
-                Next {RUN_COUNT} executions in {timeZone} and UTC
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Next Runs
+                  </CardTitle>
+                  <CardDescription>
+                    Next {RUN_COUNT} executions in {timeZone} and UTC
+                    {paused ? ", re-basing paused" : ", re-based every 30 seconds"}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPaused((v) => !v)}
+                  aria-pressed={paused}
+                >
+                  {paused ? (
+                    <Play className="mr-1 h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Pause className="mr-1 h-4 w-4" aria-hidden="true" />
+                  )}
+                  {paused ? "Resume updates" : "Pause updates"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {result.runs.length > 0 ? (

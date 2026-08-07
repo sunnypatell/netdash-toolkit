@@ -2,8 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
-import { confirmPasswordReset, verifyPasswordResetCode, applyActionCode } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+import { ensureAuth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,7 +21,6 @@ function AuthActionContent() {
   const mode = searchParams.get("mode") as ActionMode
   const oobCode = searchParams.get("oobCode")
 
-  const [email, setEmail] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(true)
@@ -40,20 +38,22 @@ function AuthActionContent() {
   // Verify the action code on mount
   useEffect(() => {
     const verifyCode = async () => {
-      if (!auth || !oobCode) {
+      const services = await ensureAuth()
+      if (!services || !oobCode) {
         setError("Invalid or missing reset code")
         setLoading(false)
         return
       }
 
       try {
+        const { verifyPasswordResetCode, applyActionCode } = await import("firebase/auth")
         if (mode === "resetPassword") {
           // Verify the password reset code and get the email
-          const email = await verifyPasswordResetCode(auth, oobCode)
+          const email = await verifyPasswordResetCode(services.auth, oobCode)
           setVerifiedEmail(email)
         } else if (mode === "verifyEmail") {
           // Apply the email verification code
-          await applyActionCode(auth, oobCode)
+          await applyActionCode(services.auth, oobCode)
           setSuccess(true)
         }
       } catch (err) {
@@ -70,7 +70,8 @@ function AuthActionContent() {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!auth || !oobCode) {
+    const services = await ensureAuth()
+    if (!services || !oobCode) {
       setError("Authentication not configured")
       return
     }
@@ -89,7 +90,8 @@ function AuthActionContent() {
     setError(null)
 
     try {
-      await confirmPasswordReset(auth, oobCode, newPassword)
+      const { confirmPasswordReset } = await import("firebase/auth")
+      await confirmPasswordReset(services.auth, oobCode, newPassword)
       setSuccess(true)
     } catch (err) {
       console.error("Password reset error:", err)

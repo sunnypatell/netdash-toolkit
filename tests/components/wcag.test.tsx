@@ -5,7 +5,7 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
-import { MIN_RENDERED_NODES, settle } from "./settle"
+import { settled } from "./settle"
 
 // automated wcag 2.2 aa gate. axe cannot prove conformance on its own - roughly
 // a third of the success criteria need human judgement - but it does catch the
@@ -61,12 +61,9 @@ describe("wcag 2.2 aa: every tool", () => {
         </Providers>
       )
       // without this the lazy tools are scanned as a bare tab strip and pass
-      // for the wrong reason
-      const nodes = await settle(container)
-      expect(
-        nodes,
-        `${slug} rendered only ${nodes} nodes, so axe would scan a shell`
-      ).toBeGreaterThan(MIN_RENDERED_NODES)
+      // for the wrong reason. the shared gate also fails on a Suspense fallback
+      // still being on screen, which a node count alone does not catch.
+      await settled(container, slug)
       const violations = await violationsOf(container)
       expect(violations, `${slug}:\n${JSON.stringify(violations, null, 2)}`).toEqual([])
     },

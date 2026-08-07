@@ -10,9 +10,18 @@ export interface FilePanelProps {
   file: File | null
   onSelect: (file: File | null) => void
   disabled?: boolean
+  // the read failure is raised in the parent, where its message is rendered
+  "aria-invalid"?: boolean
+  "aria-describedby"?: string
 }
 
-export function FilePanel({ file, onSelect, disabled }: FilePanelProps) {
+export function FilePanel({
+  file,
+  onSelect,
+  disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+}: FilePanelProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -23,6 +32,8 @@ export function FilePanel({ file, onSelect, disabled }: FilePanelProps) {
           onChange={(event) => onSelect(event.target.files?.[0] ?? null)}
           className="cursor-pointer"
           disabled={disabled}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
         />
         <p className="text-muted-foreground text-xs">
           Read in the browser and hashed byte for byte. Nothing is uploaded.

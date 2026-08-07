@@ -14,11 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Copy, Braces, Trash2, Download, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
+import { Braces, Trash2, Download, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { copyText } from "@/lib/clipboard"
+import { CopyButton } from "@/components/ui/copy-button"
 import { downloadTextFile, dateStamp } from "@/lib/download"
-import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { INDENT_LABELS, analyzeJson, type JsonIndent, type JsonOutputMode } from "@/lib/json-format"
 
@@ -57,11 +56,6 @@ export function JSONFormatter() {
     () => analyzeJson(input, indent, outputMode),
     [input, indent, outputMode]
   )
-
-  const copyToClipboard = async (value: string) => {
-    if (await copyText(value)) toast.success("JSON copied to clipboard")
-    else toast.error("Copy failed")
-  }
 
   const stats = analysis.stats
 
@@ -111,12 +105,16 @@ export function JSONFormatter() {
               onChange={(event) => setInput(event.target.value)}
               placeholder='{"key": "value"}'
               className="h-80 resize-none font-mono text-sm"
+              aria-invalid={Boolean(analysis.error)}
+              aria-describedby={analysis.error ? "json-input-error" : undefined}
             />
 
             {analysis.error && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" aria-hidden="true" />
-                <AlertDescription className="font-mono text-xs">{analysis.error}</AlertDescription>
+                <AlertDescription id="json-input-error" className="font-mono text-xs">
+                  {analysis.error}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -154,6 +152,7 @@ export function JSONFormatter() {
                 </CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {analysis.output && <CopyButton value={analysis.output} />}
                 <Label htmlFor="json-output-mode" className="text-sm">
                   Output:
                 </Label>
@@ -205,15 +204,6 @@ export function JSONFormatter() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => copyToClipboard(analysis.output)}
-                disabled={!analysis.output}
-              >
-                <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-                Copy
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() =>
                   downloadTextFile(
                     analysis.output,
@@ -224,7 +214,7 @@ export function JSONFormatter() {
                 disabled={!analysis.output}
               >
                 <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                Download
+                Export
               </Button>
             </div>
           </CardContent>

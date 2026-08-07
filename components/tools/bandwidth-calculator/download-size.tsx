@@ -16,8 +16,17 @@ import {
 import { AlertTriangle, HardDrive } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { ResultCard } from "@/components/ui/result-card"
+import { SaveToProject } from "@/components/ui/save-to-project"
+import { LoadFromProject } from "@/components/ui/load-from-project"
 import { formatBytes } from "@/lib/format"
-import { SPEED_UNITS, TIME_UNITS, computeDownloadSize, type TimeUnit } from "@/lib/bandwidth"
+import {
+  SPEED_LABELS,
+  SPEED_UNITS,
+  TIME_UNITS,
+  computeDownloadSize,
+  type SpeedUnit,
+  type TimeUnit,
+} from "@/lib/bandwidth"
 import type { PanelProps } from "@/lib/tool-panel"
 import { SpeedUnitSelect } from "./units"
 
@@ -45,20 +54,68 @@ export function DownloadSizePanel({ embedded }: PanelProps) {
     [time, timeUnit, speed, speedUnit]
   )
 
+  // computeDownloadSize returns one message at a time, so mirror its order to name the field
+  const invalidField = error ? (Number(time) > 0 ? "speed" : "time") : null
+
+  // the rate keys match the other bandwidth panels, so a saved line rate loads
+  // into whichever tab you open next
+  const handleLoadFromProject = (data: Record<string, unknown>) => {
+    const input = data.input as
+      | { time?: string; timeUnit?: string; transferSpeed?: string; transferSpeedUnit?: string }
+      | undefined
+    if (!input) return
+    void setQuery({
+      ...(input.time ? { time: input.time } : {}),
+      ...(input.timeUnit && TIME_UNITS.includes(input.timeUnit as TimeUnit)
+        ? { timeUnit: input.timeUnit as TimeUnit }
+        : {}),
+      ...(input.transferSpeed ? { speed: input.transferSpeed } : {}),
+      ...(input.transferSpeedUnit && SPEED_UNITS.includes(input.transferSpeedUnit as SpeedUnit)
+        ? { speedUnit: input.transferSpeedUnit as SpeedUnit }
+        : {}),
+    })
+  }
+
+  const actions = (
+    <>
+      <LoadFromProject itemType="bandwidth" onLoad={handleLoadFromProject} size="sm" />
+      {result && (
+        <SaveToProject
+          itemType="bandwidth"
+          itemName={`${time} ${TIME_LABELS[timeUnit].toLowerCase()} at ${speed} ${SPEED_LABELS[speedUnit]}`}
+          itemData={{
+            input: {
+              time,
+              timeUnit,
+              transferSpeed: speed,
+              transferSpeedUnit: speedUnit,
+            },
+            result,
+          }}
+          toolSource="Bandwidth Calculator"
+          size="sm"
+        />
+      )}
+    </>
+  )
+
   return (
     <div className={embedded ? "space-y-4" : "tool-container"}>
-      {!embedded && (
+      {embedded ? (
+        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+      ) : (
         <ToolHeader
           icon={HardDrive}
           title="Download Size Calculator"
           description="How much data a link can carry in a given time"
+          actions={actions}
         />
       )}
 
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="download-size-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -85,6 +142,8 @@ export function DownloadSizePanel({ embedded }: PanelProps) {
                   step="any"
                   value={time}
                   onChange={(event) => void setQuery({ time: event.target.value })}
+                  aria-invalid={invalidField === "time"}
+                  aria-describedby={invalidField === "time" ? "download-size-error" : undefined}
                 />
               </div>
               <div>
@@ -117,6 +176,8 @@ export function DownloadSizePanel({ embedded }: PanelProps) {
                   step="any"
                   value={speed}
                   onChange={(event) => void setQuery({ speed: event.target.value })}
+                  aria-invalid={invalidField === "speed"}
+                  aria-describedby={invalidField === "speed" ? "download-size-error" : undefined}
                 />
               </div>
               <div>

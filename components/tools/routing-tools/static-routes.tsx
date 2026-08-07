@@ -265,7 +265,7 @@ export function StaticRoutesPanel({ routes, onRoutesChange }: StaticRoutesPanelP
                   className="flex-1"
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Export Routes
+                  Export
                 </Button>
               </div>
             </CardContent>

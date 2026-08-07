@@ -24,6 +24,7 @@ const columns: ReferenceColumn<ICMPCodeEntry>[] = [
         {row.code}
       </Badge>
     ),
+    copyLabel: (row) => `Copy unreachable code ${row.code}`,
   },
   {
     key: "name",
@@ -53,7 +54,6 @@ export function UnreachablePanel({ searchTerm }: { searchTerm: string }) {
         rows={rows}
         columns={columns}
         rowKey={(row) => String(row.code)}
-        emptyMessage="No codes match your search"
       />
 
       <Alert>

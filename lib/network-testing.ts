@@ -5,7 +5,7 @@ import {
   toString as wireTypeToString,
   toType as wireTypeToType,
 } from "@dnsquery/dns-packet/types.js"
-import { compressIPv6, expandIPv6, solicitedNodeMulticast } from "@/lib/network-utils"
+import { compressIPv6, solicitedNodeMulticast } from "@/lib/network-utils"
 import { eui64Address } from "@/lib/ipv6-address"
 import { lookupLocal, parseMacInput } from "@/lib/oui-vendors"
 
@@ -806,6 +806,13 @@ interface NormalizedDNSAnswer {
   data: string
 }
 
+// a resolver's json is untrusted remote input, so nothing here assumes a shape
+type JsonRecord = Record<string, unknown> | null | undefined
+
+// an object here used to stringify to "[object Object]" and land in a result
+const asText = (value: unknown): string =>
+  typeof value === "string" || typeof value === "number" ? String(value) : ""
+
 interface NormalizedDNSResponse {
   Status: number
   AD: boolean
@@ -813,7 +820,10 @@ interface NormalizedDNSResponse {
   Answer: NormalizedDNSAnswer[]
 }
 
-function normalizeJsonDnsResponse(data: any, fallbackDomain: string): NormalizedDNSResponse {
+function normalizeJsonDnsResponse(
+  data: JsonRecord | undefined,
+  fallbackDomain: string
+): NormalizedDNSResponse {
   const status =
     typeof data?.Status === "number"
       ? data.Status
@@ -824,14 +834,17 @@ function normalizeJsonDnsResponse(data: any, fallbackDomain: string): Normalized
   const tcFlag = Boolean(data?.TC ?? data?.Tc ?? data?.tc)
 
   const answers: NormalizedDNSAnswer[] = Array.isArray(data?.Answer)
-    ? data.Answer.map((record: any) => {
+    ? data.Answer.map((record: JsonRecord) => {
         const typeValue =
           typeof record?.type === "number"
             ? record.type
-            : (getRecordTypeCode(String(record?.type || "")) ?? 255)
-        const ttlValue = Number.parseInt(record?.TTL ?? record?.ttl ?? "0", 10) || 0
-        const nameValue = trimTrailingDot(record?.name || record?.Name || fallbackDomain)
-        const dataValue = String(record?.data ?? record?.Data ?? record?.value ?? "")
+            : (getRecordTypeCode(asText(record?.type)) ?? 255)
+        const ttlValue = Number.parseInt(asText(record?.TTL) || asText(record?.ttl) || "0", 10) || 0
+        const nameValue = trimTrailingDot(
+          asText(record?.name) || asText(record?.Name) || fallbackDomain
+        )
+        const dataValue =
+          asText(record?.data) || asText(record?.Data) || asText(record?.value) || ""
 
         return {
           name: nameValue,
@@ -921,7 +934,11 @@ function bytesToBase64(bytes: Uint8Array): string {
     return btoa(binary)
   }
 
-  const nodeBuffer = typeof globalThis !== "undefined" ? (globalThis as any).Buffer : undefined
+  const nodeBuffer =
+    typeof globalThis !== "undefined"
+      ? (globalThis as { Buffer?: { from(b: Uint8Array): { toString(enc: string): string } } })
+          .Buffer
+      : undefined
   if (nodeBuffer) {
     return nodeBuffer.from(bytes).toString("base64")
   }

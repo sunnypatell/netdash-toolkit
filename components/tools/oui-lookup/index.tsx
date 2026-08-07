@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { Suspense, lazy, useCallback, useRef, useState } from "react"
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -21,14 +21,31 @@ import {
   lookupOui,
   parseMacInput,
 } from "@/lib/oui-vendors"
-import { SingleLookupPanel } from "./single"
-import { BulkLookupPanel } from "./bulk"
-import { ResultsPanel, sourceLabel, type LookupRow } from "./results"
+import { sourceLabel, type LookupRow } from "./types"
+
+// one chunk per panel: the shell no longer carries both input modes and the
+// results table
+const SingleLookupPanel = lazy(() =>
+  import("./single").then((m) => ({ default: m.SingleLookupPanel }))
+)
+const BulkLookupPanel = lazy(() => import("./bulk").then((m) => ({ default: m.BulkLookupPanel })))
+const ResultsPanel = lazy(() => import("./results").then((m) => ({ default: m.ResultsPanel })))
 
 const TABS = ["single", "bulk"] as const
 const REMOTE_SPACING_MS = 1100
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function PanelFallback() {
+  return (
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
+      Loading panel...
+    </p>
+  )
+}
 
 export function OUILookup() {
   // the single address and the offline switch live in the query string, so a
@@ -193,25 +210,29 @@ export function OUILookup() {
             </TabsList>
 
             <TabsContent value="single" className="space-y-4">
-              <SingleLookupPanel
-                value={query.mac}
-                busy={busy}
-                willGoRemote={willGoRemote}
-                onChange={(mac) => void setQuery({ mac })}
-                onLookup={() => void runSingle()}
-              />
+              <Suspense fallback={<PanelFallback />}>
+                <SingleLookupPanel
+                  value={query.mac}
+                  busy={busy}
+                  willGoRemote={willGoRemote}
+                  onChange={(mac) => void setQuery({ mac })}
+                  onLookup={() => void runSingle()}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="bulk" className="space-y-4">
-              <BulkLookupPanel
-                value={bulkInput}
-                busy={busy}
-                progress={progress}
-                offlineOnly={offlineOnly}
-                cached={cached}
-                onChange={setBulkInput}
-                onLookup={(lines) => void runBulk(lines)}
-              />
+              <Suspense fallback={<PanelFallback />}>
+                <BulkLookupPanel
+                  value={bulkInput}
+                  busy={busy}
+                  progress={progress}
+                  offlineOnly={offlineOnly}
+                  cached={cached}
+                  onChange={setBulkInput}
+                  onLookup={(lines) => void runBulk(lines)}
+                />
+              </Suspense>
             </TabsContent>
           </Tabs>
 
@@ -279,7 +300,9 @@ export function OUILookup() {
         </div>
 
         <div role="status" aria-busy={busy}>
-          <ResultsPanel rows={rows} onExportJson={exportJson} onExportCsv={exportCsv} />
+          <Suspense fallback={<PanelFallback />}>
+            <ResultsPanel rows={rows} onExportJson={exportJson} onExportCsv={exportCsv} />
+          </Suspense>
         </div>
       </div>
     </div>

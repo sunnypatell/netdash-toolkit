@@ -127,7 +127,7 @@ export function PasswordGenerator() {
             {empty ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription id="password-charset-error">
                   No characters left to choose from. Enable a character type, or relax the
                   exclusions - excluding both ambiguous and similar characters from numbers alone
                   empties the set.
@@ -200,6 +200,8 @@ export function PasswordGenerator() {
                       id={item.id}
                       checked={query[item.key]}
                       onCheckedChange={(checked) => setQuery({ [item.key]: !!checked })}
+                      aria-invalid={empty}
+                      aria-describedby={empty ? "password-charset-error" : undefined}
                     />
                     <Label htmlFor={item.id} className="flex-1 cursor-pointer">
                       {item.label}
@@ -218,6 +220,8 @@ export function PasswordGenerator() {
                     id="noAmbiguous"
                     checked={query.noAmbiguous}
                     onCheckedChange={(checked) => setQuery({ noAmbiguous: !!checked })}
+                    aria-invalid={empty}
+                    aria-describedby={empty ? "password-charset-error" : undefined}
                   />
                   <Label htmlFor="noAmbiguous" className="cursor-pointer">
                     Exclude ambiguous characters ({"{}[]()/\\'\"`~,;:.<>"})
@@ -228,6 +232,8 @@ export function PasswordGenerator() {
                     id="noSimilar"
                     checked={query.noSimilar}
                     onCheckedChange={(checked) => setQuery({ noSimilar: !!checked })}
+                    aria-invalid={empty}
+                    aria-describedby={empty ? "password-charset-error" : undefined}
                   />
                   <Label htmlFor="noSimilar" className="cursor-pointer">
                     Exclude similar characters (i, l, 1, L, o, 0, O)

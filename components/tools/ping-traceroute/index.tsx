@@ -9,8 +9,6 @@ import { Activity, AlertCircle, Zap } from "lucide-react"
 import { isElectron } from "@/lib/electron"
 import { describeTransport } from "@/lib/browser-ping"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
-import { getToolBySlug } from "@/lib/tool-registry"
 
 // one chunk per panel; the interfaces panel never loads on the web build
 const PingPanel = lazy(() => import("./ping"))
@@ -21,7 +19,7 @@ const TABS = ["ping", "traceroute", "interfaces"] as const
 
 function PanelFallback() {
   return (
-    <p role="status" className="text-muted-foreground p-4 text-sm">
+    <p data-panel-fallback role="status" className="text-muted-foreground p-4 text-sm">
       Loading...
     </p>
   )
@@ -45,7 +43,6 @@ export function PingTraceroute() {
     setIsNative(isElectron())
   }, [])
 
-  const tool = getToolBySlug("ping-traceroute")
   // the interfaces tab only exists in the desktop app, so a link to it has to fall
   // back rather than select a trigger that was never rendered
   const activeTab = tab === "interfaces" && !isNative ? "ping" : tab
@@ -80,12 +77,8 @@ export function PingTraceroute() {
         </Alert>
       )}
 
-      {tool && (
-        <div className="px-1">
-          <RuntimeDisclosure tool={tool} />
-        </div>
-      )}
-
+      {/* the shared disclosure is rendered once by ToolShell; this tool used to
+          repeat the same sentence a second time here */}
       <Tabs
         value={activeTab}
         onValueChange={(value) => void setQuery({ tab: value as (typeof TABS)[number] })}

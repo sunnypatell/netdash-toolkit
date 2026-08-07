@@ -179,7 +179,7 @@
       ],
       "technical": [
         "Multi-tab interface for routing protocol configuration generators",
-        "Real-time channel interference simulation and recommendations",
+        "Channel interference classified from non-overlapping, DFS and restricted channel properties; nothing is measured over the air",
         "Enhanced ACL validation with security warnings and best practices",
         "Comprehensive wireless security checklist and enterprise features"
       ]
@@ -221,7 +221,7 @@
       "type": "patch",
       "title": "Real Network Testing Implementation",
       "changes": [
-        "Replaced simulated ping/traceroute with real HTTP-based RTT measurement",
+        "Replaced fabricated ping timings with real HTTP-based RTT measurement; traceroute stayed fabricated until it was removed in 3.0",
         "Implemented animated real-time results with performance.now() timing",
         "Added CORS-aware requests with configurable timeout handling",
         "Enhanced port scanner with no-cors HTTP probes"
@@ -399,7 +399,7 @@
       "title": "Network Testing Suite",
       "changes": [
         "Added comprehensive network connectivity testing tools",
-        "Implemented real-time ping and traceroute functionality",
+        "Added browser ping as an HTTP round trip; the traceroute shipped alongside it returned fabricated hops and was removed in 3.0",
         "Enhanced DNS resolution testing with multiple record types",
         "Added network performance metrics and analysis"
       ],

@@ -14,9 +14,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertTriangle, Copy, Download, Settings } from "lucide-react"
-import { toast } from "sonner"
-import { copyText } from "@/lib/clipboard"
+import { AlertTriangle, Download, Settings } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 import {
   channelsForBand,
@@ -37,16 +36,10 @@ export function WifiConfigPanel({ config, onConfigChange }: WifiConfigPanelProps
   const channels = channelsForBand(config.band).filter((channel) => channel.recommended)
   const configText = generateWirelessConfig(config)
   const bandSupported = supportsBand(config.mode, config.band)
+  // the mode and the band jointly produce the mismatch, so both carry it
+  const bandDescribedBy = bandSupported ? undefined : "wireless-band-support-error"
 
   const patch = (next: Partial<WirelessConfig>) => onConfigChange({ ...config, ...next })
-
-  const copyToClipboard = async () => {
-    if (await copyText(configText)) {
-      toast.success("Copied to clipboard")
-    } else {
-      toast.error("Could not copy to clipboard")
-    }
-  }
 
   const exportConfig = () =>
     downloadTextFile(configText, `wireless-config-${config.ssid || "untitled"}-${dateStamp()}.txt`)
@@ -133,7 +126,11 @@ export function WifiConfigPanel({ config, onConfigChange }: WifiConfigPanelProps
                 value={config.band}
                 onValueChange={(value) => patch({ band: value as WirelessBand, channel: "auto" })}
               >
-                <SelectTrigger id="wireless-band">
+                <SelectTrigger
+                  id="wireless-band"
+                  aria-invalid={!bandSupported}
+                  aria-describedby={bandDescribedBy}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -149,7 +146,11 @@ export function WifiConfigPanel({ config, onConfigChange }: WifiConfigPanelProps
                 value={config.mode}
                 onValueChange={(value) => patch({ mode: value as WirelessStandard })}
               >
-                <SelectTrigger id="wireless-mode">
+                <SelectTrigger
+                  id="wireless-mode"
+                  aria-invalid={!bandSupported}
+                  aria-describedby={bandDescribedBy}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,7 +166,7 @@ export function WifiConfigPanel({ config, onConfigChange }: WifiConfigPanelProps
           {!bandSupported && (
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-              <AlertDescription>
+              <AlertDescription id="wireless-band-support-error">
                 {config.mode} does not operate in the {config.band} GHz band. Pick a band the
                 standard defines.
               </AlertDescription>
@@ -227,10 +228,7 @@ export function WifiConfigPanel({ config, onConfigChange }: WifiConfigPanelProps
             className="min-h-[400px] font-mono text-sm"
           />
           <div className="mt-4 flex space-x-2">
-            <Button onClick={copyToClipboard} variant="outline" className="flex-1">
-              <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-              Copy Config
-            </Button>
+            <CopyButton value={configText} variant="outline" />
             <Button onClick={exportConfig} variant="outline" className="flex-1">
               <Download className="mr-2 h-4 w-4" aria-hidden="true" />
               Export

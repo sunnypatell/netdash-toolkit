@@ -92,12 +92,14 @@ function rules(expected) {
       /\b(\d+) (?:of them never|offline|fully working)/g,
       new Set([expected.offline]),
     ],
-    // "the other 12", "the 12 networked tools"
-    [
-      "a networked tool count",
-      /\b[Tt]he other (\d+)\b|\b(\d+) networked tools\b/g,
-      new Set([expected.networked]),
-    ],
+    // "the 12 networked tools", "12 networked tools"
+    //
+    // the bare "the other N" shape used to be accepted here too, and it failed
+    // the build on "the other 9 are not input errors" in the accessibility
+    // conformance record, which counts error surfaces rather than tools. a
+    // count is only checkable when the prose says what is being counted, so
+    // the anchor is the word "networked tools" and the prose carries it.
+    ["a networked tool count", /\b(\d+) networked tools?\b/g, new Set([expected.networked])],
     // "seven categories" is spelled out in prose, so only the numeral form is checked
     ["a category count", /\b(\d+) categories\b/g, new Set([expected.categories])],
   ]

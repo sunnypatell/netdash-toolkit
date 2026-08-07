@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertTriangle, Loader2, Radio, ShieldAlert } from "lucide-react"
-import { RELAY_HOST, fetchRelayHeaders, isProbeableUrl } from "@/lib/http-relay"
+import { fetchRelayHeaders, isProbeableUrl } from "@/lib/http-relay"
 import { toast } from "sonner"
 import type { GradeInput } from "./grade-report"
 
@@ -33,7 +33,7 @@ export default function RelayPanel({ target, hostLabel, onGrade, onBusyChange }:
       return
     }
     if (!isProbeableUrl(target)) {
-      setError("Only http:// and https:// URLs can be fetched.")
+      setError("Only http:// and https:// URLs can be fetched")
       return
     }
     setBusy(true)
@@ -57,11 +57,13 @@ export default function RelayPanel({ target, hostLabel, onGrade, onBusyChange }:
       <Alert variant="destructive">
         <ShieldAlert className="h-4 w-4" />
         <AlertTitle>This route is not trustworthy for a security verdict</AlertTitle>
+        {/* the relay is named once at the top of the page by the shared runtime
+            disclosure; what only belongs here is what it can do to the answer */}
         <AlertDescription className="text-sm">
-          The request goes to <span className="font-mono">{RELAY_HOST}</span>, an unaffiliated third
-          party. It sees the URL you asked about and it can add, drop, or rewrite any header before
-          you see it - so a security grade computed from its output proves nothing about the real
-          server. Use it to get a quick look, then confirm with the curl paste before you act on it.
+          The request goes through an unaffiliated third-party relay, which can add, drop, or
+          rewrite any header before you see it - so a security grade computed from its output proves
+          nothing about the real server. Use it to get a quick look, then confirm with the curl
+          paste before you act on it.
         </AlertDescription>
       </Alert>
       <Button onClick={run} disabled={loading} variant="outline" className="w-full">

@@ -230,7 +230,10 @@ export function RegexTester() {
                     onChange={(e) => setPattern(e.target.value)}
                     placeholder="[A-Za-z]+"
                     className="border-0 font-mono focus-visible:ring-0"
-                    aria-invalid={invalid}
+                    aria-invalid={invalid || timedOut}
+                    aria-describedby={
+                      invalid ? "regex-pattern-error" : timedOut ? "regex-timeout-error" : undefined
+                    }
                   />
                   <span className="text-muted-foreground px-3">/{flagStr}</span>
                 </div>
@@ -268,7 +271,7 @@ export function RegexTester() {
             {timedOut && (
               <Alert variant="destructive">
                 <Timer className="h-4 w-4" />
-                <AlertDescription>
+                <AlertDescription id="regex-timeout-error">
                   Pattern timed out after {DEADLINE_MS}ms and was stopped - this usually means
                   catastrophic backtracking. Simplify nested quantifiers such as{" "}
                   <code className="font-mono">(a+)+</code> or shorten the test string.
@@ -279,7 +282,9 @@ export function RegexTester() {
             {invalid && (
               <Alert variant="destructive">
                 <XCircle className="h-4 w-4" />
-                <AlertDescription className="font-mono text-xs">{result.error}</AlertDescription>
+                <AlertDescription id="regex-pattern-error" className="font-mono text-xs">
+                  {result.error}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -301,6 +306,8 @@ export function RegexTester() {
                 onChange={(e) => setTestString(e.target.value)}
                 placeholder="Enter text to test against..."
                 className="h-32 resize-none font-mono"
+                aria-invalid={timedOut}
+                aria-describedby={timedOut ? "regex-timeout-error" : undefined}
               />
             </div>
 

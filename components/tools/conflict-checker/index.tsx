@@ -29,7 +29,7 @@ const TRIGGER_CLASS =
   "border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
 
 const fallback = (
-  <p role="status" className="text-muted-foreground py-8 text-center text-sm">
+  <p role="status" className="text-muted-foreground py-8 text-center text-sm" data-panel-fallback>
     Loading panel
   </p>
 )
@@ -145,11 +145,11 @@ export function ConflictChecker() {
               <>
                 <Button variant="outline" size="sm" onClick={() => exportConflicts("csv")}>
                   <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Export </span>CSV
+                  Export CSV
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => exportConflicts("report")}>
                   <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">Remediation </span>Report
+                  Export Text
                 </Button>
               </>
             )}
@@ -175,7 +175,9 @@ export function ConflictChecker() {
       {(scanError || analysisError) && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{scanError || analysisError}</AlertDescription>
+          <AlertDescription id="conflict-checker-error">
+            {scanError || analysisError}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -207,7 +209,13 @@ export function ConflictChecker() {
 
         <TabsContent value="input">
           <Suspense fallback={fallback}>
-            <ConflictInputPanel analysis={analysis} onDataParsed={setParsedData} />
+            <ConflictInputPanel
+              analysis={analysis}
+              onDataParsed={setParsedData}
+              // the scan failure has no field behind it, so only the analysis
+              // failure is tied back to the paste
+              analysisErrorId={analysisError ? "conflict-checker-error" : undefined}
+            />
           </Suspense>
         </TabsContent>
 

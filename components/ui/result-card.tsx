@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Copy, Check } from "lucide-react"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { copyText } from "@/lib/clipboard"
 
@@ -23,6 +23,9 @@ interface ResultCardProps {
   badges?: Array<{ label: string; variant?: "default" | "secondary" | "destructive" | "outline" }>
   className?: string
   description?: string
+  // says what will land here, in the same dashed hint every tool uses for an
+  // empty result. callers that know the input name should say so.
+  emptyHint?: ReactNode
 }
 
 export function ResultCard({
@@ -32,6 +35,7 @@ export function ResultCard({
   badges,
   className,
   description,
+  emptyHint = "Enter a value - results appear here.",
 }: ResultCardProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
@@ -139,7 +143,9 @@ export function ResultCard({
             </div>
           ))
         ) : (
-          <div className="text-muted-foreground py-4 text-center">No results to display</div>
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            {emptyHint}
+          </p>
         )}
       </CardContent>
     </Card>

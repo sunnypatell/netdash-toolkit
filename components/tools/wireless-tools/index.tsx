@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense, lazy } from "react"
 import {
   parseAsBoolean,
   parseAsInteger,
@@ -11,10 +12,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Wifi } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { defaultWirelessConfig, type ChannelWidth, type WirelessConfig } from "@/lib/wireless"
-import { ChannelPlanningPanel } from "./channel-planning"
-import { CapacityCalculatorPanel, type CapacitySettings } from "./capacity-calculator"
-import { WifiConfigPanel } from "./wifi-config"
-import { SecurityGuidePanel } from "./security-guide"
+import type { CapacitySettings } from "./capacity-calculator"
+
+// one chunk per tab: opening the tool no longer downloads all four panels
+const ChannelPlanningPanel = lazy(() =>
+  import("./channel-planning").then((m) => ({ default: m.ChannelPlanningPanel }))
+)
+const CapacityCalculatorPanel = lazy(() =>
+  import("./capacity-calculator").then((m) => ({ default: m.CapacityCalculatorPanel }))
+)
+const WifiConfigPanel = lazy(() =>
+  import("./wifi-config").then((m) => ({ default: m.WifiConfigPanel }))
+)
+const SecurityGuidePanel = lazy(() =>
+  import("./security-guide").then((m) => ({ default: m.SecurityGuidePanel }))
+)
+
+function PanelFallback() {
+  return (
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
+      Loading panel...
+    </p>
+  )
+}
 
 const TRIGGER_CLASS =
   "border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
@@ -123,26 +146,34 @@ export function WirelessTools() {
         </TabsList>
 
         <TabsContent value="channel-planning" className="space-y-4">
-          <ChannelPlanningPanel
-            band={config.band}
-            width={capacity.width}
-            onBandChange={(band) => void setQuery({ band, ch: "auto" })}
-            onWidthChange={(width) =>
-              void setQuery({ width: width.toString() as (typeof WIDTHS)[number] })
-            }
-          />
+          <Suspense fallback={<PanelFallback />}>
+            <ChannelPlanningPanel
+              band={config.band}
+              width={capacity.width}
+              onBandChange={(band) => void setQuery({ band, ch: "auto" })}
+              onWidthChange={(width) =>
+                void setQuery({ width: width.toString() as (typeof WIDTHS)[number] })
+              }
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="capacity-calculator" className="space-y-4">
-          <CapacityCalculatorPanel value={capacity} onChange={applyCapacity} />
+          <Suspense fallback={<PanelFallback />}>
+            <CapacityCalculatorPanel value={capacity} onChange={applyCapacity} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="wifi-config" className="space-y-4">
-          <WifiConfigPanel config={config} onConfigChange={setConfig} />
+          <Suspense fallback={<PanelFallback />}>
+            <WifiConfigPanel config={config} onConfigChange={setConfig} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
-          <SecurityGuidePanel />
+          <Suspense fallback={<PanelFallback />}>
+            <SecurityGuidePanel />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

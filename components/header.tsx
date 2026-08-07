@@ -3,14 +3,26 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { UserMenu } from "@/components/ui/user-menu"
+import dynamic from "next/dynamic"
 import { Badge } from "@/components/ui/badge"
-import { Menu, Search } from "lucide-react"
+import { Loader2, Menu, Search } from "lucide-react"
 import { openCommandPalette, useShortcutKey } from "@/components/command-palette"
 import { SITE_NAME } from "@/lib/site"
 import changelog from "@/data/changelog.json"
 
 const latestVersion = changelog.releases[0]?.version ?? "0.0.0"
+
+// the account surfaces are the only thing in the shell that pulls the firebase
+// sdk, so they stay out of the first load. the fallback matches the menu's own
+// pending state, so nothing shifts.
+const UserMenu = dynamic(() => import("@/components/ui/user-menu").then((m) => m.UserMenu), {
+  ssr: false,
+  loading: () => (
+    <Button variant="ghost" size="sm" disabled aria-hidden="true">
+      <Loader2 className="h-4 w-4 animate-spin" />
+    </Button>
+  ),
+})
 
 interface HeaderProps {
   onToggleSidebar: () => void

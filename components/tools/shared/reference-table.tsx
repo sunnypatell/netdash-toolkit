@@ -1,8 +1,7 @@
 "use client"
 
-import type { ReactNode } from "react"
-import { Copy } from "lucide-react"
-import { toast } from "sonner"
+import { useCallback, useState, type ReactNode } from "react"
+import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -15,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { copyText } from "@/lib/clipboard"
+import { cn } from "@/lib/utils"
 
 export interface ReferenceColumn<T> {
   key: string
@@ -45,12 +45,32 @@ export function searchableText<T>(columns: readonly ReferenceColumn<T>[], row: T
   return columns.map((column) => column.text(row))
 }
 
-async function copyValue(value: string) {
-  if (await copyText(value)) {
-    toast.success("Copied to clipboard")
-  } else {
-    toast.error("Copy failed")
-  }
+// CopyButton's silent behaviour with a per-row name: a table of 33 rows would
+// otherwise put 33 buttons called "Copy to clipboard" in the tab order
+function RowCopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    if (!(await copyText(value))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [value])
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn("transition-all duration-200", copied && "text-green-600 dark:text-green-400")}
+      onClick={handleCopy}
+      aria-label={copied ? "Copied!" : label}
+    >
+      {copied ? (
+        <Check className="h-3 w-3" aria-hidden="true" />
+      ) : (
+        <Copy className="h-3 w-3" aria-hidden="true" />
+      )}
+    </Button>
+  )
 }
 
 export function ReferenceTable<T>({
@@ -93,14 +113,7 @@ export function ReferenceTable<T>({
                     {column.copyLabel ? (
                       <div className="flex items-center gap-1">
                         {content}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyValue(column.text(row))}
-                          aria-label={column.copyLabel(row)}
-                        >
-                          <Copy className="h-3 w-3" aria-hidden="true" />
-                        </Button>
+                        <RowCopyButton value={column.text(row)} label={column.copyLabel(row)} />
                       </div>
                     ) : (
                       content

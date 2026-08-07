@@ -57,6 +57,8 @@ export function ACLConfigCard({
               value={aclName}
               onChange={(e) => onAclNameChange(e.target.value)}
               placeholder={aclType === "standard" ? "10" : "101"}
+              aria-invalid={nameCheck.errors.length > 0}
+              aria-describedby={nameCheck.errors.length > 0 ? "acl-name-error" : undefined}
             />
           </div>
           <div>
@@ -80,7 +82,8 @@ export function ACLConfigCard({
         {nameCheck.errors.length > 0 && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" aria-hidden="true" />
-            <AlertDescription>{nameCheck.errors.join(", ")}</AlertDescription>
+            {/* literal, not idPrefix-scoped: index.tsx mounts one panel at a time */}
+            <AlertDescription id="acl-name-error">{nameCheck.errors.join(", ")}</AlertDescription>
           </Alert>
         )}
 

@@ -24,31 +24,47 @@ import type { IPv4Result, IPv6Result } from "@/lib/network-utils"
 // results are derived, not stored: a subnet is a pure function of an address and
 // a prefix, so there was nothing for a Calculate button to do that typing cannot.
 // the inputs live in the query string, which makes any result a shareable link.
+// which field the message is about, so 3.3.1 can name it. derived from the same
+// guard order the compute uses rather than by matching the message text.
+type Culprit = "address" | "prefix" | "both" | null
+
 function computeIPv4(address: string, prefixText: string) {
-  if (!address.trim()) return { result: null, error: "" }
-  if (!isValidIPv4(address)) return { result: null, error: "Invalid IPv4 address" }
+  if (!address.trim()) return { result: null, error: "", culprit: null as Culprit }
+  if (!isValidIPv4(address)) {
+    return { result: null, error: "Invalid IPv4 address", culprit: "address" as Culprit }
+  }
   const prefix = Number.parseInt(prefixText, 10)
   if (isNaN(prefix) || prefix < 0 || prefix > 32) {
-    return { result: null, error: "Invalid prefix length (must be 0-32)" }
+    return { result: null, error: "Invalid prefix length", culprit: "prefix" as Culprit }
   }
   try {
-    return { result: calculateIPv4Subnet(address, prefix), error: "" }
+    return { result: calculateIPv4Subnet(address, prefix), error: "", culprit: null as Culprit }
   } catch (err) {
-    return { result: null, error: err instanceof Error ? err.message : "Calculation failed" }
+    return {
+      result: null,
+      error: err instanceof Error ? err.message : "Calculation failed",
+      culprit: "both" as Culprit,
+    }
   }
 }
 
 function computeIPv6(address: string, prefixText: string) {
-  if (!address.trim()) return { result: null, error: "" }
-  if (!isValidIPv6(address)) return { result: null, error: "Invalid IPv6 address" }
+  if (!address.trim()) return { result: null, error: "", culprit: null as Culprit }
+  if (!isValidIPv6(address)) {
+    return { result: null, error: "Invalid IPv6 address", culprit: "address" as Culprit }
+  }
   const prefix = Number.parseInt(prefixText, 10)
   if (isNaN(prefix) || prefix < 0 || prefix > 128) {
-    return { result: null, error: "Invalid prefix length (must be 0-128)" }
+    return { result: null, error: "Invalid prefix length", culprit: "prefix" as Culprit }
   }
   try {
-    return { result: calculateIPv6Subnet(address, prefix), error: "" }
+    return { result: calculateIPv6Subnet(address, prefix), error: "", culprit: null as Culprit }
   } catch (err) {
-    return { result: null, error: err instanceof Error ? err.message : "Calculation failed" }
+    return {
+      result: null,
+      error: err instanceof Error ? err.message : "Calculation failed",
+      culprit: "both" as Culprit,
+    }
   }
 }
 
@@ -78,6 +94,10 @@ export function SubnetCalculator() {
   const ipv4Results = tab === "ipv4" ? ipv4.result : null
   const ipv6Results = tab === "ipv6" ? ipv6.result : null
   const error = tab === "ipv4" ? ipv4.error : ipv6.error
+  const culprit = tab === "ipv4" ? ipv4.culprit : ipv6.culprit
+  const addressAtFault = culprit === "address" || culprit === "both"
+  const prefixAtFault = culprit === "prefix" || culprit === "both"
+  const ERROR_ID = "subnet-calculator-error"
 
   const exportResults = (format: "json" | "csv") => {
     const results = ipv4Results || ipv6Results
@@ -143,7 +163,7 @@ export function SubnetCalculator() {
               disabled={!ipv4Results && !ipv6Results}
             >
               <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Export </span>CSV
+              Export CSV
             </Button>
             <Button
               variant="outline"
@@ -152,7 +172,7 @@ export function SubnetCalculator() {
               disabled={!ipv4Results && !ipv6Results}
             >
               <Download className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Export </span>JSON
+              Export JSON
             </Button>
             {(ipv4Results || ipv6Results) && (
               <SaveToProject
@@ -179,7 +199,7 @@ export function SubnetCalculator() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id={ERROR_ID}>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -214,6 +234,8 @@ export function SubnetCalculator() {
                   value={ipv4Address}
                   onChange={setIpv4Address}
                   ipVersion="ipv4"
+                  invalid={addressAtFault}
+                  describedBy={addressAtFault ? ERROR_ID : undefined}
                 />
                 <IPInput
                   label="Prefix Length"
@@ -221,6 +243,8 @@ export function SubnetCalculator() {
                   value={ipv4Prefix}
                   onChange={setIpv4Prefix}
                   ipVersion="ipv4"
+                  invalid={prefixAtFault}
+                  describedBy={prefixAtFault ? ERROR_ID : undefined}
                 />
               </div>
 
@@ -233,6 +257,13 @@ export function SubnetCalculator() {
               </Alert>
             </CardContent>
           </Card>
+
+          {!ipv4Results && (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              Enter an IPv4 address and prefix length - network, broadcast and host range appear
+              here.
+            </p>
+          )}
 
           {ipv4Results && (
             <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
@@ -304,6 +335,8 @@ export function SubnetCalculator() {
                   value={ipv6Address}
                   onChange={setIpv6Address}
                   ipVersion="ipv6"
+                  invalid={addressAtFault}
+                  describedBy={addressAtFault ? ERROR_ID : undefined}
                 />
                 <IPInput
                   label="Prefix Length"
@@ -311,6 +344,8 @@ export function SubnetCalculator() {
                   value={ipv6Prefix}
                   onChange={setIpv6Prefix}
                   ipVersion="ipv6"
+                  invalid={prefixAtFault}
+                  describedBy={prefixAtFault ? ERROR_ID : undefined}
                 />
               </div>
 
@@ -323,6 +358,13 @@ export function SubnetCalculator() {
               </Alert>
             </CardContent>
           </Card>
+
+          {!ipv6Results && (
+            <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+              Enter an IPv6 address and prefix length - network, compressed form and host bits
+              appear here.
+            </p>
+          )}
 
           {ipv6Results && (
             <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">

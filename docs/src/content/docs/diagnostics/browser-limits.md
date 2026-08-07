@@ -3,7 +3,7 @@ title: What a browser cannot do
 description: Why an HTTPS page cannot fetch http, why a cross-origin response exposes only seven headers, why the Fetch Standard refuses 83 ports outright, and why browser ping is an HTTPS round trip rather than ICMP.
 ---
 
-:::caution[Before You Read]
+:::caution[Before you read]
 Several tools produce a number in the browser and a different, better number in the desktop build. That is not a quality gap, it is a category difference. A browser has no raw socket API, cannot set an IP TTL, and cannot read most cross-origin response headers. Everything below names the mechanism, links the spec text that makes it so, and links the code that obeys it.
 :::
 
@@ -27,7 +27,7 @@ Three places in the code act on this directly:
 
 The [browser port probe](https://github.com/sunnypatell/netdash-toolkit/blob/main/lib/port-probe.ts) does the same for the same reason: an HTTPS page cannot probe `http://host:8080` at all, so `probePortOverHttp` defaults its scheme to `pageIsHttps() ? "https" : "http"` rather than firing requests the browser refuses.
 
-:::note[A Limit I Did Not Test]
+:::note[A limit I did not test]
 The desktop build serves the app from `http://localhost:17890`. Loopback hosts **are** potentially trustworthy under [Secure Contexts section 3.1](https://w3c.github.io/webappsec-secure-contexts/#is-origin-trustworthy), so that renderer is a secure context, and by the letter of the spec mixed-content blocking should still apply to an `http://` target from it. I did not verify Chromium's actual behaviour here. It does not affect the capabilities that matter, because the desktop diagnostics go through IPC to the main process rather than through `fetch`.
 :::
 
@@ -97,7 +97,7 @@ grade      = F
 
 A checker built on a direct cross-origin `fetch` therefore returns **F, 0 of 100, for every site on the internet**, including the ones that got everything right. That is not a conservative result, it is a wrong one, and it is why the grade has to come from somewhere else.
 
-The app's answer is to not do the direct fetch. [`components/tools/security-headers.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/security-headers.tsx) and [`components/tools/http-headers.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/http-headers.tsx) each offer a paste panel that parses `curl` output, and a relay panel that asks a third party not subject to CORS, and both print the safelist inline so the reason is on screen rather than in these docs. Every relayed result is badged "unverified, via relay" rather than presented as first-hand, and the first-party command is printed for you:
+The app's answer is to not do the direct fetch. [`components/tools/security-headers.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/security-headers/index.tsx) and [`components/tools/http-headers.tsx`](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/http-headers/index.tsx) each offer a paste panel that parses `curl` output, and a relay panel that asks a third party not subject to CORS, and both print the safelist inline so the reason is on screen rather than in these docs. Every relayed result is badged "unverified, via relay" rather than presented as first-hand, and the first-party command is printed for you:
 
 ```bash
 # get the real headers yourself, following redirects
@@ -124,7 +124,18 @@ Historically the safelist had six entries; `Content-Length` was added later. If 
 
 This is the limit most browser-based port scanners never mention, and it is the one that quietly invents results.
 
-[Fetch Standard section 2.9, port blocking](https://fetch.spec.whatwg.org/#port-blocking) defines a [bad port](https://fetch.spec.whatwg.org/#bad-port) as any port listed in its table, and [should fetching request be blocked due to a bad port?](https://fetch.spec.whatwg.org/#block-bad-port) returns `blocked` for those. The table is there because a browser can be tricked into speaking almost-HTTP at a non-HTTP service, so the platform removes the classic service ports from reach entirely. The count as of this writing is **83 entries**, including `22` ssh, `25` smtp, `53` domain, `110` pop3, `143` imap, `445` is notably absent, and `6667` ircu.
+[Fetch Standard section 2.9, port blocking](https://fetch.spec.whatwg.org/#port-blocking) defines a [bad port](https://fetch.spec.whatwg.org/#bad-port) as any port listed in its table, and [should fetching request be blocked due to a bad port?](https://fetch.spec.whatwg.org/#block-bad-port) returns `blocked` for those. The table is there because a browser can be tricked into speaking almost-HTTP at a non-HTTP service, so the platform removes the classic service ports from reach entirely.
+
+The table holds **83 entries**, which is a number worth counting from the living standard rather than trusting to a docs page including this one:
+
+```bash
+# 83
+curl -sS https://fetch.spec.whatwg.org/ \
+  | tr -s ' \n' ' ' \
+  | grep -coE '<tr> <td>[0-9]+ <td>'
+```
+
+The entries run from `0` to `10080`, and the set is not one you can derive from first principles. `22` ssh, `25` smtp, `53` domain, `110` pop3, `143` imap, `6667` ircu and `10080` amanda are all in it. `445` microsoft-ds is **not**, nor is `3389` rdp, nor `1433` ms-sql. So "the browser blocks the dangerous ports" is not a rule; it is a list, and the only way to be right about a specific port is to consult it.
 
 A `fetch` to a bad port rejects with a `TypeError` that is indistinguishable from a connection failure. So a naive probe sees the same exception for "port 22 is firewalled", "port 22 is closed", and "your own browser refused to send anything", and a scanner that maps rejection to `closed` will confidently report `closed` for an SSH port that is wide open.
 
@@ -165,7 +176,7 @@ summarizeStates -> { open: 1, closed: 0, filtered: 0, unknown: 1, browser-blocke
 
 Read the `closed: 0` carefully. The browser probe can **never** produce `closed`; that counter exists only so the same summary shape serves the desktop connect scan, which can. Four `it` cases in [`tests/unit/port-probe.test.ts`](https://github.com/sunnypatell/netdash-toolkit/blob/main/tests/unit/port-probe.test.ts) pin this: "knows the fetch standard blocks the classic service ports", "reports a blocked port as unmeasurable without sending anything", "reports open only when the request actually completed", and "reports unknown, never closed, when the probe fails".
 
-:::caution[A Gap I Found Writing This Page]
+:::caution[A gap I found writing this page]
 `BLOCKED_PORT_SERVICES` holds 80 entries against the Fetch Standard's 83. It omits port `0`, which is not addressable anyway, and ports `4190` (sieve) and `6679` (ircs-u). A probe of 4190 or 6679 is therefore reported as `unknown` rather than `browser-blocked`. That direction is the safe one, since `unknown` claims nothing, but it is still a less precise answer than the platform makes available, and it is worth closing.
 :::
 
@@ -262,7 +273,7 @@ The measurement is still useful, and the code tries to make it honest rather tha
 
 Traceroute works by sending packets with an increasing [IP time-to-live field](https://www.rfc-editor.org/rfc/rfc791#section-3.1) and collecting the ICMP Time Exceeded messages routers return when the TTL reaches zero, which [RFC 1812 section 5.3.1](https://www.rfc-editor.org/rfc/rfc1812#section-5.3.1) requires a router to do. A browser cannot set a TTL on anything, so it cannot discover a single intermediate hop.
 
-The browser build therefore refuses, with a toast reading "Traceroute needs the desktop app". The [comment in the source](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/ping-traceroute.tsx) says what it replaced: this used to return five hardcoded hops with random jitter. A refusal is a better answer than a plausible fiction.
+The browser build therefore refuses, with a toast reading "Traceroute needs the desktop app". The [comment in the source](https://github.com/sunnypatell/netdash-toolkit/blob/main/components/tools/ping-traceroute/traceroute.tsx#L66-L76) says what it replaced: this used to return five hardcoded hops with random jitter. A refusal is a better answer than a plausible fiction.
 
 ## The browser will not compute MD5, and the tool says so instead of shipping one
 
@@ -308,6 +319,6 @@ A separate block hashes the empty string and compares against the published dige
 
 The pattern in that table is worth naming: everything a browser does well is computation, and everything it does badly needs control below HTTP. That is the whole reason [the desktop build](/docs/diagnostics/desktop-capabilities/) exists.
 
-:::tip[The Rule This Page Follows]
+:::tip[The rule this page follows]
 Never report a capability you do not have as a result you do have. If the platform cannot answer, say `unknown`, or refuse. Every number this app shows should be traceable to something it actually did.
 :::

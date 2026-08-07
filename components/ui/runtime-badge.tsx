@@ -42,13 +42,13 @@ export function RuntimeDisclosure({ tool }: { tool: ToolDefinition }) {
 
   return (
     <div className="text-muted-foreground space-y-1 text-xs">
-      {runtime.offline === false && (
+      {runtime.offline === false && runtime.thirdParty?.length ? (
         <p>
           <Cloud className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />
           What you enter is sent to <strong>{runtime.thirdParty?.join(", ")}</strong>. Requests only
           happen when you ask for them.
         </p>
-      )}
+      ) : null}
       {desktopOnly && (
         <p>
           <Monitor className="mr-1 inline h-3 w-3 align-[-2px]" aria-hidden="true" />

@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CopyButton } from "@/components/ui/copy-button"
 import { Globe2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import type { PanelProps } from "@/lib/tool-panel"
@@ -81,6 +82,7 @@ function TypeList({ entries }: { entries: AddressType[] }) {
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="font-mono">{entry.prefix}</Badge>
             <span className="font-medium">{entry.name}</span>
+            <CopyButton value={entry.prefix} />
           </div>
           <p className="text-muted-foreground mt-1 text-sm">{entry.description}</p>
           <p className="text-muted-foreground mt-1 text-xs">{entry.source}</p>

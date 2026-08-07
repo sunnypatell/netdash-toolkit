@@ -260,7 +260,7 @@ export function EigrpPanel({ config, onConfigChange }: EigrpPanelProps) {
                   className="flex-1"
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Export Config
+                  Export
                 </Button>
               </div>
             </CardContent>

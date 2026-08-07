@@ -8,11 +8,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, ArrowRight, ArrowLeft, FileCode, Trash2, Download } from "lucide-react"
+import { ArrowRight, ArrowLeft, FileCode, Trash2, Download } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { copyText } from "@/lib/clipboard"
+import { CopyButton } from "@/components/ui/copy-button"
 import { downloadTextFile, dateStamp } from "@/lib/download"
-import { toast } from "sonner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { formatBytes } from "@/lib/format"
@@ -68,11 +67,6 @@ export function Base64Encoder() {
     }
     const bytes = new Uint8Array(await chosen.arrayBuffer())
     setFile({ name: chosen.name, bytes })
-  }
-
-  const copyToClipboard = async (value: string) => {
-    if (await copyText(value)) toast.success("Copied to clipboard")
-    else toast.error("Copy failed")
   }
 
   const swapContent = () => {
@@ -176,6 +170,8 @@ export function Base64Encoder() {
                       mode === "encode" ? "Enter text to encode..." : "Enter Base64 to decode..."
                     }
                     className="h-48 resize-none font-mono"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? "base64-input-error" : undefined}
                   />
                   {mode === "encode" && (
                     <div className="space-y-2">
@@ -221,7 +217,10 @@ export function Base64Encoder() {
                     <Label htmlFor="base64-output">
                       {mode === "encode" ? "Base64 String" : "Plain Text"}
                     </Label>
-                    <Badge variant="outline">{output.length} chars</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{output.length} chars</Badge>
+                      {output && <CopyButton value={output} />}
+                    </div>
                   </div>
                   <Textarea
                     id="base64-output"
@@ -231,18 +230,9 @@ export function Base64Encoder() {
                     className="bg-muted/50 h-48 resize-none font-mono"
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(output)}
-                      disabled={!output}
-                    >
-                      <Copy className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Copy
-                    </Button>
                     <Button variant="outline" size="sm" onClick={downloadOutput} disabled={!output}>
                       <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                      Download
+                      Export
                     </Button>
                     <Button variant="outline" size="sm" onClick={clear}>
                       <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -254,7 +244,7 @@ export function Base64Encoder() {
 
               {error && (
                 <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription id="base64-input-error">{error}</AlertDescription>
                 </Alert>
               )}
             </TabsContent>

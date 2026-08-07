@@ -240,8 +240,19 @@ export function ColorConverter() {
                 placeholder="#3b82f6, rebeccapurple, oklch(0.62 0.19 260)"
                 className="font-mono"
                 aria-invalid={textError !== null}
+                aria-describedby={textError ? "color-input-error" : undefined}
               />
-              {textError && <p className="text-xs text-red-600 dark:text-red-400">{textError}</p>}
+              {/* status, not alert: this re-validates on every keystroke, so an
+                  assertive region would interrupt mid-value */}
+              {textError && (
+                <p
+                  id="color-input-error"
+                  role="status"
+                  className="text-xs text-red-600 dark:text-red-400"
+                >
+                  {textError}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -253,7 +264,9 @@ export function ColorConverter() {
                     onClick={() => handleText(c)}
                     className="h-8 w-8 rounded-md border shadow-sm transition-transform hover:scale-110"
                     style={{ backgroundColor: c }}
-                    title={c}
+                    // sc 1.4.13: a native title tooltip is not dismissible, not
+                    // hoverable and never shows on focus, so the hex lives in the
+                    // accessible name instead
                     aria-label={`Use ${c}`}
                   />
                 ))}
@@ -470,6 +483,7 @@ export function ColorConverter() {
                 placeholder="#0f172a"
                 className="font-mono"
                 aria-invalid={customBg === null}
+                aria-describedby={customBg === null ? "bg-input-error" : undefined}
               />
               {contrast.custom ? (
                 <>
@@ -495,8 +509,13 @@ export function ColorConverter() {
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-red-600 dark:text-red-400">
-                  Unrecognised background color.
+                <p
+                  id="bg-input-error"
+                  role="status"
+                  className="text-xs text-red-600 dark:text-red-400"
+                >
+                  Unrecognised background color. Expected a CSS colour such as #0f172a,
+                  rebeccapurple or oklch(0.62 0.19 260).
                 </p>
               )}
             </div>

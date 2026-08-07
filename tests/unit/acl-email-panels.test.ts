@@ -81,7 +81,6 @@ const standardPanel = (overrides: Record<string, unknown> = {}) =>
     onAclNameChange: noop,
     onPlatformChange: noop,
     onRulesChange: noop,
-    onCopy: noop,
     onExport: noop,
     ...overrides,
   })
@@ -95,7 +94,6 @@ const extendedPanel = (overrides: Record<string, unknown> = {}) =>
     onAclNameChange: noop,
     onPlatformChange: noop,
     onRulesChange: noop,
-    onCopy: noop,
     onExport: noop,
     ...overrides,
   })
@@ -279,30 +277,38 @@ describe("email panels state what they actually found", () => {
 })
 
 describe("acl-generator index", () => {
-  const configOf = (aclType: string) =>
-    (screen.getByLabelText(`Generated ${aclType} ACL configuration`) as HTMLTextAreaElement).value
+  // each acl type is its own lazy chunk, so the textarea only exists once the
+  // import for the open tab has resolved
+  const configOf = async (aclType: string) =>
+    (
+      (await screen.findByLabelText(
+        `Generated ${aclType} ACL configuration`
+      )) as HTMLTextAreaElement
+    ).value
 
-  it("swaps the untouched acl number when the tab changes", () => {
+  it("swaps the untouched acl number when the tab changes", async () => {
     render(createElement(ACLGenerator))
-    expect(configOf("extended")).toContain("access-list 101 permit tcp")
+    expect(await configOf("extended")).toContain("access-list 101 permit tcp")
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: /Standard ACL/ }))
-    const standard = configOf("standard")
+    const standard = await configOf("standard")
     expect(standard).toContain("access-list 10 permit 192.168.1.0 0.0.0.255")
     expect(standard).not.toContain("WARNING")
   })
 
-  it("keeps a number the user typed, and then says it is wrong for the tab", () => {
+  it("keeps a number the user typed, and then says it is wrong for the tab", async () => {
     render(createElement(ACLGenerator))
+    await configOf("extended")
     fireEvent.change(screen.getByLabelText("ACL Name/Number"), { target: { value: "150" } })
     fireEvent.mouseDown(screen.getByRole("tab", { name: /Standard ACL/ }))
-    expect(configOf("standard")).toContain("! WARNING: 150 is an extended ACL number")
+    expect(await configOf("standard")).toContain("! WARNING: 150 is an extended ACL number")
   })
 
-  it("regenerates for the selected platform", () => {
+  it("regenerates for the selected platform", async () => {
     render(createElement(ACLGenerator))
+    await configOf("extended")
     fireEvent.change(screen.getByLabelText("ACL Name/Number"), { target: { value: "WEB-ACL" } })
-    expect(configOf("extended")).toContain("ip access-list extended WEB-ACL")
+    expect(await configOf("extended")).toContain("ip access-list extended WEB-ACL")
   })
 })
 
@@ -338,7 +344,8 @@ describe("email-diagnostics index", () => {
 
     // the mx panel is a lazy chunk, so it only appears once the import resolves
     await waitFor(() => expect(screen.getByText("mail.example.com")).toBeTruthy())
-    expect(screen.getByText("Email Security Score")).toBeTruthy()
+    // the score card is its own chunk too, and resolves independently of the mx panel
+    expect(await screen.findByText("Email Security Score")).toBeTruthy()
     vi.unstubAllGlobals()
   })
 

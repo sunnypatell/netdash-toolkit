@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, lazy, useState } from "react"
 import { parseAsBoolean, parseAsInteger, parseAsStringLiteral, useQueryStates } from "nuqs"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -8,14 +8,26 @@ import { Shuffle, ShieldCheck } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
 import { SaveToProject } from "@/components/ui/save-to-project"
 import { LoadFromProject } from "@/components/ui/load-from-project"
-import { copyText } from "@/lib/clipboard"
 import { dateStamp, downloadTextFile } from "@/lib/download"
-import { toast } from "sonner"
 import { randomIPv4, randomIPv6, randomMac } from "@/lib/random-gen"
 import type { IPv4Kind, IPv6Kind, MacFormat, MacScope } from "@/lib/random-gen"
-import { Ipv4Panel, IPV4_KINDS } from "./ipv4"
-import { MacPanel, MAC_FORMATS, MAC_SCOPES } from "./mac"
-import { Ipv6Panel, IPV6_KINDS } from "./ipv6"
+import { IPV4_KINDS, IPV6_KINDS, MAC_FORMATS, MAC_SCOPES } from "./kinds"
+
+// one chunk per tab: opening the tool no longer downloads all three generators
+const Ipv4Panel = lazy(() => import("./ipv4").then((m) => ({ default: m.Ipv4Panel })))
+const MacPanel = lazy(() => import("./mac").then((m) => ({ default: m.MacPanel })))
+const Ipv6Panel = lazy(() => import("./ipv6").then((m) => ({ default: m.Ipv6Panel })))
+
+function PanelFallback() {
+  return (
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
+      Loading panel...
+    </p>
+  )
+}
 
 const TABS = ["ipv4", "mac", "ipv6"] as const
 const IPV4_IDS = IPV4_KINDS.map((k) => k.id) as [IPv4Kind, ...IPv4Kind[]]
@@ -56,14 +68,6 @@ export function RandomGenerator() {
   const [ipv6Values, setIpv6Values] = useState<string[]>([])
 
   const draw = (make: () => string) => Array.from({ length: count }, make)
-
-  const copyValues = async (values: string[], kind: string) => {
-    if (await copyText(values.join("\n"))) {
-      toast.success(`${values.length} ${kind} copied`)
-    } else {
-      toast.error("Copy failed")
-    }
-  }
 
   const exportValues = (values: string[], kind: string) => {
     downloadTextFile(values.join("\n"), `random-${kind}-${dateStamp()}.txt`, "text/plain")
@@ -122,59 +126,62 @@ export function RandomGenerator() {
         </TabsList>
 
         <TabsContent value="ipv4" className="space-y-4">
-          <Ipv4Panel
-            kind={query.ip4}
-            count={count}
-            values={ipv4Values}
-            onKindChange={(ip4) => void setQuery({ ip4 })}
-            onCountChange={(next) => void setQuery({ count: clampCount(next) })}
-            onGenerate={() => setIpv4Values(draw(() => randomIPv4(query.ip4)))}
-            onCopy={() => void copyValues(ipv4Values, "IPv4 addresses")}
-            onExport={() => exportValues(ipv4Values, "ipv4")}
-            onClear={() => setIpv4Values([])}
-          />
+          <Suspense fallback={<PanelFallback />}>
+            <Ipv4Panel
+              kind={query.ip4}
+              count={count}
+              values={ipv4Values}
+              onKindChange={(ip4) => void setQuery({ ip4 })}
+              onCountChange={(next) => void setQuery({ count: clampCount(next) })}
+              onGenerate={() => setIpv4Values(draw(() => randomIPv4(query.ip4)))}
+              onExport={() => exportValues(ipv4Values, "ipv4")}
+              onClear={() => setIpv4Values([])}
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="mac" className="space-y-4">
-          <MacPanel
-            scope={query.macScope}
-            format={query.macFormat}
-            uppercase={query.macUpper}
-            count={count}
-            values={macValues}
-            onScopeChange={(macScope) => void setQuery({ macScope })}
-            onFormatChange={(macFormat) => void setQuery({ macFormat })}
-            onUppercaseChange={(macUpper) => void setQuery({ macUpper })}
-            onCountChange={(next) => void setQuery({ count: clampCount(next) })}
-            onGenerate={() =>
-              setMacValues(
-                draw(() =>
-                  randomMac({
-                    scope: query.macScope,
-                    format: query.macFormat,
-                    uppercase: query.macUpper,
-                  })
+          <Suspense fallback={<PanelFallback />}>
+            <MacPanel
+              scope={query.macScope}
+              format={query.macFormat}
+              uppercase={query.macUpper}
+              count={count}
+              values={macValues}
+              onScopeChange={(macScope) => void setQuery({ macScope })}
+              onFormatChange={(macFormat) => void setQuery({ macFormat })}
+              onUppercaseChange={(macUpper) => void setQuery({ macUpper })}
+              onCountChange={(next) => void setQuery({ count: clampCount(next) })}
+              onGenerate={() =>
+                setMacValues(
+                  draw(() =>
+                    randomMac({
+                      scope: query.macScope,
+                      format: query.macFormat,
+                      uppercase: query.macUpper,
+                    })
+                  )
                 )
-              )
-            }
-            onCopy={() => void copyValues(macValues, "MAC addresses")}
-            onExport={() => exportValues(macValues, "mac")}
-            onClear={() => setMacValues([])}
-          />
+              }
+              onExport={() => exportValues(macValues, "mac")}
+              onClear={() => setMacValues([])}
+            />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="ipv6" className="space-y-4">
-          <Ipv6Panel
-            kind={query.ip6}
-            count={count}
-            values={ipv6Values}
-            onKindChange={(ip6) => void setQuery({ ip6 })}
-            onCountChange={(next) => void setQuery({ count: clampCount(next) })}
-            onGenerate={() => setIpv6Values(draw(() => randomIPv6(query.ip6)))}
-            onCopy={() => void copyValues(ipv6Values, "IPv6 addresses")}
-            onExport={() => exportValues(ipv6Values, "ipv6")}
-            onClear={() => setIpv6Values([])}
-          />
+          <Suspense fallback={<PanelFallback />}>
+            <Ipv6Panel
+              kind={query.ip6}
+              count={count}
+              values={ipv6Values}
+              onKindChange={(ip6) => void setQuery({ ip6 })}
+              onCountChange={(next) => void setQuery({ count: clampCount(next) })}
+              onGenerate={() => setIpv6Values(draw(() => randomIPv6(query.ip6)))}
+              onExport={() => exportValues(ipv6Values, "ipv6")}
+              onClear={() => setIpv6Values([])}
+            />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

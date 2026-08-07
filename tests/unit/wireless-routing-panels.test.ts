@@ -220,30 +220,33 @@ describe("wireless tools url state", () => {
       })
     )
 
-  it("opens the panel and the plan a shared link asks for", () => {
+  it("opens the panel and the plan a shared link asks for", async () => {
     mount("?tab=capacity-calculator&std=802.11be&band=6&width=320&streams=4&clients=25")
-    // EHT320 is 2882.4 Mbps per stream, so 4 streams is 11530 rounded
-    expect(screen.getByText("11530 Mbps")).toBeTruthy()
+    // EHT320 is 2882.4 Mbps per stream, so 4 streams is 11530 rounded. the panel
+    // is a lazy chunk, so the first query has to wait for it
+    expect(await screen.findByText("11530 Mbps")).toBeTruthy()
     expect(screen.getByText("25")).toBeTruthy()
   })
 
-  it("carries the wifi config inputs in the link too", () => {
+  it("carries the wifi config inputs in the link too", async () => {
     mount("?tab=wifi-config&ssid=Branch-WiFi&sec=wpa2&band=5")
-    const output = screen.getByLabelText("Generated wireless configuration") as HTMLTextAreaElement
+    const output = (await screen.findByLabelText(
+      "Generated wireless configuration"
+    )) as HTMLTextAreaElement
     expect(output.value).toContain("dot11 ssid Branch-WiFi")
   })
 
   it("writes an edit back to the query string", async () => {
     const onUrlUpdate = vi.fn()
     mount("?tab=wifi-config", onUrlUpdate)
-    fireEvent.change(screen.getByLabelText("SSID Name"), { target: { value: "Lab" } })
+    fireEvent.change(await screen.findByLabelText("SSID Name"), { target: { value: "Lab" } })
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled())
     expect(onUrlUpdate.mock.calls.at(-1)?.[0].searchParams.get("ssid")).toBe("Lab")
   })
 
-  it("falls back to the defaults when the link carries junk", () => {
+  it("falls back to the defaults when the link carries junk", async () => {
     mount("?tab=nope&band=7&std=802.11zz")
     // channel planning is the default tab, and 5 GHz the default band
-    expect(screen.getByText("Channel Overview - 5 GHz Band")).toBeTruthy()
+    expect(await screen.findByText("Channel Overview - 5 GHz Band")).toBeTruthy()
   })
 })

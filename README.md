@@ -54,14 +54,14 @@
 
 ### No backend
 
-36 of the 48 tools make no network request at all. The other 12 name the exact hosts they contact before they contact them.
+36 of the 48 tools make no network request at all. The 12 networked tools name the exact hosts they contact before they contact them.
 
 </td>
 <td align="center" width="25%">
 
 ### Optional cloud sync
 
-Sign in with Google or Email to sync saved projects across devices with Firebase. Every tool works signed out, and projects are stored as plaintext documents, not encrypted.
+Sign in with Google or Email to sync saved projects across devices with Firebase. Every tool works signed out, the SDK is imported on demand rather than at page load, and projects are stored as plaintext documents, not encrypted.
 
 </td>
 <td align="center" width="25%">
@@ -421,6 +421,7 @@ netdash-toolkit/
 │   └── tools/             # one file per simple tool, one directory per multi-panel tool
 ├── lib/                    # every piece of logic worth testing lives here
 │   ├── tool-registry.ts   # the single source of truth: 48 tools, categories, runtime disclosure
+│   ├── firebase.ts        # no static SDK import: auth and firestore load on demand
 │   ├── browser-limits.ts  # CORS safelist, the fetch standard's blocked ports, mixed-content
 │   ├── network-utils.ts   # IPv4/IPv6 address math
 │   ├── mtu.ts             # MTU and MSS arithmetic, every byte cited

@@ -108,7 +108,10 @@ function withPortIds(ports: ReadonlyArray<SwitchPort>): PortRow[] {
 
 function PanelFallback() {
   return (
-    <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
       Loading panel...
     </p>
   )
@@ -166,8 +169,8 @@ export function VLANManager() {
                 downloadTextFile(exportVLANsToCSV(vlans), `vlans-${dateStamp()}.csv`, "text/csv")
               }
             >
-              <Download className="mr-1 h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Export </span>CSV
+              <Download className="mr-2 h-4 w-4" />
+              Export
             </Button>
             {vlans.length > 0 && (
               <SaveToProject

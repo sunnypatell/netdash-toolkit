@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CopyButton } from "@/components/ui/copy-button"
-import { CheckCircle2, Info, XCircle } from "lucide-react"
+import { CheckCircle2, Download, Info, XCircle } from "lucide-react"
 import { describeStatus, type ResponseBlock } from "@/lib/http-header-parse"
 import { dateStamp, downloadTextFile } from "@/lib/download"
 
@@ -212,7 +212,8 @@ export function HeaderReport({ analysis, blockIndex, onBlockIndexChange }: Heade
             </div>
 
             <Button variant="outline" size="sm" onClick={exportHeaders}>
-              Export JSON
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              Export
             </Button>
           </CardContent>
         </Card>

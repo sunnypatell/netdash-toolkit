@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { CopyButton } from "@/components/ui/copy-button"
 import { AlertCircle, Zap } from "lucide-react"
 import { generateEUI64FromMAC, generateSolicitedNodeMulticast } from "@/lib/network-testing"
 
@@ -26,9 +27,7 @@ export function IPv6Panel() {
       setMulticastError(null)
     } catch {
       setMulticast(null)
-      setMulticastError(
-        "Not a valid IPv6 address. Try a full or compressed form such as 2001:db8::1."
-      )
+      setMulticastError("Invalid IPv6 address. Try a full or compressed form such as 2001:db8::1")
     }
   }
 
@@ -38,7 +37,7 @@ export function IPv6Panel() {
       setEui64Error(null)
     } catch {
       setEui64(null)
-      setEui64Error("Could not build an EUI-64 address. Check the MAC address and the IPv6 prefix.")
+      setEui64Error("Could not build an EUI-64 address. Check the MAC address and the IPv6 prefix")
     }
   }
 
@@ -80,9 +79,12 @@ export function IPv6Panel() {
 
           <div aria-live="polite">
             {multicast && (
-              <div className="bg-muted/50 rounded-md border p-3">
-                <p className="text-muted-foreground text-xs">Solicited-node multicast</p>
-                <p className="font-mono text-sm break-all">{multicast}</p>
+              <div className="bg-muted/50 flex items-start gap-2 rounded-md border p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs">Solicited-node multicast</p>
+                  <p className="font-mono text-sm break-all">{multicast}</p>
+                </div>
+                <CopyButton value={multicast} className="shrink-0" />
               </div>
             )}
           </div>
@@ -129,9 +131,12 @@ export function IPv6Panel() {
 
           <div aria-live="polite">
             {eui64 && (
-              <div className="bg-muted/50 mt-4 rounded-md border p-3">
-                <p className="text-muted-foreground text-xs">EUI-64 address</p>
-                <p className="font-mono text-sm break-all">{eui64}</p>
+              <div className="bg-muted/50 mt-4 flex items-start gap-2 rounded-md border p-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs">EUI-64 address</p>
+                  <p className="font-mono text-sm break-all">{eui64}</p>
+                </div>
+                <CopyButton value={eui64} className="shrink-0" />
               </div>
             )}
           </div>

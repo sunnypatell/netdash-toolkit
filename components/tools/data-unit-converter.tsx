@@ -92,14 +92,15 @@ export function DataUnitConverter() {
     return results === null ? null : new Map(results.map((r) => [r.unit.id, r]))
   }, [value, unit])
 
-  const error =
-    value.trim() === ""
-      ? ""
-      : selected === null
-        ? `"${unit}" is not a unit this converter knows`
-        : conversions === null
-          ? "Enter a value of zero or more"
-          : ""
+  // split by field so each control only claims the message its own value caused
+  const invalidUnit = value.trim() !== "" && selected === null
+  const invalidValue = value.trim() !== "" && selected !== null && conversions === null
+
+  const error = invalidUnit
+    ? `"${unit}" is not a unit this converter knows`
+    : invalidValue
+      ? "Enter a value of zero or more"
+      : ""
 
   return (
     <div className="tool-container">
@@ -111,7 +112,7 @@ export function DataUnitConverter() {
 
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription id="data-unit-converter-error">{error}</AlertDescription>
         </Alert>
       )}
 
@@ -133,13 +134,19 @@ export function DataUnitConverter() {
                 min={0}
                 step="any"
                 className="font-mono"
-                aria-invalid={error !== ""}
+                aria-invalid={invalidValue}
+                aria-describedby={invalidValue ? "data-unit-converter-error" : undefined}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="data-unit">Unit</Label>
               <Select value={unit} onValueChange={(v) => setQuery({ unit: v })}>
-                <SelectTrigger id="data-unit" className="w-full">
+                <SelectTrigger
+                  id="data-unit"
+                  className="w-full"
+                  aria-invalid={invalidUnit}
+                  aria-describedby={invalidUnit ? "data-unit-converter-error" : undefined}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">

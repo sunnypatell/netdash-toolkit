@@ -7,10 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertTriangle, ExternalLink, Loader2, Mail, Server } from "lucide-react"
+import { AlertTriangle, Download, ExternalLink, Loader2, Mail, Server } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
-import { copyText } from "@/lib/clipboard"
-import { toast } from "sonner"
+import { dateStamp, downloadTextFile } from "@/lib/download"
 import {
   COMMON_DKIM_SELECTORS,
   cleanDomain,
@@ -18,9 +17,8 @@ import {
   runEmailDiagnostics,
   type EmailDiagnosticResult,
 } from "@/lib/email-auth"
-import { ScoreCard } from "./score-card"
-
 // result panels only exist after a successful run, so they load on demand
+const ScoreCard = lazy(() => import("./score-card").then((m) => ({ default: m.ScoreCard })))
 const MXPanel = lazy(() => import("./mx").then((m) => ({ default: m.MXPanel })))
 const SPFPanel = lazy(() => import("./spf").then((m) => ({ default: m.SPFPanel })))
 const DKIMPanel = lazy(() => import("./dkim").then((m) => ({ default: m.DKIMPanel })))
@@ -34,7 +32,7 @@ const TAB_CLASS =
 const EXAMPLE_DOMAINS = ["gmail.com", "microsoft.com", "proton.me", "fastmail.com"]
 
 const PanelFallback = () => (
-  <p role="status" className="text-muted-foreground text-sm">
+  <p role="status" className="text-muted-foreground text-sm" data-panel-fallback>
     Loading panel...
   </p>
 )
@@ -50,19 +48,20 @@ export function EmailDiagnostics() {
   const [result, setResult] = useState<EmailDiagnosticResult | null>(null)
   const [progress, setProgress] = useState("")
 
-  const copyToClipboard = async (text: string) => {
-    if (await copyText(text)) {
-      toast.success("Copied to clipboard")
-    } else {
-      toast.error("Copy failed")
-    }
+  const exportResults = () => {
+    if (!result) return
+    downloadTextFile(
+      JSON.stringify(result, null, 2),
+      `email-diagnostics-${result.domain}-${dateStamp()}.json`,
+      "application/json"
+    )
   }
 
   const performDiagnostics = useCallback(async () => {
     const cleanedDomain = cleanDomain(domain)
     if (!cleanedDomain) {
       setDomainInvalid(true)
-      setError("Please enter a domain name")
+      setError("Enter a domain name")
       return
     }
     if (!looksLikeDomain(cleanedDomain)) {
@@ -97,6 +96,15 @@ export function EmailDiagnostics() {
         icon={Mail}
         title="Email Diagnostics"
         description="Check MX records, SPF, DKIM, and DMARC configuration for any domain"
+        actions={
+          result &&
+          status === "success" && (
+            <Button variant="outline" size="sm" onClick={exportResults}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+              Export
+            </Button>
+          )
+        }
       />
 
       <Card>
@@ -168,6 +176,12 @@ export function EmailDiagnostics() {
       {/* the score is the headline, so it is what gets announced. the tab panels
           below stay outside, or every tab switch re-reads the whole result. */}
       <div role="status" aria-busy={status === "loading"} className="space-y-4">
+        {status === "idle" && (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            The authentication score, MX records, SPF, DKIM and DMARC appear here. Nothing is looked
+            up until you run the diagnostics.
+          </p>
+        )}
         {result && status === "success" && (
           <>
             {result.incomplete && (
@@ -180,7 +194,9 @@ export function EmailDiagnostics() {
               </Alert>
             )}
 
-            <ScoreCard result={result} />
+            <Suspense fallback={<PanelFallback />}>
+              <ScoreCard result={result} />
+            </Suspense>
           </>
         )}
       </div>
@@ -205,13 +221,13 @@ export function EmailDiagnostics() {
 
             <TabsContent value="mx" className="space-y-4">
               <Suspense fallback={<PanelFallback />}>
-                <MXPanel domain={result.domain} result={result.mx} onCopy={copyToClipboard} />
+                <MXPanel domain={result.domain} result={result.mx} />
               </Suspense>
             </TabsContent>
 
             <TabsContent value="spf" className="space-y-4">
               <Suspense fallback={<PanelFallback />}>
-                <SPFPanel result={result.spf} onCopy={copyToClipboard} />
+                <SPFPanel result={result.spf} />
               </Suspense>
             </TabsContent>
 
@@ -223,7 +239,7 @@ export function EmailDiagnostics() {
 
             <TabsContent value="dmarc" className="space-y-4">
               <Suspense fallback={<PanelFallback />}>
-                <DMARCPanel domain={result.domain} result={result.dmarc} onCopy={copyToClipboard} />
+                <DMARCPanel domain={result.domain} result={result.dmarc} />
               </Suspense>
             </TabsContent>
           </Tabs>

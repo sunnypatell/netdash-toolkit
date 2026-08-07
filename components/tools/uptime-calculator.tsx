@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select"
 import { Clock, AlertTriangle, CheckCircle2 } from "lucide-react"
 import { ToolHeader } from "@/components/ui/tool-header"
+import { CopyButton } from "@/components/ui/copy-button"
 import {
   SLA_LEVELS,
   UPTIME_PERIODS,
@@ -49,6 +50,16 @@ export function UptimeCalculator() {
   const selected = results?.byPeriod.find((entry) => entry.period.id === period) ?? null
   const invalid = uptime.trim() !== "" && results === null
 
+  // the whole budget, not just the selected period, so a paste carries the table
+  const budgetText = results
+    ? [
+        `${results.availabilityPercent}% availability`,
+        ...results.byPeriod.map(
+          (entry) => `Per ${entry.period.label.toLowerCase()}: ${formatDowntime(entry.seconds)}`
+        ),
+      ].join("\n")
+    : ""
+
   return (
     <div className="tool-container">
       <ToolHeader
@@ -59,7 +70,9 @@ export function UptimeCalculator() {
 
       {invalid && (
         <Alert variant="destructive">
-          <AlertDescription>Enter an availability percentage between 0 and 100.</AlertDescription>
+          <AlertDescription id="uptime-error">
+            Enter an availability percentage between 0 and 100.
+          </AlertDescription>
         </Alert>
       )}
 
@@ -84,6 +97,7 @@ export function UptimeCalculator() {
                   step="any"
                   className="font-mono"
                   aria-invalid={invalid}
+                  aria-describedby={invalid ? "uptime-error" : undefined}
                 />
                 <span className="text-muted-foreground" aria-hidden="true">
                   %
@@ -157,7 +171,10 @@ export function UptimeCalculator() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Allowed downtime</CardTitle>
+            <CardTitle className="flex items-center justify-between gap-2">
+              Allowed downtime
+              {results && <CopyButton value={budgetText} />}
+            </CardTitle>
             <CardDescription>
               {results
                 ? `Maximum outage that still meets ${results.availabilityPercent}% availability`
@@ -202,9 +219,10 @@ export function UptimeCalculator() {
                 )}
               </div>
             ) : (
-              <div className="flex h-48 items-center justify-center">
-                <p className="text-muted-foreground">Enter a valid uptime percentage (0-100)</p>
-              </div>
+              <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+                Enter an availability percentage between 0 and 100 - the downtime budget appears
+                here.
+              </p>
             )}
           </CardContent>
         </Card>

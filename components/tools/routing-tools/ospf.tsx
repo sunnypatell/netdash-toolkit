@@ -219,7 +219,7 @@ export function OspfPanel({ config, onConfigChange }: OspfPanelProps) {
                   className="flex-1"
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Export Config
+                  Export
                 </Button>
               </div>
             </CardContent>
@@ -231,7 +231,7 @@ export function OspfPanel({ config, onConfigChange }: OspfPanelProps) {
         <Info className="h-4 w-4" aria-hidden="true" />
         <AlertDescription>
           <strong>OSPF Best Practices:</strong> Use area 0 as backbone, configure router-id
-          manually, and use passive-interface for networks that don't need OSPF neighbors.
+          manually, and use passive-interface for networks that don&apos;t need OSPF neighbors.
         </AlertDescription>
       </Alert>
     </div>

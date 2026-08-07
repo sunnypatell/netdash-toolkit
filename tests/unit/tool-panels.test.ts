@@ -183,7 +183,7 @@ describe("offline panels work standalone", () => {
     render(createElement(IPv6Panel, {}))
     fireEvent.change(screen.getByLabelText("IPv6 Address"), { target: { value: "nope" } })
     fireEvent.click(screen.getByRole("button", { name: "Generate" }))
-    expect(screen.getByText(/Not a valid IPv6 address/)).toBeTruthy()
+    expect(screen.getByText(/Invalid IPv6 address/)).toBeTruthy()
     expect(screen.getByLabelText("IPv6 Address").getAttribute("aria-invalid")).toBe("true")
   })
 })

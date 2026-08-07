@@ -33,7 +33,7 @@ export default function PastePanel({ target, hostLabel, onGrade }: PastePanelPro
     const blocks = parseResponseBlocks(pasted)
     if (blocks.length === 0) {
       setError(
-        "No headers found in that paste. Expected lines like “strict-transport-security: max-age=63072000”."
+        'No headers found in that paste. Expected lines like "strict-transport-security: max-age=63072000"'
       )
       toast.error("Could not parse any headers")
       return
@@ -77,8 +77,8 @@ export default function PastePanel({ target, hostLabel, onGrade }: PastePanelPro
         Grade pasted headers
       </Button>
       <p className="text-muted-foreground text-xs">
-        Fully offline - the paste never leaves your browser, and the grade is trustworthy because
-        you obtained the headers yourself.
+        Runs offline - the paste never leaves your browser, and the grade is trustworthy because you
+        obtained the headers yourself.
       </p>
       {error && (
         <Alert variant="destructive">

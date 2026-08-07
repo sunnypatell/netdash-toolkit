@@ -130,7 +130,7 @@ export function parseACLNetwork(input: string): ParsedACLNetwork {
   if (prefixStr !== undefined) {
     const prefix = Number.parseInt(prefixStr, 10)
     if (isNaN(prefix) || prefix < 0 || prefix > 32) {
-      throw new Error("Invalid prefix length")
+      throw new Error("Invalid prefix length (must be 0-32)")
     }
 
     const subnet = calculateIPv4Subnet(normalizedAddress, prefix)

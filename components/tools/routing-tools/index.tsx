@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, lazy, useMemo, useState } from "react"
 import { parseAsStringLiteral, useQueryState } from "nuqs"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Router } from "lucide-react"
@@ -20,16 +20,33 @@ import {
   type OSPFConfig,
   type StaticRoute,
 } from "@/lib/routing"
-import { OspfPanel } from "./ospf"
-import { EigrpPanel } from "./eigrp"
-import { StaticRoutesPanel } from "./static-routes"
-import { AdminDistancePanel } from "./admin-distance"
+
+// one chunk per tab: opening the tool no longer downloads all four generators
+const OspfPanel = lazy(() => import("./ospf").then((m) => ({ default: m.OspfPanel })))
+const EigrpPanel = lazy(() => import("./eigrp").then((m) => ({ default: m.EigrpPanel })))
+const StaticRoutesPanel = lazy(() =>
+  import("./static-routes").then((m) => ({ default: m.StaticRoutesPanel }))
+)
+const AdminDistancePanel = lazy(() =>
+  import("./admin-distance").then((m) => ({ default: m.AdminDistancePanel }))
+)
 
 const TABS = ["ospf", "eigrp", "static", "admin-distance"] as const
 type RoutingTab = (typeof TABS)[number]
 
 const TRIGGER_CLASS =
   "border-input bg-muted data-[state=active]:bg-background rounded-md border px-3 py-1.5 text-xs sm:rounded-sm sm:border-0 sm:bg-transparent sm:text-sm"
+
+function PanelFallback() {
+  return (
+    <p
+      data-panel-fallback
+      className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm"
+    >
+      Loading panel...
+    </p>
+  )
+}
 
 export function RoutingTools() {
   // the panel is deep-linkable; the network statement and route lists are not in
@@ -134,19 +151,27 @@ export function RoutingTools() {
         </TabsList>
 
         <TabsContent value="ospf" className="space-y-4">
-          <OspfPanel config={ospfConfig} onConfigChange={setOspfConfig} />
+          <Suspense fallback={<PanelFallback />}>
+            <OspfPanel config={ospfConfig} onConfigChange={setOspfConfig} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="eigrp" className="space-y-4">
-          <EigrpPanel config={eigrpConfig} onConfigChange={setEigrpConfig} />
+          <Suspense fallback={<PanelFallback />}>
+            <EigrpPanel config={eigrpConfig} onConfigChange={setEigrpConfig} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="static" className="space-y-4">
-          <StaticRoutesPanel routes={staticRoutes} onRoutesChange={setStaticRoutes} />
+          <Suspense fallback={<PanelFallback />}>
+            <StaticRoutesPanel routes={staticRoutes} onRoutesChange={setStaticRoutes} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="admin-distance" className="space-y-4">
-          <AdminDistancePanel />
+          <Suspense fallback={<PanelFallback />}>
+            <AdminDistancePanel />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

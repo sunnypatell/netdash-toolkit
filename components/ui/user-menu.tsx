@@ -36,9 +36,15 @@ import {
   Settings,
   Users,
 } from "lucide-react"
+import dynamic from "next/dynamic"
 import { useAuth } from "@/contexts/auth-context"
 import { useProjects } from "@/contexts/project-context"
-import { AccountSettingsDialog } from "@/components/ui/account-settings-dialog"
+// this dialog imports firebase/auth as values, so a static import puts the
+// whole auth sdk in the UserMenu chunk that every visitor fetches on mount
+const AccountSettingsDialog = dynamic(
+  () => import("@/components/ui/account-settings-dialog").then((m) => m.AccountSettingsDialog),
+  { ssr: false }
+)
 
 type AuthView = "signin" | "signup" | "reset"
 

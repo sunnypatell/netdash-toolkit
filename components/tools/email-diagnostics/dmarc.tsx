@@ -2,20 +2,19 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Copy, Shield } from "lucide-react"
+import { CopyButton } from "@/components/ui/copy-button"
+import { Shield } from "lucide-react"
 import type { DMARCResult } from "@/lib/email-auth"
 import { Issues } from "./issues"
 
 export interface DMARCPanelProps {
   domain: string
   result: DMARCResult
-  onCopy?: (text: string) => void
 }
 
 const ALIGNMENT_LABEL = { r: "relaxed", s: "strict" } as const
 
-export function DMARCPanel({ domain, result, onCopy }: DMARCPanelProps) {
+export function DMARCPanel({ domain, result }: DMARCPanelProps) {
   return (
     <Card>
       <CardHeader>
@@ -33,17 +32,7 @@ export function DMARCPanel({ domain, result, onCopy }: DMARCPanelProps) {
             <div className="bg-muted rounded-lg p-3">
               <div className="flex items-start justify-between gap-2">
                 <code className="text-sm break-all">{result.record}</code>
-                {onCopy && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 shrink-0 p-0"
-                    onClick={() => onCopy(result.record || "")}
-                    aria-label="Copy DMARC record"
-                  >
-                    <Copy className="h-3 w-3" aria-hidden="true" />
-                  </Button>
-                )}
+                <CopyButton value={result.record || ""} className="shrink-0" />
               </div>
             </div>
 

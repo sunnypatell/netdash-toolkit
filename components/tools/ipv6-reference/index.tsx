@@ -12,7 +12,11 @@ const IPv6FormatRules = lazy(() => import("./format"))
 
 const TABS = ["types", "special", "format"] as const
 
-const fallback = <p className="text-muted-foreground py-8 text-center text-sm">Loading reference</p>
+const fallback = (
+  <p className="text-muted-foreground py-8 text-center text-sm" data-panel-fallback>
+    Loading reference
+  </p>
+)
 
 export function IPv6Reference() {
   const [{ tab }, setQuery] = useQueryStates(

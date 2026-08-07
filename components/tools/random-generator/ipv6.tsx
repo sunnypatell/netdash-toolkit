@@ -14,13 +14,7 @@ import {
 import { RefreshCw } from "lucide-react"
 import { ResultList } from "./result-list"
 import type { IPv6Kind } from "@/lib/random-gen"
-
-export const IPV6_KINDS: { id: IPv6Kind; label: string }[] = [
-  { id: "global", label: "Global unicast (2000::/3, RFC 4291)" },
-  { id: "ula", label: "Unique local (fd00::/8, RFC 4193)" },
-  { id: "link-local", label: "Link-local (fe80::/10, RFC 4291)" },
-  { id: "documentation", label: "Documentation (2001:db8::/32, RFC 3849)" },
-]
+import { IPV6_KINDS } from "./kinds"
 
 interface Ipv6PanelProps {
   kind: IPv6Kind
@@ -29,7 +23,6 @@ interface Ipv6PanelProps {
   onKindChange: (kind: IPv6Kind) => void
   onCountChange: (count: number) => void
   onGenerate: () => void
-  onCopy: () => void
   onExport: () => void
   onClear: () => void
 }
@@ -41,7 +34,6 @@ export function Ipv6Panel({
   onKindChange,
   onCountChange,
   onGenerate,
-  onCopy,
   onExport,
   onClear,
 }: Ipv6PanelProps) {
@@ -90,13 +82,7 @@ export function Ipv6Panel({
           Generate IPv6 addresses
         </Button>
 
-        <ResultList
-          kind="IPv6 addresses"
-          values={values}
-          onCopy={onCopy}
-          onExport={onExport}
-          onClear={onClear}
-        />
+        <ResultList kind="IPv6 addresses" values={values} onExport={onExport} onClear={onClear} />
       </CardContent>
     </Card>
   )

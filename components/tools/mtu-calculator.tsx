@@ -47,6 +47,12 @@ export function MTUCalculator() {
     return calculateMTU(linkMTU, ip as IPVersion, transport as Transport, enabled)
   }, [mtu, ip, transport, enabled])
 
+  // every error is a statement about the effective mtu, which link mtu, ip
+  // version, transport and the encapsulation set all feed into
+  const errorIds = result?.errors.length
+    ? result.errors.map((_, index) => `mtu-error-${index}`).join(" ")
+    : undefined
+
   const toggleEncapsulation = (id: string) => {
     void setQuery({
       encap: enabled.includes(id) ? enabled.filter((other) => other !== id) : [...enabled, id],
@@ -84,6 +90,8 @@ export function MTUCalculator() {
                 value={mtu}
                 onChange={(e) => setQuery({ mtu: e.target.value })}
                 placeholder="1500"
+                aria-invalid={result === null || Boolean(errorIds)}
+                aria-describedby={result === null ? "link-mtu-error" : errorIds}
               />
               <p className="text-muted-foreground mt-1 text-xs">
                 Layer 3 MTU of the outer link. Ethernet&apos;s 1500 already excludes the 14-byte
@@ -94,7 +102,11 @@ export function MTUCalculator() {
             <div>
               <Label htmlFor="ip-version">Inner IP Version</Label>
               <Select value={ip} onValueChange={(value) => setQuery({ ip: value as IPVersion })}>
-                <SelectTrigger id="ip-version">
+                <SelectTrigger
+                  id="ip-version"
+                  aria-invalid={Boolean(errorIds)}
+                  aria-describedby={errorIds}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -110,7 +122,11 @@ export function MTUCalculator() {
                 value={transport}
                 onValueChange={(value) => setQuery({ transport: value as Transport })}
               >
-                <SelectTrigger id="transport">
+                <SelectTrigger
+                  id="transport"
+                  aria-invalid={Boolean(errorIds)}
+                  aria-describedby={errorIds}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -121,7 +137,8 @@ export function MTUCalculator() {
               </Select>
             </div>
 
-            <fieldset>
+            {/* described as a group: no single checkbox is malformed, the total overhead is */}
+            <fieldset aria-describedby={errorIds}>
               <legend className="text-sm font-medium">Encapsulation</legend>
               <div className="mt-2 space-y-3">
                 {ENCAPSULATIONS.map((option) => (
@@ -173,10 +190,10 @@ export function MTUCalculator() {
                 ]}
               />
 
-              {result.errors.map((message) => (
+              {result.errors.map((message, index) => (
                 <Alert key={message} variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>{message}</AlertDescription>
+                  <AlertDescription id={`mtu-error-${index}`}>{message}</AlertDescription>
                 </Alert>
               ))}
 
@@ -211,13 +228,13 @@ export function MTUCalculator() {
 
               <Button onClick={exportResults} variant="outline" className="w-full">
                 <Download className="mr-2 h-4 w-4" />
-                Export Results
+                Export
               </Button>
             </>
           ) : (
             <Alert>
               <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>Enter a link MTU above zero.</AlertDescription>
+              <AlertDescription id="link-mtu-error">Enter a link MTU above zero.</AlertDescription>
             </Alert>
           )}
         </div>

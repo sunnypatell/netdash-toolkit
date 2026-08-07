@@ -115,6 +115,6 @@ brew install --cask --no-quarantine netdash
 - **Notarization and Windows code signing.** Both need paid certificates. The gap is covered by verifiable provenance rather than by an OS trust prompt, which is a different guarantee, not an equivalent one.
 - **Reproducible builds.** The build is hermetic in the sense that dependencies come from a frozen lockfile and Electron binaries are checksum-verified by `@electron/get`, but nobody has shown that two independent runs produce identical bytes. Provenance tells you which builder produced a file; it does not let you rebuild it yourself and compare.
 
-:::caution[Verify Before You Trust the Tap]
+:::caution[Verify before you trust the tap]
 A green CI badge means the pipeline ran. It does not mean the file in your downloads folder is the file the pipeline produced. The `slsa-verifier` command at the top of this page is the one that closes that gap; the rest are conveniences.
 :::

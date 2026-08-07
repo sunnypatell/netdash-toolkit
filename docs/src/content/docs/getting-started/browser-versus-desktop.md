@@ -54,6 +54,6 @@ Search is worth one sentence of history, because it is true now and was not when
 
 The 12 networked tools fail cleanly rather than hanging, because every outbound request in the app carries an abort signal or a spawn timeout. The one exception worth naming is the secondary DoH client in `lib/email-auth.ts`, which has no abort signal and falls back to the browser's own connection timeout.
 
-:::tip[Which One Should You Install]
+:::tip[Which one should you install]
 If you do subnet math, config generation and reference lookups, the website is the whole product and installing anything is a waste of your time. Install the desktop app when you need ICMP, traceroute, a real port scan, or your LAN's ARP table.
 :::

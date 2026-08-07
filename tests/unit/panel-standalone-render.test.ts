@@ -36,6 +36,10 @@ vi.mock("@/lib/firebase", () => ({
   auth: null,
   db: null,
   googleProvider: null,
+  ensureAuth: async () => null,
+  ensureFirestore: async () => null,
+  hasStoredSession: async () => false,
+  writeSessionHint: () => {},
 }))
 
 if (!window.matchMedia) {

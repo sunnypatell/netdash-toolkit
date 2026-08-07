@@ -103,6 +103,6 @@ Nothing is passed through a shell. Commands are launched with `spawn(binary, arg
 
 Binary paths are hardcoded per platform (`/sbin/ping` on macOS, `/bin/ping` on Linux, bare `ping` on Windows) because a packaged app does not inherit a shell's `PATH`. Timeouts are enforced twice: `spawn`'s own `timeout` option, plus a manual `SIGTERM` escalating to `SIGKILL` after one second, resolving with partial output if any arrived. A non-zero exit code with output is treated as success, because `ping` exits `1` for an unreachable host and that is a result, not an error.
 
-:::note[No Elevation, By Design]
+:::note[No elevation, by design]
 The Windows installer requests `asInvoker` and nothing in the app asks for root. Everything above works as an unprivileged user, which is why ICMP goes through the system `ping` binary instead of a raw socket. If a diagnostic would need privileges, it is not in the app.
 :::
