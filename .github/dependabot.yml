@@ -53,3 +53,27 @@ updates:
       # ignored here.
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+
+  # /docs is a separate lockfile and was not covered by the root npm entry, so
+  # majors leaked through: astro 5 to 7 in #42, unmergeable while starlight
+  # peers on astro ^5.5.0
+  - package-ecosystem: "npm"
+    directory: "/docs"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 7
+    groups:
+      docs-all:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docs"
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
