@@ -698,7 +698,12 @@ export function ProjectManager() {
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
                   {/* Share button - only for owned projects */}
                   {isOwner && syncEnabled && (
-                    <Button size="sm" variant="outline" onClick={() => setIsShareDialogOpen(true)}>
+                    <Button
+                      aria-label="Share project"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsShareDialogOpen(true)}
+                    >
                       <Share2 className="h-4 w-4 sm:mr-2" />
                       <span className="hidden sm:inline">Share</span>
                     </Button>
@@ -708,7 +713,12 @@ export function ProjectManager() {
                   {canEdit && projectsTab === "my" && (
                     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                       <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" onClick={openEditDialog}>
+                        <Button
+                          aria-label="Edit project"
+                          size="sm"
+                          variant="outline"
+                          onClick={openEditDialog}
+                        >
                           <Edit className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Edit</span>
                         </Button>
@@ -757,6 +767,7 @@ export function ProjectManager() {
                   {/* Export - available for owners */}
                   {isOwner && currentProject && (
                     <Button
+                      aria-label="Export project"
                       size="sm"
                       variant="outline"
                       onClick={() => exportProject(currentProject)}
@@ -770,7 +781,7 @@ export function ProjectManager() {
                   {isOwner && currentProject && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button size="sm" variant="destructive">
+                        <Button aria-label="Delete project" size="sm" variant="destructive">
                           <Trash2 className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Delete</span>
                         </Button>
@@ -945,6 +956,7 @@ export function ProjectManager() {
                                         size="sm"
                                         variant="ghost"
                                         className="text-destructive"
+                                        aria-label={`Delete ${item.name}`}
                                       >
                                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                                       </Button>

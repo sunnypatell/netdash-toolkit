@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { anchorFocus } from "@/lib/focus"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,8 +36,7 @@ export function PlanningPanel({
   const [draftHosts, setDraftHosts] = useState("")
   const [draftDescription, setDraftDescription] = useState("")
 
-  // every infeasibility message weighs a host count against the base block, so
-  // both sides of that comparison point at it
+  // every infeasibility message weighs a host count against the base block, so both point at it
   const planDescribedBy = planFailed ? "vlsm-plan-error" : undefined
 
   const addRequirement = () => {
@@ -126,7 +126,7 @@ export function PlanningPanel({
             </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" data-focus-anchor tabIndex={-1}>
             {requirements.map((req) => (
               <div key={req.id} className="bg-muted/50 flex items-center space-x-4 rounded-lg p-3">
                 <div className="grid flex-1 grid-cols-1 gap-2 md:grid-cols-3">
@@ -159,9 +159,10 @@ export function PlanningPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() =>
+                  onClick={(event) => {
+                    anchorFocus(event.currentTarget)
                     onRequirementsChange(requirements.filter((other) => other.id !== req.id))
-                  }
+                  }}
                   aria-label={`Remove subnet requirement ${req.name || req.id}`}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />

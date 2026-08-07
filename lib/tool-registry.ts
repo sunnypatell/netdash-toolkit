@@ -107,7 +107,6 @@ export interface ToolDefinition {
   keywords: string[] // drives search
   // omitted means fully offline; declare it whenever the tool leaves the device
   runtime?: ToolRuntime
-  load: ToolLoader
 }
 
 // true when the tool never leaves the device
@@ -187,8 +186,6 @@ export const tools: ToolDefinition[] = [
     features: ["IPv4 & IPv6 support", "CIDR notation", "Wildcard masks"],
     popular: true,
     projectItemType: "subnet",
-    load: () =>
-      import("@/components/tools/subnet-calculator").then((m) => ({ default: m.SubnetCalculator })),
     keywords: ["subnet", "cidr", "network", "ip", "mask", "calculate"],
   },
   {
@@ -201,7 +198,6 @@ export const tools: ToolDefinition[] = [
     features: ["Optimal allocation", "Fragmentation analysis", "Export plans"],
     popular: true,
     projectItemType: "vlsm",
-    load: () => import("@/components/tools/vlsm-planner").then((m) => ({ default: m.VLSMPlanner })),
     keywords: ["vlsm", "subnet", "planning", "allocation", "network design"],
   },
   {
@@ -212,8 +208,6 @@ export const tools: ToolDefinition[] = [
     icon: Wifi,
     category: "calculators",
     features: ["Protocol stacks", "Overhead calculation", "Fragmentation warnings"],
-    load: () =>
-      import("@/components/tools/mtu-calculator").then((m) => ({ default: m.MTUCalculator })),
     keywords: ["mtu", "packet", "fragmentation", "overhead", "header"],
   },
   {
@@ -226,10 +220,6 @@ export const tools: ToolDefinition[] = [
     features: ["Transfer time", "Throughput calc", "Unit conversion"],
     popular: true,
     projectItemType: "bandwidth",
-    load: () =>
-      import("@/components/tools/bandwidth-calculator").then((m) => ({
-        default: m.BandwidthCalculator,
-      })),
     keywords: ["bandwidth", "transfer", "speed", "throughput", "download"],
   },
   {
@@ -243,8 +233,6 @@ export const tools: ToolDefinition[] = [
     features: ["Fiber & copper", "TIA-568 compliant", "Power budget"],
     popular: true,
     projectItemType: "cable",
-    load: () =>
-      import("@/components/tools/cable-calculator").then((m) => ({ default: m.CableCalculator })),
     keywords: ["cable", "fiber", "copper", "signal loss", "attenuation"],
   },
 
@@ -259,7 +247,6 @@ export const tools: ToolDefinition[] = [
     category: "ip-tools",
     features: ["Binary/Hex/Decimal", "IPv6 mapped", "All formats"],
     projectItemType: "ip-converter",
-    load: () => import("@/components/tools/ip-converter").then((m) => ({ default: m.IPConverter })),
     keywords: ["ip", "convert", "binary", "hex", "decimal", "ipv4"],
   },
   {
@@ -271,8 +258,6 @@ export const tools: ToolDefinition[] = [
     category: "ip-tools",
     features: ["CIDR to list", "Export CSV/JSON", "Network details"],
     projectItemType: "ip-range",
-    load: () =>
-      import("@/components/tools/ip-enumerator").then((m) => ({ default: m.IPEnumerator })),
     keywords: ["ip", "range", "list", "enumerate", "cidr", "hosts"],
   },
   {
@@ -283,7 +268,6 @@ export const tools: ToolDefinition[] = [
     icon: Zap,
     category: "ip-tools",
     features: ["Address compression", "EUI-64 generation", "Solicited-node multicast"],
-    load: () => import("@/components/tools/ipv6-tools").then((m) => ({ default: m.IPv6Tools })),
     keywords: ["ipv6", "eui64", "compression", "address", "multicast"],
   },
   {
@@ -300,8 +284,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       desktopOnly: ["reading the local ARP cache"],
     },
-    load: () =>
-      import("@/components/tools/conflict-checker").then((m) => ({ default: m.ConflictChecker })),
     keywords: ["ip", "mac", "conflict", "duplicate", "arp", "dhcp"],
   },
 
@@ -315,7 +297,6 @@ export const tools: ToolDefinition[] = [
     category: "network",
     features: ["Switch templates", "Trunk planning", "Cisco & Aruba"],
     projectItemType: "vlan",
-    load: () => import("@/components/tools/vlan-manager").then((m) => ({ default: m.VLANManager })),
     keywords: ["vlan", "switch", "trunk", "tagging", "802.1q"],
   },
   {
@@ -328,8 +309,6 @@ export const tools: ToolDefinition[] = [
     features: ["OSPF & EIGRP", "Static routes", "Admin distances"],
     popular: true,
     projectItemType: "routing",
-    load: () =>
-      import("@/components/tools/routing-tools").then((m) => ({ default: m.RoutingTools })),
     keywords: ["routing", "ospf", "eigrp", "static", "route", "gateway"],
   },
   {
@@ -341,8 +320,6 @@ export const tools: ToolDefinition[] = [
     category: "network",
     features: ["Standard & Extended", "Multi-vendor", "Rule validation"],
     projectItemType: "acl",
-    load: () =>
-      import("@/components/tools/acl-generator").then((m) => ({ default: m.ACLGenerator })),
     keywords: ["acl", "firewall", "access list", "security", "rules"],
   },
   {
@@ -354,8 +331,6 @@ export const tools: ToolDefinition[] = [
     category: "network",
     features: ["Channel planning", "Interference analysis", "WiFi config"],
     popular: true,
-    load: () =>
-      import("@/components/tools/wireless-tools").then((m) => ({ default: m.WirelessTools })),
     keywords: ["wifi", "wireless", "channel", "interference", "2.4ghz", "5ghz"],
   },
 
@@ -383,8 +358,6 @@ export const tools: ToolDefinition[] = [
       // tool is ping, so icmp is the sole desktop-only capability
       desktopOnly: ["real ICMP ping"],
     },
-    load: () =>
-      import("@/components/tools/network-tester").then((m) => ({ default: m.NetworkTester })),
     keywords: ["test", "connectivity", "rtt", "latency", "throughput"],
   },
   {
@@ -406,7 +379,6 @@ export const tools: ToolDefinition[] = [
       ],
       desktopOnly: ["direct DNS queries"],
     },
-    load: () => import("@/components/tools/dns-tools").then((m) => ({ default: m.DNSTools })),
     keywords: ["dns", "lookup", "doh", "resolver", "records"],
   },
   {
@@ -423,8 +395,6 @@ export const tools: ToolDefinition[] = [
       thirdParty: ["the host you enter"],
       desktopOnly: ["real ICMP ping", "system traceroute", "local network interface enumeration"],
     },
-    load: () =>
-      import("@/components/tools/ping-traceroute").then((m) => ({ default: m.PingTraceroute })),
     keywords: ["ping", "traceroute", "tracert", "icmp", "path"],
   },
   {
@@ -440,7 +410,6 @@ export const tools: ToolDefinition[] = [
       thirdParty: ["the host you enter"],
       desktopOnly: ["real TCP connect scanning"],
     },
-    load: () => import("@/components/tools/port-scanner").then((m) => ({ default: m.PortScanner })),
     keywords: ["port", "scan", "service", "open", "tcp"],
   },
   {
@@ -455,7 +424,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["the hostname you enter", "api.certspotter.com"],
     },
-    load: () => import("@/components/tools/ssl-checker").then((m) => ({ default: m.SSLChecker })),
     keywords: ["ssl", "tls", "certificate", "https", "security"],
   },
   {
@@ -470,7 +438,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["rdap.org", "the registry or RIR RDAP server rdap.org redirects to"],
     },
-    load: () => import("@/components/tools/whois-lookup").then((m) => ({ default: m.WhoisLookup })),
     keywords: ["whois", "domain", "registration", "ownership", "registrar"],
   },
   {
@@ -485,8 +452,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["cloudflare-dns.com", "dns.google"],
     },
-    load: () =>
-      import("@/components/tools/email-diagnostics").then((m) => ({ default: m.EmailDiagnostics })),
     keywords: ["email", "mx", "spf", "dkim", "dmarc", "smtp"],
   },
 
@@ -500,8 +465,6 @@ export const tools: ToolDefinition[] = [
     category: "generators",
     features: ["Random IPs", "Random MACs", "Bulk generation"],
     projectItemType: "random-gen",
-    load: () =>
-      import("@/components/tools/random-generator").then((m) => ({ default: m.RandomGenerator })),
     keywords: ["random", "generate", "ip", "mac", "uuid"],
   },
   {
@@ -514,8 +477,6 @@ export const tools: ToolDefinition[] = [
     features: ["WPA2/WPA3/WEP", "PNG/SVG export", "Project saving"],
     popular: true,
     projectItemType: "wifi-qr",
-    load: () =>
-      import("@/components/tools/wifi-qr-generator").then((m) => ({ default: m.WifiQRGenerator })),
     keywords: ["wifi", "qr", "code", "wireless", "connect"],
   },
 
@@ -528,8 +489,6 @@ export const tools: ToolDefinition[] = [
     icon: BookOpen,
     category: "reference",
     features: ["Port numbers", "Protocols", "Quick reference"],
-    load: () =>
-      import("@/components/tools/reference-hub").then((m) => ({ default: m.ReferenceHub })),
     keywords: ["reference", "ports", "protocols", "standards", "cheatsheet"],
   },
   {
@@ -544,7 +503,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["api.maclookup.app"],
     },
-    load: () => import("@/components/tools/oui-lookup").then((m) => ({ default: m.OUILookup })),
     keywords: ["oui", "mac", "vendor", "manufacturer", "ieee"],
   },
 
@@ -561,7 +519,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["api.hackertarget.com"],
     },
-    load: () => import("@/components/tools/http-headers").then((m) => ({ default: m.HTTPHeaders })),
     keywords: ["http", "headers", "response", "security", "web"],
   },
   {
@@ -577,8 +534,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["api.hackertarget.com", "observatory-api.mdn.mozilla.net"],
     },
-    load: () =>
-      import("@/components/tools/security-headers").then((m) => ({ default: m.SecurityHeaders })),
     keywords: ["security", "headers", "hsts", "csp", "xss"],
   },
   {
@@ -593,8 +548,6 @@ export const tools: ToolDefinition[] = [
       offline: false,
       thirdParty: ["api.hackertarget.com"],
     },
-    load: () =>
-      import("@/components/tools/redirect-checker").then((m) => ({ default: m.RedirectChecker })),
     keywords: ["redirect", "301", "302", "url", "chain"],
   },
   {
@@ -605,8 +558,6 @@ export const tools: ToolDefinition[] = [
     icon: Monitor,
     category: "diagnostics",
     features: ["Browser detection", "OS detection", "Device type"],
-    load: () =>
-      import("@/components/tools/user-agent-parser").then((m) => ({ default: m.UserAgentParser })),
     keywords: ["user agent", "browser", "device", "mobile", "desktop"],
   },
 
@@ -620,8 +571,6 @@ export const tools: ToolDefinition[] = [
     category: "devtools",
     features: ["Multiple algorithms", "File hashing", "Hash verification"],
     popular: true,
-    load: () =>
-      import("@/components/tools/hash-generator").then((m) => ({ default: m.HashGenerator })),
     keywords: ["hash", "sha256", "sha512", "sha1", "sha384", "checksum", "digest"],
   },
   {
@@ -633,10 +582,6 @@ export const tools: ToolDefinition[] = [
     category: "devtools",
     features: ["Customizable", "Strength meter", "Secure random"],
     popular: true,
-    load: () =>
-      import("@/components/tools/password-generator").then((m) => ({
-        default: m.PasswordGenerator,
-      })),
     keywords: ["password", "generator", "secure", "random", "strong"],
   },
   {
@@ -647,8 +592,6 @@ export const tools: ToolDefinition[] = [
     icon: FileCode,
     category: "devtools",
     features: ["Text encoding", "File encoding", "URL-safe (RFC 4648 §5)"],
-    load: () =>
-      import("@/components/tools/base64-encoder").then((m) => ({ default: m.Base64Encoder })),
     keywords: ["base64", "encode", "decode", "binary", "text", "url-safe", "base64url", "rfc4648"],
   },
   {
@@ -659,7 +602,6 @@ export const tools: ToolDefinition[] = [
     icon: Link2,
     category: "devtools",
     features: ["URL encoding", "Query builder", "Percent encoding"],
-    load: () => import("@/components/tools/url-encoder").then((m) => ({ default: m.URLEncoder })),
     keywords: ["url", "encode", "decode", "query", "percent"],
   },
   {
@@ -671,8 +613,6 @@ export const tools: ToolDefinition[] = [
     category: "devtools",
     features: ["Pretty print", "Validation", "Minify"],
     popular: true,
-    load: () =>
-      import("@/components/tools/json-formatter").then((m) => ({ default: m.JSONFormatter })),
     keywords: ["json", "format", "validate", "minify", "pretty"],
   },
   {
@@ -683,7 +623,6 @@ export const tools: ToolDefinition[] = [
     icon: Key,
     category: "devtools",
     features: ["Decode payload", "Expiry check", "Claim inspection"],
-    load: () => import("@/components/tools/jwt-decoder").then((m) => ({ default: m.JWTDecoder })),
     keywords: ["jwt", "token", "decode", "auth", "bearer"],
   },
   {
@@ -694,10 +633,6 @@ export const tools: ToolDefinition[] = [
     icon: Clock,
     category: "devtools",
     features: ["Unix to date", "Date to Unix", "Timezone support"],
-    load: () =>
-      import("@/components/tools/timestamp-converter").then((m) => ({
-        default: m.TimestampConverter,
-      })),
     keywords: ["timestamp", "unix", "epoch", "date", "time"],
   },
   {
@@ -708,7 +643,6 @@ export const tools: ToolDefinition[] = [
     icon: Timer,
     category: "devtools",
     features: ["Cron syntax", "Next runs", "Human readable"],
-    load: () => import("@/components/tools/cron-parser").then((m) => ({ default: m.CronParser })),
     keywords: ["cron", "schedule", "job", "timer", "expression"],
   },
   {
@@ -720,7 +654,6 @@ export const tools: ToolDefinition[] = [
     category: "devtools",
     features: ["Live matching", "Capture groups", "Common patterns"],
     popular: true,
-    load: () => import("@/components/tools/regex-tester").then((m) => ({ default: m.RegexTester })),
     keywords: ["regex", "regexp", "pattern", "match", "search"],
   },
   {
@@ -731,8 +664,6 @@ export const tools: ToolDefinition[] = [
     icon: Palette,
     category: "devtools",
     features: ["HEX/RGB/HSL", "Color picker", "CMYK support"],
-    load: () =>
-      import("@/components/tools/color-converter").then((m) => ({ default: m.ColorConverter })),
     keywords: ["color", "hex", "rgb", "hsl", "convert"],
   },
   {
@@ -743,8 +674,6 @@ export const tools: ToolDefinition[] = [
     icon: FileText,
     category: "devtools",
     features: ["Paragraphs", "Sentences", "Word count"],
-    load: () =>
-      import("@/components/tools/lorem-generator").then((m) => ({ default: m.LoremGenerator })),
     keywords: ["lorem", "ipsum", "placeholder", "text", "dummy"],
   },
 
@@ -757,10 +686,6 @@ export const tools: ToolDefinition[] = [
     icon: HardDrive,
     category: "calculators",
     features: ["Bits/Bytes", "SI units", "IEC binary units"],
-    load: () =>
-      import("@/components/tools/data-unit-converter").then((m) => ({
-        default: m.DataUnitConverter,
-      })),
     keywords: ["data", "unit", "convert", "bytes", "bits", "mb", "gb", "kb"],
   },
   {
@@ -771,8 +696,6 @@ export const tools: ToolDefinition[] = [
     icon: Clock,
     category: "calculators",
     features: ["Nines calculation", "Downtime per period", "SLA reference"],
-    load: () =>
-      import("@/components/tools/uptime-calculator").then((m) => ({ default: m.UptimeCalculator })),
     keywords: ["uptime", "sla", "availability", "downtime", "nines"],
   },
   {
@@ -783,10 +706,6 @@ export const tools: ToolDefinition[] = [
     icon: Calculator,
     category: "calculators",
     features: ["Latency calc", "BDP throughput", "IP math"],
-    load: () =>
-      import("@/components/tools/network-calculator").then((m) => ({
-        default: m.NetworkCalculator,
-      })),
     keywords: ["latency", "throughput", "bdp", "rtt", "window", "ip math"],
   },
 
@@ -799,8 +718,6 @@ export const tools: ToolDefinition[] = [
     icon: Cpu,
     category: "ip-tools",
     features: ["All MAC formats", "EUI-64", "Address properties"],
-    load: () =>
-      import("@/components/tools/mac-formatter").then((m) => ({ default: m.MACFormatter })),
     keywords: ["mac", "address", "format", "eui64", "cisco", "ieee"],
   },
   {
@@ -811,10 +728,6 @@ export const tools: ToolDefinition[] = [
     icon: Binary,
     category: "ip-tools",
     features: ["CIDR to mask", "Wildcard calc", "Quick reference"],
-    load: () =>
-      import("@/components/tools/subnet-mask-converter").then((m) => ({
-        default: m.SubnetMaskConverter,
-      })),
     keywords: ["subnet", "mask", "cidr", "wildcard", "convert"],
   },
 
@@ -827,8 +740,6 @@ export const tools: ToolDefinition[] = [
     icon: Server,
     category: "reference",
     features: ["Common ports", "Service lookup", "Categorized"],
-    load: () =>
-      import("@/components/tools/port-reference").then((m) => ({ default: m.PortReference })),
     keywords: ["port", "reference", "service", "tcp", "udp"],
   },
   {
@@ -839,8 +750,6 @@ export const tools: ToolDefinition[] = [
     icon: Network,
     category: "reference",
     features: ["All CIDRs", "Private ranges", "Mask table"],
-    load: () =>
-      import("@/components/tools/cidr-reference").then((m) => ({ default: m.CIDRReference })),
     keywords: ["cidr", "reference", "subnet", "mask", "cheatsheet"],
   },
   {
@@ -851,10 +760,6 @@ export const tools: ToolDefinition[] = [
     icon: FileText,
     category: "reference",
     features: ["IP protocols", "ICMP types", "Error codes"],
-    load: () =>
-      import("@/components/tools/protocol-reference").then((m) => ({
-        default: m.ProtocolReference,
-      })),
     keywords: ["protocol", "icmp", "tcp", "udp", "reference"],
   },
   {
@@ -865,8 +770,6 @@ export const tools: ToolDefinition[] = [
     icon: Globe2,
     category: "reference",
     features: ["Address types", "Special addresses", "Format rules"],
-    load: () =>
-      import("@/components/tools/ipv6-reference").then((m) => ({ default: m.IPv6Reference })),
     keywords: ["ipv6", "reference", "address", "prefix", "multicast"],
   },
 ]

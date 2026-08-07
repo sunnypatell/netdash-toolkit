@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
+import { loadTool } from "@/lib/tool-loaders"
 
 // automated wcag 2.2 aa gate. axe cannot prove conformance on its own - roughly
 // a third of the success criteria need human judgement - but it does catch the
@@ -53,7 +54,7 @@ describe("wcag 2.2 aa: every tool", () => {
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s has no detectable violations",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>

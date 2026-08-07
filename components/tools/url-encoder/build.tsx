@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { anchorFocus } from "@/lib/focus"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -50,7 +51,7 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-focus-anchor tabIndex={-1}>
           {params.map((param, index) => (
             <div key={index} className="flex items-center gap-2">
               <Input
@@ -73,7 +74,10 @@ export function BuildPanel({ base, onBaseChange, params, onParamsChange }: Build
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onParamsChange(params.filter((_, i) => i !== index))}
+                onClick={(event) => {
+                  anchorFocus(event.currentTarget)
+                  onParamsChange(params.filter((_, i) => i !== index))
+                }}
                 disabled={params.length === 1}
                 aria-label={`Remove parameter ${index + 1}`}
               >

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { anchorFocus } from "@/lib/focus"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -139,7 +140,7 @@ export function PortsPanel({ ports, vlans, onPortsChange }: PortsPanelProps) {
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-focus-anchor tabIndex={-1}>
           {ports.map((port) => (
             <div
               key={port.rowId}
@@ -170,7 +171,10 @@ export function PortsPanel({ ports, vlans, onPortsChange }: PortsPanelProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onPortsChange(ports.filter((other) => other.rowId !== port.rowId))}
+                onClick={(event) => {
+                  anchorFocus(event.currentTarget)
+                  onPortsChange(ports.filter((other) => other.rowId !== port.rowId))
+                }}
                 className="shrink-0"
                 aria-label={`Delete port ${port.name}`}
               >

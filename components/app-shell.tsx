@@ -79,10 +79,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* the scroll container is the wrapper, not <main>: a <footer> nested in
             <main> gets no contentinfo landmark, so the site footer was invisible
             to landmark navigation */}
-        <div className="scrollbar-slim flex-1 overflow-auto">
+        {/* a column so main can grow: without it a short page, or one still
+            loading, leaves the footer sitting in the middle of the viewport
+            until content arrives and shoves it down */}
+        <div className="scrollbar-slim flex flex-1 flex-col overflow-auto">
           <main
             id="main-content"
-            className="mx-auto w-full max-w-350 px-3 py-4 sm:px-6 sm:py-6 lg:px-8"
+            className="mx-auto w-full max-w-350 flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8"
             tabIndex={-1}
           >
             {children}

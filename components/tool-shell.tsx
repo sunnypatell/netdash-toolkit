@@ -11,6 +11,7 @@ import {
   type ToolDefinition,
 } from "@/lib/tool-registry"
 import { rememberToolVisit } from "@/components/command-palette"
+import { loadTool } from "@/lib/tool-loaders"
 
 const RELATED_MAX = 6
 
@@ -113,7 +114,7 @@ export function ToolShell({ slug }: { slug: string }) {
   }, [slug])
 
   const tool = useMemo(() => getToolBySlug(slug), [slug])
-  const Tool = useMemo(() => (tool ? lazy(tool.load) : null), [tool])
+  const Tool = useMemo(() => (tool ? lazy(() => loadTool(tool.slug)) : null), [tool])
 
   // unreachable in practice: dynamicParams=false 404s unknown slugs at the
   // router before this renders

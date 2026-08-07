@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
+import { loadTool } from "@/lib/tool-loaders"
 
 // mounts all 48 tools for real. a tool that throws on mount, imports something
 // missing, or crashes in a provider fails here in seconds, which is the cheap
@@ -34,7 +35,7 @@ describe("every registered tool mounts", () => {
         errors.push(args)
       })
 
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       expect(Tool, `${slug} exported no component`).toBeTypeOf("function")
 
@@ -66,7 +67,7 @@ describe("every registered tool mounts", () => {
 
 describe("tool accessibility basics", () => {
   it.each(tools.map((t) => [t.slug, t] as const))("%s exposes a heading", async (slug, tool) => {
-    const mod = await tool.load()
+    const mod = await loadTool(tool.slug)
     const Tool = mod.default
     const { container } = render(
       <Providers>

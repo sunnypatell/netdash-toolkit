@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { anchorFocus } from "@/lib/focus"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -101,7 +102,7 @@ export function VlansPanel({ vlans, onVlansChange }: VlansPanelProps) {
           </Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-4" data-focus-anchor tabIndex={-1}>
           {vlans.map((vlan) => (
             <Card key={vlan.rowId} className="p-4">
               <div className="flex items-start justify-between gap-2">
@@ -175,7 +176,10 @@ export function VlansPanel({ vlans, onVlansChange }: VlansPanelProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onVlansChange(vlans.filter((other) => other.rowId !== vlan.rowId))}
+                  onClick={(event) => {
+                    anchorFocus(event.currentTarget)
+                    onVlansChange(vlans.filter((other) => other.rowId !== vlan.rowId))
+                  }}
                   className="shrink-0"
                   aria-label={`Delete VLAN ${vlan.id} ${vlan.name}`}
                 >

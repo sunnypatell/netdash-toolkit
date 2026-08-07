@@ -187,3 +187,25 @@ describe("tool registry", () => {
     expect(getToolBySlug("does-not-exist")).toBeUndefined()
   })
 })
+
+describe("every tool has exactly one loader", () => {
+  // the loaders left the registry so app/layout would stop hoisting all 48 tool
+  // modules into the script every page loads. nothing in the type system ties
+  // the two lists together any more, so a new tool can ship with no loader and
+  // only fail at runtime when someone opens it.
+  it("registry and loader map agree", async () => {
+    const { toolLoaders } = await import("@/lib/tool-loaders")
+    const registrySlugs = tools.map((t) => t.slug).sort()
+    const loaderSlugs = Object.keys(toolLoaders).sort()
+    expect(registrySlugs.length, "no tools, so this proves nothing").toBeGreaterThan(0)
+    expect(loaderSlugs).toEqual(registrySlugs)
+  })
+
+  it("every loader actually resolves to a component", async () => {
+    const { loadTool } = await import("@/lib/tool-loaders")
+    for (const tool of tools) {
+      const mod = await loadTool(tool.slug)
+      expect(typeof mod.default, `${tool.slug} loader returned no component`).toBe("function")
+    }
+  }, 60000)
+})

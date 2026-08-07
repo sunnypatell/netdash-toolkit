@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { getToolBySlug, tools } from "@/lib/tool-registry"
 import { settle, settled } from "./settle"
+import { loadTool } from "@/lib/tool-loaders"
 
 // wcag 2.2 sc 4.1.3 status messages (aa) and sc 3.3.1 error identification (a):
 // https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html
@@ -60,7 +61,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
   it.each(ASYNC_TOOLS.map((t) => [t.slug, t] as const))(
     "%s renders at least one live region",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>
@@ -83,7 +84,7 @@ describe("4.1.3 status messages: async tools announce their results", () => {
   it.each(ASYNC_TOOLS.map((t) => [t.slug, t] as const))(
     "%s uses no aria-live=assertive",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>
@@ -111,7 +112,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
   it("the resting scan still has something to inspect", async () => {
     let withDescribedBy = 0
     for (const tool of tools) {
-      const Tool = (await tool.load()).default
+      const Tool = (await loadTool(tool.slug)).default
       const { container } = render(
         <Providers>
           <Tool />
@@ -135,7 +136,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s resolves the describedby references it renders",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>
@@ -167,7 +168,7 @@ describe("3.3.1 error identification: every message is reachable from its field"
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s pairs every aria-invalid field with a description",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>
@@ -234,7 +235,7 @@ describe("3.3.1 / 4.1.3: the association holds once a real error is produced", (
     const user = userEvent.setup()
     const tool = getToolBySlug("email-diagnostics")
     expect(tool, "email-diagnostics left the registry").toBeTruthy()
-    const Tool = (await tool!.load()).default
+    const Tool = (await loadTool(tool!.slug)).default
     const { container } = render(
       <Providers>
         <Tool />

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
 import { tools } from "@/lib/tool-registry"
 import { settled } from "./settle"
+import { loadTool } from "@/lib/tool-loaders"
 
 // wcag 2.2 sc 2.5.3 label in name, level a:
 // https://www.w3.org/WAI/WCAG22/Understanding/label-in-name.html
@@ -106,7 +107,7 @@ describe("2.5.3 label in name", () => {
   it.each(tools.map((t) => [t.slug, t] as const))(
     "%s: every visible label appears in its accessible name",
     async (slug, tool) => {
-      const mod = await tool.load()
+      const mod = await loadTool(tool.slug)
       const Tool = mod.default
       const { container } = render(
         <Providers>

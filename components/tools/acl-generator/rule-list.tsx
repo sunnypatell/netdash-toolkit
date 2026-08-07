@@ -1,6 +1,7 @@
 "use client"
 
 import type { ReactNode } from "react"
+import { anchorFocus } from "@/lib/focus"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -30,7 +31,9 @@ export function RulesCard({ count, onAdd, children }: RulesCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="max-h-96 space-y-4 overflow-y-auto">{children}</div>
+        <div className="max-h-96 space-y-4 overflow-y-auto" data-focus-anchor tabIndex={-1}>
+          {children}
+        </div>
       </CardContent>
     </Card>
   )
@@ -65,7 +68,10 @@ export function RuleShell({ index, validation, onDelete, children }: RuleShellPr
             ))}
         </div>
         <Button
-          onClick={onDelete}
+          onClick={(event) => {
+            anchorFocus(event.currentTarget)
+            onDelete()
+          }}
           size="sm"
           variant="ghost"
           className="text-destructive h-8 w-8 p-0"
