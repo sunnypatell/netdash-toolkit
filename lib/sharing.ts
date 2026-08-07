@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   setDoc,
-  deleteDoc,
   query,
   where,
   getDocs,
@@ -146,6 +145,27 @@ export async function unshareProject(
     batch.delete(docSnap.ref)
   })
 
+  await batch.commit()
+}
+
+/**
+ * Delete every share record for a project
+ * Called when the owner deletes the project, so collaborators stop seeing a
+ * project that no longer exists and the records do not sit in firestore forever
+ */
+export async function deleteAllSharesForProject(ownerId: string, projectId: string): Promise<void> {
+  if (!db) return
+
+  const sharesQuery = query(
+    collection(db, "projectShares"),
+    where("ownerId", "==", ownerId),
+    where("projectId", "==", projectId)
+  )
+  const snapshots = await getDocs(sharesQuery)
+  if (snapshots.empty) return
+
+  const batch = writeBatch(db)
+  snapshots.forEach((docSnap) => batch.delete(docSnap.ref))
   await batch.commit()
 }
 

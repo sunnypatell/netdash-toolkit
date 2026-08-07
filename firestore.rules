@@ -51,9 +51,12 @@ service cloud.firestore {
 
     // Project shares collection - for querying "shared with me"
     match /projectShares/{shareId} {
-      // Read: user can read shares where they are the recipient
+      // Read: the recipient, and the owner. the owner half is not optional:
+      // unshareProject and updateSharePermission both query this collection by
+      // sharedWithUserId, and without it firestore denies the whole query.
       allow read: if isAuthenticated() &&
-        resource.data.sharedWithUserId == request.auth.uid;
+        (resource.data.sharedWithUserId == request.auth.uid ||
+         resource.data.ownerId == request.auth.uid);
 
       // Create: only project owner can create shares
       allow create: if isAuthenticated() &&

@@ -1,21 +1,21 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 import {
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  linkWithCredential,
-  fetchSignInMethodsForEmail,
-  GoogleAuthProvider,
-  signInWithCredential,
-  type User,
-  type AuthError,
-} from "firebase/auth"
-import { auth, googleProvider, isFirebaseConfigured } from "@/lib/firebase"
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react"
+import type { AuthError, OAuthCredential, User } from "firebase/auth"
+import {
+  ensureAuth,
+  hasStoredSession,
+  isFirebaseConfigured,
+  writeSessionHint,
+} from "@/lib/firebase"
 
 interface AuthContextType {
   user: User | null
@@ -34,6 +34,14 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+// held rather than re-requested, so concurrent sign-in paths share one instance
+let authApi: Promise<typeof import("firebase/auth")> | null = null
+
+function loadAuthApi() {
+  authApi ??= import("firebase/auth")
+  return authApi
+}
 
 // Helper to get user-friendly error messages
 const getAuthErrorMessage = (error: AuthError): string => {
@@ -69,39 +77,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [pendingCredential, setPendingCredential] = useState<ReturnType<
-    typeof GoogleAuthProvider.credentialFromError
-  > | null>(null)
+  const [pendingCredential, setPendingCredential] = useState<OAuthCredential | null>(null)
+  // flipped by any sign-in attempt, so the listener attaches for a visitor who
+  // arrived signed out and therefore never loaded the sdk on mount
+  const [authRequested, setAuthRequested] = useState(false)
   const isConfigured = isFirebaseConfigured()
 
   const clearError = useCallback(() => setError(null), [])
 
   useEffect(() => {
-    if (!auth) {
+    if (!isFirebaseConfigured()) {
       setLoading(false)
       return
     }
 
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      (user) => {
-        setUser(user)
-        setLoading(false)
-        setError(null)
-      },
-      (error) => {
-        console.error("Auth state change error:", error)
-        setError(error.message)
-        setLoading(false)
-      }
-    )
+    let cancelled = false
+    let unsubscribe: (() => void) | null = null
 
-    return () => unsubscribe()
-  }, [])
+    const attach = async () => {
+      const services = await ensureAuth()
+      if (cancelled || !services) {
+        if (!cancelled) setLoading(false)
+        return
+      }
+      const { onAuthStateChanged } = await loadAuthApi()
+      if (cancelled) return
+
+      unsubscribe = onAuthStateChanged(
+        services.auth,
+        (user) => {
+          setUser(user)
+          setLoading(false)
+          setError(null)
+          // the next cold load reads this instead of the sdk
+          writeSessionHint(!!user)
+        },
+        (error) => {
+          console.error("Auth state change error:", error)
+          setError(error.message)
+          setLoading(false)
+        }
+      )
+    }
+
+    const start = async () => {
+      // a visitor who has never signed in must not download the sdk to learn
+      // that they are signed out
+      if (!authRequested && !(await hasStoredSession())) {
+        if (!cancelled) setLoading(false)
+        return
+      }
+      await attach()
+    }
+
+    // every await in here is now a network fetch for a chunk. a rejected one
+    // used to escape as an unhandled rejection with `loading` still true, which
+    // is a header spinner that never stops.
+    start().catch((error: unknown) => {
+      console.error("Failed to initialise Firebase auth:", error)
+      if (!cancelled) setLoading(false)
+    })
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [authRequested])
 
   // Initialize Google One Tap (requires NEXT_PUBLIC_GOOGLE_CLIENT_ID env var)
+  // the handler closes over pendingCredential, so naming it as a dep would tear
+  // down and reload the gsi script every time that changes
+  const oneTapRef = useRef<(response: { credential: string }) => void>(() => {})
+
   useEffect(() => {
-    if (!isConfigured || !auth || typeof window === "undefined") return
+    if (!isConfigured || typeof window === "undefined") return
 
     // Wait for auth state to be determined before showing One Tap
     if (loading) return
@@ -132,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: googleClientId,
-          callback: handleGoogleOneTap,
+          callback: (response: { credential: string }) => oneTapRef.current(response),
           auto_select: true,
           cancel_on_tap_outside: false,
           use_fedcm_for_prompt: true, // Use FedCM for better UX in Chrome
@@ -151,12 +200,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isConfigured, loading, user])
 
   const handleGoogleOneTap = async (response: { credential: string }) => {
-    if (!auth) return
+    const services = await ensureAuth()
+    if (!services) return
+    setAuthRequested(true)
 
     try {
       setError(null)
+      const { GoogleAuthProvider, signInWithCredential, linkWithCredential } = await loadAuthApi()
       const credential = GoogleAuthProvider.credential(response.credential)
-      const result = await signInWithCredential(auth, credential)
+      const result = await signInWithCredential(services.auth, credential)
 
       // Check if we need to link accounts
       if (pendingCredential && result.user) {
@@ -173,16 +225,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(getAuthErrorMessage(authError))
     }
   }
+  oneTapRef.current = handleGoogleOneTap
 
   const signInWithGoogle = async (): Promise<boolean> => {
-    if (!auth || !googleProvider) {
+    const services = await ensureAuth()
+    if (!services) {
       setError("Firebase authentication is not configured")
       return false
     }
+    setAuthRequested(true)
 
     try {
       setError(null)
-      const result = await signInWithPopup(auth, googleProvider)
+      const { signInWithPopup, linkWithCredential } = await loadAuthApi()
+      const result = await signInWithPopup(services.auth, services.googleProvider)
 
       // Check if we need to link accounts
       if (pendingCredential && result.user) {
@@ -199,6 +255,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Handle account exists with different credential
       if (authError.code === "auth/account-exists-with-different-credential") {
+        const { GoogleAuthProvider } = await loadAuthApi()
         const credential = GoogleAuthProvider.credentialFromError(authError)
         if (credential) {
           setPendingCredential(credential)
@@ -212,14 +269,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) {
+    const services = await ensureAuth()
+    if (!services) {
       setError("Firebase authentication is not configured")
       return false
     }
+    setAuthRequested(true)
 
     try {
       setError(null)
-      const result = await signInWithEmailAndPassword(auth, email, password)
+      const { signInWithEmailAndPassword, linkWithCredential } = await loadAuthApi()
+      const result = await signInWithEmailAndPassword(services.auth, email, password)
 
       // Check if we need to link accounts
       if (pendingCredential && result.user) {
@@ -240,15 +300,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUpWithEmail = async (email: string, password: string): Promise<boolean> => {
-    if (!auth) {
+    const services = await ensureAuth()
+    if (!services) {
       setError("Firebase authentication is not configured")
       return false
     }
+    setAuthRequested(true)
 
     try {
       setError(null)
+      const { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } = await loadAuthApi()
       // Check if email is already in use with different provider
-      const methods = await fetchSignInMethodsForEmail(auth, email)
+      const methods = await fetchSignInMethodsForEmail(services.auth, email)
       if (methods.length > 0 && !methods.includes("password")) {
         setError(
           `This email is already registered with ${methods[0]}. Please sign in with that method first, then link your accounts.`
@@ -256,7 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false
       }
 
-      await createUserWithEmailAndPassword(auth, email, password)
+      await createUserWithEmailAndPassword(services.auth, email, password)
       return true
     } catch (error) {
       const authError = error as AuthError
@@ -267,13 +330,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const resetPassword = async (email: string): Promise<boolean> => {
-    if (!auth) {
+    const services = await ensureAuth()
+    if (!services) {
       setError("Firebase authentication is not configured")
       return false
     }
 
     try {
       setError(null)
+      const { sendPasswordResetEmail } = await loadAuthApi()
       // Use custom action URL for styled password reset page
       const actionCodeSettings = {
         url:
@@ -282,7 +347,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : "https://netdash-toolkit.vercel.app/auth/action",
         handleCodeInApp: false,
       }
-      await sendPasswordResetEmail(auth, email, actionCodeSettings)
+      await sendPasswordResetEmail(services.auth, email, actionCodeSettings)
       return true
     } catch (error) {
       const authError = error as AuthError
@@ -293,7 +358,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!auth) {
+    const services = await ensureAuth()
+    if (!services) {
       return
     }
 
@@ -303,7 +369,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.disableAutoSelect()
       }
-      await firebaseSignOut(auth)
+      const { signOut: firebaseSignOut } = await loadAuthApi()
+      await firebaseSignOut(services.auth)
+      // cleared here as well as in the listener, so a cold load after signing
+      // out never pays for the sdk again
+      writeSessionHint(false)
       // Re-enable One Tap prompt after sign out
       if (window.google?.accounts?.id) {
         window.google.accounts.id.prompt()

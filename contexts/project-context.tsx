@@ -9,22 +9,23 @@ import {
   useRef,
   type ReactNode,
 } from "react"
-import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  query,
-  orderBy,
-  onSnapshot,
-  getDoc,
-} from "firebase/firestore"
-import { db, isFirebaseConfigured } from "@/lib/firebase"
+import { ensureFirestore, isFirebaseConfigured } from "@/lib/firebase"
 import { useAuth } from "./auth-context"
-import { updateUserIndex, subscribeToSharedProjects } from "@/lib/sharing"
 import type { ShareEntry, ProjectShare, Permission } from "@/types/sharing"
 import type { ProjectItemType } from "@/lib/tool-registry"
 import { toast } from "sonner"
+
+// firestore and the sharing helpers are the single largest chunk in the app, so
+// they load only once a signed-in session actually reaches the cloud. the
+// promise is held rather than re-requested: three effects open the cloud at
+// once on sign-in, and one import keeps them on one module instance.
+let firestoreApi: Promise<typeof import("firebase/firestore")> | null = null
+
+async function openCloud() {
+  firestoreApi ??= import("firebase/firestore")
+  const [firestore, api] = await Promise.all([ensureFirestore(), firestoreApi])
+  return firestore ? { firestore, api } : null
+}
 
 // Types for project items
 export interface ProjectItem {
@@ -96,25 +97,48 @@ const STORAGE_KEY = "netdash-projects"
 // carries a deleted project used to re-upload it to firestore, and a refresh
 // then read it straight back. an in-memory guard cannot survive that refresh.
 const TOMBSTONE_KEY = "netdash-deleted-projects"
+// a browser that deletes but never signs in never gets a snapshot to retire
+// these, so the newest few hundred are all that is kept
+const TOMBSTONE_LIMIT = 200
 
-function readTombstones(): Set<string> {
+// project id -> the uid whose cloud copy still has to go, or null when the
+// delete was made signed out. only that account's snapshot can retire it: a
+// second account's snapshot never carries the document, so treating it as proof
+// of deletion dropped the tombstone and let the first account restore it.
+type Tombstones = Map<string, string | null>
+
+function readTombstones(): Tombstones {
+  const out: Tombstones = new Map()
   try {
     const raw = localStorage.getItem(TOMBSTONE_KEY)
     const parsed: unknown = raw ? JSON.parse(raw) : []
-    return new Set(
-      Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : []
-    )
+    if (!Array.isArray(parsed)) return out
+    for (const entry of parsed) {
+      // bare strings are the pre-uid format written by an older build
+      if (typeof entry === "string") out.set(entry, null)
+      else if (Array.isArray(entry) && typeof entry[0] === "string") {
+        out.set(entry[0], typeof entry[1] === "string" ? entry[1] : null)
+      }
+    }
   } catch {
-    return new Set()
+    return new Map()
   }
+  return out
 }
 
-function writeTombstones(ids: Set<string>) {
+// read-modify-write against storage, not against this tab's copy: a second tab
+// deleting at the same time would otherwise have its tombstone overwritten and
+// its project re-uploaded by whichever tab wrote last
+function updateTombstones(mutate: (ids: Tombstones) => void): Tombstones {
+  const ids = readTombstones()
+  mutate(ids)
+  const capped: Tombstones = new Map([...ids].slice(-TOMBSTONE_LIMIT))
   try {
-    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...ids]))
+    localStorage.setItem(TOMBSTONE_KEY, JSON.stringify([...capped]))
   } catch {
     // a full or blocked localStorage must not break deletion
   }
+  return capped
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
@@ -136,17 +160,25 @@ function isImportableProject(
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  // authLoading separates "not signed in" from "we do not know yet". only the
+  // second may refuse a delete; refusing the first leaves a signed-out visitor
+  // unable to remove anything they created.
+  const { user, loading: authLoading } = useAuth()
   const [projects, setProjects] = useState<Project[]>([])
   const [sharedProjects, setSharedProjects] = useState<SharedProject[]>([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const syncEnabled = !!(user && isFirebaseConfigured() && db)
+  // no longer gated on `db`: firestore is loaded on demand, so requiring an
+  // already-initialised instance here would mean it never got a reason to load
+  const syncEnabled = !!(user && isFirebaseConfigured())
 
   // Track projects being deleted to prevent listener from restoring them.
   // seeded from storage so a delete survives a reload while the cloud copy is
   // still being removed.
-  const deletingIdsRef = useRef<Set<string>>(new Set())
+  const deletingIdsRef = useRef<Tombstones>(new Map())
+  // ids whose cloud delete is currently in flight, so the snapshot retry below
+  // never issues a second write for the same document
+  const inFlightDeletesRef = useRef<Set<string>>(new Set())
   // the snapshot callback below outlives the render that created it, so it
   // must read projects through a ref rather than the captured array
   const localProjectsRef = useRef<Project[]>([])
@@ -204,12 +236,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Update user profile and user index for sharing
   useEffect(() => {
-    if (!syncEnabled || !db || !user) return
+    if (!syncEnabled || !user) return
 
-    const firestore = db // Capture non-null reference
     const updateUserData = async () => {
       try {
-        // Update user profile document
+        const cloud = await openCloud()
+        if (!cloud) return
+        const { firestore, api } = cloud
+        const { doc, setDoc } = api
+        const { updateUserIndex } = await import("@/lib/sharing")
+
+        // only what a collaborator chip renders. every signed in user can read
+        // this doc, so nothing goes in it that the sharing ui does not need.
         const userRef = doc(firestore, "users", user.uid)
         await setDoc(
           userRef,
@@ -217,8 +255,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
             email: user.email,
             displayName: user.displayName || null,
             photoURL: user.photoURL || null,
-            lastSeen: Date.now(),
-            provider: user.providerData[0]?.providerId || "unknown",
           },
           { merge: true }
         )
@@ -237,132 +273,204 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Sync own projects with Firestore
   useEffect(() => {
-    if (!syncEnabled || !db || !user) {
+    if (!syncEnabled || !user) {
       return
     }
 
-    const firestore = db // Capture non-null reference for callbacks
     setSyncing(true)
+    let cancelled = false
+    let unsubscribe: (() => void) | null = null
 
-    const projectsRef = collection(firestore, "users", user.uid, "projects")
-    const q = query(projectsRef, orderBy("updatedAt", "desc"))
-
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const cloudProjects: Project[] = []
-        snapshot.forEach((docSnap) => {
-          cloudProjects.push({ id: docSnap.id, ...docSnap.data() } as Project)
-        })
-
-        // Merge cloud projects with local projects
-        const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
-        cloudIdsRef.current = cloudProjectIds
-
-        // a deleted project is never local-only: uploading it is exactly how a
-        // delete used to undo itself
-        const tombstoned = deletingIdsRef.current
-        const localOnlyProjects = localProjectsRef.current.filter(
-          (p) => !cloudProjectIds.has(p.id) && !tombstoned.has(p.id)
-        )
-
-        // the cloud no longer has it, so the delete is confirmed and the
-        // tombstone can be retired rather than growing without bound
-        if (tombstoned.size > 0) {
-          let changed = false
-          for (const id of [...tombstoned]) {
-            if (!cloudProjectIds.has(id)) {
-              tombstoned.delete(id)
-              changed = true
-            }
-          }
-          if (changed) writeTombstones(tombstoned)
-        }
-
-        // Upload local-only projects to cloud with owner info
-        if (localOnlyProjects.length > 0 && user.email) {
-          localOnlyProjects.forEach(async (project) => {
-            try {
-              const projectRef = doc(firestore, "users", user.uid, "projects", project.id)
-              await setDoc(projectRef, {
-                ...project,
-                ownerId: user.uid,
-                ownerEmail: user.email,
-              })
-            } catch (error) {
-              console.error("Failed to upload local project to cloud:", error)
-              toast.error(`Could not upload "${project.name}" to the cloud`)
-            }
-          })
-        }
-
-        // Merge: cloud projects + local-only projects
-        // Filter out any projects that are currently being deleted
-        const mergedProjects = [...cloudProjects, ...localOnlyProjects]
-          .filter((p) => !deletingIdsRef.current.has(p.id))
-          .filter((p, i, all) => all.findIndex((o) => o.id === p.id) === i)
-          .sort((a, b) => b.updatedAt - a.updatedAt)
-
-        setProjects(mergedProjects)
-        setSyncing(false)
-      },
-      (error) => {
-        // a rules rejection or offline client used to be console-only, so the
-        // ui just showed stale local data with no hint that sync was dead
-        console.error("Firestore sync error:", error)
-        toast.error("Cloud sync stopped", { description: error.message })
-        setSyncing(false)
+    const subscribe = async () => {
+      const cloud = await openCloud()
+      if (cancelled || !cloud) {
+        if (!cancelled) setSyncing(false)
+        return
       }
-    )
+      const { firestore, api } = cloud
+      const { collection, query, orderBy, onSnapshot, doc, setDoc, deleteDoc } = api
 
-    return () => unsubscribe()
+      const projectsRef = collection(firestore, "users", user.uid, "projects")
+      const q = query(projectsRef, orderBy("updatedAt", "desc"))
+
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const cloudProjects: Project[] = []
+          snapshot.forEach((docSnap) => {
+            cloudProjects.push({ id: docSnap.id, ...docSnap.data() } as Project)
+          })
+
+          // Merge cloud projects with local projects
+          const cloudProjectIds = new Set(cloudProjects.map((p) => p.id))
+          cloudIdsRef.current = cloudProjectIds
+
+          // another tab may have deleted something since this one mounted, and
+          // its tombstone only exists on disk
+          const tombstoned: Tombstones = new Map([...deletingIdsRef.current, ...readTombstones()])
+          deletingIdsRef.current = tombstoned
+
+          // a deleted project is never local-only: uploading it is exactly how a
+          // delete used to undo itself
+          const localOnlyProjects = localProjectsRef.current.filter(
+            (p) => !cloudProjectIds.has(p.id) && !tombstoned.has(p.id)
+          )
+
+          // a signed-out delete carries no uid, so the first account to sync
+          // claims it; another account's snapshot says nothing about this one
+          const ours = (uid: string | null) => uid === null || uid === user.uid
+
+          // the cloud no longer has it, so the delete is confirmed and the
+          // tombstone can be retired rather than growing without bound
+          const confirmed = [...tombstoned]
+            .filter(([id, uid]) => ours(uid) && !cloudProjectIds.has(id))
+            .map(([id]) => id)
+          if (confirmed.length > 0) {
+            deletingIdsRef.current = updateTombstones((ids) => {
+              for (const id of confirmed) ids.delete(id)
+            })
+          }
+
+          // still in the cloud: the delete never landed, because it was made
+          // offline or signed out or the write was rejected. retry it here
+          // rather than leave the project hidden on this device forever.
+          const pending = [...deletingIdsRef.current]
+            .filter(([id, uid]) => ours(uid) && cloudProjectIds.has(id))
+            .map(([id]) => id)
+          for (const id of pending) {
+            // a long offline spell can deliver many stale snapshots, and each
+            // one would otherwise queue another write for the same document
+            if (inFlightDeletesRef.current.has(id)) continue
+            inFlightDeletesRef.current.add(id)
+            deleteDoc(doc(firestore, "users", user.uid, "projects", id))
+              .catch((error: unknown) => {
+                console.error("Failed to delete project from cloud:", error)
+                // the copy survived, so stop hiding it and let the user retry
+                deletingIdsRef.current = updateTombstones((ids) => ids.delete(id))
+                const survivor = cloudProjects.find((p) => p.id === id)
+                if (survivor) {
+                  setProjects((prev) =>
+                    prev.some((p) => p.id === id) ? prev : [survivor, ...prev]
+                  )
+                }
+                toast.error("Could not delete a project from the cloud", {
+                  description:
+                    error instanceof Error ? error.message : "It is still saved in your account.",
+                })
+              })
+              .finally(() => inFlightDeletesRef.current.delete(id))
+          }
+
+          // Upload local-only projects to cloud with owner info
+          if (localOnlyProjects.length > 0 && user.email) {
+            localOnlyProjects.forEach(async (project) => {
+              try {
+                const projectRef = doc(firestore, "users", user.uid, "projects", project.id)
+                await setDoc(projectRef, {
+                  ...project,
+                  ownerId: user.uid,
+                  ownerEmail: user.email,
+                })
+              } catch (error) {
+                console.error("Failed to upload local project to cloud:", error)
+                toast.error(`Could not upload "${project.name}" to the cloud`)
+              }
+            })
+          }
+
+          // Merge: cloud projects + local-only projects
+          // Filter out any projects that are currently being deleted
+          const mergedProjects = [...cloudProjects, ...localOnlyProjects]
+            .filter((p) => !deletingIdsRef.current.has(p.id))
+            .filter((p, i, all) => all.findIndex((o) => o.id === p.id) === i)
+            .sort((a, b) => b.updatedAt - a.updatedAt)
+
+          setProjects(mergedProjects)
+          setSyncing(false)
+        },
+        (error) => {
+          // a rules rejection or offline client used to be console-only, so the
+          // ui just showed stale local data with no hint that sync was dead
+          console.error("Firestore sync error:", error)
+          toast.error("Cloud sync stopped", { description: error.message })
+          setSyncing(false)
+        }
+      )
+    }
+
+    subscribe()
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
   }, [user, syncEnabled])
 
   // Subscribe to projects shared with the current user
   useEffect(() => {
-    if (!syncEnabled || !db || !user) {
+    if (!syncEnabled || !user) {
       setSharedProjects([])
       return
     }
 
-    const firestore = db
-    const unsubscribe = subscribeToSharedProjects(user.uid, async (shares: ProjectShare[]) => {
-      // Load full project data for each share
-      const loadedProjects: SharedProject[] = []
+    let cancelled = false
+    let unsubscribe: (() => void) | null = null
 
-      for (const share of shares) {
-        try {
-          const projectRef = doc(firestore, share.projectPath)
-          const projectSnap = await getDoc(projectRef)
+    const subscribe = async () => {
+      const cloud = await openCloud()
+      if (cancelled || !cloud) return
+      const { firestore, api } = cloud
+      const { doc, getDoc } = api
+      const { subscribeToSharedProjects } = await import("@/lib/sharing")
+      if (cancelled) return
 
-          if (projectSnap.exists()) {
-            const projectData = projectSnap.data() as Project
-            loadedProjects.push({
-              ...projectData,
-              id: projectSnap.id,
-              permission: share.permission,
-              projectPath: share.projectPath,
-              ownerEmail: share.ownerEmail,
-            })
+      unsubscribe = subscribeToSharedProjects(user.uid, async (shares: ProjectShare[]) => {
+        // Load full project data for each share
+        const loadedProjects: SharedProject[] = []
+
+        for (const share of shares) {
+          try {
+            const projectRef = doc(firestore, share.projectPath)
+            const projectSnap = await getDoc(projectRef)
+
+            if (projectSnap.exists()) {
+              const projectData = projectSnap.data() as Project
+              loadedProjects.push({
+                ...projectData,
+                id: projectSnap.id,
+                permission: share.permission,
+                projectPath: share.projectPath,
+                ownerEmail: share.ownerEmail,
+              })
+            }
+          } catch (error) {
+            console.error(`Failed to load shared project ${share.projectId}:`, error)
           }
-        } catch (error) {
-          console.error(`Failed to load shared project ${share.projectId}:`, error)
         }
-      }
 
-      setSharedProjects(loadedProjects.sort((a, b) => b.updatedAt - a.updatedAt))
-    })
+        setSharedProjects(loadedProjects.sort((a, b) => b.updatedAt - a.updatedAt))
+      })
+    }
 
-    return () => unsubscribe()
+    subscribe()
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
   }, [user, syncEnabled])
 
   // Save project to Firestore
   const saveToCloud = useCallback(
     async (project: Project) => {
-      if (!syncEnabled || !db || !user) return
+      if (!syncEnabled || !user) return
 
       try {
-        const projectRef = doc(db, "users", user.uid, "projects", project.id)
+        const cloud = await openCloud()
+        if (!cloud) return
+        const { doc, setDoc } = cloud.api
+
+        const projectRef = doc(cloud.firestore, "users", user.uid, "projects", project.id)
         // merge so a save never wipes sharing state the local copy has not
         // loaded (sharedWith, isShared), which a full overwrite would drop
         await setDoc(
@@ -394,22 +502,44 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       // resolved yet, and reporting success here deletes it locally while
       // leaving the cloud copy to be restored by the next snapshot. that is the
       // resurrection the user actually saw.
-      if (!isFirebaseConfigured() || !db) return true
+      if (!isFirebaseConfigured()) return true
       if (!user) {
-        throw new Error("Not signed in yet, so the cloud copy could not be deleted. Try again.")
+        // still resolving is the dangerous case: a cloud copy may exist under an
+        // account we are about to learn about. genuinely signed out is not, and
+        // refusing there means a visitor can never delete their own local work.
+        if (authLoading) {
+          throw new Error("Still signing in, so the cloud copy could not be deleted. Try again.")
+        }
+        // the tombstone survives, so the first snapshot after sign-in removes it
+        return true
       }
       if (!syncEnabled) return true
 
       try {
-        const projectRef = doc(db, "users", user.uid, "projects", projectId)
+        const cloud = await openCloud()
+        if (!cloud) return true
+        const { doc, deleteDoc } = cloud.api
+
+        const projectRef = doc(cloud.firestore, "users", user.uid, "projects", projectId)
         await deleteDoc(projectRef)
+
+        // the share records are a separate top level collection, so deleting the
+        // project leaves collaborators pointed at something that is gone
+        try {
+          const { deleteAllSharesForProject } = await import("@/lib/sharing")
+          await deleteAllSharesForProject(user.uid, projectId)
+        } catch (error) {
+          // the project is already gone, so a failed cleanup must not report the
+          // delete as failed and strand the user with a project they cannot remove
+          console.error("Failed to clean up share records:", error)
+        }
         return true
       } catch (error) {
         console.error("Failed to delete project from cloud:", error)
         throw error // Propagate error so caller knows deletion failed
       }
     },
-    [syncEnabled, user]
+    [syncEnabled, user, authLoading]
   )
 
   const addProject = async (
@@ -447,12 +577,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const deleteProject = async (id: string): Promise<{ success: boolean; error?: string }> => {
     // written before the request, so a reload mid-delete still cannot resurrect it
-    deletingIdsRef.current.add(id)
-    writeTombstones(deletingIdsRef.current)
+    deletingIdsRef.current = updateTombstones((ids) => ids.set(id, user?.uid ?? null))
 
     try {
       // Delete from cloud first (wait for completion)
-      await deleteFromCloud(id)
+      inFlightDeletesRef.current.add(id)
+      try {
+        await deleteFromCloud(id)
+      } finally {
+        inFlightDeletesRef.current.delete(id)
+      }
 
       // Then update local state. the ref has to be pruned in the same tick:
       // setProjects has not committed yet, so a snapshot arriving before the
@@ -464,20 +598,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       // the tombstone is retired by the snapshot that confirms the cloud copy is
       // gone, not here: clearing it now reopens the window an in-flight snapshot
-      // used to walk through
-      if (!syncEnabled) {
-        deletingIdsRef.current.delete(id)
-        writeTombstones(deletingIdsRef.current)
+      // used to walk through. with no cloud at all there is no such snapshot.
+      if (!isFirebaseConfigured()) {
+        deletingIdsRef.current = updateTombstones((ids) => ids.delete(id))
       }
 
       return { success: true }
     } catch (error) {
-      // Keep the ID in deletingIdsRef to prevent restoration during retry
-      // But allow future deletion attempts
       console.error("Delete project failed:", error)
 
-      // the tombstone stays. dropping it on a timer was what let a failed delete
-      // reappear, and it is retired only when the cloud confirms the copy is gone
+      // the cloud copy is intact, so the tombstone has to go: keeping it hides a
+      // project that still exists and leaves the user nothing to retry against
+      deletingIdsRef.current = updateTombstones((ids) => ids.delete(id))
 
       return {
         success: false,
@@ -563,10 +695,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Update a shared project
   const updateSharedProject = async (projectPath: string, updates: Partial<Project>) => {
-    if (!db) return
+    const cloud = await openCloud()
+    if (!cloud) return
+    const { doc, setDoc } = cloud.api
 
     try {
-      const projectRef = doc(db, projectPath)
+      const projectRef = doc(cloud.firestore, projectPath)
       await setDoc(
         projectRef,
         {
@@ -596,10 +730,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     projectPath: string,
     item: Omit<ProjectItem, "id" | "createdAt">
   ) => {
-    if (!db) return
-
     const project = sharedProjects.find((p) => p.projectPath === projectPath)
     if (!project) return
+
+    const cloud = await openCloud()
+    if (!cloud) return
+    const { doc, setDoc } = cloud.api
 
     const newItem: ProjectItem = {
       ...item,
@@ -608,7 +744,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const projectRef = doc(db, projectPath)
+      const projectRef = doc(cloud.firestore, projectPath)
       await setDoc(
         projectRef,
         {
@@ -639,13 +775,15 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Remove item from a shared project
   const removeItemFromSharedProject = async (projectPath: string, itemId: string) => {
-    if (!db) return
-
     const project = sharedProjects.find((p) => p.projectPath === projectPath)
     if (!project) return
 
+    const cloud = await openCloud()
+    if (!cloud) return
+    const { doc, setDoc } = cloud.api
+
     try {
-      const projectRef = doc(db, projectPath)
+      const projectRef = doc(cloud.firestore, projectPath)
       await setDoc(
         projectRef,
         {
