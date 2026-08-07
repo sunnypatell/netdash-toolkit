@@ -23,11 +23,7 @@ import { BulkLookupPanel } from "@/components/tools/oui-lookup/bulk"
 import { ResultsPanel } from "@/components/tools/oui-lookup/results"
 import type { IPv4Kind, IPv6Kind, MacFormat, MacScope } from "@/lib/random-gen"
 
-// two claims are under test here. first, tool inputs live in the query string,
-// so a link reproduces a result and no Convert button is needed. second, the
-// exceptions: a generated secret or random value must never reach the url.
-// random-generator and oui-lookup are now directories of panels, so each panel
-// also gets mounted alone, with no parent, to prove it runs on props only.
+// inputs live in the url, but a generated secret never may; each panel is also mounted alone
 
 for (const name of ["ResizeObserver", "IntersectionObserver"] as const) {
   if (!(name in window)) {

@@ -1,13 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron"
 
-// Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld("electronAPI", {
-  // App info
   getVersion: () => ipcRenderer.invoke("app:getVersion"),
   getPlatform: () => ipcRenderer.invoke("app:getPlatform"),
   isElectron: () => ipcRenderer.invoke("app:isElectron"),
 
-  // Network operations - Real networking via Node.js
   ping: (host: string, options?: { timeout?: number; count?: number }) =>
     ipcRenderer.invoke("network:ping", host, options),
 
@@ -26,11 +23,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // it can only report neighbours this host has already resolved.
   getArpTable: () => ipcRenderer.invoke("network:arpTable"),
 
-  // System info
   getSystemInfo: () => ipcRenderer.invoke("system:getInfo"),
 })
 
-// Type definitions for TypeScript
 declare global {
   interface Window {
     electronAPI: {

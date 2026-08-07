@@ -1,9 +1,7 @@
 import type { SubnetMaskEntry } from "./types"
 
-// every row is plain prefix arithmetic: mask is the top `prefix` bits set,
-// wildcard is its complement, and usable hosts is 2^(32-prefix) - 2 apart from
-// the two documented exceptions, /31 (RFC 3021 point-to-point) and /32 (host
-// route). tests/unit/reference-data.test.ts recomputes all of it.
+// plain prefix arithmetic, recomputed by tests/unit/reference-data.test.ts. the only exceptions
+// to 2^(32-prefix) - 2 usable hosts are /31 (RFC 3021) and /32.
 export const SUBNET_MASKS: readonly SubnetMaskEntry[] = [
   { prefix: 32, mask: "255.255.255.255", wildcard: "0.0.0.0", usableHosts: 1 },
   { prefix: 31, mask: "255.255.255.254", wildcard: "0.0.0.1", usableHosts: 2 },

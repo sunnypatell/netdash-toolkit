@@ -1,6 +1,4 @@
-// single blob-download path for every tool export. replaces 23 hand-rolled
-// createObjectURL blocks that each leaked minor variations (missing revoke,
-// missing datestamp, inconsistent mime types).
+// one blob path for every export; the 23 hand-rolled copies missed revokes and mime types
 
 export type DownloadMime = "text/plain" | "text/csv" | "application/json" | "image/png"
 

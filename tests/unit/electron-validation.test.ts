@@ -7,9 +7,7 @@ import {
   validatePorts,
 } from "@/electron/network/validation"
 
-// every string in this file is a shape check on the validator. nothing here is
-// resolved, connected to or probed: these are the inputs that must never reach
-// a command line, asserted as strings.
+// inputs that must never reach a command line, asserted as strings; nothing is resolved or probed
 
 describe("validateHost", () => {
   it("accepts rfc 1123 hostnames, including internal hyphens", () => {

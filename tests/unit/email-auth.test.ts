@@ -202,11 +202,7 @@ describe("dkim (rfc 6376)", () => {
   })
 
   it("returns nothing for a failure status that still carries answers", () => {
-    // both inputs above have answers: [], so the right half of
-    // `failure || answers.length === 0` decided them and the failure check was
-    // never load-bearing. doh resolvers do answer SERVFAIL and NXDOMAIN with a
-    // populated Answer array (cname chains, soa-bearing negatives), and feeding
-    // those to the tag parser reports a live key on a domain that has none
+    // the inputs above have answers: [], so the length check decided them and the failure check never did
     const nxdomainWithCname: DnsResponse = {
       status: 3,
       answers: [answer(DNS_TYPE.TXT, '"v=DKIM1; k=rsa; p=abc"')],
@@ -359,10 +355,7 @@ describe("scoring", () => {
   })
 
   it("pins the dkim weights below the 100 clamp, where they are visible", () => {
-    // with p=reject the total lands exactly on Math.min(score, 100), so raising
-    // the enforcement weight from 15 to anything larger was invisible: both the
-    // full-run total and the testing-vs-live difference still came out right.
-    // p=none drops the base to 63 and leaves headroom for the clamp to matter
+    // with p=reject the total lands on the clamp, so the enforcement weight could move unnoticed
     const relaxed = {
       ...base,
       dmarc: analyzeDmarc(txt("v=DMARC1; p=none; rua=mailto:a@example.com")),
@@ -410,10 +403,7 @@ describe("doh transport", () => {
   })
 
   it("treats a non-2xx resolver as a failure, not as a dns answer", async () => {
-    // a resolver that 500s still returns a json body. without the status check
-    // that body is read as a Status: 0 answer, so an outage reads as "no spf
-    // record" and the backup resolver is never tried. both failure tests use a
-    // rejected promise, which lands in the catch instead
+    // a 500 still returns a body, read as Status: 0, so an outage reads as "no spf record"
     const fetchImpl = vi
       .fn()
       .mockResolvedValueOnce({
@@ -512,9 +502,7 @@ describe("full run", () => {
     expect(result.overallScore).toBe(0)
   })
 
-  // the test above rejects every request, so all four disjuncts of `incomplete`
-  // are true at once and any one of them could be deleted unnoticed. each of
-  // these fails exactly one lookup.
+  // the test above rejects every request, so all four disjuncts are true; these fail one each
   it.each([
     ["mx", "MX:example.com"],
     ["spf", "TXT:example.com"],

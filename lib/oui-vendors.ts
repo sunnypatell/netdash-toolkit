@@ -139,7 +139,7 @@ export const OUI_VENDORS: Record<string, string> = {
   DCA632: "Raspberry Pi Foundation",
   B827EB: "Raspberry Pi Foundation",
   E45F01: "Raspberry Pi Foundation",
-  // Network Equipment
+  // network equipment
   "000496": "Extreme Networks",
   "00E02B": "Extreme Networks",
   "000130": "Foundry Networks",
@@ -151,7 +151,7 @@ export const OUI_VENDORS: Record<string, string> = {
   "006008": "3Com Corporation",
   "006097": "3Com Corporation",
   "00A024": "3Com Corporation",
-  // Consumer Electronics
+  // consumer electronics
   "00E04C": "Realtek Semiconductor",
   "001217": "Cisco-Linksys",
   "00E018": "Asustek Computer",

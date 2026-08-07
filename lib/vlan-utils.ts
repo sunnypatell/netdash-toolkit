@@ -49,7 +49,6 @@ export function isValidVLANId(id: number): boolean {
   return Number.isInteger(id) && id >= VLAN_ID_MIN && id <= VLAN_ID_MAX
 }
 
-// Check for reserved VLAN IDs
 export function isReservedVLAN(
   id: number,
   reservedList: number[] = [1, 1002, 1003, 1004, 1005]
@@ -57,12 +56,10 @@ export function isReservedVLAN(
   return reservedList.includes(id)
 }
 
-// Validate VLAN configuration
 export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
 
-  // Validate VLAN ID
   if (!isValidVLANId(vlan.id)) {
     errors.push(
       isStandardReservedVLAN(vlan.id)
@@ -71,18 +68,15 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
     )
   }
 
-  // Check for reserved VLANs
   if (isReservedVLAN(vlan.id)) {
     warnings.push(`VLAN ${vlan.id} is reserved (default or legacy VLAN)`)
   }
 
-  // Check for duplicate VLAN IDs
   const duplicate = existingVLANs.find((v) => v.id === vlan.id)
   if (duplicate) {
     errors.push(`VLAN ID ${vlan.id} already exists (${duplicate.name})`)
   }
 
-  // Validate VLAN name
   if (!vlan.name || vlan.name.trim().length === 0) {
     errors.push("VLAN name is required")
   } else if (/\s/.test(vlan.name)) {
@@ -92,7 +86,6 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
     warnings.push("VLAN name should be 32 characters or less")
   }
 
-  // Validate subnets
   for (const subnet of vlan.subnets) {
     if (!isValidCIDR(subnet)) {
       errors.push(`Invalid subnet format: ${subnet}`)
@@ -106,7 +99,6 @@ export function validateVLAN(vlan: VLAN, existingVLANs: VLAN[] = []): VLANValida
   }
 }
 
-// Check for overlapping subnets across VLANs
 const MAX_IPV6 = (1n << 128n) - 1n
 
 const ipv6ToBigInt = (ip: string): bigint => {
@@ -182,7 +174,7 @@ export function checkSubnetOverlaps(
                 }
               }
             } catch {
-              // Ignore invalid CIDR conversions and fall back to string comparison
+              // unparseable cidr falls back to string comparison
             }
           }
         }
@@ -193,14 +185,13 @@ export function checkSubnetOverlaps(
   return overlaps
 }
 
-// Parse VLAN list string (e.g., "10,20,30-35,100")
+// accepts "10,20,30-35,100"
 export function parseVLANList(vlanString: string): number[] {
   const vlans: number[] = []
   const parts = vlanString.split(",").map((s) => s.trim())
 
   for (const part of parts) {
     if (part.includes("-")) {
-      // Range (e.g., "30-35")
       const [start, end] = part.split("-").map((s) => Number.parseInt(s.trim()))
       if (!isNaN(start) && !isNaN(end) && start <= end) {
         for (let i = start; i <= end; i++) {
@@ -210,7 +201,6 @@ export function parseVLANList(vlanString: string): number[] {
         }
       }
     } else {
-      // Single VLAN
       const vlanId = Number.parseInt(part)
       if (!isNaN(vlanId) && isValidVLANId(vlanId)) {
         vlans.push(vlanId)
@@ -245,7 +235,6 @@ function normalizeVLANList(vlanString: string): string {
   return ranges.join(",")
 }
 
-// Generate Cisco IOS access port configuration
 export function generateCiscoAccessConfig(port: SwitchPort): string {
   if (port.mode !== "access" || !port.accessVlan) {
     throw new Error("Access port must have access VLAN specified")
@@ -263,7 +252,6 @@ export function generateCiscoAccessConfig(port: SwitchPort): string {
   return config
 }
 
-// Generate Cisco IOS trunk port configuration
 export function generateCiscoTrunkConfig(port: SwitchPort): string {
   if (port.mode !== "trunk") {
     throw new Error("Port must be configured as trunk")
@@ -291,7 +279,6 @@ export function generateCiscoTrunkConfig(port: SwitchPort): string {
   return config
 }
 
-// Generate Aruba CX access port configuration
 export function generateArubaAccessConfig(port: SwitchPort): string {
   if (port.mode !== "access" || !port.accessVlan) {
     throw new Error("Access port must have access VLAN specified")
@@ -309,7 +296,6 @@ export function generateArubaAccessConfig(port: SwitchPort): string {
   return config
 }
 
-// Generate Aruba CX trunk port configuration
 export function generateArubaTrunkConfig(port: SwitchPort): string {
   if (port.mode !== "trunk") {
     throw new Error("Port must be configured as trunk")
@@ -335,7 +321,6 @@ export function generateArubaTrunkConfig(port: SwitchPort): string {
   return config
 }
 
-// Generate switch configuration for multiple ports
 export function generateSwitchConfig(
   ports: SwitchPort[],
   vendor: "cisco-ios" | "aruba-cx",
@@ -344,7 +329,6 @@ export function generateSwitchConfig(
 ): string {
   let config = ""
 
-  // Add global VLAN configuration if requested
   if (includeGlobalVlans && vlans.length > 0) {
     if (vendor === "cisco-ios") {
       config += "! VLAN Configuration\n"
@@ -371,7 +355,6 @@ export function generateSwitchConfig(
     }
   }
 
-  // Add interface configurations
   config += "! Interface Configuration\n"
   for (const port of ports) {
     try {
@@ -397,7 +380,6 @@ export function generateSwitchConfig(
   return config
 }
 
-// Validate trunk configuration
 export function validateTrunkConfig(port: SwitchPort, vlans: VLAN[]): VLANValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
@@ -406,7 +388,6 @@ export function validateTrunkConfig(port: SwitchPort, vlans: VLAN[]): VLANValida
     return { isValid: true, errors, warnings }
   }
 
-  // Check native VLAN exists
   if (port.nativeVlan) {
     const nativeVlanExists = vlans.some((v) => v.id === port.nativeVlan)
     if (!nativeVlanExists) {
@@ -427,7 +408,6 @@ export function validateTrunkConfig(port: SwitchPort, vlans: VLAN[]): VLANValida
     }
   }
 
-  // Parse and validate allowed VLANs
   if (port.allowedVlans) {
     try {
       const allowedVlanIds = parseVLANList(port.allowedVlans)
@@ -449,7 +429,6 @@ export function validateTrunkConfig(port: SwitchPort, vlans: VLAN[]): VLANValida
   }
 }
 
-// Export VLAN database to CSV
 export function exportVLANsToCSV(vlans: VLAN[]): string {
   const headers = ["VLAN ID", "Name", "Purpose", "Subnets", "Description"]
   const rows = vlans.map((vlan) => [

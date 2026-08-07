@@ -1,6 +1,4 @@
-// shared formatting helpers. these existed as 4+ inline copies with
-// mismatched unit ladders (KB vs KiB in different tools); this file is now
-// the single source of truth for both decimal and binary unit systems.
+// single source for both unit ladders; the inline copies disagreed on KB vs KiB
 
 // decimal (SI): 1 kB = 1000 B. binary (IEC): 1 KiB = 1024 B.
 export const SI_BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB"] as const

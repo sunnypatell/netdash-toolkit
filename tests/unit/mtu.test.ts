@@ -14,10 +14,7 @@ import {
   UDP_HEADER,
 } from "@/lib/mtu"
 
-// the rfc floors are link mtu figures. the old calculator compared them against
-// the payload left after the transport header, which is a different quantity by
-// exactly the header sizes, so it both warned when it should not and stayed
-// silent when it should not.
+// the rfc floors are link mtu; the old calculator compared them against the post-transport payload
 
 describe("header sizes", () => {
   it("matches the fixed header sizes the rfcs define", () => {

@@ -1,14 +1,11 @@
-// Utility to detect if running in Electron and access Electron APIs
-
 export function isElectron(): boolean {
-  // Check if window.electronAPI exists (set by preload script)
+  // set by preload.ts
   if (typeof window !== "undefined" && window.electronAPI) {
     return true
   }
   return false
 }
 
-// Type-safe wrapper for Electron API calls
 export async function callElectronAPI<T>(
   method: keyof typeof window.electronAPI,
   ...args: unknown[]
@@ -26,7 +23,6 @@ export async function callElectronAPI<T>(
   }
 }
 
-// Convenience wrappers for network operations
 export const electronNetwork = {
   async ping(host: string, options?: { timeout?: number; count?: number }) {
     return callElectronAPI<{
@@ -123,7 +119,6 @@ export const electronNetwork = {
   },
 }
 
-// Check platform
 export async function getElectronPlatform(): Promise<string | null> {
   return callElectronAPI<string>("getPlatform")
 }

@@ -12,9 +12,7 @@ import {
   type MacOptions,
 } from "@/lib/random-gen"
 
-// the addresses this module emits go into test fixtures and lab configs, so
-// "random" has to mean uniform over the range the ui promised, and "public" has
-// to mean globally routable.
+// these addresses go into lab configs, so "random" must be uniform and "public" globally routable
 
 const toInt = (dotted: string) =>
   dotted.split(".").reduce((acc, octet) => ((acc << 8) | Number(octet)) >>> 0, 0)
@@ -38,9 +36,7 @@ describe("randomInt is uniform, not folded", () => {
   })
 
   it("refuses nonsense bounds", () => {
-    // matched on message: a bare toThrow() also accepted the "size must be
-    // positive" that leaks out of uniformIndex once the bounds check is gone,
-    // so the bounds check could be deleted outright
+    // matched on message: a bare toThrow() also accepted uniformIndex's "size must be positive"
     expect(() => randomInt(5, 1)).toThrow(/max must be >= min/)
     expect(() => randomInt(0.5, 3)).toThrow(/bounds must be integers/)
   })

@@ -1,6 +1,4 @@
-// row ids for editable lists. `Date.now().toString()` collided whenever two
-// rows were added inside the same millisecond, which duplicated both the react
-// key and the per-row dom ids that labels point at.
+// Date.now() collided within a millisecond, duplicating react keys and the dom ids labels target
 let counter = 0
 
 export function nextId(prefix = "row"): string {

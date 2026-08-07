@@ -41,7 +41,6 @@ function loadAuthApi() {
   return authApi
 }
 
-// Helper to get user-friendly error messages
 const getAuthErrorMessage = (error: AuthError): string => {
   switch (error.code) {
     case "auth/email-already-in-use":
@@ -146,10 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isConfigured || typeof window === "undefined") return
 
-    // Wait for auth state to be determined before showing One Tap
     if (loading) return
 
-    // Don't show One Tap if user is already signed in
     if (user) {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.cancel()
@@ -157,16 +154,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Skip One Tap on localhost - it requires HTTPS and verified domains
+    // one tap needs HTTPS and a verified domain, so localhost never qualifies
     const isLocalhost =
       window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     if (isLocalhost) return
 
-    // Google One Tap requires a separate OAuth client ID from Google Cloud Console
+    // one tap needs its own OAuth client id, separate from the firebase one
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     if (!googleClientId) return // Skip One Tap if not configured
 
-    // Load Google Identity Services script
     const script = document.createElement("script")
     script.src = "https://accounts.google.com/gsi/client"
     script.async = true
@@ -204,7 +200,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const credential = GoogleAuthProvider.credential(response.credential)
       const result = await signInWithCredential(services.auth, credential)
 
-      // Check if we need to link accounts
       if (pendingCredential && result.user) {
         try {
           await linkWithCredential(result.user, pendingCredential)
@@ -234,7 +229,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { signInWithPopup, linkWithCredential } = await loadAuthApi()
       const result = await signInWithPopup(services.auth, services.googleProvider)
 
-      // Check if we need to link accounts
       if (pendingCredential && result.user) {
         try {
           await linkWithCredential(result.user, pendingCredential)
@@ -247,7 +241,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       const authError = error as AuthError
 
-      // Handle account exists with different credential
       if (authError.code === "auth/account-exists-with-different-credential") {
         const { GoogleAuthProvider } = await loadAuthApi()
         const credential = GoogleAuthProvider.credentialFromError(authError)
@@ -275,7 +268,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { signInWithEmailAndPassword, linkWithCredential } = await loadAuthApi()
       const result = await signInWithEmailAndPassword(services.auth, email, password)
 
-      // Check if we need to link accounts
       if (pendingCredential && result.user) {
         try {
           await linkWithCredential(result.user, pendingCredential)
@@ -304,7 +296,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null)
       const { createUserWithEmailAndPassword, fetchSignInMethodsForEmail } = await loadAuthApi()
-      // Check if email is already in use with different provider
       const methods = await fetchSignInMethodsForEmail(services.auth, email)
       if (methods.length > 0 && !methods.includes("password")) {
         setError(
@@ -333,7 +324,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setError(null)
       const { sendPasswordResetEmail } = await loadAuthApi()
-      // Use custom action URL for styled password reset page
+      // custom action url so the reset lands on our own styled page
       const actionCodeSettings = {
         url:
           typeof window !== "undefined"
@@ -359,7 +350,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       setError(null)
-      // Cancel Google One Tap when signing out
       if (window.google?.accounts?.id) {
         window.google.accounts.id.disableAutoSelect()
       }
@@ -368,7 +358,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // cleared here as well as in the listener, so a cold load after signing
       // out never pays for the sdk again
       writeSessionHint(false)
-      // Re-enable One Tap prompt after sign out
       if (window.google?.accounts?.id) {
         window.google.accounts.id.prompt()
       }

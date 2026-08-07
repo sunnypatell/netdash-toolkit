@@ -16,10 +16,7 @@ import { OUIPanel } from "@/components/tools/network-tester/oui-panel"
 import { RTTPanel } from "@/components/tools/network-tester/rtt-panel"
 import { ThroughputPanel } from "@/components/tools/network-tester/throughput-panel"
 
-// reference-hub and network-tester are now a directory of panels behind a tabbed
-// index. these mount each panel on its own, with no parent and no provider, so a
-// panel that secretly depended on the old shared state blob fails here. the tool
-// level suites in tests/components only ever see the default tab.
+// each panel mounted alone, no parent and no provider; the tool level suites see only tab one
 
 // happy-dom lacks the browser apis radix touches on mount
 for (const name of ["ResizeObserver", "IntersectionObserver"] as const) {

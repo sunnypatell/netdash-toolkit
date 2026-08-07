@@ -1,9 +1,5 @@
-// jwt inspection for the decoder tool. jose does the actual parsing (correct
-// utf-8, no escape/unescape hack); the local diagnostics exist only to turn
-// jose's single coarse "invalid formatting" throw into an accurate message.
-//
-// nothing here verifies a signature. a decoder cannot: it has no key. every
-// label this module produces talks about *time claims*, never validity.
+// jose parses; the local diagnostics only turn its one coarse throw into an accurate message.
+// nothing here verifies a signature, so every label talks about time claims, never validity.
 
 import { decodeJwt, decodeProtectedHeader } from "jose"
 

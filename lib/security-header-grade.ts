@@ -1,8 +1,5 @@
-// grades security headers against the specs that define them rather than against
-// their mere presence. "present" and "doing something" are different claims:
-// strict-transport-security: max-age=0 deletes the policy, x-content-type-options:
-// sniff does nothing, and a report-only csp enforces nothing - all three used to
-// score full marks here.
+// grades against the spec, not mere presence: max-age=0 deletes the policy, x-content-type-options:
+// sniff does nothing, and a report-only csp enforces nothing, yet all three scored full marks
 
 import { fieldValues, firstFieldValue, type ResponseBlock } from "./http-header-parse"
 
@@ -282,9 +279,7 @@ const LEAKY_REFERRER_POLICIES = new Set([
 ])
 
 export function effectiveReferrerPolicy(values: string[]): string | null {
-  // the referrer policy spec parses the header as a comma/space separated token
-  // list and keeps the last token it recognises, so a trailing modern value
-  // overrides an older fallback in front of it
+  // the spec keeps the last recognised token, so a trailing modern value overrides its fallback
   let policy: string | null = null
   for (const value of values) {
     for (const token of value.split(/[\s,]+/)) {

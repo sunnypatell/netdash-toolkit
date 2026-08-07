@@ -10,10 +10,7 @@ import {
   transportsOf,
 } from "@/lib/reference/service-ports"
 
-// these assert internal consistency, which is what a test can prove offline.
-// the values themselves were checked row by row against the iana service name
-// and port number registry, the protocol numbers registry and the icmp
-// parameters registry; the citations live in the data modules.
+// internal consistency is what a test can prove offline; the iana citations are in the data modules
 
 describe("service port table", () => {
   it("keeps every port inside the 16-bit port space", () => {

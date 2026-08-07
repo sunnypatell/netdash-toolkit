@@ -1,8 +1,6 @@
 import { SUBNET_MASKS } from "@/lib/reference/subnet-masks"
 
-// prefix, mask, wildcard and usable hosts live once, in lib/reference/subnet-masks.
-// this module is the ascending view of that table plus the total address count,
-// the one column the reference table has no use for.
+// ascending view over lib/reference/subnet-masks, plus the total address count it has no use for
 export interface CIDREntry {
   prefix: number
   mask: string

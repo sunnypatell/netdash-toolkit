@@ -1,9 +1,5 @@
-// ad-hoc sign macos builds whenever electron-builder skipped signing (no
-// identity on ci runners): arm64 gets an ad-hoc signature automatically
-// because apple silicon requires one, but x64 is left completely unsigned,
-// which turns gatekeeper's "open anyway" path into a dead end on intel macs.
-// the release workflow gates on `codesign --verify --deep --strict` for
-// every packed app, so a broken seal fails the build instead of shipping.
+// with no signing identity on ci, arm64 still gets an ad-hoc signature but x64 is left unsigned,
+// which dead-ends gatekeeper's "open anyway" on intel macs. the release workflow verifies both.
 const { execFileSync } = require("node:child_process")
 const path = require("node:path")
 

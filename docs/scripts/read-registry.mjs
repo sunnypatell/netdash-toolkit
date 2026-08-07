@@ -1,8 +1,5 @@
-// reads ../lib/tool-registry.ts and returns its data without importing the app
-// (the registry pulls in react, lucide-react and `@/` aliases we cannot resolve here).
-// strategy: lift the two array literals verbatim, stub the icon identifiers, and
-// evaluate them as a data: URL module. the `load:` thunks stay as dead syntax
-// because a dynamic import is only resolved when the arrow is called.
+// lifts the array literals out of tool-registry.ts and evaluates them as a data: URL module,
+// because importing it would drag in react, lucide-react and unresolvable `@/` aliases
 
 import { readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"

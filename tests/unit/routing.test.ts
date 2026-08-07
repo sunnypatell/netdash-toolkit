@@ -40,10 +40,7 @@ describe("ospf and eigrp network statements", () => {
   it("rejects a wildcard that is not a contiguous run of bits", () => {
     const result = evaluateNetworkStatement("10.0.0.0", "0.255.0.255")
     expect(result.isValid).toBe(false)
-    // pinned to the exact message so the rejecting path is identified. it is
-    // netmaskToPrefix throwing, not the `prefixToMaskInt(prefix) !== netmaskInt`
-    // branch further down: netmaskToPrefix already rejects every non-contiguous
-    // mask, so that branch is unreachable and no input can cover it
+    // pinned to the message: netmaskToPrefix throws, and the branch below it is unreachable
     expect(result.error).toBe("Subnet mask must have contiguous 1 bits")
   })
 

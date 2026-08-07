@@ -416,7 +416,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [user, syncEnabled])
 
-  // Save project to Firestore
   const saveToCloud = useCallback(
     async (project: Project) => {
       if (!syncEnabled || !user) return

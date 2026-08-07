@@ -11,9 +11,7 @@ import { EncodePanel } from "@/components/tools/url-encoder/encode"
 import { DecodePanel } from "@/components/tools/url-encoder/decode"
 import { BuildPanel } from "@/components/tools/url-encoder/build"
 
-// hash-generator and url-encoder used to be single files whose tab bodies could
-// only ever be exercised through the parent. each panel now takes props, so it
-// mounts on its own with no provider, no router and no shared state blob.
+// each panel takes props now, so it mounts with no provider, no router and no shared state
 
 const AXE_OPTIONS: axe.RunOptions = {
   runOnly: {

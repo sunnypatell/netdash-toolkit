@@ -1,9 +1,7 @@
 import { expandIPv6, isValidIPv4, isValidIPv6 } from "./network-utils"
 
-// a PTR record does not live at the address. rfc 1035 3.5 puts ipv4 reverse
-// mappings under IN-ADDR.ARPA with the octets reversed, and rfc 3596 2.5 puts
-// ipv6 under IP6.ARPA as reversed nibbles. querying PTR for "8.8.8.8" verbatim
-// asks for a name that does not exist and comes back NXDOMAIN.
+// PTR lives under IN-ADDR.ARPA with reversed octets (rfc 1035 3.5) or IP6.ARPA with reversed
+// nibbles (rfc 3596 2.5); querying "8.8.8.8" verbatim just returns NXDOMAIN
 export function reverseDnsName(input: string): string | null {
   const address = input.trim()
   if (isValidIPv4(address)) {

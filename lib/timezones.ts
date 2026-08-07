@@ -113,10 +113,8 @@ export function zonedTimeToEpochMs(
   )
   const first = guess - zoneOffsetMs(guess, timeZone)
   const second = guess - zoneOffsetMs(first, timeZone)
-  // a wall clock inside a spring-forward gap never happens, so the second pass
-  // is not a fixed point and lands an hour BEFORE what was asked for. fall back
-  // to the first pass, which lands after it, matching java.time's
-  // ZonedDateTime.of and Temporal's "compatible" disambiguation.
+  // inside a spring-forward gap the second pass lands an hour early, so keep the first: this is
+  // java.time ZonedDateTime.of and Temporal's "compatible" disambiguation
   if (guess - zoneOffsetMs(second, timeZone) !== second) return first
   return second
 }

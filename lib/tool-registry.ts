@@ -45,11 +45,9 @@ import {
   Globe2,
 } from "lucide-react"
 
-// Tool category definitions
 export type ToolCategory =
   "calculators" | "ip-tools" | "network" | "diagnostics" | "generators" | "reference" | "devtools"
 
-// Project item types for saving to projects
 export type ProjectItemType =
   | "subnet"
   | "vlsm"
@@ -75,7 +73,6 @@ export type ProjectItemType =
   | "email-diag"
   | "other"
 
-// Complete tool definition
 // a lazy import thunk; each tool becomes its own chunk, loaded on navigation
 export type ToolLoader = () => Promise<{ default: ComponentType }>
 
@@ -116,7 +113,6 @@ export function offlineToolCount(): number {
   return tools.filter(isOffline).length
 }
 
-// Category metadata
 export interface CategoryDefinition {
   id: ToolCategory
   label: string
@@ -124,7 +120,6 @@ export interface CategoryDefinition {
   description: string
 }
 
-// All categories
 export const categories: CategoryDefinition[] = [
   {
     id: "calculators",
@@ -170,7 +165,6 @@ export const categories: CategoryDefinition[] = [
   },
 ]
 
-// All tools - single source of truth
 export const tools: ToolDefinition[] = [
   // === CALCULATORS ===
   {

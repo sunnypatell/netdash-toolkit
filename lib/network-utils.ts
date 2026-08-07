@@ -1,5 +1,3 @@
-// Core networking utility functions for IPv4 and IPv6 calculations
-
 export interface IPv4Result {
   network: string
   broadcast: string
@@ -102,7 +100,6 @@ export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
   let hostCount: number
 
   if (prefix === 32) {
-    // Single host
     firstHost = network
     lastHost = network
     hostCount = 1
@@ -112,7 +109,6 @@ export function calculateIPv4Subnet(ip: string, prefix: number): IPv4Result {
     lastHost = broadcast
     hostCount = 2
   } else {
-    // Standard subnet
     firstHost = intToIpv4(networkInt + 1)
     lastHost = intToIpv4(broadcastInt - 1)
     hostCount = Math.pow(2, 32 - prefix) - 2
@@ -215,7 +211,6 @@ export function compressIPv6(ip: string): string {
   const { address: expanded, zone } = splitIPv6Zone(expandIPv6(ip))
   const suffix = zone === undefined ? "" : `%${zone}`
 
-  // Find the longest sequence of consecutive zero groups
   const groups = expanded.split(":")
 
   const mapped = ipv4MappedText(groups)
@@ -243,13 +238,11 @@ export function compressIPv6(ip: string): string {
     }
   }
 
-  // Check final sequence
   if (currentZeroLength > longestZeroLength) {
     longestZeroStart = currentZeroStart
     longestZeroLength = currentZeroLength
   }
 
-  // Apply compression if we found a sequence of 2 or more zeros
   if (longestZeroLength >= 2) {
     const before = groups.slice(0, longestZeroStart).map((g) => g.replace(/^0+/, "") || "0")
     const after = groups
@@ -267,7 +260,6 @@ export function compressIPv6(ip: string): string {
     }
   }
 
-  // No compression possible, just remove leading zeros
   return groups.map((g) => g.replace(/^0+/, "") || "0").join(":") + suffix
 }
 
@@ -317,7 +309,6 @@ export function calculateIPv6Subnet(ip: string, prefix: number): IPv6Result {
   const compressed = compressIPv6(network)
   const hostBits = 128 - prefix
 
-  // Determine address type
   const firstGroup = groups[0]
   const isLoopback = expanded === "0000:0000:0000:0000:0000:0000:0000:0001"
   // fe80::/10 spans fe80-febf; the old /16 check disagreed with isPrivate below
@@ -416,7 +407,6 @@ export function summarizeCIDRs(cidrs: string[]): string[] {
   return result
 }
 
-// Validation functions
 export function isValidIPv4(ip: string): boolean {
   if (!ip || typeof ip !== "string") return false
 
@@ -434,7 +424,6 @@ export function isValidIPv6(ip: string): boolean {
   if (zone !== undefined && !/^[0-9A-Za-z._~-]+$/.test(zone)) return false
 
   try {
-    // Basic IPv6 format validation
     if (address.includes(":::")) return false
     if (address.split("::").length > 2) return false
     // a lone leading/trailing colon leaves an empty group that padStart hides

@@ -1,4 +1,4 @@
-// Email authentication record parsing: MX (RFC 5321/7505), SPF (RFC 7208),
+// email authentication record parsing: MX (RFC 5321/7505), SPF (RFC 7208),
 // DKIM (RFC 6376), DMARC (RFC 7489). Lookups go over DNS-over-HTTPS.
 
 import { isValidCIDR, isValidIPv4, isValidIPv6 } from "@/lib/network-utils"

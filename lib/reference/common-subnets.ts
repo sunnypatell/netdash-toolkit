@@ -1,9 +1,6 @@
 import type { CommonSubnetEntry } from "./types"
 
-// only the prefix, the label and the use case live here; mask and host counts
-// are looked up from SUBNET_MASKS so the two tables cannot disagree. the old
-// table carried its own copies plus classful names ("Half Class C", "Class C")
-// for what are just /25 and /24.
+// mask and host counts come from SUBNET_MASKS so the two tables cannot disagree
 export const COMMON_SUBNETS: readonly CommonSubnetEntry[] = [
   { prefix: 32, name: "Single host", useCase: "Host routes, loopbacks, ACL entries" },
   { prefix: 31, name: "Point-to-point", useCase: "Router links without a wasted pair (RFC 3021)" },

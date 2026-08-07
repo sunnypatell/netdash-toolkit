@@ -2,9 +2,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-// the privileged path, exercised end to end with spawn and net.Socket replaced.
-// nothing here starts a process or opens a connection: the point is to prove
-// what would have been spawned and that every handle is released afterwards.
+// spawn and net.Socket replaced: proves what would have been spawned, and that handles are released
 
 const state = vi.hoisted(() => {
   type Listener = (...args: unknown[]) => void

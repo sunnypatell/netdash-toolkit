@@ -9,9 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.resolve(here, "../dist")
 const BASE = "/docs"
 
-// links to pages this build does not own. the accessibility conformance record is
-// authored separately; it is referenced from the sidebar on purpose and must not
-// be created here just to satisfy the crawler.
+// authored outside this build and linked from the sidebar on purpose; do not create to satisfy the crawler
 const KNOWN_PENDING = new Set(["/docs/accessibility-conformance/"])
 
 async function htmlFiles(dir) {

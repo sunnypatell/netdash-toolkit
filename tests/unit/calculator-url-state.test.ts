@@ -14,10 +14,7 @@ import { ProtocolReference } from "@/components/tools/protocol-reference"
 import { VLSMPlanner } from "@/components/tools/vlsm-planner"
 import { VLANManager } from "@/components/tools/vlan-manager"
 
-// the claim under test: every input lives in the query string, so a link
-// reproduces a result with no interaction and no Calculate button. the two
-// deliberate exceptions are the vlsm requirement list and the vlan/port tables,
-// which are unbounded editable lists; those must stay out of the url entirely.
+// every input in the query string, bar the vlsm and vlan/port tables, which are unbounded lists
 
 for (const name of ["ResizeObserver", "IntersectionObserver"] as const) {
   if (!(name in window)) {

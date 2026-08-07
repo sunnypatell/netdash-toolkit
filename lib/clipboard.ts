@@ -1,7 +1,5 @@
-// one clipboard path for the whole app. returns success so callers can show
-// feedback; falls back to the legacy execCommand path for non-secure contexts
-// (the electron build serves over http://127.0.0.1, which is treated as
-// secure, but file previews and odd embeds are not).
+// falls back to execCommand for non-secure contexts: http://127.0.0.1 counts as secure,
+// but file previews and embeds do not
 
 export async function copyText(text: string): Promise<boolean> {
   try {

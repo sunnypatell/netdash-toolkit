@@ -87,9 +87,7 @@ describe("manifest", () => {
 })
 
 describe("shipped version", () => {
-  // components/header.tsx renders changelog.releases[0].version, so a release
-  // that bumps package.json without adding a changelog entry ships a badge
-  // showing the previous version. that happened: v3.0.0 on a 3.0.1 build.
+  // header.tsx renders releases[0].version, so a bump with no entry shipped v3.0.0 on a 3.0.1 build
   it("the changelog's newest entry matches the package version", async () => {
     const [pkg, changelog] = await Promise.all([
       import("../../package.json"),

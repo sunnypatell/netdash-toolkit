@@ -49,15 +49,10 @@ describe("1.4.11 state indicators", () => {
     expect(r, `--accent on --popover is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
   })
 
-  // 2.54:1 in the light theme, recorded so the number is checked not remembered; the text swaps too
-  it("the light theme menu highlight is a known open gap, still measuring under 3:1", () => {
+  // was 2.54:1 while --accent was emerald-500; emerald-700 took it to 5.48:1
+  it("the light theme menu highlight clears 3:1 against the popover surface", () => {
     const r = ratio(hex("light", "accent"), hex("light", "popover"))
-    expect(
-      r,
-      `--accent on --popover is now ${r.toFixed(2)}:1. if this reached 3:1, promote 1.4.11 to full support in docs/src/content/docs/accessibility-conformance.md and turn this into a >= 3 assertion.`
-    ).toBeLessThan(3)
-    // it is not arbitrarily bad either; a regression below 2:1 is a real problem
-    expect(r).toBeGreaterThan(2)
+    expect(r, `--accent on --popover is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
   })
 
   it("the focused row's text stays readable on the highlight, in both themes", () => {
@@ -69,14 +64,10 @@ describe("1.4.11 state indicators", () => {
     }
   })
 
-  // the same family one level down, and worse in the light theme because --sidebar is not white
-  it("the light theme sidebar highlight is a known open gap, still measuring under 3:1", () => {
+  // the same family one level down, and harder because --sidebar is not white
+  it("the light theme sidebar highlight clears 3:1", () => {
     const r = ratio(hex("light", "sidebar-accent"), hex("light", "sidebar"))
-    expect(
-      r,
-      `--sidebar-accent on --sidebar is now ${r.toFixed(2)}:1. if this reached 3:1, revisit 1.4.11 in docs/src/content/docs/accessibility-conformance.md and turn this into a >= 3 assertion.`
-    ).toBeLessThan(3)
-    expect(r).toBeGreaterThan(2)
+    expect(r, `--sidebar-accent on --sidebar is ${r.toFixed(2)}:1`).toBeGreaterThanOrEqual(3)
   })
 
   it("the dark theme sidebar highlight clears 3:1", () => {

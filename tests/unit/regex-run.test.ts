@@ -74,9 +74,7 @@ describe("runRegexMatch", () => {
     expect(result.total).toBe(0)
   })
 
-  // the empty-pattern case above returns before the loop, so it never proved the
-  // advance works. these do, by agreeing with String.prototype.matchAll, which
-  // uses the spec's own AdvanceStringIndex.
+  // the empty-pattern case above returns before the loop; these agree with String.prototype.matchAll
   it.each([
     ["(?:)", "g", "abc"],
     ["(?:)", "gu", "abc"],
@@ -90,9 +88,7 @@ describe("runRegexMatch", () => {
     )
   })
 
-  // under u/v, exec snaps lastIndex back to the start of the code point, so the
-  // old bare +1 landed inside a surrogate pair, was undone, and looped forever
-  // on any astral character until the 1s deadline saved the tab.
+  // under u/v exec snaps lastIndex back, so the old bare +1 looped forever on an astral character
   it.each([
     ["(?:)", "gu", "😀😀"],
     ["(?:)", "gv", "😀😀"],

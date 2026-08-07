@@ -151,9 +151,7 @@ describe("parseRdapError (rfc 9083 6)", () => {
   })
 })
 
-// nothing in the repo ever observed the request fetchRdap sends, so the whole
-// url it builds was unasserted: RDAP_PATHS.asn could stop being the rfc 9224
-// "autnum" segment and every asn lookup would 404 with the suite still green.
+// nothing observed the request, so RDAP_PATHS.asn could stop being rfc 9224's "autnum" unnoticed
 describe("the request fetchRdap actually sends", () => {
   const ok = (body: unknown) =>
     ({ ok: true, status: 200, json: async () => body }) as unknown as Response

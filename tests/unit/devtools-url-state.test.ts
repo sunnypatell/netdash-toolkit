@@ -15,9 +15,7 @@ import { ColorConverter } from "@/components/tools/color-converter"
 import { JWTDecoder } from "@/components/tools/jwt-decoder"
 import { UserAgentParser } from "@/components/tools/user-agent-parser"
 
-// the devtools tools put their mode and options in the query string so a result
-// is a shareable link. the two payload-carrying ones deliberately do not: base64
-// input and a pasted json document stay local, and a jwt never leaves the page.
+// mode and options go in the url; base64 input, a pasted json document and a jwt stay local
 
 function mount(node: ReactElement, searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) {
   // children passed in the props object, not as a third argument: the adapter's

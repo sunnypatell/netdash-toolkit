@@ -10,9 +10,7 @@ import {
   tools,
 } from "@/lib/tool-registry"
 
-// these assert architectural rules rather than behaviour: the registry is the
-// single source of truth for the whole app, so anything that can silently
-// drift away from it gets a test instead of a convention.
+// architectural rules, not behaviour: anything that can drift from the registry gets a test
 
 const repoRoot = join(__dirname, "../..")
 const toolsDir = join(repoRoot, "components/tools")
@@ -29,11 +27,7 @@ const sourceOf = (slug: string) => {
   const path = join(toolsDir, `${fileName}.tsx`)
   if (existsSync(path)) parts.push(readFileSync(path, "utf8"))
 
-  // a tool split into one file per panel keeps its slug as a directory with an
-  // index.tsx; the whole directory is the tool's source for these assertions.
-  // both are read, never one or the other: while a shell and its panel directory
-  // coexisted, returning on the shell hid all 24 panel files from the offline and
-  // projectItemType checks below, including the panels that call fetch.
+  // both are read, never one or the other: stopping at the shell hid all 24 panel files below
   const dir = join(toolsDir, fileName)
   if (existsSync(dir)) {
     for (const f of readdirSync(dir)) {
@@ -44,9 +38,7 @@ const sourceOf = (slug: string) => {
   return parts.length > 0 ? parts.join("\n") : null
 }
 
-// network-testing is a grab-bag: tools import pure constants from it as well
-// as its fetching helpers, so a blanket scan of it would flag offline tools.
-// these are its actual network entry points.
+// tools import pure constants from network-testing too, so these are its real network entry points
 const NETWORK_SYMBOLS = [
   "queryDNSOverHTTPS",
   "testRTT",
@@ -54,9 +46,7 @@ const NETWORK_SYMBOLS = [
   "testUploadThroughput",
 ]
 
-// a tool "does network i/o" if it fetches directly, calls the electron network
-// bridge, or imports a local module that fetches. agents keep extracting these
-// calls into lib modules, so component-only detection goes stale.
+// agents keep extracting these calls into lib modules, so component-only detection goes stale
 function performsNetworkIO(src: string): boolean {
   if (/\bfetch\(|electronNetwork\./.test(src)) return true
   if (NETWORK_SYMBOLS.some((s) => new RegExp(`\\b${s}\\b`).test(src))) return true
@@ -65,10 +55,7 @@ function performsNetworkIO(src: string): boolean {
     const name = m[1]
     if (name === "network-testing") continue // handled by NETWORK_SYMBOLS above
     const libPath = join(repoRoot, "lib", `${name}.ts`)
-    // fetch used as a value, either called or passed. a paren-only match missed
-    // lib/oui-vendors injecting it as a default parameter, `=\s*fetch` missed
-    // lib/email-auth defaulting with `?? fetch`, and a bare \bfetch\b matched
-    // the literal "node-fetch" in ua-parse's bot list.
+    // fetch as a value too: a paren-only match missed `?? fetch`, and a bare one matched "node-fetch"
     if (
       existsSync(libPath) &&
       /\bfetch\s*\(|(?:=|\?\?)\s*fetch\b/.test(readFileSync(libPath, "utf8"))
@@ -118,11 +105,7 @@ describe("tool registry", () => {
   })
 
   it("gives every tool exactly one shape on disk", () => {
-    // a tool is <slug>.tsx when it has no panels and <slug>/index.tsx when it
-    // does. two agents once shipped both conventions, which left six tools with
-    // a shell file beside a panel directory of the same name: the specifier
-    // resolved to the file, so sourceOf below never read the panels and the
-    // offline and projectItemType assertions silently skipped them.
+    // two agents once shipped both conventions, leaving six tools whose panel directory went unread
     const both = tools
       .map((t) => (t.slug === "wifi-qr" ? "wifi-qr-generator" : t.slug))
       .filter(
@@ -160,10 +143,7 @@ describe("tool registry", () => {
   })
 
   it("says where the data goes for every non-offline tool", () => {
-    // a tool that does i/o must be able to tell the user what that i/o is.
-    // usually that means naming third-party hosts, but a desktop-only local
-    // system call (conflict-checker reading the arp cache) reaches no third
-    // party at all, so declaring the capability is the honest disclosure there.
+    // a desktop-only local call reaches no third party, so the capability is the honest disclosure
     for (const tool of tools.filter((t) => t.runtime?.offline === false)) {
       const disclosed =
         (tool.runtime?.thirdParty?.length ?? 0) + (tool.runtime?.desktopOnly?.length ?? 0)
@@ -189,10 +169,7 @@ describe("tool registry", () => {
 })
 
 describe("every tool has exactly one loader", () => {
-  // the loaders left the registry so app/layout would stop hoisting all 48 tool
-  // modules into the script every page loads. nothing in the type system ties
-  // the two lists together any more, so a new tool can ship with no loader and
-  // only fail at runtime when someone opens it.
+  // nothing in the type system ties the two lists, so a tool with no loader only fails at runtime
   it("registry and loader map agree", async () => {
     const { toolLoaders } = await import("@/lib/tool-loaders")
     const registrySlugs = tools.map((t) => t.slug).sort()

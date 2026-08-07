@@ -15,14 +15,9 @@ import { SAMPLE_EXTENDED_RULES, SAMPLE_STANDARD_RULES, generateACL, type ACLType
 import { DNS_TYPE, analyzeDkim, analyzeDmarc, analyzeMx, analyzeSpf } from "@/lib/email-auth"
 import type { DnsAnswer, DnsResponse } from "@/lib/email-auth"
 
-// acl-generator and email-diagnostics are now a directory of panels behind a
-// tabbed index. these mount each panel alone, with props and no provider, so a
-// panel that still leaned on the parent's state blob fails here. the tool level
-// suites in tests/components only ever see the default tab, and the email result
-// panels are never reached there at all because they need a dns answer first.
+// each panel mounted alone on props: the tool level suites only ever see the default tab
 
-// project persistence needs a provider; the indexes are what own it, and these
-// tests are about the tab and lookup wiring around it
+// project persistence needs a provider, which the indexes own; these test the wiring around it
 vi.mock("@/components/ui/save-to-project", () => ({
   SaveToProject: () => createElement("button", {}, "Save to Project"),
 }))

@@ -1,8 +1,7 @@
 import { blockedPortService, isBlockedPort, pageIsHttps } from "./browser-limits"
 
-// "unknown": a failed browser fetch cannot tell closed from filtered from
-// blocked-by-the-browser. "browser-blocked" is the case we can prove without
-// sending anything, so it is reported separately instead of hiding in unknown.
+// a failed fetch cannot tell closed from filtered, but browser-blocked is provable without
+// sending anything, so it is reported separately rather than hidden in unknown
 export type PortState = "open" | "closed" | "filtered" | "unknown" | "browser-blocked"
 
 export type ScanMethod = "tcp-connect" | "http-probe"

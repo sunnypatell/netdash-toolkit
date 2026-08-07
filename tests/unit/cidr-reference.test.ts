@@ -3,9 +3,7 @@ import { CIDR_TABLE, COMMON_CIDR_TABLE } from "@/lib/cidr-reference"
 import { usableHostsFor } from "@/lib/mask-convert"
 import { ipv4ToInt, netmaskToPrefix } from "@/lib/network-utils"
 
-// a reference table is only worth anything if every column agrees with every
-// other column, so assert internal consistency across all 33 rows rather than
-// spot-checking the three everyone remembers.
+// every column has to agree with every other, so check all 33 rows, not the memorable three
 
 describe("cidr reference table", () => {
   it("covers /0 through /32 exactly once", () => {

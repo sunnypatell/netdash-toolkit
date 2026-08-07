@@ -11,10 +11,7 @@ import {
   parseTracerouteOutput,
 } from "@/electron/network/parsers"
 
-// the macos fixtures are real output captured from a macos host. the linux and
-// windows ones are transcribed from those platforms' documented formats,
-// including the non-english variants, because this machine can only produce
-// macos output and none of these may be obtained by probing anything.
+// the macos fixtures are real capture; the linux and windows ones are transcribed, never probed
 const fixture = (name: string) => readFileSync(join(__dirname, "../fixtures", name), "utf8")
 
 describe("parsePingOutput", () => {

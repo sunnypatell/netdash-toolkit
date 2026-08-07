@@ -1,10 +1,7 @@
 import { parseResponseBlocks, type ResponseBlock } from "./http-header-parse"
 
-// verified by curl: this endpoint sends "access-control-allow-origin: *" and
-// returns the target's real status line and headers, one block per redirect hop.
-// it is the only way a page can see a cross-origin Location or Set-Cookie at all.
-// it is also an unaffiliated relay that can add, drop or rewrite anything, so
-// every caller labels its output unverified.
+// the only way a page sees a cross-origin Location or Set-Cookie, but an unaffiliated relay
+// that can rewrite anything, so every caller labels its output unverified
 export const RELAY_HOST = "api.hackertarget.com"
 const RELAY_ENDPOINT = "https://api.hackertarget.com/httpheaders/"
 

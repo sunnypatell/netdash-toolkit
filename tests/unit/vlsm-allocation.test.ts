@@ -3,10 +3,7 @@ import { calculateVLSM } from "@/lib/vlsm-utils"
 import type { VLSMRequirement } from "@/lib/vlsm-utils"
 import { ipv4ToInt } from "@/lib/network-utils"
 
-// an allocator that silently produces an invalid plan is worse than one that
-// fails, so these assert the three properties a plan must have: no two blocks
-// share an address, every block starts on its own boundary, and an impossible
-// requirement set comes back as a failure rather than a plausible-looking plan.
+// a silently invalid plan is worse than a failure: no overlap, every block on its own boundary
 
 function req(name: string, hostsRequired: number): VLSMRequirement {
   return { id: name, name, hostsRequired }

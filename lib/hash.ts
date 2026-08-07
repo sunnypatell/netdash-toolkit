@@ -65,11 +65,7 @@ export const UNAVAILABLE_ALGORITHMS: { name: string; reason: string }[] = [
 
 export type CryptoAvailability = "available" | "insecure-context" | "unsupported"
 
-/**
- * SubtleCrypto is gated on a secure context, so over plain http `crypto.subtle`
- * is simply undefined. Worth distinguishing from an old browser, because the
- * user can fix one of those and not the other.
- */
+// crypto.subtle is undefined over plain http; worth telling apart from an old browser
 export function cryptoAvailability(): CryptoAvailability {
   if (typeof crypto === "undefined" || typeof crypto.subtle === "undefined") {
     const secure =
@@ -107,8 +103,7 @@ export async function computeHashes(
   }))
 }
 
-// return type inferred: annotating it as Uint8Array widens the buffer to
-// ArrayBufferLike, which ts 6 will not accept as a BufferSource
+// return type left inferred: Uint8Array widens to ArrayBufferLike, which ts 6 rejects as BufferSource
 export function encodeText(text: string) {
   return new TextEncoder().encode(text)
 }
@@ -118,10 +113,7 @@ export interface VerifyOutcome {
   algorithm: string | null
 }
 
-/**
- * Names the algorithm that matched rather than just saying yes. "matches" with
- * no algorithm is not much of an answer when four digests were computed.
- */
+// names which algorithm matched, since four digests were computed
 export function verifyHash(hashes: HashResult[], candidate: string): VerifyOutcome | null {
   const normalized = candidate.trim().toLowerCase().replace(/^0x/, "")
   if (!normalized) return null

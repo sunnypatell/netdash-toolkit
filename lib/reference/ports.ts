@@ -1,9 +1,7 @@
 import type { PortEntry } from "./types"
 
-// checked row by row against the iana service name and transport protocol port
-// number registry (service-names-port-numbers.csv). where the everyday name and
-// the registered name disagree, ianaName carries the registered one so the table
-// can show both instead of presenting folklore as an assignment.
+// checked against the iana service-names-port-numbers registry; ianaName carries the registered
+// name where it differs, so folklore is never shown as an assignment
 export const COMMON_PORTS: readonly PortEntry[] = [
   {
     port: 20,

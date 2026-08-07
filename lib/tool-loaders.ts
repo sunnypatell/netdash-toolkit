@@ -1,9 +1,7 @@
 import type { ComponentType } from "react"
 
-// deliberately not in tool-registry. app/layout.tsx is a server module, and a
-// server module reaching a "use client" target through an import() thunk makes
-// next hoist every one of those targets into that route's client entry, so all
-// 48 tools shipped in the script every page loads.
+// kept out of tool-registry: a server module reaching "use client" targets through import()
+// thunks makes next hoist all 48 tools into every route's client entry
 export type ToolLoader = () => Promise<{ default: ComponentType }>
 
 export const toolLoaders: Record<string, ToolLoader> = {

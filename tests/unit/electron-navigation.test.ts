@@ -3,9 +3,7 @@ import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { appOrigins, decideNavigation, isPermissionAllowed } from "@/electron/navigation"
 
-// preload.ts exposes ping, traceroute, portScan, arpScan and getSystemInfo, and a
-// preload runs for every navigation in its webContents. so the question these
-// tests answer is: can any navigation put a non-app origin in that window.
+// the preload runs for every navigation, so the question is whether any can land a non-app origin
 
 const PROD = appOrigins({ isDev: false, staticPort: 17890 })
 const DEV = appOrigins({ isDev: true, staticPort: 17890 })

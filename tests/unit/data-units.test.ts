@@ -10,9 +10,7 @@ import {
   toBits,
 } from "@/lib/data-units"
 
-// the defining bug of this tool category is treating MB as MiB, or bits as
-// bytes. every assertion here is a value from IEC 80000-13:2008 / IEEE
-// 1541-2002 rather than a value read back out of the implementation.
+// every value comes from IEC 80000-13:2008 / IEEE 1541-2002, not out of the implementation
 
 const bitsOf = (id: string) => findUnit(id)?.bits ?? NaN
 

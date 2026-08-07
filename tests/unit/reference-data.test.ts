@@ -7,9 +7,7 @@ import { IP_PROTOCOL_NUMBERS } from "@/lib/reference/protocol-numbers"
 import { filterRows, matchesTerm } from "@/lib/reference/search"
 import { SUBNET_MASKS, subnetMaskFor } from "@/lib/reference/subnet-masks"
 
-// the reference tables are data, so the tests recompute them rather than count
-// rows: masks against prefix arithmetic, address counts against 2^(32-prefix),
-// and the port table against the shape of the iana registry it was checked from.
+// recomputed rather than counted: masks from prefix arithmetic, addresses from 2^(32-prefix)
 
 function maskBits(prefix: number): number {
   return prefix === 0 ? 0 : (0xffffffff << (32 - prefix)) >>> 0

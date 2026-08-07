@@ -1,8 +1,6 @@
 import type { IPv6RangeEntry } from "./types"
 
-// prefixes and rfc references follow the iana ipv6 special-purpose address
-// registry; 2000::/3 and ff00::/8 come from RFC 4291 sections 2.4 and 2.7,
-// which the special-purpose registry does not list.
+// iana ipv6 special-purpose registry, plus 2000::/3 and ff00::/8 from RFC 4291 2.4 and 2.7
 export const IPV6_SPECIAL_RANGES: readonly IPv6RangeEntry[] = [
   {
     range: "::/128",

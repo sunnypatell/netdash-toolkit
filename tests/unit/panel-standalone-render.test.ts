@@ -26,10 +26,7 @@ import ConflictRemediationPanel from "@/components/tools/conflict-checker/remedi
 import { IPConverter } from "@/components/tools/ip-converter"
 import { IPEnumerator } from "@/components/tools/ip-enumerator"
 
-// each of these tools used to hide two or three panels behind a tab strip, so
-// the tool level suites in tests/components only ever exercised the default tab.
-// these mount every panel on its own, with no shell handing it state, and assert
-// the value it derives from the query string.
+// every panel mounted alone with no shell handing it state, since the tool suites see only tab one
 
 vi.mock("@/lib/firebase", () => ({
   isFirebaseConfigured: () => false,

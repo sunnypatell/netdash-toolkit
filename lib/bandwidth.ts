@@ -1,6 +1,5 @@
-// bit rates are decimal everywhere in ieee 802.3 and itu-t, so 1 Mbps is
-// exactly 1e6 bit/s. byte sizes are offered in both ladders, labelled honestly,
-// because "how long does my 4 GiB iso take" and "my 4 GB iso" are different sums.
+// bit rates are decimal per ieee 802.3 and itu-t (1 Mbps = 1e6 bit/s); byte sizes offer both
+// ladders because a 4 GiB iso and a 4 GB iso are different sums
 
 export const SI_SIZE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB"] as const
 export const IEC_SIZE_UNITS = ["KiB", "MiB", "GiB", "TiB", "PiB"] as const

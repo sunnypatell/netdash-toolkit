@@ -1,6 +1,4 @@
-// ICMP for IPv4, checked against the IANA icmp-parameters registry. Names are
-// the registry's own wording, which is why type 8 is "Echo" rather than "Echo
-// Request" and type 13 is "Timestamp" rather than "Timestamp Request".
+// names are the IANA icmp-parameters registry's own wording, so type 8 is "Echo", not "Echo Request"
 
 export interface ICMPTypeEntry {
   type: number

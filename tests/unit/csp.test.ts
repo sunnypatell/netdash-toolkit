@@ -4,14 +4,7 @@ import { describe, expect, it } from "vitest"
 import { CSP_DIRECTIVES, CONTENT_SECURITY_POLICY } from "@/electron/csp"
 import { appOrigins } from "@/electron/navigation"
 
-// this app's whole purpose is making network requests, so a connect-src that is
-// wrong fails for users rather than for us. these tests derive the third-party
-// host list from the source at test time and assert the policy permits it, which
-// means adding a new third-party call fails ci instead of failing in production.
-//
-// they also assert the two policies stay identical: the desktop build serves the
-// same static export from http://localhost, so the only intended difference is
-// which origin 'self' resolves to.
+// the host list is derived from the source at test time, so a new third-party call fails ci
 
 const repoRoot = process.cwd()
 const SCAN_DIRS = ["lib", "components", "app", "contexts"]
@@ -20,8 +13,7 @@ const WEB_ORIGIN = new URL(
 ).origin
 const DESKTOP_ORIGIN = appOrigins({ isDev: false, staticPort: 17890 })[0]
 
-// ---------------------------------------------------------------------------
-// policy parsing + source matching
+// policy parsing and source matching
 
 type Directives = Record<string, string[]>
 
@@ -59,7 +51,6 @@ function permits(sources: string[], target: string, selfOrigin: string): boolean
   })
 }
 
-// ---------------------------------------------------------------------------
 // egress derived from the source tree
 
 function sourceFiles(dir: string): string[] {
@@ -72,16 +63,11 @@ function sourceFiles(dir: string): string[] {
 
 const LOOKBACK = 120
 const FETCH_CALL = /\bfetch\w*\(/
-// each rule requires the literal to sit directly against the thing that makes it
-// a request target. documentation links live in href= / learnMore: / detailsUrl:
-// and match none of them.
+// each rule needs the literal against its request target; doc links in href= match none of them
 const FETCH_ARG = /\bfetch\w*\(\s*["'`]?$/
 const ENDPOINT_CONST =
   /\b(?:const|let|var)\s+[A-Z0-9_]*(?:ENDPOINT|API|RESOLVER|HOST)[A-Z0-9_]*\s*=[^=]*$/
-// any constant in a file that fetches: lib/rdap.ts calls its BOOTSTRAP, and the
-// next module will name it something else again. this deliberately does not
-// require screaming case, because `const observatoryBase = "https://..."` beside
-// a fetch is the same egress and the screaming-only version missed it.
+// not screaming case only: `const observatoryBase = "https://..."` beside a fetch is the same egress
 const CONST_IN_FETCHING_FILE = /\b(?:const|let|var)\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=[^=]*$/
 const URL_BINDING = /(?:^|[^A-Za-z0-9_.])url\s*[:=]\s*["'`]$/
 const SCRIPT_SRC = /\bscript\w*\.src\s*=\s*["'`]$/
@@ -143,12 +129,9 @@ function connectHostsIn(src: string): string[] {
 const egress = scanEgress()
 const DERIVED_HOSTS = [...egress.connect.keys()].sort()
 
-// ---------------------------------------------------------------------------
 // the disclosure the derived list is checked against
 
-// nothing about the egress surface is hardcoded here. the source is the input,
-// SECURITY.md is the artifact that has to keep up with it, and a third-party
-// call added without touching that table fails this file.
+// the source is the input and SECURITY.md has to keep up with it, so nothing here is hardcoded
 const securityDoc = readFileSync(join(repoRoot, ".github", "SECURITY.md"), "utf8")
 
 function documentedHosts(marker: string): string[] {

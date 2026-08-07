@@ -2,10 +2,7 @@ import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// 4.1.3. ResultCard announces its own result. a wrapper that also carries
-// aria-live puts one live region inside another, so the same numbers are read
-// twice. this is a source scan on purpose: at rest most of these tools render
-// no ResultCard at all, so a rendered check passes while the defect is present.
+// 4.1.3: a source scan, because at rest most of these tools render no ResultCard for one to wrap
 
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

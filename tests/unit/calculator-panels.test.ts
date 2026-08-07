@@ -18,11 +18,7 @@ import { ICMPPanel } from "@/components/tools/protocol-reference/icmp"
 import { UnreachablePanel } from "@/components/tools/protocol-reference/unreachable"
 import { calculateVLSM } from "@/lib/vlsm-utils"
 
-// network-calculator, vlsm-planner, vlan-manager and protocol-reference are now
-// directories of panels behind a tabbed index. these mount each panel alone,
-// with no parent, no Tabs root and no nuqs adapter, so a panel that still
-// reached for the old shared state blob fails here rather than in review. the
-// tool level suites in tests/components only ever exercise the default tab.
+// each panel mounted alone: no parent, no Tabs root, no nuqs adapter, so a state leak fails here
 
 // happy-dom lacks the browser apis radix touches on mount
 for (const name of ["ResizeObserver", "IntersectionObserver"] as const) {

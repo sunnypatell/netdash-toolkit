@@ -1,8 +1,5 @@
-// four encodings that all get called "url encoding" and are not interchangeable:
-//   component - encodeURIComponent, for one path segment or one query value
-//   uri       - encodeURI, for a whole url whose reserved delimiters must survive
-//   form      - application/x-www-form-urlencoded, where a space is "+"
-//   rfc3986   - encodeURIComponent plus the five sub-delims it leaves alone
+// four things called "url encoding" that are not interchangeable: encodeURIComponent, encodeURI,
+// form (space is "+"), and rfc3986 (encodeURIComponent plus the five sub-delims it leaves alone)
 export type UrlEncodeMode = "component" | "uri" | "form" | "rfc3986"
 
 export interface UrlEncodeResult {

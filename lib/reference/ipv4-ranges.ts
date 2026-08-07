@@ -1,10 +1,7 @@
 import type { IPv4RangeEntry } from "./types"
 
-// types and rfc references follow the iana ipv4 special-purpose address
-// registry, except 224.0.0.0/4 which lives in the ipv4 multicast registry
-// (RFC 5771). the previous table labelled the rfc 1918 blocks "Class A/B/C
-// Private", which classful addressing stopped meaning anything in RFC 1519:
-// 172.16.0.0/12 is 16 class-B networks and 192.168.0.0/16 is 256 class-C ones.
+// iana ipv4 special-purpose registry, except 224.0.0.0/4 which is in the multicast registry
+// (RFC 5771). no classful names: RFC 1519 ended those, and 172.16.0.0/12 is 16 class-B networks.
 export const IPV4_SPECIAL_RANGES: readonly IPv4RangeEntry[] = [
   {
     range: "0.0.0.0/8",

@@ -6,10 +6,7 @@ import { ProjectProvider } from "@/contexts/project-context"
 import { loadTool } from "@/lib/tool-loaders"
 import { settled } from "./settle"
 
-// 4.1.3, the inverse failure. these are synchronous calculators, so a result
-// exists for every intermediate value the user types. announcing each one read
-// the whole conversion table four times while typing "1000". polite does not
-// fix that, it queues it, so the user hears every keystroke before the answer.
+// 4.1.3 inverted: announcing each intermediate value read the whole table four times typing "1000"
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -74,7 +71,5 @@ describe("wcag 4.1.3: a derived result does not announce on every keystroke", ()
     ).not.toBe("")
   }, 20000)
 
-  // the nesting check lives in tests/unit/wcag-nested-live-regions.test.ts. a
-  // rendered version of it was vacuous: at rest these tools show no ResultCard,
-  // so restoring the wrapper on cable-calculator left it green.
+  // the nesting check is in tests/unit/wcag-nested-live-regions.test.ts: rendered, it was vacuous
 })

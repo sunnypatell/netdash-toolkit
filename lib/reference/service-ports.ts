@@ -1,6 +1,4 @@
-// a categorised view over the one port table in ./ports. no row data lives
-// here: port-reference needs a category filter and the range definitions, which
-// the shared table has no use for, so only those are added on top.
+// categorised view over ./ports; only the filter and range definitions live here, no row data
 
 import { COMMON_PORTS } from "./ports"
 import type { PortEntry, PortProtocol } from "./types"

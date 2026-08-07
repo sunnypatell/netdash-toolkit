@@ -11,9 +11,7 @@ import {
   type WifiConfig,
 } from "@/lib/wifi-qr"
 
-// the WIFI: scheme is documented on zxing's Barcode Contents page, which is what
-// the android and ios scanners implement. a mis-escaped passphrase produces a QR
-// code that scans fine and joins nothing, so every rule there gets a test.
+// a mis-escaped passphrase produces a QR code that scans fine and joins nothing
 
 const config = (overrides: Partial<WifiConfig> = {}): WifiConfig => ({
   ssid: "Lab-Net",
@@ -183,10 +181,7 @@ describe("download filename", () => {
 })
 
 describe("a scanner recovers exactly what was entered", () => {
-  /**
-   * unescaper written from the zxing Barcode Contents rules rather than from
-   * lib/wifi-qr, so a round trip proves the escaping instead of mirroring it.
-   */
+  // written from the zxing rules rather than from lib/wifi-qr, so the round trip proves the escaping
   function parseWifiUri(uri: string): Record<string, string> {
     const body = uri.slice("WIFI:".length)
     const out: Record<string, string> = {}

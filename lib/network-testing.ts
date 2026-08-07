@@ -1,5 +1,3 @@
-// Network testing utilities for RTT, throughput, and connectivity
-
 import * as dnsPacket from "@dnsquery/dns-packet"
 import {
   toString as wireTypeToString,
@@ -16,9 +14,7 @@ interface DNSCacheEntry {
   minTTL: number
 }
 
-// map iteration order is insertion order, so "least recently used" only holds
-// if every read re-inserts its key. get() below does that; without it the
-// eviction policy was plain fifo.
+// map order is insertion order, so get() must re-insert or the eviction policy is plain fifo
 class DNSCache {
   private cache: Map<string, DNSCacheEntry> = new Map()
   private maxSize: number = 100
@@ -38,7 +34,6 @@ class DNSCache {
       return null
     }
 
-    // Check if entry has expired based on TTL
     if (Date.now() >= entry.expiresAt) {
       this.cache.delete(key)
       this.misses++
@@ -51,7 +46,6 @@ class DNSCache {
     this.cache.delete(key)
     this.cache.set(key, entry)
 
-    // Return cached result with updated metadata
     return {
       ...entry.result,
       timestamp: Date.now(),
@@ -64,7 +58,6 @@ class DNSCache {
       return // Don't cache failed or empty results
     }
 
-    // Calculate minimum TTL from all records (at least 30 seconds, max 1 hour)
     const minTTL = Math.min(
       Math.max(30, Math.min(...result.records.map((r) => r.ttl || 300))),
       3600
@@ -74,7 +67,6 @@ class DNSCache {
     // re-setting an existing key keeps its old position, so drop it first
     this.cache.delete(key)
 
-    // Enforce max cache size by evicting the least recently used entry
     if (this.cache.size >= this.maxSize) {
       const lruKey = this.cache.keys().next().value
       if (lruKey) {
@@ -106,7 +98,6 @@ class DNSCache {
     }
   }
 
-  // Get remaining TTL for a cached entry
   getRemainingTTL(domain: string, recordType: string, provider: string): number | null {
     const key = this.getCacheKey(domain, recordType, provider)
     const entry = this.cache.get(key)
@@ -120,7 +111,6 @@ class DNSCache {
   }
 }
 
-// Global DNS cache instance
 export const dnsCache = new DNSCache()
 
 export interface RTTTestResult {
@@ -188,7 +178,6 @@ export function calculatePercentile(values: number[], percentile: number): numbe
   return sorted[Math.min(Math.max(rank, 1), sorted.length) - 1]
 }
 
-// Enhanced RTT Testing with better reliability
 export async function testRTT(
   url: string,
   method: "HEAD" | "GET" = "HEAD",
@@ -491,7 +480,6 @@ function describeRTTError(error: unknown, url: URL, timeout: number): string {
   return "Unknown network error"
 }
 
-// Enhanced throughput testing with better progress tracking
 export async function testDownloadThroughput(
   url: string,
   timeout = 30000
@@ -563,14 +551,12 @@ export async function testDownloadThroughput(
   }
 }
 
-// Enhanced upload throughput testing
 export async function testUploadThroughput(
   url: string,
   sizeBytes: number,
   timeout = 30000
 ): Promise<ThroughputTestResult> {
   try {
-    // Generate more realistic test data
     const testData = new Uint8Array(sizeBytes)
     const pattern = new TextEncoder().encode("NETWORK_TEST_DATA_")
     for (let i = 0; i < sizeBytes; i++) {
@@ -625,18 +611,15 @@ export async function testUploadThroughput(
   }
 }
 
-// Enhanced DNS over HTTPS query with TTL-based caching
 export async function queryDNSOverHTTPS(
   domain: string,
   recordType = "A",
   provider = "cloudflare",
   options: { skipCache?: boolean } = {}
 ): Promise<DNSResult> {
-  // Check cache first (unless explicitly skipped)
   if (!options.skipCache) {
     const cachedResult = dnsCache.get(domain, recordType, provider)
     if (cachedResult) {
-      // Add cache indicator to the result
       return {
         ...cachedResult,
         provider: `${provider} (cached)`,
@@ -766,7 +749,6 @@ export async function queryDNSOverHTTPS(
         timestamp: Date.now(),
       }
 
-      // Cache the successful result using TTL from records
       dnsCache.set(domain, recordType, provider, result)
 
       return result
@@ -889,7 +871,6 @@ function getRecordTypeCode(type: string): number | undefined {
   return code === 0 ? undefined : code
 }
 
-// Helper function to get record type name from number
 function getRecordTypeName(type: number): string {
   const extra = Object.keys(EXTRA_RECORD_TYPE_CODES).find(
     (name) => EXTRA_RECORD_TYPE_CODES[name] === type
@@ -1059,14 +1040,12 @@ function trimTrailingDot(value: string): string {
 // regex rejected them before a query could even be built
 const DOMAIN_LABEL = /^_?[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
 
-// Helper function to validate domain names
 function isValidDomain(domain: string): boolean {
   const name = trimTrailingDot(domain)
   if (!name || name.length > 253) return false
   return name.split(".").every((label) => label.length <= 63 && DOMAIN_LABEL.test(label))
 }
 
-// Helper function to format record data based on type (json provider payloads)
 function formatRecordData(data: string, type: number): string {
   switch (type) {
     case 15: {
@@ -1136,9 +1115,7 @@ export const PROTOCOL_OVERHEADS = {
 // legacy alias kept for existing importers
 export const protocolOverheads = PROTOCOL_OVERHEADS
 
-// the bundled prefix table lives once, in lib/oui-vendors: the copy that used
-// to sit here was a strict subset, so this panel silently missed 40 prefixes
-// the OUI Lookup tool resolved.
+// from lib/oui-vendors: the local copy was a subset and missed 40 prefixes the lookup tool had
 export function lookupOUI(mac: string): OUIResult {
   const parsed = parseMacInput(mac)
   if (!parsed) {

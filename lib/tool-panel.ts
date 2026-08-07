@@ -1,6 +1,4 @@
-// a split tool's panel is a tool in its own right: it owns its own inputs and
-// renders its own header. the tabbed shell that composes panels passes
-// `embedded` so only one header shows.
+// each panel renders its own header, so the tabbed shell passes `embedded` to suppress duplicates
 export interface PanelProps {
   embedded?: boolean
 }

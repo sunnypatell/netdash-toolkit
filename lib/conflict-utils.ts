@@ -39,9 +39,7 @@ export interface SubnetConflict {
   remediation: string[]
 }
 
-// dhcp lease whose mac disagrees with the live arp entry for the same ip:
-// usually a stale lease, occasionally spoofing. arp entries are dynamically
-// learned, not static assignments, so this is not a "static overlap".
+// arp entries are learned, not assigned, so a lease/arp mac mismatch is a stale lease or spoofing
 export interface StaleLeaseConflict {
   type: "stale-lease-or-spoof"
   ip: string
@@ -71,7 +69,6 @@ export interface ConflictAnalysisResult {
   }
 }
 
-// Convert parsed entries to conflict entries
 function toConflictEntry(
   entry: ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry,
   sourceData: string
@@ -87,7 +84,6 @@ function toConflictEntry(
   }
 }
 
-// Check if two IPs are in the same subnet
 export function sameSubnet(ip1: string, ip2: string, prefixLength = 24): boolean {
   if (!isValidIPv4(ip1) || !isValidIPv4(ip2)) return false
   if (prefixLength < 0 || prefixLength > 32) return false
@@ -106,12 +102,11 @@ function collectUniqueValues(entries: ConflictEntry[], key: keyof ConflictEntry)
   return Array.from(new Set(values))
 }
 
-// Detect IP address conflicts (same IP, different MAC)
+// same ip, different mac
 function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
   const conflicts: IPConflict[] = []
   const ipMap = new Map<string, ConflictEntry[]>()
 
-  // Group entries by IP address
   for (const entry of entries) {
     if (entry.ip) {
       if (!ipMap.has(entry.ip)) {
@@ -121,13 +116,11 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
     }
   }
 
-  // Check for conflicts
   for (const [ip, ipEntries] of ipMap) {
     if (ipEntries.length > 1) {
       const uniqueMACs = new Set(ipEntries.map((e) => e.mac).filter(Boolean))
 
       if (uniqueMACs.size > 1) {
-        // Same IP with different MACs
         const severity = ipEntries.some((e) => e.source === "dhcp") ? "high" : "medium"
         const remediation = new Set<string>([
           "Verify which device should have this IP address",
@@ -184,12 +177,11 @@ function detectIPConflicts(entries: ConflictEntry[]): IPConflict[] {
   return conflicts
 }
 
-// Detect MAC address conflicts (same MAC, different IPs in same subnet)
+// same mac, different ips in one subnet
 function detectMACConflicts(entries: ConflictEntry[], prefixLength = 24): MACConflict[] {
   const conflicts: MACConflict[] = []
   const macMap = new Map<string, ConflictEntry[]>()
 
-  // Group entries by MAC address
   for (const entry of entries) {
     if (entry.mac) {
       if (!macMap.has(entry.mac)) {
@@ -199,7 +191,6 @@ function detectMACConflicts(entries: ConflictEntry[], prefixLength = 24): MACCon
     }
   }
 
-  // Check for conflicts
   for (const [mac, macEntries] of macMap) {
     if (macEntries.length > 1) {
       // dedupe so the same host seen in multiple sources is not a conflict
@@ -208,7 +199,6 @@ function detectMACConflicts(entries: ConflictEntry[], prefixLength = 24): MACCon
       )
 
       if (uniqueIPs.length > 1) {
-        // Check if IPs are in the same subnet (potential conflict)
         let hasConflict = false
         for (let i = 0; i < uniqueIPs.length; i++) {
           for (let j = i + 1; j < uniqueIPs.length; j++) {
@@ -264,9 +254,7 @@ function detectMACConflicts(entries: ConflictEntry[], prefixLength = 24): MACCon
   return conflicts
 }
 
-// Detect DHCP leases that disagree with the live ARP view of the same IP.
-// ARP entries are dynamically learned observations, so a mismatch usually
-// means the lease is stale (device moved/re-leased) or, rarely, spoofing.
+// a mismatch usually means the lease is stale, rarely spoofing
 function detectStaleLeaseConflicts(entries: ConflictEntry[]): StaleLeaseConflict[] {
   const conflicts: StaleLeaseConflict[] = []
   const liveEntries = entries.filter((e) => e.source === "arp" || e.source === "mac-table")
@@ -326,7 +314,6 @@ function detectStaleLeaseConflicts(entries: ConflictEntry[]): StaleLeaseConflict
   return conflicts
 }
 
-// Main conflict analysis function
 export function analyzeConflicts(
   parsedData: (ParsedARPEntry | ParsedDHCPLease | ParsedMACEntry)[],
   sourceTexts: string[],
@@ -337,14 +324,12 @@ export function analyzeConflicts(
   const sourceData = sourceTexts.length === 1 ? sourceTexts[0] : ""
   const entries: ConflictEntry[] = parsedData.map((entry) => toConflictEntry(entry, sourceData))
 
-  // Detect different types of conflicts
   const ipConflicts = detectIPConflicts(entries)
   const macConflicts = detectMACConflicts(entries, subnetPrefixLength)
   const staleLeaseConflicts = detectStaleLeaseConflicts(entries)
 
   const allConflicts: Conflict[] = [...ipConflicts, ...macConflicts, ...staleLeaseConflicts]
 
-  // Calculate statistics
   const uniqueIPs = new Set(entries.map((e) => e.ip).filter(Boolean)).size
   const uniqueMACs = new Set(entries.map((e) => e.mac).filter(Boolean)).size
   const sources = [...new Set(entries.map((e) => e.source))]
@@ -367,7 +352,6 @@ export function analyzeConflicts(
   }
 }
 
-// Export conflicts to CSV
 export function exportConflictsToCSV(conflicts: Conflict[]): string {
   const headers = ["Type", "Severity", "Description", "IP", "MAC", "Sources", "Remediation"]
 
@@ -388,7 +372,6 @@ export function exportConflictsToCSV(conflicts: Conflict[]): string {
   )
 }
 
-// Generate remediation report
 export function generateRemediationReport(conflicts: Conflict[]): string {
   let report = "Network Conflict Remediation Report\n"
   report += "=====================================\n\n"

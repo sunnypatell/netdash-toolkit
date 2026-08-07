@@ -32,9 +32,7 @@ describe("encodeUrlText: the four encodings are not interchangeable", () => {
   })
 })
 
-// ecma-262 19.2.6.5 leaves A-Za-z0-9 and -_.!~*'() unescaped. the old hand-written
-// reference table claimed ! ' ( ) * encoded to %21 %27 %28 %29 %2A, which is what
-// RFC 3986 wants but not what encodeURIComponent does.
+// ecma-262 19.2.6.5 leaves !'()* alone; the old table claimed the RFC 3986 escapes instead
 describe("the sub-delims encodeURIComponent does not touch", () => {
   it.each(["!", "'", "(", ")", "*"])("leaves %s alone in component mode", (char) => {
     expect(encodeUrlText(char, "component").output).toBe(char)

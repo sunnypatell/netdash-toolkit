@@ -12,10 +12,7 @@ import {
 } from "@/lib/timestamp"
 import { formatInZone, zonedTimeToEpochMs, zoneOffsetMs } from "@/lib/timezones"
 
-// ci runs on ubuntu with no TZ set, so the ambient zone is UTC, where local ==
-// utc and no day is 23 or 25 hours long. every "local wall clock" and "dst
-// included" assertion below was therefore true of a utc-slicing implementation
-// too. pinning a zone with dst is what makes those tests able to fail.
+// ci sets no TZ, so utc-slicing satisfied every "local wall clock" assertion; a dst zone can fail
 process.env.TZ = "America/New_York"
 
 describe("detectInputKind", () => {
@@ -148,10 +145,7 @@ describe("parseTimestampInput", () => {
   })
 
   it("rejects a digit string that overflows to Infinity", () => {
-    // "1e999" never reaches the finite guard: NUMERIC_RE has no exponent
-    // alternative, so it is classified text and dies at Date.parse instead. a
-    // plain run of digits is what actually enters the numeric branch and
-    // overflows there
+    // "1e999" reads as text: NUMERIC_RE has no exponent, so only digits enter the numeric branch
     const overflow = parseTimestampInput("9".repeat(400))
     expect(overflow.ok).toBe(false)
     if (!overflow.ok) expect(overflow.error).toMatch(/finite/i)
@@ -182,9 +176,7 @@ describe("unit round trips", () => {
   })
 
   it("renders the small scales exactly too, off a non-round instant", () => {
-    // the round trip above starts from an exact second and an exact excel day,
-    // so it could not tell floor from round, or 6 decimals from 2
-    // the half second is what separates floor from round, and 6 decimals from 2
+    // the round trip above starts on an exact second, so it could not tell floor from round
     const ms = 1609459200500 // 2021-01-01T00:00:00.500Z
     expect(epochMsToUnitString(ms, "s")).toBe("1609459200")
     expect(epochMsToUnitString(ms, "ms")).toBe("1609459200500")
@@ -276,10 +268,7 @@ describe("formatRelativeToNow", () => {
 
 describe("a wall clock inside a spring-forward gap resolves forward", () => {
   it("returns 03:30 EDT, not 01:30 EST, for a 02:30 that never happens", () => {
-    // 2026-03-08 02:00-03:00 does not exist in new york. the two-pass zone
-    // solver settled on 06:30Z, which reads back as 01:30 EST: an hour BEFORE
-    // the wall clock that was asked for. java.time's ZonedDateTime.of and
-    // Temporal's "compatible" disambiguation both push forward instead.
+    // 02:00-03:00 does not exist in new york, and the solver settled an hour BEFORE what was asked
     const parsed = parseTimestampInput("2026-03-08T02:30:00", { timeZone: "America/New_York" })
     expect(parsed.ok).toBe(true)
     if (!parsed.ok) return

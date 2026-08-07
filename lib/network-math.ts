@@ -1,4 +1,4 @@
-// Propagation, bandwidth-delay and IPv4 bitwise maths.
+// propagation, bandwidth-delay and IPv4 bitwise maths
 
 import { intToIpv4, ipv4ToInt } from "./network-utils"
 

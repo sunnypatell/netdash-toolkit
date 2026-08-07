@@ -1,12 +1,5 @@
-// data size units. the whole point of this module is that decimal and binary
-// multiples are distinct values with distinct names, and that bits are never
-// silently treated as bytes.
-//
-// symbols follow IEC 80000-13:2008 (also IEEE 1541-2002): the bit is "bit" with
-// SI prefixes for powers of 1000 (kbit = 1000 bit) and IEC prefixes for powers
-// of 1024 (Kibit = 1024 bit). "kb" is deliberately not used - it differs from
-// "kB" only by case, which is the single most common source of a 8x or 1.024x
-// error in tools like this one.
+// symbols follow IEC 80000-13:2008: SI prefixes for powers of 1000, IEC for 1024. "kb" is never
+// used because it differs from "kB" only by case, the usual source of an 8x or 1.024x error.
 
 export type UnitBase = "decimal" | "binary"
 export type UnitKind = "bit" | "byte"

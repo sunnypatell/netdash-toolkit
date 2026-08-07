@@ -66,9 +66,7 @@ describe("parseACLNetwork", () => {
   })
 
   it("rejects an out-of-range prefix and junk input", () => {
-    // renamed: none of these is a mask at all, so none of them ever reached a
-    // contiguity check. parseACLNetwork takes a prefix length, so it cannot
-    // receive a non-contiguous mask in the first place
+    // none of these is a mask, so parseACLNetwork's prefix argument can never be non-contiguous
     expect(() => parseACLNetwork("10.0.0.0/33")).toThrow()
     expect(() => parseACLNetwork("999.1.1.1")).toThrow()
     expect(() => parseACLNetwork("")).toThrow()
@@ -139,9 +137,7 @@ describe("cisco ios standard acl", () => {
 
   it("closes with an explicit deny any and an access-group hint", () => {
     const output = gen({ aclType: "standard", aclName: "10" }, { standard: SAMPLE_STANDARD_RULES })
-    // whole line, not a prefix substring: toContain also accepted
-    // "access-list 10 deny any log" and "deny any any", neither of which is
-    // valid standard-acl syntax
+    // whole line, not a prefix substring: toContain also accepted "access-list 10 deny any log"
     expect(output.split("\n").map((l) => l.trim())).toContain("access-list 10 deny any")
     expect(output).not.toContain("access-list 10 deny ip any any")
     expect(output).toContain("!  ip access-group 10 in")

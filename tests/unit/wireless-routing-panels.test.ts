@@ -19,10 +19,7 @@ import { AdminDistancePanel } from "@/components/tools/routing-tools/admin-dista
 import { defaultWirelessConfig } from "@/lib/wireless"
 import { defaultEigrpConfig, defaultOspfConfig, emptyStaticRoute } from "@/lib/routing"
 
-// wireless-tools and routing-tools are now a directory of panels behind a tabbed
-// index. these mount each panel alone, with no parent and no provider, which is
-// the property that lets the registry give each one its own route and chunk. the
-// tool level suites in tests/components only ever see the default tab.
+// each panel mounted alone, which is what lets the registry give it its own route and chunk
 
 for (const name of ["ResizeObserver", "IntersectionObserver"] as const) {
   if (!(name in window)) {

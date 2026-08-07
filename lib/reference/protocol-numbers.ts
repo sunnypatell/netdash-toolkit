@@ -1,9 +1,6 @@
 import type { ProtocolNumberEntry } from "./types"
 
-// names are the iana protocol-numbers keywords; the rfc column names the current
-// defining document rather than an obsoleted one. three rows were stale against
-// the registry: TCP (RFC 793 -> RFC 9293), VRRP (RFC 5798 -> RFC 9568) and
-// SCTP (RFC 4960 -> RFC 9260).
+// iana protocol-numbers keywords; the rfc column names the current document, not an obsoleted one
 export const IP_PROTOCOL_NUMBERS: readonly ProtocolNumberEntry[] = [
   {
     number: 1,

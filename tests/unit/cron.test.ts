@@ -9,9 +9,7 @@ import {
   normalizeQuestionMarks,
 } from "@/lib/cron"
 
-// the old hand-rolled parser stepped one minute at a time for 1000 iterations,
-// which is a 16h40m search window: any expression firing later than that
-// returned nothing and the tool claimed the expression was invalid.
+// the old parser stepped a minute at a time for 1000 iterations, a 16h40m search window
 const FROM = new Date("2026-07-29T18:30:00Z")
 
 function partsIn(date: Date, timeZone: string) {
@@ -92,9 +90,7 @@ describe("nextCronRuns", () => {
     }
   })
 
-  // the smoke test above asserts only "some run exists", so a normalizeCron that
-  // dropped the nth qualifier turned "third friday" into "every friday" and the
-  // description still said "third Friday" beside a schedule that contradicted it
+  // the smoke test above asserts only "some run exists", so a dropped nth qualifier went unnoticed
   it("puts 5#3 on the third friday of the month, not on every friday", () => {
     const { runs, error } = nextCronRuns("0 0 * * 5#3", {
       timeZone: "UTC",
@@ -265,9 +261,7 @@ describe("formatRelativeMs", () => {
   })
 })
 
-// two engine-level defects found by brute-forcing real time against the posix
-// rules rather than by reading croner's answer back. both produced a silently
-// wrong schedule: no error, no warning, just a job that never runs.
+// found by brute-forcing the posix rules against real time, not by reading croner's answer back
 
 describe("? means no specific value in one day field, not both", () => {
   const from = new Date("2026-02-01T00:00:00Z")
@@ -277,9 +271,7 @@ describe("? means no specific value in one day field, not both", () => {
     )
 
   it("rewrites ? to * so the other day field still restricts", () => {
-    // quartz defines ? as "no specific value" for exactly this pairing. croner
-    // read a ? in either day field as cancelling both, so a friday-only job
-    // fired every day of the week.
+    // croner read a ? in either day field as cancelling both, so a friday-only job fired daily
     expect(normalizeQuestionMarks("0 0 ? * 5")).toBe("0 0 * * 5")
     expect(normalizeQuestionMarks("0 0 13 * ?")).toBe("0 0 13 * *")
     expect(normalizeQuestionMarks("0 0 0 ? * 5")).toBe("0 0 0 * * 5")

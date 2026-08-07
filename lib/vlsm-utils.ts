@@ -42,12 +42,10 @@ export function calculateVLSM(
   requirements: VLSMRequirement[]
 ): VLSMPlan {
   try {
-    // Validate base network
     const baseSubnet = calculateIPv4Subnet(baseNetwork, basePrefix)
     const baseNetworkInt = ipv4ToInt(baseSubnet.network)
     const totalAvailableHosts = baseSubnet.hostCount
 
-    // Sort requirements by hosts needed (descending)
     const sortedRequirements = [...requirements].sort((a, b) => b.hostsRequired - a.hostsRequired)
 
     const allocations: VLSMAllocation[] = []
@@ -71,11 +69,10 @@ export function calculateVLSM(
         }
       }
 
-      // Calculate the smallest prefix that can accommodate the required hosts
       let prefix = -1
       let blockSize = 0
 
-      // Find the smallest block size that fits the required hosts. Include /32 and /31 networks
+      // /32 and /31 are included, so a 1-host request does not round up to /30
       // so that point-to-point and host-only allocations do not consume unnecessarily large ranges.
       for (let p = 32; p >= 1; p--) {
         const testBlockSize = Math.pow(2, 32 - p)
@@ -102,7 +99,6 @@ export function calculateVLSM(
         }
       }
 
-      // Check if the block fits within the base network
       const blockEnd = currentNetworkInt + blockSize - 1
       const baseNetworkEnd = baseNetworkInt + Math.pow(2, 32 - basePrefix) - 1
 
@@ -120,11 +116,9 @@ export function calculateVLSM(
         }
       }
 
-      // Align to the appropriate boundary for the prefix
       const alignment = blockSize
       const alignedStart = Math.ceil(currentNetworkInt / alignment) * alignment
 
-      // Check if aligned start still fits
       if (alignedStart + blockSize - 1 > baseNetworkEnd) {
         return {
           baseNetwork: baseSubnet.network,
@@ -139,7 +133,6 @@ export function calculateVLSM(
         }
       }
 
-      // Calculate subnet details
       const subnetNetwork = intToIpv4(alignedStart)
       const subnet = calculateIPv4Subnet(subnetNetwork, prefix)
 
@@ -163,9 +156,7 @@ export function calculateVLSM(
       currentNetworkInt = alignedStart + blockSize
     }
 
-    // utilization is measured in address space (block sizes vs base block),
-    // not usable hosts: mixing the two under-reported consumption because
-    // per-subnet network/broadcast addresses looked "available"
+    // address space, not usable hosts: counting hosts made network/broadcast look available
     const baseBlockSize = Math.pow(2, 32 - basePrefix)
     const consumedAddresses = allocations.reduce((sum, a) => sum + Math.pow(2, 32 - a.prefix), 0)
     const wastedHosts = totalAvailableHosts - totalAllocatedHosts
@@ -255,7 +246,6 @@ export function exportVLSMPlan(plan: VLSMPlan, format: "csv" | "json" | "text"):
     return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n")
   }
 
-  // Text format
   let output = `VLSM Plan for ${plan.baseNetwork}/${plan.basePrefix}\n`
   output += `${"=".repeat(50)}\n\n`
   output += `Total Available Hosts: ${plan.totalHosts}\n`

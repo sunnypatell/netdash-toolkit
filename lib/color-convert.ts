@@ -1,10 +1,5 @@
-// colour maths for the converter tool.
-//
-// imported from "culori/fn" on purpose: the main "culori" entry pulls every
-// colour space in and does not tree-shake (15.3kB vs 7.2kB gzip), so modes are
-// registered explicitly below. anything not registered here will silently fail
-// to convert, which is why lrgb (wcag luminance) and lab65 (ciede2000) are in
-// the list even though nothing displays them.
+// "culori/fn" on purpose: the main entry does not tree-shake (15.3kB vs 7.2kB gzip). an
+// unregistered mode fails silently, so lrgb and lab65 are listed though nothing displays them.
 
 import {
   // aliased: culori's useMode is a mode registry, not a react hook, and
@@ -223,15 +218,8 @@ const UNKNOWN_CONTRAST: ContrastCheck = {
   composited: false,
 }
 
-/**
- * WCAG 2.2 1.4.3 measures the text as rendered, so a translucent colour has to be
- * composited before its luminance means anything: 50% black on white is 3.98:1,
- * not the 21:1 you get by ignoring alpha. A translucent *background* is flattened
- * over white, since nothing here knows what is really behind it.
- *
- * Out-of-sRGB inputs are gamut-mapped first so the ratio describes the swatch
- * that gets painted rather than a colour the display cannot show.
- */
+// WCAG 2.2 1.4.3 measures text as rendered, so alpha is composited first (50% black on white is
+// 3.98:1, not 21:1) and out-of-sRGB input is gamut-mapped to the swatch actually painted
 export function contrastCheck(
   foreground: Color | string,
   background: Color | string

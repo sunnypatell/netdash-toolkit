@@ -12,10 +12,7 @@ import {
   type WirelessConfig,
 } from "@/lib/wireless"
 
-// these assert the published allocations, not the previous behaviour of the tool.
-// the 2.4 GHz plan comes from IEEE 802.11-2020 Annex E and FCC 47 CFR 15.247, the
-// 5 GHz and 6 GHz plans from FCC 47 CFR 15.407, and the phy rates from the
-// per-stream mcs tables of each amendment.
+// from IEEE 802.11-2020 Annex E, FCC 47 CFR 15.247 and 15.407, not from the tool's own behaviour
 
 describe("2.4 GHz channel plan", () => {
   it("numbers 13 channels at 2407 + 5n MHz", () => {

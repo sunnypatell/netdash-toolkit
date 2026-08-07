@@ -222,9 +222,7 @@ describe("gradeBlock", () => {
     expect(grade.effectiveCount).toBe(grade.scoredCount)
   })
 
-  // only 0 -> F and 100 -> A+ were pinned, so every threshold between them was
-  // free to move: turning the B arm into D, or widening A+ down to 65, changed
-  // nothing the suite could see. these pin both sides of all five thresholds.
+  // only 0 -> F and 100 -> A+ were pinned, so every threshold between them was free to move
   describe("the grade ladder", () => {
     const EFFECTIVE: Record<string, string> = {
       "content-security-policy": "default-src 'self'", // 25
