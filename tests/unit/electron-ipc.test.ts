@@ -178,8 +178,7 @@ describe("spawn safety", () => {
   })
 
   it("keeps non-numeric options off the command line", async () => {
-    // options.count used to flow into Math.min unchecked and reach ping as the
-    // literal string "NaN"
+    // options.count used to flow into Math.min unchecked and reach ping as the string "NaN"
     const result = invoke("network:ping", "192.0.2.1", { count: "abc", timeout: {} })
     finishChild(fixture("ping-macos.txt"))
     await result
@@ -219,8 +218,7 @@ describe("ping handler", () => {
   it("surfaces a resolver failure instead of reporting it as 100% packet loss", async () => {
     const result = invoke("network:ping", "no-such-host.invalid")
     const child = state.children[0]
-    // this text only ever reaches stderr, and discarding it made an unresolvable
-    // name indistinguishable from a host that is simply down
+    // this only reaches stderr; discarding it made an unresolvable name look like a host that is down
     child.stderr.emit("data", Buffer.from("ping: cannot resolve no-such-host.invalid\n"))
     child.emit("close", 68)
 
@@ -250,8 +248,7 @@ describe("child process lifecycle", () => {
     const child = state.children[0]
     expect(child.signals).toEqual(["SIGTERM"])
 
-    // child.killed is true the moment a signal is sent, so escalation used to be
-    // gated on a flag that was already set and never fired
+    // child.killed is true the moment a signal is sent, so escalation was gated on an already-set flag
     await vi.advanceTimersByTimeAsync(1001)
     expect(child.signals).toEqual(["SIGTERM", "SIGKILL"])
 

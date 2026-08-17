@@ -47,8 +47,7 @@ describe("exclusions remove every occurrence", () => {
         symbols: false,
       })
     ).toBe("")
-    // numbers minus the similar set minus the ambiguous set still leaves digits,
-    // but digits-only with similar excluded must shrink, not silently reset
+    // digits survive both exclusions, but digits-only with similar excluded must shrink, not reset
     const digits = buildCharset({ ...base, uppercase: false, lowercase: false, symbols: false })
     expect(digits).toBe(CHARS.numbers)
     const digitsFiltered = buildCharset({
@@ -108,8 +107,7 @@ describe("entropy reflects the charset actually used", () => {
 
 describe("uniformIndex rejects instead of folding", () => {
   it("discards draws in the biased tail", () => {
-    // size 3: limit = floor(2^32/3)*3 = 4294967295. 4294967295 must be rejected,
-    // and the next draw used.
+    // size 3: limit = floor(2^32/3)*3 = 4294967295, which must be rejected and the next draw used
     const draws = [4294967295, 7]
     let i = 0
     const index = uniformIndex(3, (buffer) => {
@@ -166,8 +164,7 @@ describe("generated passwords are uniform over the charset", () => {
       chiSquare += Math.pow(count - expected, 2) / expected
     }
 
-    // df = 87 for the default 88-character charset; the 0.999 critical value is
-    // ~144, so this fails roughly 1 run in 1000 rather than flaking constantly
+    // df = 87 for the 88-character charset, 0.999 critical ~144, so this flakes 1 run in 1000
     expect(charset.length).toBe(88)
     expect(chiSquare).toBeLessThan(144)
     // every character must actually be reachable

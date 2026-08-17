@@ -47,8 +47,7 @@ describe("encapsulation overheads", () => {
   })
 
   it("quotes the worst case for an IPsec ESP tunnel, padding included", () => {
-    // a floor check let esp-cbc drop the 15 bytes of block padding and stay green.
-    // aes-gcm: 20 outer ipv4 + 8 esp + 8 iv + 2 trailer + 16 icv + 3 pad
+    // a floor check let esp-cbc drop 15 bytes of padding; aes-gcm = 20 ipv4 + 8 esp + 8 iv + 2 + 16 + 3
     expect(byId("esp-gcm")).toBe(57)
     // aes-cbc + hmac-sha1-96: 20 + 8 + 16 iv + 2 + 12 icv + 15 pad to the block
     expect(byId("esp-cbc")).toBe(73)
@@ -113,8 +112,7 @@ describe("RFC 8200 section 5 IPv6 minimum link MTU", () => {
   })
 
   it("does not fire on a link that is legal but leaves a payload under 1280", () => {
-    // the payload here is 1300 - 40 - 20 = 1240, under 1280, yet the link is
-    // fine. comparing the payload against the link minimum was the old bug.
+    // the payload is 1240, under 1280, yet the link is fine; comparing the two was the old bug
     const result = calculateMTU(1300, "ipv6", "tcp", [])
     expect(result.payloadBytes).toBe(1240)
     expect(result.errors).toEqual([])

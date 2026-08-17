@@ -128,8 +128,6 @@ describe("3.3.1: every aria-describedby resolves to an element that exists", () 
   })
 })
 
-// ---------------------------------------------------------------------------
-
 // an unconditional destructive Alert is a standing caveat, not a reported error
 const DESTRUCTIVE_ALERT = /<Alert\s[^>]*variant="destructive"/g
 const DESTRUCTIVE_TEXT = /<p\s[^>]*className=\{?["'`][^"'`]*text-(?:destructive|red-\d)/g

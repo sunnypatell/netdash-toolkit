@@ -111,8 +111,7 @@ it("defines the same colour tokens in both themes", () => {
   expect(colours(themes.dark)).toEqual(colours(themes.light))
 })
 
-// an opaque --ring through shadcn's default 50% alpha composites to 2.09:1, so no ring may be translucent.
-// the colour segment must admit digits and brackets: `[a-z-]+` missed `ring-red-500/50` and `ring-[#f00]/50`
+// an opaque --ring through shadcn's default 50% alpha composites to 2.09:1, so none may be translucent
 const RING_ALPHA = () =>
   new RegExp(
     `(?:ring|outline)-(?:\\[[^\\]\\s]+\\]|[a-z0-9-]+)\\${"/"}(?:\\[[^\\]\\s]+\\]|\\d+%?)`,

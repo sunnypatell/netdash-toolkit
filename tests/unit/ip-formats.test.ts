@@ -9,8 +9,7 @@ import {
 import { ipv4ToInt } from "@/lib/network-utils"
 
 describe("ipv4 format conversion", () => {
-  // signed 32-bit arithmetic corrupts everything above 2147483647, so walk the
-  // whole top half of the space and prove every format round-trips
+  // signed 32-bit arithmetic corrupts everything above 2147483647, so walk the whole top half
   const highAddresses = [
     "128.0.0.0",
     "192.168.1.1",

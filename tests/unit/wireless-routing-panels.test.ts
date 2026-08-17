@@ -219,8 +219,7 @@ describe("wireless tools url state", () => {
 
   it("opens the panel and the plan a shared link asks for", async () => {
     mount("?tab=capacity-calculator&std=802.11be&band=6&width=320&streams=4&clients=25")
-    // EHT320 is 2882.4 Mbps per stream, so 4 streams is 11530 rounded. the panel
-    // is a lazy chunk, so the first query has to wait for it
+    // EHT320 is 2882.4 Mbps per stream, so 4 streams is 11530; the panel is a lazy chunk
     expect(await screen.findByText("11530 Mbps")).toBeTruthy()
     expect(screen.getByText("25")).toBeTruthy()
   })

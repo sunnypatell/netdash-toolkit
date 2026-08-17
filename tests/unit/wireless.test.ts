@@ -25,8 +25,7 @@ describe("2.4 GHz channel plan", () => {
   })
 
   it("recommends exactly 1, 6 and 11", () => {
-    // the regression this replaces: 1/6/11 were tagged medium interference, so the
-    // recommended list filtered down to nothing at all
+    // 1/6/11 were tagged medium interference, so the recommended list filtered down to nothing
     expect(channels24.filter((ch) => ch.recommended).map((ch) => ch.channel)).toEqual([1, 6, 11])
     expect(channelsForBand("2.4").filter((ch) => ch.interference === "low")).toHaveLength(3)
   })
@@ -69,8 +68,7 @@ describe("5 GHz channel plan", () => {
   })
 
   it("caps channel 165 at 20 MHz", () => {
-    // 5825 MHz sits 25 MHz below the 5850 MHz edge, so it cannot anchor an 80 MHz
-    // block. the old table claimed 80 MHz for it.
+    // 5825 MHz sits 25 MHz below the 5850 edge, so it cannot anchor 80 MHz; the old table said it could
     expect(channels5.find((ch) => ch.channel === 165)?.maxWidth).toBe(20)
     expect(channels5.find((ch) => ch.channel === 149)?.maxWidth).toBe(80)
     expect(channels5.find((ch) => ch.channel === 36)?.maxWidth).toBe(160)
@@ -114,8 +112,7 @@ describe("6 GHz channel plan", () => {
   })
 
   it("pins every step of the width ladder on both sides of its boundary", () => {
-    // the 40 MHz pair at 225-229 sat between two tested channels, so the whole
-    // tier could be deleted without failing anything
+    // the 40 MHz pair at 225 to 229 sat between two tested channels, so the tier could be deleted
     const widthAt = (channel: number) => channels6.find((ch) => ch.channel === channel)?.maxWidth
     expect(widthAt(189)).toBe(320)
     expect(widthAt(193)).toBe(160)
@@ -149,8 +146,7 @@ describe("capacity maths", () => {
   })
 
   it("does not change the rate just because the band changed", () => {
-    // the regression this replaces: 20 and 40 MHz silently dropped to one spatial
-    // stream on 2.4 GHz, so the same radio reported half the rate
+    // 20 and 40 MHz silently dropped to one spatial stream on 2.4 GHz, halving the reported rate
     expect(capacity("802.11ax", "2.4", 20).theoretical).toBe(
       capacity("802.11ax", "5", 20).theoretical
     )
@@ -178,8 +174,7 @@ describe("capacity maths", () => {
     ] as const) {
       const result = capacity(standard, band, 20)
       expect(result.supported).toBe(false)
-      // named, not just truthy: the two reasons this function can give are
-      // different diagnoses, and toBeTruthy() let either template become "x"
+      // named, not just truthy: the two reasons are different diagnoses, and toBeTruthy() takes "x"
       expect(result.reason).toBe(`${standard} does not operate in the ${band} GHz band`)
       expect(result.theoretical).toBe(0)
     }
@@ -189,8 +184,7 @@ describe("capacity maths", () => {
     expect(capacity("802.11be", "5", 320).supported).toBe(false)
     expect(capacity("802.11ax", "2.4", 80).supported).toBe(false)
     expect(capacity("802.11n", "5", 80).supported).toBe(false)
-    // the other of the two reasons, so neither template can be swapped for the
-    // other without failing
+    // the other of the two reasons, so neither template can be swapped for the other
     expect(capacity("802.11be", "5", 320).reason).toBe(
       "802.11be has no 320 MHz mode in the 5 GHz band"
     )
@@ -245,8 +239,7 @@ describe("autonomous IOS access point config", () => {
     generateWirelessConfig({ ...defaultWirelessConfig, ...overrides })
 
   it("broadcasts the SSID with guest-mode and hides it with no guest-mode", () => {
-    // guest-mode puts the SSID in the beacon, so the old code hid networks by
-    // asking for them to be advertised
+    // guest-mode puts the SSID in the beacon, so the old code hid networks by advertising them
     expect(build({ hidden: false })).toContain("   guest-mode")
     expect(build({ hidden: true })).toContain("   no guest-mode")
     expect(build({ hidden: true })).not.toMatch(/^ {3}guest-mode$/m)

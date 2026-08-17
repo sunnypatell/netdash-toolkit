@@ -65,8 +65,7 @@ describe("validateHost", () => {
   })
 
   it("rejects anything outside the hostname and address alphabet", () => {
-    // spawn runs without a shell, so none of these were ever interpreted; the
-    // point is that a value that is not a host never reaches a command line
+    // spawn runs without a shell, so the point is that a non-host never reaches a command line
     const rejected = [
       "example.com;id",
       "example.com id",

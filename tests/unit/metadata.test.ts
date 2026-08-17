@@ -5,8 +5,7 @@ import sitemap from "@/app/sitemap"
 import robots from "@/app/robots"
 import manifest from "@/app/manifest"
 
-// these assertions are computed from the registry rather than hardcoded, so they
-// keep holding as tab panels get promoted to first-class tools.
+// computed from the registry, so they keep holding as tab panels get promoted to tools
 
 describe("canonical urls", () => {
   it("always ends in a slash, because next.config sets trailingSlash", () => {

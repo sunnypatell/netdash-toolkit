@@ -52,7 +52,10 @@ export function FilePanel({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onSelect(null)}
+            onClick={() => {
+              onSelect(null)
+              document.getElementById("hash-file-input")?.focus()
+            }}
             aria-label={`Remove ${file.name}`}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />

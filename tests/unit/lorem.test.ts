@@ -10,8 +10,7 @@ import {
   loremWords,
 } from "@/lib/lorem"
 
-// a deterministic rng so the counts can be asserted exactly. placeholder prose
-// is decoration, which is why Math.random is acceptable here and nowhere else.
+// deterministic so the counts can be asserted exactly; placeholder prose is the one decoration case
 function seeded(seed = 1): () => number {
   let state = seed
   return () => {
@@ -30,8 +29,7 @@ describe("the requested count is what you get", () => {
   })
 
   it("still returns exactly n words with the classic opening spliced in", () => {
-    // the old implementation pasted "Lorem ipsum dolor sit amet" on top of the
-    // requested count, so "50 words" produced 54 and "1 word" produced garbage
+    // the old implementation pasted the "Lorem ipsum" opener on top of the count, so 50 gave 54
     for (const n of [1, 2, 5, 8, 9, 50]) {
       const text = generateLorem({ mode: "words", count: n, startWithLorem: true }, seeded())
       expect(countWords(text), `${n} words`).toBe(n)

@@ -19,8 +19,7 @@ const toInt = (dotted: string) =>
 
 describe("randomInt is uniform, not folded", () => {
   it("discards a draw in the biased tail rather than taking it modulo", () => {
-    // size 3: limit = floor(2^32/3)*3 = 4294967295. folding 4294967295 would
-    // return 0; rejecting it and using the next draw returns 7 % 3 = 1.
+    // size 3: limit = 4294967295; folding it returns 0, rejecting it and redrawing gives 7 % 3 = 1
     const draws = [4294967295, 7]
     let i = 0
     const value = randomInt(0, 2, (buffer) => {
@@ -51,8 +50,7 @@ describe("randomInt is uniform, not folded", () => {
   })
 
   it("passes a chi-square goodness-of-fit test over a range that is not a power of two", () => {
-    // 100 does not divide 2^32, so a folded implementation over-represents the
-    // low buckets. df = 99, and the 0.999 critical value is ~148.
+    // 100 does not divide 2^32, so folding over-represents the low buckets; df = 99, 0.999 is ~148
     const buckets = new Array(100).fill(0)
     const draws = 200_000
     for (let i = 0; i < draws; i++) buckets[randomInt(0, 99)]++
@@ -94,8 +92,7 @@ describe("ipv4 generation stays inside the range it claims", () => {
   })
 
   it("never emits a reserved address in public mode", () => {
-    // the old filter excluded all of 172.x-191.x and 192.x while letting through
-    // 169.254/16 link-local and 100.64/10 CGNAT
+    // the old filter excluded 172.x to 191.x and 192.x while letting 169.254/16 and 100.64/10 pass
     for (let i = 0; i < runs; i++) {
       const address = randomIPv4("public")
       const reason = nonPublicReason(toInt(address))

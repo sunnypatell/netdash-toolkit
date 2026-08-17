@@ -283,7 +283,8 @@ function PaletteItem({
       {!isOffline(tool) && (
         <span className="flex shrink-0 items-center gap-1 text-[0.6875rem] text-amber-700 group-data-[selected=true]:text-current dark:text-amber-400">
           <Cloud className="size-3" aria-hidden="true" />
-          <span className="hidden sm:inline">Sends data</span>
+          {/* sr-only, not hidden: display:none would drop the privacy signal from the name below 640px */}
+          <span className="sr-only sm:not-sr-only">Sends data</span>
         </span>
       )}
       {/* text never rides on opacity here: a faded label on the selected emerald row drops under 4.5:1 */}

@@ -38,8 +38,7 @@ describe("detectUnit", () => {
   })
 
   it("ranks negative values on absolute magnitude, not sign", () => {
-    // a sign-blind `num > 9999999999` test called every pre-1970 ms/µs/ns
-    // timestamp "seconds" and answered with a date thousands of years off
+    // a sign-blind `num > 9999999999` called every pre-1970 ms/µs/ns timestamp "seconds"
     expect(detectUnit(-1609459200)).toBe("s")
     expect(detectUnit(-1609459200000)).toBe("ms")
     expect(detectUnit(-1609459200000000)).toBe("us")
@@ -191,8 +190,7 @@ describe("local wall-clock helpers", () => {
   })
 
   it("takes the date and the time from the same local clock", () => {
-    // toISOString().split("T")[0] mixed with toTimeString() shifts the date by a
-    // day every evening west of utc
+    // toISOString().split("T")[0] mixed with toTimeString() shifts the date every evening west of utc
     for (const hour of [0, 6, 12, 18, 23]) {
       const date = new Date(2021, 0, 1, hour, 30, 15)
       const roundTrip = new Date(`${toLocalDateInputValue(date)}T${toLocalTimeInputValue(date)}`)
@@ -201,8 +199,7 @@ describe("local wall-clock helpers", () => {
   })
 
   it("reads the local calendar fields, not a utc slice of the instant", () => {
-    // 19:30 local on new year's eve is already 00:30Z on the 1st, so a
-    // toISOString().slice() implementation prints tomorrow's date
+    // 19:30 local on new year's eve is already 00:30Z, so a toISOString() slice prints tomorrow
     const evening = new Date(2020, 11, 31, 19, 30, 15)
     expect(toLocalDateInputValue(evening)).toBe("2020-12-31")
     expect(toLocalTimeInputValue(evening)).toBe("19:30:15")
@@ -219,8 +216,7 @@ describe("local wall-clock helpers", () => {
   })
 
   it("crosses a dst boundary by a calendar day, not by 86400000 ms", () => {
-    // spring forward 2026-03-08 in new york: that local day is 23 hours long, so
-    // adding a fixed day of milliseconds lands at 01:00 on the 9th
+    // that local day is 23 hours long, so adding a fixed day of ms lands at 01:00 on the 9th
     const beforeSpring = new Date(2026, 2, 7, 12, 0, 0)
     expect(startOfLocalDay(beforeSpring, 1).getTime()).toBe(new Date(2026, 2, 8).getTime())
     expect(startOfLocalDay(beforeSpring, 2).getTime()).toBe(new Date(2026, 2, 9).getTime())

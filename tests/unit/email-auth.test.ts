@@ -215,8 +215,7 @@ describe("dkim (rfc 6376)", () => {
     }
     expect(analyzeDkim("s1", servfailWithAnswer)).toBeNull()
 
-    // and the same record with a clean status is still read, so the guard is
-    // rejecting the status rather than the record
+    // the same record with a clean status still reads, so the guard rejects the status not the record
     expect(analyzeDkim("s1", txt("v=DKIM1; k=rsa; p=abc"))?.valid).toBe(true)
   })
 })

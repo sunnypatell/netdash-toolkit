@@ -143,8 +143,7 @@ describe("parseRdapError (rfc 9083 6)", () => {
   })
 
   it("calls 501 and 400 a missing service, not a failed lookup", () => {
-    // the branch that separates "this registry publishes no rdap" from "the
-    // request went wrong" had no test, so deleting it changed nothing
+    // the branch separating "no rdap published" from "the request went wrong" had no test
     expect(parseRdapError(501, null, "AS64496")).toMatchObject({ noService: true })
     expect(parseRdapError(400, null, "AS64496")).toMatchObject({ noService: true })
     expect(parseRdapError(500, null, "AS64496")).toMatchObject({ noService: false })
@@ -157,8 +156,7 @@ describe("the request fetchRdap actually sends", () => {
     ({ ok: true, status: 200, json: async () => body }) as unknown as Response
 
   function stubFetch(response: Response) {
-    // the generic is explicit so mock.calls is a typed tuple; inferring it
-    // through the async signature yields a zero-length tuple that cannot be indexed
+    // the generic is explicit so mock.calls is a typed tuple; inference yields a zero-length one
     const spy = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () => response)
     const original = globalThis.fetch
     globalThis.fetch = spy as unknown as typeof fetch

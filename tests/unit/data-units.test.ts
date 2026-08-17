@@ -46,8 +46,7 @@ describe("decimal and binary multiples are distinct", () => {
   })
 
   it("keeps every factor exactly representable as a double", () => {
-    // 2^53 is the largest integer double arithmetic represents exactly, and PiB
-    // sits right on it. anything above would quietly round.
+    // 2^53 is the largest exactly representable integer and PiB sits on it; above would round
     for (const unit of DATA_UNITS) {
       expect(Number.isInteger(unit.bits), `${unit.id} = ${unit.bits}`).toBe(true)
       expect(unit.bits, unit.id).toBeLessThanOrEqual(2 ** 53)

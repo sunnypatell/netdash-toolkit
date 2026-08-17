@@ -125,8 +125,7 @@ describe("nextCronRuns", () => {
   })
 
   it("keeps a daily run at the same local wall clock across a dst transition", () => {
-    // 2027-03-14 is spring forward in New York; naive local-hour arithmetic
-    // duplicates or skips the run here
+    // 2027-03-14 is spring forward in New York; naive local-hour arithmetic duplicates or skips it
     const { runs } = nextCronRuns("0 3 * * *", {
       timeZone: "America/New_York",
       count: 4,
@@ -297,8 +296,7 @@ describe("the dom/dow OR does not drop a day", () => {
   }
 
   it("still fires on 1 March when february had 28 days and the 1st is a weekend", () => {
-    // croner omitted this run outright for 2025, 2026 and 2031. the expression
-    // means "the 1st of the month, or any monday", so 1 march must be in it.
+    // croner omitted this run for 2025, 2026 and 2031; "the 1st, or any monday" includes it
     for (const year of [2025, 2026, 2031]) {
       expect(firstOfMonth("0 0 1 * 1", year, 2), `${year}-03-01`).toContain(`${year}-03-01`)
     }

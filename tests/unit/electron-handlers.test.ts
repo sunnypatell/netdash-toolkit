@@ -42,8 +42,7 @@ describe("parsePingOutput", () => {
   })
 
   it("reads a german windows ping, whose label is Zeit= rather than time=", () => {
-    // matching the literal word "time" returned [] here, which the handler then
-    // reported as a live host with 100% packet loss
+    // matching the literal word "time" returned [], reported as a live host with 100% packet loss
     expect(parsePingOutput(fixture("ping-windows-de.txt"), "win32")).toEqual([12, 1, 11])
   })
 
@@ -90,8 +89,7 @@ describe("parseTracerouteOutput", () => {
   })
 
   it("keeps the address of a hop whose first probe was lost", () => {
-    // " 2  * 198.51.100.9 (198.51.100.9)  8.104 ms" was reported as ip "*" and
-    // timeout true even though the hop answered
+    // " 2  * 198.51.100.9 (198.51.100.9)  8.104 ms" was reported as ip "*" and timeout true
     const hops = parseTracerouteOutput(fixture("traceroute-linux.txt"), "linux")
     expect(hops.map((h) => h.hop)).toEqual([1, 2, 3, 4])
     expect(hops[1]).toMatchObject({ hop: 2, ip: "198.51.100.9", timeout: false })
@@ -117,8 +115,7 @@ describe("parseTracerouteOutput", () => {
   })
 
   it("keeps a german tracert's timed-out hop instead of leaving a hole", () => {
-    // matching the literal "Request timed out." dropped hop 2, so the caller saw
-    // hops numbered 1 and 3 and no indication that anything was missing
+    // matching the literal "Request timed out." dropped hop 2, leaving hops 1 and 3 and no gap
     const hops = parseTracerouteOutput(fixture("tracert-windows-de.txt"), "win32")
     expect(hops.map((h) => h.hop)).toEqual([1, 2, 3])
     expect(hops[1]).toMatchObject({ hop: 2, ip: "*", timeout: true })
@@ -166,8 +163,7 @@ describe("parseArpOutput", () => {
   })
 
   it("reads a german windows arp table, whose type column says dynamisch", () => {
-    // requiring the literal words dynamic|static returned an empty table, which
-    // the ui presents as "no neighbours found"
+    // requiring the literal words dynamic|static returned an empty table: "no neighbours found"
     expect(parseArpOutput(fixture("arp-windows-de.txt"), "win32")).toEqual([
       { ip: "192.168.1.1", mac: "00:11:22:33:44:55", interface: "192.168.1.10" },
       { ip: "192.168.1.41", mac: "84:a3:29:58:8e:89", interface: "192.168.1.10" },

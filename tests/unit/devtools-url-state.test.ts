@@ -18,8 +18,7 @@ import { UserAgentParser } from "@/components/tools/user-agent-parser"
 // mode and options go in the url; base64 input, a pasted json document and a jwt stay local
 
 function mount(node: ReactElement, searchParams = "", onUrlUpdate?: OnUrlUpdateFunction) {
-  // children passed in the props object, not as a third argument: the adapter's
-  // props type requires it and createElement's rest parameter does not satisfy it
+  // children goes in the props object: the adapter's props type requires it, a rest arg does not
   return render(
     createElement(NuqsTestingAdapter, {
       searchParams,
@@ -264,8 +263,7 @@ describe("user agent parser", () => {
 })
 
 describe("jwt decoder keeps the token out of the url", () => {
-  // obviously fake, generated for this test: header {"alg":"none"}, payload
-  // {"sub":"fake-subject","name":"Test User"}, empty signature
+  // obviously fake: header {"alg":"none"}, payload {"sub":"fake-subject"}, empty signature
   const UNSIGNED = "eyJhbGciOiJub25lIn0.eyJzdWIiOiJmYWtlLXN1YmplY3QiLCJuYW1lIjoiVGVzdCBVc2VyIn0."
 
   it("never writes the token to the query string", async () => {

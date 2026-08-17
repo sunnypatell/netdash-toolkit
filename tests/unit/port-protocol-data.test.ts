@@ -67,8 +67,7 @@ describe("service port table", () => {
       expect(entry.ianaName.length, `${entry.port} has no IANA name`).toBeGreaterThan(0)
     }
 
-    // the rows where the everyday name and the registry disagree. presenting the
-    // colloquial name as an IANA assignment is what "fabricated data" looks like.
+    // presenting the colloquial name as an IANA assignment is what "fabricated data" looks like
     expect(ianaFor(8443)).toBe("pcsync-https")
     expect(ianaFor(1521)).toBe("ncube-lm")
     expect(ianaFor(6443)).toBe("sun-sr-https")

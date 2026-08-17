@@ -47,8 +47,7 @@ describe("ipv4ToInt", () => {
 
 describe("prefixToNetmask", () => {
   it("rejects a fractional prefix instead of silently rounding it", () => {
-    // js coerces the shift count to an int32, so 32 - 24.5 shifted by 7 and a
-    // /24 request came back as a /25 mask. same for 23.1 giving a /24.
+    // js coerces the shift count to int32, so 32 - 24.5 shifted by 7 and a /24 came back a /25
     for (const p of [24.5, 24.9, 23.1, 0.5]) {
       expect(() => prefixToNetmask(p), `prefix ${p}`).toThrow(/must be 0-32/)
     }
@@ -200,8 +199,7 @@ describe("expandIPv6 / compressIPv6 (rfc 5952)", () => {
   })
 
   it("applies the dotted quad only to ::ffff:0:0/96", () => {
-    // ::/96 is the deprecated ipv4-compatible block and holds :: and ::1, so
-    // section 5 must not reach it
+    // ::/96 is the deprecated ipv4-compatible block and holds :: and ::1, so section 5 stops short
     expect(compressIPv6("::1")).toBe("::1")
     expect(compressIPv6("::")).toBe("::")
     expect(compressIPv6("::c0a8:101")).toBe("::c0a8:101")
@@ -266,8 +264,7 @@ describe("solicitedNodeMulticast", () => {
   })
 
   it("pads unexpanded groups instead of mis-slicing them", () => {
-    // the copy in network-testing.ts sliced the raw text and produced
-    // "ff02::1:ff:f1" for this address
+    // the copy in network-testing.ts sliced the raw text and produced "ff02::1:ff:f1" here
     expect(solicitedNodeMulticast("fe80:0:0:0:0:0:f:1")).toBe("ff02::1:ff0f:1")
   })
 
@@ -295,8 +292,7 @@ describe("calculateIPv6Subnet", () => {
   })
 
   it("treats all of fe80::/10 as link-local, agreeing with isPrivate", () => {
-    // isLinkLocal used to test == 0xfe80 (a /16) while isPrivate masked /10,
-    // so fe90::1 came back isPrivate: true, isLinkLocal: false
+    // isLinkLocal tested == 0xfe80 (a /16) while isPrivate masked /10, so fe90::1 came back private
     for (const ip of ["fe80::1", "fe90::1", "feaf::1", "febf::1"]) {
       const r = calculateIPv6Subnet(ip, 64)
       expect({ ip, isLinkLocal: r.isLinkLocal, isPrivate: r.isPrivate }).toEqual({

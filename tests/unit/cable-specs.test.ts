@@ -16,8 +16,7 @@ import {
 
 describe("fiber attenuation matches the published maxima", () => {
   it("caps every multimode grade at the tia-568.3-d table 4 figures", () => {
-    // om grade sets modal bandwidth, not attenuation: all om grades are
-    // 3.5 dB/km @850 nm and 1.5 dB/km @1300 nm
+    // om grade sets modal bandwidth, not attenuation: all are 3.5 dB/km @850 nm, 1.5 @1300 nm
     for (const grade of ["om1", "om2", "om3", "om4", "om5"] as const) {
       expect(FIBER_SPECS[grade].attenuation[850], grade).toBe(3.5)
       expect(FIBER_SPECS[grade].attenuation[1300], grade).toBe(1.5)

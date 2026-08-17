@@ -127,8 +127,7 @@ describe("runRegexMatch", () => {
   })
 
   it("stops the match loop once the deadline passes", () => {
-    // a cheap always-matching pattern over a big input: the loop itself must
-    // give up, independently of the worker being terminated from outside
+    // a cheap always-matching pattern over a big input: the loop itself has to give up
     const result = runRegexMatch(
       { pattern: "a", flags: "g", input: "a".repeat(4_000_000), maxMatches: 10 },
       5
@@ -152,8 +151,7 @@ describe("buildRegexWorkerSource", () => {
   })
 
   it("embeds the matcher by value, never by identifier", () => {
-    // a minifier renames the export; a name reference inside the string would
-    // survive the rename and break the worker at runtime
+    // a minifier renames the export, and a name inside the string would survive and break the worker
     expect(source).toContain("var __ndRegexRun = function")
     expect(source.split("self.onmessage")[1]).not.toContain("runRegexMatch")
   })

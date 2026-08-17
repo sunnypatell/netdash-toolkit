@@ -138,8 +138,7 @@ describe("rejection", () => {
   })
 
   it("does not silently strip junk the way the lenient cli parser does", () => {
-    // lib/parsers.normalizeMac exists to survive vendor cli output and would
-    // accept this by discarding the letters; the formatter must not
+    // normalizeMac survives vendor cli output by discarding letters; the formatter must not
     expect(parseMac("zz001a2b3c4d5e")).toBeNull()
     expect(parseMac("00:1A:2B:3C:4D:5E extra")).toBeNull()
   })

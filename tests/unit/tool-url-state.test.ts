@@ -75,8 +75,7 @@ function mount(
   searchParams = "",
   onUrlUpdate?: OnUrlUpdateFunction
 ) {
-  // children go in the props object: createElement's variadic form does not
-  // satisfy a component whose props type requires children
+  // children go in the props object: createElement's variadic form does not satisfy the props type
   return render(
     createElement(NuqsTestingAdapter, {
       searchParams,

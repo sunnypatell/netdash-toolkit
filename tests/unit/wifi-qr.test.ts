@@ -31,8 +31,7 @@ describe("escaping the reserved characters", () => {
   })
 
   it("escapes the backslash first, so nothing is double-escaped", () => {
-    // if ; were escaped before \, the backslash it introduces would be escaped
-    // again and the value would arrive with a stray backslash
+    // escaping ; before \ would escape the backslash it introduces and leave a stray one
     expect(escapeWifiValue("a;b")).toBe("a\\;b")
     expect(escapeWifiValue("a\\;b")).toBe("a\\\\\\;b")
     expect(escapeWifiValue("a\\b")).toBe("a\\\\b")

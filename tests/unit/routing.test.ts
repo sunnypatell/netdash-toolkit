@@ -190,8 +190,7 @@ describe("ip route command generation", () => {
 
 describe("ospf config generation", () => {
   it("writes area authentication for the backbone too", () => {
-    // the regression this replaces: every area statement was skipped when the id
-    // was 0, so authentication on area 0 produced nothing at all
+    // every area statement was skipped when the id was 0, so area 0 authentication produced nothing
     const config = buildOspfConfig(
       {
         ...defaultOspfConfig,

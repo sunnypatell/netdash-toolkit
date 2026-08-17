@@ -28,6 +28,7 @@ import {
   summarizeRange,
   type RangeSummary,
 } from "@/lib/ip-enumerate"
+import { anchorFocus } from "@/lib/focus"
 
 const PAGE_SIZE = 256
 const MAX_LIMIT = 65536
@@ -301,7 +302,11 @@ export function IPEnumerator() {
                   </Button>
                 </div>
 
-                <ul className="max-h-96 space-y-1 overflow-y-auto rounded-lg border p-3">
+                <ul
+                  className="max-h-96 space-y-1 overflow-y-auto rounded-lg border p-3"
+                  data-focus-anchor
+                  tabIndex={-1}
+                >
                   {addresses.map((address) => {
                     const isNetwork = address === summary.networkAddress
                     const isBroadcast = address === summary.broadcastAddress
@@ -353,11 +358,12 @@ export function IPEnumerator() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
+                      onClick={(event) => {
+                        anchorFocus(event.currentTarget)
                         void setQuery({
                           limit: Math.min(addresses.length + PAGE_SIZE * 4, MAX_LIMIT),
                         })
-                      }
+                      }}
                     >
                       Load More
                     </Button>

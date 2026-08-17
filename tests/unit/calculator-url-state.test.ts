@@ -49,8 +49,7 @@ function mount(
   searchParams = "",
   onUrlUpdate?: OnUrlUpdateFunction
 ) {
-  // children goes in the props object: the adapter types it as required, so the
-  // third createElement argument does not satisfy the overload
+  // children goes in the props object: the adapter types it as required, so a third arg will not do
   return render(
     createElement(NuqsTestingAdapter, {
       searchParams,
@@ -94,8 +93,7 @@ describe("results arrive from the link, with no Calculate button", () => {
 
   it("subnet mask converter converts on arrival", async () => {
     mount(SubnetMaskConverter, "?mask=26")
-    // the binary form only exists in the conversions card, so it cannot be
-    // confused with the /0 to /32 reference table further down the page
+    // the binary form exists only in the conversions card, not the /0 to /32 table further down
     expect(await screen.findByText("All notations for /26")).toBeTruthy()
     expect(screen.getByText("11111111.11111111.11111111.11000000")).toBeTruthy()
     expect(screen.getAllByText("255.255.255.192").length).toBeGreaterThan(0)
@@ -109,8 +107,7 @@ describe("results arrive from the link, with no Calculate button", () => {
 
   it("mac formatter formats on arrival", async () => {
     mount(MACFormatter, "?mac=001a2b3c4d5e")
-    // the eui-64 and the binary are only rendered for a parsed address, unlike
-    // the notation examples card which is always on screen
+    // the eui-64 and binary render only for a parsed address, unlike the always-on notation card
     expect(await screen.findByText("021A:2BFF:FE3C:4D5E")).toBeTruthy()
     expect(screen.getByText("00000000 00011010 00101011 00111100 01001101 01011110")).toBeTruthy()
   })
@@ -122,8 +119,7 @@ describe("results arrive from the link, with no Calculate button", () => {
 
   it("network calculator opens the throughput tab and computes it", async () => {
     mount(NetworkCalculator, "?tab=throughput&bandwidth=1000&rtt=50&window=65535")
-    // 1 Gbps over 50 ms holds 6.25 MB in flight, and the window to fill the
-    // pipe is the same figure by definition, so it appears twice
+    // 1 Gbps over 50 ms holds 6.25 MB, and the window to fill the pipe is the same figure
     expect(await screen.findByText("10.49 Mbps")).toBeTruthy()
     expect(screen.getAllByText("6,250,000 bytes (6103.52 KiB)")).toHaveLength(2)
   })

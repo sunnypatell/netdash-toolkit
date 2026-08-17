@@ -10,8 +10,7 @@ import {
   slaLevelFor,
 } from "@/lib/uptime"
 
-// the figures below are the ones on every SLA cheat sheet, derived from the
-// period length each label states rather than copied out of the implementation.
+// derived from the period length each label states, not copied out of the implementation
 
 const seconds = (id: string) => UPTIME_PERIODS.find((p) => p.id === id)!.seconds
 
@@ -95,8 +94,7 @@ describe("the nines figures match the actual percentages", () => {
 
 describe("duration formatting carries between units", () => {
   it("never prints 60 minutes or 24 hours", () => {
-    // 119.8 minutes used to render as "1h 60m": the minutes were rounded
-    // independently of the hours they belong to
+    // 119.8 minutes rendered as "1h 60m": the minutes were rounded independently of the hours
     expect(formatDowntime(119.8 * 60)).toBe("1h 59m 48s")
     expect(formatDowntime(86399.6)).toBe("1d 0h 0m")
     for (let s = 0; s < 200000; s += 7) {

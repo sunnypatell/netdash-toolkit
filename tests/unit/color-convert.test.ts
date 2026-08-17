@@ -217,8 +217,7 @@ describe("wcag contrast", () => {
     )
   })
 
-  // 1.4.3 measures the text as rendered, so alpha has to be composited first.
-  // ignoring it reported 50% black on white as 21:1, a wrong pass.
+  // 1.4.3 measures text as rendered: ignoring alpha reported 50% black on white as 21:1
   it("composites a translucent foreground instead of reading it as opaque", () => {
     const half = contrastCheck("rgb(0 0 0 / 0.5)", "#ffffff")
     expect(half.composited).toBe(true)
@@ -253,8 +252,7 @@ describe("wcag contrast", () => {
     }
   })
 
-  // the ratio has to describe the swatch that gets painted, and a wide-gamut
-  // colour is painted gamut-mapped
+  // the ratio has to describe the painted swatch, and a wide-gamut colour is painted gamut-mapped
   it("gamut-maps a wide-gamut colour before measuring it", () => {
     const check = contrastCheck("oklch(0.7 0.35 150)", "#ffffff")
     expect(Number.isFinite(check.ratio)).toBe(true)
@@ -263,8 +261,7 @@ describe("wcag contrast", () => {
 })
 
 describe("hsl output fidelity", () => {
-  // integer hsl() addresses ~4.9e5 states against 16.7M sRGB colours, so a
-  // copied hsl(217 91% 60%) used to re-parse up to 5/255 away from its source
+  // integer hsl() has ~4.9e5 states against 16.7M sRGB, so a copy re-parsed up to 5/255 away
   it("round-trips a copied hsl string to within one 8-bit step", () => {
     let worst = 0
     let worstCase = ""

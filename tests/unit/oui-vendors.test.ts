@@ -12,8 +12,7 @@ import {
   type FetchLike,
 } from "@/lib/oui-vendors"
 
-// typed as FetchLike so vi.fn records the (url, init) tuple; a zero-arg
-// implementation makes mock.calls a zero-length tuple and unindexable
+// typed as FetchLike so vi.fn records (url, init); a zero-arg impl makes mock.calls unindexable
 const notFound: FetchLike = () =>
   Promise.resolve(
     new Response(JSON.stringify({ success: true, found: false }), {
@@ -78,8 +77,7 @@ describe("offline-first lookup", () => {
   })
 
   it("still resolves offline when the remote says found:false", async () => {
-    // the previous implementation only reached the local map from a catch block,
-    // so an http 200 with found:false returned "Unknown vendor" instead.
+    // the local map was only reached from a catch, so a 200 with found:false said "Unknown vendor"
     const fetchImpl = vi.fn(notFound)
     const result = await lookupOui("080027aabbcc", { offlineOnly: false, fetchImpl })
     expect(result.vendor).toBe("Oracle VirtualBox")

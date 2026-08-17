@@ -26,8 +26,7 @@ function parsePolicy(policy: string): Directives {
   return directives
 }
 
-// csp source matching, minus the parts this policy never uses (paths, non-default
-// ports, nonces, hashes)
+// csp source matching, minus the parts this policy never uses (paths, ports, nonces, hashes)
 function permits(sources: string[], target: string, selfOrigin: string): boolean {
   let url: URL
   try {
@@ -96,8 +95,7 @@ function scanSource(src: string, rel: string, into: Egress) {
       record(into.connect, host, where)
   }
 
-  // a host interpolated straight into a fetch argument: the user typed it.
-  // only direct fetch args are detected, so this is a floor, not the total.
+  // a host interpolated into a fetch argument; only direct args are detected, so this is a floor
   for (const m of src.matchAll(/https?:\/\/\$\{|\}:\/\//g)) {
     if (!FETCH_CALL.test(src.slice(Math.max(0, m.index - 100), m.index))) continue
     into.interpolated.push(`${rel}:${src.slice(0, m.index).split("\n").length}`)
@@ -118,8 +116,7 @@ function scanEgress(): Egress {
   return out
 }
 
-// the scan is the only thing standing between an undisclosed third-party call
-// and a green ci run, so it gets fed known-bad input rather than trusted.
+// the only thing between an undisclosed third-party call and a green ci run, so feed it known-bad
 function connectHostsIn(src: string): string[] {
   const out = emptyEgress()
   scanSource(src, "synthetic.ts", out)
@@ -150,8 +147,7 @@ function documentedHosts(marker: string): string[] {
 }
 
 const DOCUMENTED_APP_HOSTS = documentedHosts("app")
-// the firebase sdk hardcodes these; they are in node_modules, not in this repo,
-// so the doc is their only source and the policy still has to cover them
+// the firebase sdk hardcodes these in node_modules, so the doc is their only source here
 const DOCUMENTED_SDK_HOSTS = documentedHosts("sdk")
 const DOCUMENTED_COUNT = Number(
   /contacts (\d+) fixed third-party hosts/.exec(securityDoc)?.[1] ?? NaN
@@ -220,8 +216,7 @@ describe("the web build ships a policy", () => {
   })
 
   it("keeps COOP at same-origin-allow-popups", () => {
-    // signInWithPopup needs the opener handle; plain same-origin breaks google
-    // sign-in on the web build
+    // signInWithPopup needs the opener handle; plain same-origin breaks google sign-in on the web
     const coop = catchAll.headers.find(
       (h: { key: string }) => h.key.toLowerCase() === "cross-origin-opener-policy"
     )
@@ -243,8 +238,7 @@ describe.each(BUILDS)("%s policy", (_name, policy, selfOrigin) => {
   })
 
   it("does not upgrade insecure requests", () => {
-    // the port scanner and ping fallback probe http:// targets on purpose, and
-    // upgrade-insecure-requests would silently rewrite them to https
+    // the port scanner and ping fallback probe http:// on purpose, and this would rewrite them
     expect(Object.keys(policy)).not.toContain("upgrade-insecure-requests")
   })
 
@@ -282,8 +276,7 @@ describe.each(BUILDS)("%s policy", (_name, policy, selfOrigin) => {
   })
 
   it("permits a host the user types, because four tools fetch one", () => {
-    // if this ever reaches zero, re-derive whether connect-src can drop its
-    // scheme sources for an allowlist
+    // if this reaches zero, re-derive whether connect-src can drop its scheme sources
     expect(egress.interpolated.length).toBeGreaterThan(0)
     expect(policy["connect-src"]).toContain("https:")
     expect(

@@ -319,8 +319,7 @@ describe("bot detection against real strings", () => {
     }
   })
 
-  // the old \bcrawler?\b read as "crawle" plus an optional r, so a bare "crawl"
-  // token never matched
+  // the old \bcrawler?\b read as "crawle" plus an optional r, so a bare "crawl" never matched
   it("detects a bare crawl token as well as crawler", () => {
     expect(isBotUserAgent("Mozilla/5.0 (compatible; Acme crawl 1.0; +http://acme.test)")).toBe(true)
     expect(isBotUserAgent("Y!J-BRW/1.0 crawler (http://help.yahoo.co.jp/)")).toBe(true)

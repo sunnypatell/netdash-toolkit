@@ -887,7 +887,7 @@ export function ProjectManager() {
                         </p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-3" id="project-items" tabIndex={-1}>
                         {activeProject.items.map((item) => {
                           const Icon = getItemIcon(item.type)
                           return (
@@ -944,7 +944,10 @@ export function ProjectManager() {
                                       <AlertDialogFooter>
                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                                         <AlertDialogAction
-                                          onClick={() => handleRemoveItem(item.id)}
+                                          onClick={() => {
+                                            void handleRemoveItem(item.id)
+                                            document.getElementById("project-items")?.focus()
+                                          }}
                                         >
                                           Delete
                                         </AlertDialogAction>

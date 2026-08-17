@@ -15,8 +15,7 @@ import {
 const repoRoot = join(__dirname, "../..")
 const toolsDir = join(repoRoot, "components/tools")
 
-// directories under components/tools that hold components shared by several
-// tools rather than a tool of their own, so they have no registry entry
+// shared component directories under components/tools, so they have no registry entry
 const SHARED_DIRS = new Set(["shared"])
 
 const sourceOf = (slug: string) => {
@@ -92,8 +91,7 @@ describe("tool registry", () => {
   })
 
   it("leaves no orphaned tool component outside the registry", () => {
-    // network-analyzer was unreachable for months because nothing caught this,
-    // and a directory of panels can go orphaned the same way a single file can
+    // network-analyzer was unreachable for months, and a panel directory can go orphaned the same way
     const registered = new Set(
       tools.map((t) => (t.slug === "wifi-qr" ? "wifi-qr-generator" : t.slug))
     )
@@ -115,8 +113,7 @@ describe("tool registry", () => {
   })
 
   it("only declares projectItemType when the tool actually saves to a project", () => {
-    // the registry promised persistence for 12 tools that never rendered
-    // SaveToProject, so the metadata lied to the ui
+    // the registry promised persistence for 12 tools that never rendered SaveToProject
     const liars = tools
       .filter((t) => t.projectItemType)
       .filter((t) => !sourceOf(t.slug)?.includes("SaveToProject"))
@@ -125,8 +122,7 @@ describe("tool registry", () => {
   })
 
   it("declares runtime.offline=false for exactly the tools that do network i/o", () => {
-    // derived from the source, not hand-maintained: the dashboard advertised
-    // "100% offline" while 12 tools called fetch, and no test could catch it
+    // derived from the source: the dashboard advertised "100% offline" while 12 tools called fetch
     const mismatches: string[] = []
     for (const tool of tools) {
       const src = sourceOf(tool.slug) ?? ""

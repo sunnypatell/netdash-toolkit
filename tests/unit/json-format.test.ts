@@ -9,8 +9,7 @@ describe("indentation", () => {
     expect(analyzeJson(input, "4", "pretty").output).toContain('\n    "a": 1')
   })
 
-  // JSON.stringify(value, null, 0) produces no whitespace at all, so the old
-  // "Tab" option silently minified instead of indenting
+  // JSON.stringify(v, null, 0) produces no whitespace, so the old "Tab" option silently minified
   it("indents with a real tab character", () => {
     const output = analyzeJson(input, "tab", "pretty").output
     expect(output).toContain('\n\t"a": 1')
@@ -24,8 +23,7 @@ describe("indentation", () => {
 })
 
 describe("numeric precision", () => {
-  // JSON.parse rounds to the nearest double, and JSON.stringify writes the
-  // rounded value back with no complaint
+  // JSON.parse rounds to the nearest double and JSON.stringify writes it back with no complaint
   it("warns that an integer past 2^53 was rounded", () => {
     const result = analyzeJson('{"id":9007199254740993}', "2", "pretty")
     expect(result.valid).toBe(true)
@@ -109,8 +107,7 @@ describe("stats", () => {
     expect(jsonStats(42)).toMatchObject({ numbers: 1, depth: 0 })
   })
 
-  // the recursive stats walk threw RangeError inside the parse try/catch, so
-  // valid json was reported to the user as invalid
+  // the recursive stats walk threw RangeError inside the parse try/catch, so valid json read invalid
   it("walks deeply nested input without overflowing the stack", () => {
     const depth = 60_000
     const stats = jsonStats(JSON.parse("[".repeat(depth) + "]".repeat(depth)))

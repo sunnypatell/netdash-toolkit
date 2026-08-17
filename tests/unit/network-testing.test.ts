@@ -13,8 +13,7 @@ import {
 import type { DNSResult } from "@/lib/network-testing"
 import { isValidIPv6 } from "@/lib/network-utils"
 
-// hand-assembled wire fixtures: the parser must be checked against raw bytes,
-// not against the same codec that produced them
+// hand-assembled wire bytes: a parser checked against its own codec proves nothing
 const u16 = (n: number): number[] => [(n >> 8) & 0xff, n & 0xff]
 const u32 = (n: number): number[] => [
   (n >>> 24) & 0xff,
@@ -228,8 +227,7 @@ describe("parseDnsMessage", () => {
 })
 
 describe("parseDnsMessage AAAA rendering", () => {
-  // the deleted third ipv6 compressor appended a colon that :{3,} had already
-  // collapsed, so every trailing zero run rendered an extra ":"
+  // the deleted third compressor appended a colon that :{3,} had already collapsed
   it("emits a single :: for trailing zero runs", () => {
     const cases: Array<[string, string]> = [
       ["20010db8000000000000000000000000", "2001:db8::"],
@@ -501,14 +499,14 @@ describe("queryDNSOverHTTPS timer hygiene", () => {
       ms?: number,
       ...rest: unknown[]
     ) => {
-      const id = (realSetTimeout as any)(handler, ms, ...rest)
+      const id = (realSetTimeout as (...a: unknown[]) => unknown)(handler, ms, ...rest)
       if (ms === 15000) abortTimers.push(id)
       return id
     }) as typeof globalThis.setTimeout)
 
     vi.spyOn(globalThis, "clearTimeout").mockImplementation(((id: unknown) => {
       cleared.push(id)
-      return (realClearTimeout as any)(id)
+      return (realClearTimeout as (handle: unknown) => void)(id)
     }) as typeof globalThis.clearTimeout)
 
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("socket reset"))

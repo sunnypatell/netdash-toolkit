@@ -13,7 +13,7 @@ import { loadTool } from "@/lib/tool-loaders"
 const AXE_OPTIONS: axe.RunOptions = {
   runOnly: {
     type: "tag",
-    // wcag2a + wcag2aa + wcag21a + wcag21aa + wcag22aa is exactly the 2.2 AA set
+    // exactly the wcag 2.2 AA tag set
     values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
   },
   rules: {

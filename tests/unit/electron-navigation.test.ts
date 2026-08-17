@@ -10,8 +10,7 @@ const DEV = appOrigins({ isDev: true, staticPort: 17890 })
 
 describe("app origins", () => {
   it("covers both localhost and the loopback literal", () => {
-    // the window loads over localhost for firebase's authorized-domain list
-    // while the server binds 127.0.0.1, so both spellings are the app
+    // the window loads over localhost for firebase while the server binds 127.0.0.1, so both are us
     expect(PROD).toEqual(["http://localhost:17890", "http://127.0.0.1:17890"])
     expect(DEV).toEqual(["http://localhost:3000", "http://127.0.0.1:3000"])
   })
@@ -43,8 +42,7 @@ describe("remote origins never load in the app window", () => {
     expect(decideNavigation(url, PROD)).toEqual({ action: "external", url })
   })
 
-  // the previous implementation used url.includes("localhost"), which is true for
-  // any hostname merely containing it
+  // the previous implementation used url.includes("localhost"), true of any hostname containing it
   it.each([
     "http://localhost.example.com/",
     "http://notlocalhost:17890/",
@@ -55,8 +53,7 @@ describe("remote origins never load in the app window", () => {
   })
 
   it("blocks a host that smuggles the allowed port into the hostname", () => {
-    // "17890.example.com" is not a valid port, so this never parses. blocking is
-    // the right answer for anything we cannot resolve to a definite origin.
+    // "17890.example.com" is not a valid port, so this never parses; block what has no origin
     expect(decideNavigation("http://localhost:17890.example.com/", PROD).action).toBe("block")
   })
 
@@ -106,8 +103,7 @@ describe("permissions", () => {
     expect(isPermissionAllowed("clipboard-sanitized-write")).toBe(true)
   })
 
-  // the handler is an allow-list, so a permission electron introduces later is
-  // refused by default rather than granted until someone notices
+  // an allow-list, so a permission electron adds later is refused by default rather than granted
   it.each(["a-permission-that-does-not-exist-yet", "display-capture", "window-management"])(
     "refuses %s, an unknown or future permission",
     (permission) => {
@@ -116,8 +112,7 @@ describe("permissions", () => {
   )
 })
 
-// the wiring is as load-bearing as the policy: a perfect decision function that
-// nothing calls protects nothing.
+// a perfect decision function that nothing calls protects nothing
 describe("main.ts wiring", () => {
   const main = readFileSync(join(process.cwd(), "electron", "main.ts"), "utf8")
 

@@ -73,8 +73,7 @@ describe("parseACLNetwork", () => {
   })
 
   it("converts a wildcard to a prefix and refuses a non-contiguous one", () => {
-    // the contiguity logic lives here, and nothing called it: its only in-repo
-    // call site is unreachable because parseACLNetwork always sets prefix
+    // the contiguity logic's only in-repo call site is unreachable: parseACLNetwork always sets prefix
     expect(wildcardToPrefix("0.0.0.255")).toBe(24)
     expect(wildcardToPrefix("0.0.0.0")).toBe(32)
     expect(wildcardToPrefix("255.255.255.255")).toBe(0)

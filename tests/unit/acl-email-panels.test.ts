@@ -272,8 +272,7 @@ describe("email panels state what they actually found", () => {
 })
 
 describe("acl-generator index", () => {
-  // each acl type is its own lazy chunk, so the textarea only exists once the
-  // import for the open tab has resolved
+  // each acl type is its own lazy chunk, so the textarea exists only once the open tab resolves
   const configOf = async (aclType: string) =>
     (
       (await screen.findByLabelText(
