@@ -2,22 +2,16 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 
-// firestore.rules ships to a live database and nothing else in the suite reads
-// it, so a rule can be tightened into breaking a client call with no signal.
-// that already happened once: projectShares allowed read only to the recipient,
-// which denied the owner-side queries in unshareProject and
-// updateSharePermission, so unsharing and permission changes both failed.
-//
-// proving the deployed behaviour needs the emulator, which needs a jre. this
-// asserts the structure the client code depends on instead.
+// nothing else reads firestore.rules, so a tightened rule breaks a client call
+// silently: projectShares once granted read to the recipient only, killing
+// unsharing. the emulator needs a jre, so this asserts structure, not behaviour.
 
 const RULES = readFileSync(join(process.cwd(), "firestore.rules"), "utf8")
 
 function block(name: string): string {
   const start = RULES.indexOf(`match /${name}/`)
   expect(start, `no match block for ${name}`).toBeGreaterThan(-1)
-  // the path segment carries its own braces, so the block opens at the last
-  // brace on the match line, not the first one after it
+  // the path segment has its own braces, so the block opens at the last one on the line
   const eol = RULES.indexOf("\n", start)
   const open = RULES.lastIndexOf("{", eol)
   let depth = 0
@@ -42,9 +36,8 @@ describe("firestore.rules matches what the client actually queries", () => {
   })
 
   it("lets the owner read their own share records", () => {
-    // unshareProject and updateSharePermission both query projectShares filtered
-    // by sharedWithUserId while signed in as the owner. firestore rejects a query
-    // it cannot prove safe, so without this the whole query is denied.
+    // both owner-side callers filter by sharedWithUserId, and firestore denies a
+    // query it cannot prove safe, so without this the whole query fails
     const read = clause(block("projectShares"), "read")
     expect(read).toContain("resource.data.ownerId == request.auth.uid")
   })
@@ -76,17 +69,15 @@ describe("firestore.rules matches what the client actually queries", () => {
   })
 
   it("does not let a collaborator take over a project they can edit", () => {
-    // an edit grant that does not pin ownerId and sharedWith lets a collaborator
-    // write themselves in as owner and lock the real owner out
+    // an edit grant that does not pin ownerId lets a collaborator take the project
     const update = clause(block("projects"), "update")
     expect(update).toContain("request.resource.data.ownerId == resource.data.ownerId")
     expect(update).toContain("request.resource.data.sharedWith == resource.data.sharedWith")
   })
 
   it("keeps the profile doc to what the sharing ui renders", () => {
-    // /users/{uid} is readable by every signed-in user, which is deliberate: the
-    // sharing ui needs a name and avatar. it only stays harmless while nothing
-    // else is written there, and lastSeen and provider were, unread by anything.
+    // /users/{uid} is world-readable to signed-in users by design, so it stays
+    // harmless only while nothing beyond a name and avatar is written there
     const written = /doc\(firestore, "users", user\.uid\)[\s\S]{0,400}?\)/.exec(
       readFileSync(join(process.cwd(), "contexts/project-context.tsx"), "utf8")
     )

@@ -27,9 +27,8 @@ interface ResultCardProps {
   emptyHint?: ReactNode
 }
 
-// these are synchronous calculators, so every keystroke produced a whole new
-// result. announcing each one read the full table four times while the user
-// typed "1000". the render stays immediate; only the announcement waits.
+// synchronous calculators, so announcing every keystroke read the whole table
+// four times while typing "1000". render stays immediate, only the speech waits.
 function useSettledText(text: string, delayMs = 700): string {
   const [settled, setSettled] = useState("")
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
