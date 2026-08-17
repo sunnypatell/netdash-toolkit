@@ -1,7 +1,7 @@
 // email authentication record parsing: MX (RFC 5321/7505), SPF (RFC 7208),
 // DKIM (RFC 6376), DMARC (RFC 7489). Lookups go over DNS-over-HTTPS.
 
-import { isValidCIDR, isValidIPv4, isValidIPv6 } from "@/lib/network-utils"
+import { isValidCIDR, isValidIPv4, isValidIPv6, parsePrefixText } from "@/lib/network-utils"
 
 export const DNS_TYPE = { A: 1, CNAME: 5, MX: 15, TXT: 16 } as const
 
@@ -204,8 +204,7 @@ const isSpfIp4 = (value: string): boolean =>
 const isSpfIp6 = (value: string): boolean => {
   if (!value.includes("/")) return isValidIPv6(value)
   const [address, prefix] = value.split("/")
-  const length = Number.parseInt(prefix, 10)
-  return isValidIPv6(address) && length >= 0 && length <= 128
+  return isValidIPv6(address) && parsePrefixText(prefix, 128) !== null
 }
 
 const isSpfRecord = (record: string): boolean => /^v=spf1(\s|$)/i.test(record.trim())

@@ -396,7 +396,7 @@ pnpm dev
 |  **Testing**   | [Vitest](https://vitest.dev/), [Testing Library](https://testing-library.com/), [axe-core](https://github.com/dequelabs/axe-core) |
 |  **Theming**   | [next-themes](https://github.com/pacocoursey/next-themes)                                                                         |
 |    **Docs**    | [Astro Starlight](https://starlight.astro.build/), a separate pnpm project                                                        |
-|  **Desktop**   | [Electron 39](https://www.electronjs.org/) + [electron-builder](https://www.electron.build/)                                      |
+|  **Desktop**   | [Electron 43](https://www.electronjs.org/) + [electron-builder](https://www.electron.build/)                                      |
 | **Deployment** | [Vercel](https://vercel.com/)                                                                                                     |
 
 </div>
@@ -555,7 +555,7 @@ pnpm dist:linux
 
 | Platform    | Requirements                                                                                                                                 |
 | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
-| **macOS**   | macOS 12.0+ (Monterey or later), x64 or Apple Silicon. Electron 39 declares `LSMinimumSystemVersion 12.0`, so older releases will not launch |
+| **macOS**   | macOS 12.0+ (Monterey or later), x64 or Apple Silicon. Electron 43 declares `LSMinimumSystemVersion 12.0`, so older releases will not launch |
 | **Windows** | Windows 10+, x64                                                                                                                             |
 | **Linux**   | Ubuntu 22.04+, Debian 12+, or equivalent (glibc 2.31+)                                                                                       |
 

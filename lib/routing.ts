@@ -7,6 +7,7 @@ import {
   ipv4ToInt,
   isValidIPv4,
   netmaskToPrefix,
+  parsePrefixText,
   prefixToMaskInt,
   prefixToNetmask,
 } from "@/lib/network-utils"
@@ -117,9 +118,9 @@ export function evaluateNetworkStatement(
 
   if (trimmedAddress.includes("/")) {
     const [ip, prefixStr] = trimmedAddress.split("/")
-    const prefix = Number.parseInt(prefixStr ?? "", 10)
+    const prefix = parsePrefixText(prefixStr, 32)
 
-    if (!isValidIPv4(ip) || isNaN(prefix) || prefix < 0 || prefix > 32) {
+    if (!isValidIPv4(ip) || prefix === null) {
       return { isValid: false, warnings, error: "Invalid CIDR notation" }
     }
 
@@ -188,9 +189,9 @@ export function evaluateStaticRoute(route: StaticRoute): StaticRouteEvaluation {
 
   if (destination.includes("/")) {
     const [ip, prefixStr] = destination.split("/")
-    const prefix = Number.parseInt(prefixStr ?? "", 10)
+    const prefix = parsePrefixText(prefixStr, 32)
 
-    if (!isValidIPv4(ip) || isNaN(prefix) || prefix < 0 || prefix > 32) {
+    if (!isValidIPv4(ip) || prefix === null) {
       return { isValid: false, warnings, error: "Invalid destination CIDR" }
     }
 
@@ -230,8 +231,8 @@ export function evaluateStaticRoute(route: StaticRoute): StaticRouteEvaluation {
     }
   } else {
     const sanitized = maskInput.startsWith("/") ? maskInput.slice(1) : maskInput
-    const parsed = Number.parseInt(sanitized, 10)
-    if (isNaN(parsed) || parsed < 0 || parsed > 32) {
+    const parsed = parsePrefixText(sanitized, 32)
+    if (parsed === null) {
       return { isValid: false, warnings, error: "Invalid prefix length" }
     }
     prefix = parsed

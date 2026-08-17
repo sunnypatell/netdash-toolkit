@@ -6,6 +6,7 @@ import {
   ipv4ToInt,
   isValidIPv4,
   netmaskToPrefix,
+  parsePrefixText,
 } from "@/lib/network-utils"
 
 export type ACLType = "standard" | "extended"
@@ -80,6 +81,10 @@ export interface ACLSpec {
 export const isValidPort = (value: number): boolean =>
   Number.isInteger(value) && value >= MIN_PORT && value <= MAX_PORT
 
+// parseInt read "80abc" as 80, so a mistyped port passed validation and was
+// written into the generated config verbatim
+const decimalInt = (text: string): number => (/^\d{1,5}$/.test(text.trim()) ? Number(text) : NaN)
+
 // a wildcard is the bitwise inverse of a netmask; going through netmaskToPrefix
 // also rejects the non-contiguous masks a raw popcount would silently accept
 export const wildcardToPrefix = (wildcard: string): number =>
@@ -128,8 +133,8 @@ export function parseACLNetwork(input: string): ParsedACLNetwork {
   }
 
   if (prefixStr !== undefined) {
-    const prefix = Number.parseInt(prefixStr, 10)
-    if (isNaN(prefix) || prefix < 0 || prefix > 32) {
+    const prefix = parsePrefixText(prefixStr, 32)
+    if (prefix === null) {
       throw new Error("Invalid prefix length (must be 0-32)")
     }
 
@@ -234,8 +239,8 @@ export function parsePortRange(range: string | undefined): [number, number] | nu
     .map((p) => p.trim())
     .filter(Boolean)
   if (parts.length !== 2) return null
-  const start = Number.parseInt(parts[0], 10)
-  const end = Number.parseInt(parts[1], 10)
+  const start = decimalInt(parts[0])
+  const end = decimalInt(parts[1])
   if (!isValidPort(start) || !isValidPort(end)) return null
   return [start, end]
 }
@@ -307,7 +312,7 @@ export function validateExtendedRule(rule: ExtendedACLRule): ValidationResult {
       } else if (bounds[0] >= bounds[1]) {
         errors.push("Source port range start must be lower than its end")
       }
-    } else if (rule.sourcePort && !isValidPort(Number.parseInt(rule.sourcePort, 10))) {
+    } else if (rule.sourcePort && !isValidPort(decimalInt(rule.sourcePort))) {
       errors.push(`Invalid source port (${PORT_RANGE_LABEL})`)
     }
 
@@ -318,7 +323,7 @@ export function validateExtendedRule(rule: ExtendedACLRule): ValidationResult {
       } else if (bounds[0] >= bounds[1]) {
         errors.push("Destination port range start must be lower than its end")
       }
-    } else if (rule.destPort && !isValidPort(Number.parseInt(rule.destPort, 10))) {
+    } else if (rule.destPort && !isValidPort(decimalInt(rule.destPort))) {
       errors.push(`Invalid destination port (${PORT_RANGE_LABEL})`)
     }
   } else if (rule.sourcePort || rule.destPort || rule.sourcePortRange || rule.destPortRange) {
@@ -327,13 +332,13 @@ export function validateExtendedRule(rule: ExtendedACLRule): ValidationResult {
 
   if (rule.protocol === "icmp") {
     if (rule.icmpType) {
-      const type = Number.parseInt(rule.icmpType, 10)
+      const type = decimalInt(rule.icmpType)
       if (isNaN(type) || type < 0 || type > 255) {
         errors.push("Invalid ICMP type (0-255)")
       }
     }
     if (rule.icmpCode) {
-      const code = Number.parseInt(rule.icmpCode, 10)
+      const code = decimalInt(rule.icmpCode)
       if (isNaN(code) || code < 0 || code > 255) {
         errors.push("Invalid ICMP code (0-255)")
       }
@@ -579,7 +584,7 @@ function junosPort(
   }
   const raw = port?.trim()
   if (!raw) return { value: null }
-  const parsed = Number.parseInt(raw, 10)
+  const parsed = decimalInt(raw)
   if (!isValidPort(parsed)) return { value: null }
   if (op === "gt") {
     return parsed < MAX_PORT ? { value: `${parsed + 1}-${MAX_PORT}` } : { value: null }
@@ -618,7 +623,7 @@ function panService(rule: ExtendedACLRule): {
     if (bounds) port = `${bounds[0]}-${bounds[1]}`
   } else if (operator === "eq") {
     const value = rule.destPort?.trim()
-    if (value && isValidPort(Number.parseInt(value, 10))) port = value
+    if (value && isValidPort(decimalInt(value))) port = value
   } else {
     notes.push(
       `PAN-OS service objects cannot express "${operator} ${rule.destPort ?? ""}"; using service any`
@@ -635,7 +640,7 @@ function panService(rule: ExtendedACLRule): {
     if (bounds) sourcePort = `${bounds[0]}-${bounds[1]}`
   } else if (sourceOperator === "eq") {
     const value = rule.sourcePort?.trim()
-    if (value && isValidPort(Number.parseInt(value, 10))) sourcePort = value
+    if (value && isValidPort(decimalInt(value))) sourcePort = value
   }
 
   const name = `service-${protocol}-${port}${sourcePort ? `-src-${sourcePort}` : ""}`

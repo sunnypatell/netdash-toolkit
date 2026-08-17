@@ -341,10 +341,18 @@ export interface CIDRRange {
   prefix: number
 }
 
+// a prefix is decimal digits and nothing else. parseInt read "24.5" as 24 and
+// "8abc" as 8, so a mistyped prefix silently returned the wrong network.
+export function parsePrefixText(prefixStr: string | undefined, max: 32 | 128): number | null {
+  if (prefixStr === undefined || !/^\d{1,3}$/.test(prefixStr)) return null
+  const prefix = Number(prefixStr)
+  return prefix <= max ? prefix : null
+}
+
 export function cidrToRange(cidr: string): CIDRRange {
   const [ip, prefixStr] = cidr.split("/")
-  const prefix = Number.parseInt(prefixStr, 10)
-  if (!Number.isInteger(prefix) || prefix < 0 || prefix > 32) {
+  const prefix = parsePrefixText(prefixStr, 32)
+  if (prefix === null) {
     throw new Error("Invalid CIDR prefix")
   }
   const ipInt = ipv4ToInt(ip)
@@ -446,16 +454,15 @@ export function isValidCIDR(cidr: string): boolean {
   if (parts.length !== 2) return false
 
   const [ip, prefixStr] = parts
-  // bare parseInt accepted "24abc" and "+24"
-  if (!/^\d{1,3}$/.test(prefixStr)) return false
-  const prefix = Number(prefixStr)
+  const prefix = parsePrefixText(prefixStr, 128)
+  if (prefix === null) return false
 
   if (isValidIPv4(ip)) {
     return prefix <= 32
   }
   // a zone id scopes a single interface address, never a prefix
   if (!ip.includes("%") && isValidIPv6(ip)) {
-    return prefix <= 128
+    return true
   }
 
   return false

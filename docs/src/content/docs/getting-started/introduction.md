@@ -15,7 +15,7 @@ There is no backend. `next.config.mjs` sets `output: "export"`, so `next build` 
 | Routing       | `trailingSlash: true`                          | every URL is a directory with an `index.html`, which is what a dumb static server needs |
 | Tools         | 48, enumerated in `lib/tool-registry.ts`       | one list drives the sidebar, search, routes, and these docs                             |
 | Offline tools | 36 of 48                                       | the majority of the app works with no network at all                                    |
-| Desktop shell | Electron 39, serving `out/` over loopback HTTP | the same static export, plus capabilities a browser lacks                               |
+| Desktop shell | Electron 43, serving `out/` over loopback HTTP | the same static export, plus capabilities a browser lacks                               |
 | Licence       | MIT                                            | fork it, self-host it, ship it                                                          |
 
 The tool count and the offline count in that table are not hand-maintained. They are read out of the registry when these docs are built, and a unit test in `tests/unit/tool-registry.test.ts` asserts that each tool's declared `runtime.offline` matches whether the component actually performs network I/O.
