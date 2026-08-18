@@ -198,7 +198,7 @@ export function Dashboard() {
     setQuery("")
     setRuntime("all")
     setCategory("all")
-    // the reset control unmounts itself and Input is not a forwardRef, so focus is moved by id rather than by ref
+    // the reset control unmounts itself, so focus is moved deliberately; by id to avoid threading a ref through
     const input = document.getElementById(SEARCH_ID)
     if (input instanceof HTMLInputElement) input.focus()
   }
