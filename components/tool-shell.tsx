@@ -1,6 +1,13 @@
 "use client"
 
-import { Suspense, lazy, useEffect, useMemo } from "react"
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  type ComponentType,
+  type LazyExoticComponent,
+} from "react"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { RuntimeDisclosure } from "@/components/ui/runtime-badge"
@@ -14,6 +21,17 @@ import { rememberToolVisit } from "@/components/command-palette"
 import { loadTool } from "@/lib/tool-loaders"
 
 const RELATED_MAX = 6
+
+// one lazy component per slug, at module scope: a fresh identity per render would remount the tool
+const lazyTools = new Map<string, LazyExoticComponent<ComponentType>>()
+
+function lazyTool(slug: string): LazyExoticComponent<ComponentType> {
+  const existing = lazyTools.get(slug)
+  if (existing) return existing
+  const created = lazy(() => loadTool(slug))
+  lazyTools.set(slug, created)
+  return created
+}
 
 // most arrivals come from search and have never seen the home page; a collapsed icon rail was the only way out
 function Breadcrumb({ tool }: { tool: ToolDefinition }) {
@@ -107,7 +125,7 @@ export function ToolShell({ slug }: { slug: string }) {
   }, [slug])
 
   const tool = useMemo(() => getToolBySlug(slug), [slug])
-  const Tool = useMemo(() => (tool ? lazy(() => loadTool(tool.slug)) : null), [tool])
+  const Tool = tool ? lazyTool(tool.slug) : null
 
   // unreachable: dynamicParams=false 404s unknown slugs before this renders
   if (!tool || !Tool) return null
@@ -124,6 +142,8 @@ export function ToolShell({ slug }: { slug: string }) {
       )}
 
       <Suspense fallback={<ToolSkeleton tool={tool} />}>
+        {/* the rule cannot see through the module-scope table; the identity per slug is stable */}
+        {/* eslint-disable-next-line react-hooks/static-components */}
         <Tool />
       </Suspense>
 

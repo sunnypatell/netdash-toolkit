@@ -66,12 +66,15 @@ export function OUILookup() {
 
   // prefix -> vendor (null = confirmed remote miss); survives re-renders so a repeat is free
   const cache = useRef(new Map<string, string | null>())
-  const cached = useCallback((oui: string) => cache.current.has(oui), [])
+  // mirrored into state: reading the ref during render left both this and the bulk estimate stale
+  const [cachedOuis, setCachedOuis] = useState<ReadonlySet<string>>(() => new Set())
+  const cached = useCallback((oui: string) => cachedOuis.has(oui), [cachedOuis])
+  const syncCachedOuis = useCallback(() => setCachedOuis(new Set(cache.current.keys())), [])
 
   const offlineOnly = query.offline
   const parsed = parseMacInput(query.mac)
   const willGoRemote =
-    !offlineOnly && parsed !== null && !lookupLocal(parsed.oui) && !cache.current.has(parsed.oui)
+    !offlineOnly && parsed !== null && !lookupLocal(parsed.oui) && !cachedOuis.has(parsed.oui)
 
   const runSingle = async () => {
     if (!parsed) return
@@ -82,6 +85,7 @@ export function OUILookup() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Lookup failed")
     } finally {
+      syncCachedOuis()
       setBusy(false)
     }
   }
@@ -120,6 +124,7 @@ export function OUILookup() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Bulk lookup failed")
     } finally {
+      syncCachedOuis()
       setProgress(null)
       setBusy(false)
     }

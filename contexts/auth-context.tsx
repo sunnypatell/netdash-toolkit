@@ -214,7 +214,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(getAuthErrorMessage(authError))
     }
   }
-  oneTapRef.current = handleGoogleOneTap
+  // after render, not during: the gsi callback only ever fires once mounted
+  useEffect(() => {
+    oneTapRef.current = handleGoogleOneTap
+  })
 
   const signInWithGoogle = async (): Promise<boolean> => {
     const services = await ensureAuth()

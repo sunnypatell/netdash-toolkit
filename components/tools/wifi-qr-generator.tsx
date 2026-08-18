@@ -163,7 +163,7 @@ export function WifiQRGenerator() {
               <SaveToProject
                 itemType="wifi-qr"
                 itemName={config.ssid}
-                itemData={{ ...config, qrString, generatedAt: Date.now() }}
+                itemData={{ ...config, qrString }}
                 toolSource="WiFi QR Code Generator"
                 size="sm"
               />
