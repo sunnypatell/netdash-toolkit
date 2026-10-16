@@ -113,7 +113,7 @@
     "croner": "^10.0.1",
     "cronstrue": "^3.30.0",
     "culori": "^4.0.2",
-    "firebase": "^12.17.1",
+    "firebase": "^13.0.0",
     "ipaddr.js": "^2.5.0",
     "jose": "^6.2.12",
     "lucide-react": "^1.52.0",
