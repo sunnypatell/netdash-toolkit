@@ -548,6 +548,8 @@ jobs:
               strategy :github_latest
             end
 
+            depends_on macos: :ventura
+
             app "NetDash Toolkit.app"
 
             caveats <<~CAVEATS
