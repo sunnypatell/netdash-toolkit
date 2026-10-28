@@ -142,7 +142,7 @@
     "axe-core": "^4.14.0",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
-    "electron": "44.9.2",
+    "electron": "44.9.3",
     "electron-builder": "^26.18.0",
     "eslint": "^10.13.0",
     "eslint-config-next": "16.4.2",
