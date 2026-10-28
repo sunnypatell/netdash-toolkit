@@ -28,7 +28,7 @@ jobs:
       HAS_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
       - name: Harden runner (egress audit)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
@@ -51,7 +51,7 @@ jobs:
       # account json), the non-deprecated method.
       - name: Deploy to Firebase
         if: env.HAS_SERVICE_ACCOUNT == 'true'
-        uses: w9jds/firebase-action@2ca73e9fbf9557017fb055f7db643a9878c7b9bf # v15.25.1
+        uses: w9jds/firebase-action@fc894b2de04cfc04c398e98dea8ac546470fbd6b # v15.34.0
         with:
           args: deploy --only firestore:rules
         env:

@@ -2,7 +2,7 @@ import { act } from "@testing-library/react"
 import { expect } from "vitest"
 
 // unwaited, a suite scans a 64 node tab strip instead of the 797 node tool
-export async function settle(container: HTMLElement, maxTicks = 25): Promise<number> {
+export async function settle(container: HTMLElement, maxTicks = MAX_TICKS): Promise<number> {
   let previous = -1
   let stable = 0
   for (let i = 0; i < maxTicks; i++) {
@@ -25,6 +25,9 @@ export const MIN_RENDERED_NODES = 25
 
 // reference-hub's tab strip alone is 64 nodes, so two quiet ticks over a shell clear the floor
 const STABLE_TICKS = 3
+
+// a cold lazy chunk's first transform took 11 to 16 ticks at load 22 and overran 25 at load 34
+const MAX_TICKS = 200
 
 // the data-panel-fallback marker is what closes this; the text arm cannot be made reliable, see
 // docs/src/content/docs/contributing/tests-and-gates.md

@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Harden runner (egress audit)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
@@ -47,7 +47,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup toolchain
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
 
       - name: Check formatting
         run: pnpm format:check
@@ -71,7 +71,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Harden runner (egress audit)
-        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
@@ -81,7 +81,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup toolchain
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint 1.7.12 rejects $/
 
       - name: Restore Next.js build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
