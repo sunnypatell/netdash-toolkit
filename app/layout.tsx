@@ -4,7 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { ProjectProvider } from "@/contexts/project-context"
-import { Analytics } from "@vercel/analytics/react"
+import { WebAnalytics } from "@/components/web-analytics"
 import { Toaster } from "sonner"
 import { Suspense } from "react"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
@@ -118,7 +118,7 @@ export default function RootLayout({
             <Toaster richColors closeButton position="bottom-right" />
           </ThemeProvider>
         </Suspense>
-        <Analytics />
+        <WebAnalytics />
       </body>
     </html>
   )
