@@ -2,7 +2,7 @@
 // - unit: pure logic (lib/ + electron parsers) in node, no dom
 // - components: mounts every tool in happy-dom to catch render crashes. this
 //   is the cheap rigorous substitute for clicking through 48 tools by hand.
-//   happy-dom over jsdom: faster, and jsdom 30 needs node 22 via undici.
+//   happy-dom over jsdom: faster.
 import { defineConfig } from "vitest/config"
 import react from "@vitejs/plugin-react"
 

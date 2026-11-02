@@ -7,7 +7,7 @@ participation is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ### Prerequisites
 
-- Node.js 20+ (the major is pinned in `.nvmrc`, so `nvm use` picks it up)
+- Node.js 22.23.4+ (the major is pinned in `.nvmrc`, so `nvm use` picks it up; the docs build refuses anything older)
 - pnpm 10+ (the exact version is pinned in `package.json`'s `packageManager` field, so `corepack enable` is enough)
 
 ### Getting Started
