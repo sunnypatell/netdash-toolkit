@@ -23,7 +23,7 @@ pnpm exec vitest run --project unit
 pnpm exec vitest run --project components
 ```
 
-The split is not cosmetic. `unit` covers pure logic in `lib/` plus the Electron output parsers, and it runs in Node because there is no DOM to need. `components` mounts real React components, and the config comment explains the environment choice: happy-dom over jsdom because it is faster, and because jsdom 30 needs Node 22 through undici while this project pins Node 20.
+The split is not cosmetic. `unit` covers pure logic in `lib/` plus the Electron output parsers, and it runs in Node because there is no DOM to need. `components` mounts real React components, and the config comment explains the environment choice: happy-dom over jsdom because it is faster.
 
 One config detail that bites people adding tests: the root `tsconfig.json` sets `jsx: "preserve"` for Next, so vitest needs its own transform. That is what `@vitejs/plugin-react` is doing in the config, and without it a `.tsx` test fails to parse rather than fails to pass.
 
