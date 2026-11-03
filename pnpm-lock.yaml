@@ -202,6 +202,9 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.8.1
         version: 0.8.1(prettier@3.9.10)
+      rolldown:
+        specifier: ^1.2.15
+        version: 1.2.15
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3

@@ -72,7 +72,7 @@ substitute for clicking through the whole tool directory by hand.
 | `pnpm build:app`        | `next build` only, skips the astro docs build                       |
 | `pnpm build:docs`       | builds the astro site in `docs/` and copies it to `public/docs/`    |
 | `pnpm electron:dev`     | next dev server plus electron, both watching                        |
-| `pnpm electron:compile` | typechecks and emits electron main/preload to `dist-electron/`      |
+| `pnpm electron:compile` | typechecks, then bundles main and preload into `dist-electron/`     |
 | `pnpm electron:pack`    | packs an unpacked app dir for the host platform (the CI smoke test) |
 | `pnpm electron:build`   | full web build then a real electron-builder run                     |
 | `pnpm dist:mac`         | `electron:build --mac`; same for `:win`, `:linux`, `:all`           |
