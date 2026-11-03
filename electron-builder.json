@@ -9,15 +9,7 @@
     "buildResources": "electron/resources"
   },
   "icon": "electron/resources/icon",
-  "files": [
-    "dist-electron/**/*",
-    "out/**/*",
-    "!**/*.map",
-    "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
-    "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
-    "!**/node_modules/*.d.ts",
-    "!**/node_modules/.bin"
-  ],
+  "files": ["dist-electron/**/*", "out/**/*", "!**/*.map", "!node_modules{,/**/*}"],
   "extraMetadata": {
     "main": "dist-electron/main.js"
   },

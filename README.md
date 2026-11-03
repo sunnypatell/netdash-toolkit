@@ -579,7 +579,7 @@ pnpm dist:linux
 | `pnpm typecheck`        | `tsc --noEmit`. A passing build does not check types, see below                        |
 | `pnpm lint`             | ESLint. Note `next lint` is deprecated and is removed in Next.js 16                    |
 | `pnpm format:check`     | Prettier in check mode. CI fails on this                                               |
-| `pnpm electron:compile` | Typecheck and emit the Electron main process, which has its own `tsconfig.json`        |
+| `pnpm electron:compile` | Typecheck the Electron main process, then bundle it and the preload with rolldown      |
 | `pnpm electron:pack`    | Pack an unpacked app directory for this platform, which is the CI packaging smoke test |
 | `pnpm dist:mac`         | Build macOS app (DMG + ZIP). Also `dist:win`, `dist:linux`, `dist:all`                 |
 

@@ -8,7 +8,7 @@ The desktop app is the same static export with an Electron shell around it. The 
 ## Build it
 
 ```bash
-# compile the main process, then package for the current platform
+# build the web export, bundle the main process, then package for the current platform
 pnpm install
 pnpm build
 pnpm electron:compile
@@ -17,7 +17,7 @@ pnpm dist:mac    # or dist:win, dist:linux, dist:all
 
 `pnpm electron:build` chains the first three for you. Output lands in `release/`. For a fast unpacked build with no installer, which is what CI does as a smoke test, run `pnpm electron:pack` (`electron:compile` plus `electron-builder --dir`) and check that `release/linux-unpacked/` contains an executable plus `resources/app.asar`. `electron:pack` packs whatever is currently in `out/`, so run `pnpm build` first if the web output is stale.
 
-During development, `pnpm electron:dev` starts `next dev` on port 3000 and points the Electron window at it, so the renderer hot-reloads while the main process is compiled once by `tsc -p electron/tsconfig.json`.
+During development, `pnpm electron:dev` starts `next dev` on port 3000 and points the Electron window at it, so the renderer hot-reloads while the main process is built once by `pnpm electron:compile`.
 
 ## How the static export gets served
 
@@ -143,7 +143,9 @@ Windows and Linux artifacts are unsigned. SmartScreen warns on first run.
 
 ### What goes into the package
 
-`files` in `electron-builder.json` is `dist-electron/**/*` and `out/**/*`, plus exclusions for sourcemaps, `.d.ts` files, and the usual dependency noise. That is the whole payload: the compiled main process, and the static export.
+`files` in `electron-builder.json` is `dist-electron/**/*` and `out/**/*`, minus sourcemaps and minus `node_modules` entirely. That is the whole payload: the bundled main process and preload, and the static export.
+
+`node_modules` is excluded because electron-builder otherwise packs every production dependency, and almost none of them run in the desktop app. The renderer is the prebuilt `out/`, so `next`, `react`, `firebase` and the rest are already compiled into it, and the main process loads exactly one package, `serve-handler`. `pnpm electron:compile` therefore typechecks with `tsc --noEmit` and then bundles `electron/main.ts` and `electron/preload.ts` with rolldown (`electron/rolldown.config.mjs`), inlining `serve-handler`, so `dist-electron/main.js` requires only Node builtins and `electron`. Measured on a macOS arm64 build with the same settings before and after: `app.asar` went from 155.9 MB and 9,932 files to 11.9 MB and 443, the `.app` from 548 MB to 269 MB, and the dmg from 178.9 MB to 112.0 MB. A new main process import needs no packaging change, because the bundler picks it up.
 
 It used to also list `public/**/*`, which shipped the documentation twice. `pnpm build:docs` copies `docs/dist` into `public/docs`, and `next build` then copies all of `public/` into `out/`, so `out/docs/` is already the served copy. The `public/**/*` glob added a second 2.7 MB copy at `<asar>/public/docs` that nothing reads, because `electron/main.ts` points `serve-handler` at `../out` and only at `../out`. It has been removed.
 
