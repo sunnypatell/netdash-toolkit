@@ -109,7 +109,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "croner": "^10.0.1",
+    "croner": "^11.0.1",
     "cronstrue": "^3.40.0",
     "culori": "^4.0.2",
     "firebase": "^13.3.0",
