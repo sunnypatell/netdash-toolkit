@@ -22,3 +22,5 @@ overrides:
   "shell-quote@^1.0.0": "^1.11.0"
   brace-expansion: "^5.0.10"
   "@grpc/grpc-js@~1.9.0": "~1.13.6"
+  "minimatch@^9.0.0": "^11.0.1"
+  "minimatch@^10.0.0": "^11.0.1"
