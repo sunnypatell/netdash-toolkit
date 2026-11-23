@@ -3,7 +3,7 @@ title: Local development
 description: Set up NetDash Toolkit locally, understand the build scripts, and see how these docs are built into the app's static output.
 ---
 
-Node 20 and pnpm 10, then one install. The app has no backend and no required environment variables, so a clean clone runs immediately.
+Node 22.23.4+ and pnpm 12, then one install. The app has no backend and no required environment variables, so a clean clone runs immediately.
 
 ## Setup
 

@@ -1,0 +1,6 @@
+# its own root, so pnpm never folds docs into the app project above it
+minimumReleaseAge: 10080
+
+allowBuilds:
+  # its postinstall only checks for the platform binary, which pnpm installs as an optional dep
+  esbuild: false
